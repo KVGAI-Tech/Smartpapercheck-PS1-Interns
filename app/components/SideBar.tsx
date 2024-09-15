@@ -35,7 +35,7 @@
                 { name: 'Discover', icon:<Search width={15} height={15} />,  pathname : '/Discover' },
                 { name: 'Upload', icon: <Upload width={15} height={15} />,  pathname : '/Upload' },
                 { name: 'TA', icon: <User2Icon width={15} height={15} />, pathname : '/TA' },
-                { name: 'StudentsData', icon: <BarChart2 width={15} height={15} />,pathname : '/StudentsData' },
+                { name: 'Courses', icon: <BarChart2 width={15} height={15} />,pathname : '/Courses' },
             ].map((item) =>  {
 
                 const isActive = pathname === item.pathname ;
