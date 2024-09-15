@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import React, { useEffect, useRef, useState } from 'react';
 import WebViewer from '@pdftron/webviewer';
@@ -25,15 +25,15 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
   const [annotatedPdfUrl, setAnnotatedPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (viewerRef.current) {
+    if (typeof window !== 'undefined' && viewerRef.current) {
       if (webViewerInstanceRef.current) {
         console.warn('WebViewer instance already created.');
         return;
       }
-
+  
       WebViewer(
         {
-          path: '/lib', 
+          path: '/lib',
           licenseKey: 'demo:1726216468861:7e284aa90300000000d4e7c6a09995eaa9f796cfe5f51f725e1f67836a',
           initialDoc: fileUrl,
         },
@@ -41,14 +41,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
       ).then((instance) => {
         webViewerInstanceRef.current = instance;
         const { documentViewer, annotationManager } = instance.Core;
-
-        // Listen for annotation changes (detect when a shape is created)
+  
         annotationManager.addEventListener('annotationChanged', (annotations, action) => {
           if (action === 'add') {
             const newAnnotation = annotations[0];
             if (newAnnotation.Subject === 'Rectangle' || newAnnotation.Subject === 'Polygon') {
               const rect = newAnnotation.getRect();
-              // Show options menu near the drawn shape
               const x = rect.x1;
               const y = rect.y1;
               setMenuPosition({ x, y });
@@ -60,7 +58,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
         console.error('Error initializing WebViewer:', error);
       });
     }
-
+  
     return () => {
       if (webViewerInstanceRef.current) {
         const { Core } = webViewerInstanceRef.current;
@@ -71,6 +69,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
       }
     };
   }, [fileUrl]);
+  
 
   // const exportAndGeneratePdfUrl = async () => {
 

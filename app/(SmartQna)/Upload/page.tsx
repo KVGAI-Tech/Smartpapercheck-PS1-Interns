@@ -8,7 +8,9 @@ import { usePathname } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
-import PDFViewer from '@/app/components/Canva';
+import dynamic from 'next/dynamic';
+
+const PDFViewer = dynamic(() => import('@/app/components/Canva'), { ssr: false });
 
 interface IFormInput {
   PDFURL: File | undefined;
@@ -53,11 +55,11 @@ const Page = () => {
         };
         reader.readAsDataURL(data.PDFURL);
         console.log(reader)
-        const fileURL = URL.createObjectURL(data.PDFURL);
+       
         setPdfURL(reader.result as string);
         setCourseTitle(data.courseTitle);
         setExamName(data.examName);
-        console.log(fileURL);
+        console.log(pdfURL);
       }
     } catch (error: any) {
       console.log(error.message);
