@@ -39,7 +39,7 @@ interface TA {
   imageUrl: string;
 }
 
-const page = () => {
+const Page = () => {
   const [assignType, setAssignType] = useState<string>('Question-wise');
   
     const  pathname =  usePathname() ;
@@ -331,4 +331,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Page

@@ -3,7 +3,7 @@ import Charts from '@/app/components/DashBoard';
 import { usePathname } from 'next/navigation';
 import React, { useState } from 'react'
 
-const page = () => {
+const Page = () => {
     const pathname = usePathname() ;
     const [isLoading , setIsLoading] = useState(false) ;
     const [user , setUser] = useState({
@@ -36,4 +36,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Page
