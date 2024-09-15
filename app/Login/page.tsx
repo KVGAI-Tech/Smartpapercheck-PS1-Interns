@@ -19,8 +19,6 @@ import { z } from "zod"
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
 
-export const description =
-  "A login form with email and password. There's an option to login with Google and a link to sign up if you don't have an account."
 
  const  LoginForm = () => {
   const  [isLoading,setIsLoading] = useState(false)  ;
