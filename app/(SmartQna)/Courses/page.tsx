@@ -21,6 +21,34 @@ import CourseCard from '@/app/components/CourseCard';
 const Page = () => {
     const pathname = usePathname();
     const [courses, setCourses] = useState<CourseInterface[]>([]);
+    const Coursearray = [
+        {
+            id: 'CS 11',
+            name: 'Introduction to Computer Science',
+            studentsEnrolled: 150,
+            tasEnrolled: 5,
+        },
+        {
+            id: 'CS 12',
+            name: 'Data Structures and Algorithms',
+            studentsEnrolled: 120,
+            tasEnrolled: 3,
+        },
+        {
+            id: 'CS 13',
+            name: 'Web Development',
+            studentsEnrolled: 130,
+            tasEnrolled: 4,
+        },
+        {
+            id: 'CS 14',
+            name: 'Database Systems',
+            studentsEnrolled: 110,
+            tasEnrolled: 2,
+        },
+          
+        
+    ]
     
     const [isLoading, setIsLoading] = useState(false);
     const form = useForm<Course>(
@@ -47,7 +75,7 @@ const Page = () => {
         }
     }
     
- if(!courses){
+ if(!Coursearray){
     return (
         <div className='h-screen w-[88%] flex justify-center items-center'>
             <div className='flex flex-col justify-center items-center gap-4'>
@@ -155,14 +183,14 @@ const Page = () => {
       </Dialog>
     </div>
     <div className='w-full h-[80%]  p-7'>
-    {courses.length === 0 ? (
+    {Coursearray.length === 0 ? (
                     <div className='flex flex-col justify-center items-center gap-4 h-64'>
                         <h3 className='text-primary-600 text-xl font-bold'>No Courses Found</h3>
                         <p className='text-gray-600 text-md'>Add a course to get started</p>
                     </div>
                 ) : (
                     <div className=' grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-                        {courses.map((course) => (
+                        {Coursearray.map((course) => (
                             <CourseCard key={course.id} course={course} />
                         ))}
                     </div>

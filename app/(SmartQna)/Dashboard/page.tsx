@@ -24,7 +24,7 @@ const Page = () => {
     ];
 
     return (
-        <div className='h-screen w-full overflow-y-auto bg-gray-50'>
+        <div className='h-screen w-[88%] overflow-y-auto bg-gray-50'>
             <div className="w-full bg-gradient-to-r from-purple-700 to-indigo-800 text-white py-8 px-4">
                 <div className='max-w-7xl mx-auto flex items-center'>
                     <Image

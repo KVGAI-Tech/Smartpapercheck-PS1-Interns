@@ -6,6 +6,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@/components/ui/button'; // Assume Input is from your UI library
 import { Input } from '@/components/ui/input';
 import { Loader2, Save } from 'lucide-react'; // Assuming you're using Lucide icons
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@radix-ui/react-label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroupItem  ,  RadioGroup } from '@/components/ui/radio-group';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface PDFViewerProps {
   fileUrl: string; // URL of the PDF file to load
@@ -23,6 +28,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
   const [menuPosition, setMenuPosition] = useState<{ x: number, y: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [annotatedPdfUrl, setAnnotatedPdfUrl] = useState<string | null>(null);
+  const [keyword, setKeyword] = useState('');
+  const [marks, setMarks] = useState('');
+  const [markingType, setMarkingType] = useState('full');
+  const [annotationType, setAnnotationType] = useState('');
+ const [overlayOpacity, setOverlayOpacity] = useState(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && viewerRef.current) {
@@ -40,17 +50,30 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
         viewerRef.current
       ).then((instance) => {
         webViewerInstanceRef.current = instance;
-        const { documentViewer, annotationManager } = instance.Core;
+        const { documentViewer, annotationManager , Annotations } = instance.Core;
   
         annotationManager.addEventListener('annotationChanged', (annotations, action) => {
           if (action === 'add') {
             const newAnnotation = annotations[0];
             if (newAnnotation.Subject === 'Rectangle' || newAnnotation.Subject === 'Polygon') {
+             const  strokeColor = newAnnotation.StrokeColor;
+            
+              // Set the fill color to the stroke color and adjust opacity
+              newAnnotation.FillColor = new Annotations.Color(
+                strokeColor.R, 
+                strokeColor.G, 
+                strokeColor.B, 
+                0.5 // Set opacity to 50%
+              );
+              
+              // Force the annotation to redraw with the new appearance
+              annotationManager.redrawAnnotation(newAnnotation);
               const rect = newAnnotation.getRect();
               const x = rect.x1;
               const y = rect.y1;
               setMenuPosition({ x, y });
               setSelectedAnnotation(newAnnotation);
+              setOverlayOpacity(0.5);
             }
           }
         });
@@ -69,35 +92,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
       }
     };
   }, [fileUrl]);
-  
-
-  // const exportAndGeneratePdfUrl = async () => {
-
-  //   const { documentViewer } = webViewerInstanceRef.current.Core;
-  //   console.log(documentViewer.getDocument())
-  //   const pdfDoc = await documentViewer.getDocument().getPDFDoc();
-  //   console.log("pdfDoc",pdfDoc)
-  //   const pdfBytes = await pdfDoc.save();
-  //   console.log("pdfBytes",pdfBytes)
-  //   const file = new File([pdfBytes], 'annotated.pdf', { type: 'application/pdf' });
-  //   console.log("file",file)
-  //   const reader = new FileReader();
-  //   console.log("reader",reader)
-
-  //   return new Promise<string | undefined>((resolve, reject) => {
-  //     reader.onloadend = () => {
-  //       try {
-  //         const base64PDF = reader.result as string;
-  //         resolve(base64PDF); // Return the base64-encoded data URL
-  //       } catch (error) {
-  //         console.error('Error generating PDF URL:', error);
-  //         reject(error);
-  //       }
-  //     };
-
-  //     reader.readAsDataURL(file); // Convert file to data URL
-  //   });
-  // };
 
   const handleSaveAnnotations = async () => {
     setIsSaving(true);
@@ -139,12 +133,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
   }
   };
 
-  const handleOptionSelect = (option: string) => {
+  const handleOptionSelect = () => {
+    setOverlayOpacity(0);
     if (selectedAnnotation) {
       const annotationID = selectedAnnotation.Id;
       const rect = selectedAnnotation.getRect();
       const pageNumber = selectedAnnotation.PageNumber;
-      const annotationType = option;
 
       // Create object to store annotation data
       const annotationData = {
@@ -156,7 +150,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
           x2: rect.x2,
           y2: rect.y2
         },
-        pageNumber
+        pageNumber,
+        keyword,
+        marks: parseFloat(marks),
+        markingType
       };
 
       // Add this annotation data to the collective state
@@ -167,46 +164,103 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
       // Clear selected annotation and hide menu
       setMenuPosition(null);
       setSelectedAnnotation(null);
+      setKeyword('');
+      setMarks('');
+      setMarkingType('full');
+      setAnnotationType('');
     }
   };
 
   return (
     <div style={{ position: 'relative' }}>
       <div ref={viewerRef} style={{ height: '100vh', width: '100%' }} />
-
+ <AnimatePresence>
+        {menuPosition && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
+              pointerEvents: 'none',
+              zIndex: 40,
+            }}
+          />
+        )}
+      </AnimatePresence>
       {menuPosition && (
-        <div
-          className="annotation-menu"
-          style={{
-            position: 'absolute',
-            top: `${menuPosition.y}px`,
-            left: `${menuPosition.x}px`,
-            background: 'white',
-            border: '1px solid black',
-            zIndex: 1000,
-            padding: '10px',
-          }}
-        >
-          <DropdownMenu defaultOpen>
-            <DropdownMenuTrigger asChild>
-              <Button>Select Annotation Type</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleOptionSelect('Figure')}>Figure</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOptionSelect('Graph')}>Graph</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOptionSelect('Text')}>Text</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOptionSelect('Answer')}>Answer</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <Card className="absolute z-50" style={{ top: `${menuPosition.y}px`, left: `${menuPosition.x}px`, width: '300px' }}>
+          <CardHeader>
+            <CardTitle className='text-lg font-semibold text-primary-600'>Annotation Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="annotationType">Annotation Type</Label>
+              <Select onValueChange={setAnnotationType} value={annotationType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Figure">Figure</SelectItem>
+                  <SelectItem value="Graph">Graph</SelectItem>
+                  <SelectItem value="Text">Text</SelectItem>
+                  <SelectItem value="Answer">Answer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="keyword">Keyword</Label>
+              <Input
+                id="keyword"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="Enter keyword"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="marks">Marks</Label>
+              <Input
+                id="marks"
+                type="number"
+                value={marks}
+                onChange={(e) => setMarks(e.target.value)}
+                placeholder="Enter marks"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Marking Type</Label>
+              <RadioGroup defaultValue="full" onValueChange={setMarkingType}>
+  <div className="flex items-center space-x-2">
+    <RadioGroupItem value="full" id="full" />
+    <Label htmlFor="full">Full Marking</Label>
+  </div>
+  <div className="flex items-center space-x-2">
+    <RadioGroupItem value="partial" id="partial" />
+    <Label htmlFor="partial">Partial Marking</Label>
+  </div>
+</RadioGroup>
+
+            </div>
+            <Button onClick={handleOptionSelect} className="w-full bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25">
+              Save Annotation
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       <div style={{ position: 'fixed', bottom: '10px', right: '10px' }}>
-       
-        <Button className='gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25' onClick={handleSaveAnnotations}>{isSaving ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}Save annotation</Button>
+        <Button className='gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25' onClick={handleSaveAnnotations}>
+          {isSaving ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
+          Save annotation
+        </Button>
       </div>
 
-      {/* Show annotated PDF URL if available */}
       {annotatedPdfUrl && (
         <div style={{ position: 'fixed', bottom: '50px', right: '10px' }}>
           <a href={annotatedPdfUrl} target="_blank" rel="noopener noreferrer">View Annotated PDF</a>

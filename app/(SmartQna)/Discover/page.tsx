@@ -10,15 +10,15 @@ const Page = () => {
     
 
     <div className='h-screen w-[88%]'>
-        <div className=" w-full h-[12%] bg-[url('/dashboard_bg.png')] flex  justify-start items-center bg-cover bg-center">
-        <div className='w-[70%] h-[60%] p-10'>
-        <h1 className='text-primary-600 text-2xl tracking-normal leading-snug font-sans font-bold'>{pathname.split('/')[1]}</h1>
-
-        </div>
-            
-       
-
-        </div>
+        <div className="w-full bg-gradient-to-r from-purple-700 to-indigo-800 text-white py-8 px-4">
+                <div className='max-w-7xl mx-auto flex items-center'>
+                    
+                    <div>
+                        <h1 className='text-3xl font-bold mb-2'>{pathname.split('/')[1]}</h1>
+                  
+                    </div>
+                </div>
+            </div>
         
       
     </div>
