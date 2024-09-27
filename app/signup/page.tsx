@@ -19,9 +19,16 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { error } from 'console';
+import { useToast } from '@/hooks/use-toast';
+import { title } from 'process';
+import { useRouter } from 'next/navigation';
+
 
 const SignupForm = () => {
   const [isLoading, setIsLoading] = useState(false);
+const {toast} = useToast() ;
+const router = useRouter() ;
+
 
   const form = useForm<z.infer<typeof SignupSchema>>({
     resolver: zodResolver(SignupSchema),
@@ -40,13 +47,27 @@ const SignupForm = () => {
 
     try {
       // Call your signup API here
-      const response = await fetch(`http://43.205.184.7:8000/api/signup`, {
+      const response = await fetch(`https://43.205.184.7:8000/api/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
+      if(response.ok){
+        toast({
+          title:"signup successful"
+
+        })
+        router.push('/login')   ;
+
+        
+       
+      } else {
+        toast({
+          title:"error while signin" 
+        })
+      }
 
     
 
