@@ -47,7 +47,7 @@ const router = useRouter() ;
 
     try {
       // Call your signup API here
-      const response = await fetch(`https://43.205.184.7:8000/api/signup`, {
+      const response = await fetch(`http://43.205.184.7:8000/api/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
