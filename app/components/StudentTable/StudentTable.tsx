@@ -2,9 +2,13 @@
 import { StudentData, columns } from "./Columns"
 import { DataTable } from "./Data_Table"
 
-async function getData(): Promise<StudentData[]> {
-  // Fetch data from your API here.
-  return [
+
+interface Demoprops {
+  data?:any[]
+}
+
+export default  function DemoPage({data}:Demoprops) {
+  const datas =  [
     {
       Id: "728ed52f",
       name: "John Doe",
@@ -175,14 +179,10 @@ async function getData(): Promise<StudentData[]> {
       },
     // ...
   ]
-}
-
-export default async function DemoPage() {
-  const data = await getData()
-
+console.log(data)
   return (
     <div className="container mx-auto p-3 ">
-      <DataTable columns={columns} data={data} />
+      <DataTable columns={columns} data={datas} />
     </div>
   )
 }

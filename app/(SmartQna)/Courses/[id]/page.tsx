@@ -1,13 +1,24 @@
 "use client"
-import { useParams } from 'next/navigation';
-import React, { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { PlusIcon, Users, UserCheck } from 'lucide-react'
 import ExamCard from '@/app/components/ExamCard'
+import { useAuth } from '@/app/context/AuthProvider';
 
 const Page = () => {
     const params = useParams();
+    const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+//   useEffect(() => {
+//     if (!isAuthenticated) {
+//       router.push('/login'); // Redirect to login page if not authenticated
+//     }
+//   }, [isAuthenticated, router]);
+
+ 
     const [course, setCourse] = useState({
         id: params.id,
         name: 'Introduction to Computer Science',
@@ -19,7 +30,9 @@ const Page = () => {
         { id: 1, title: 'Midterm Exam', date: '2023-10-15', duration: '2 hours', participants: 145 },
         { id: 2, title: 'Final Exam', date: '2023-12-20', duration: '3 hours', participants: 148 },
     ]);
-
+    // if (!isAuthenticated) {
+    //     return <div>Loading...</div>;
+    //   }
     return (
         <div className='h-screen w-[88%] overflow-y-auto bg-gray-50'>
             <div className="w-full bg-gradient-to-r from-purple-700 to-indigo-800 text-white py-8 px-4">

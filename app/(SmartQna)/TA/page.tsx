@@ -3,7 +3,7 @@ import TACard from '@/app/components/TaCard';
 import { Button } from '@/components/ui/button';
 import { ArrowDownIcon, Plus  } from 'lucide-react';
 import { Span } from 'next/dist/trace';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 
 import {
@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from '@/app/context/AuthProvider';
 
 interface TA {
   id: string;
@@ -41,6 +42,15 @@ interface TA {
 
 const Page = () => {
   const [assignType, setAssignType] = useState<string>('Question-wise');
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     router.push('/login'); // Redirect to login page if not authenticated
+  //   }
+  // }, [isAuthenticated, router]);
+
   
     const  pathname =  usePathname() ;
     const [tas, setTAs] = useState<TA[]>([
@@ -136,6 +146,11 @@ const Page = () => {
     useEffect(() => {
       console.log(assignType);
     }, [assignType]);
+
+    // if (!isAuthenticated) {
+    //   return <div>Loading...</div>;
+    // }
+    
 
     return (
       
@@ -332,3 +347,5 @@ const Page = () => {
 }
 
 export default Page
+
+

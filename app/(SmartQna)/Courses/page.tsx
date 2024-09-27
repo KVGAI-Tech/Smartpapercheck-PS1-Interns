@@ -4,15 +4,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form , FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Upload, Loader2, PlusIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
-import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { Course, courseSchema } from '@/Schemas/CourseSchema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import CourseCard from '@/app/components/CourseCard';
+import { useAuth } from '@/app/context/AuthProvider';
+import { Textarea } from '@/components/ui/textarea';
+import { description } from '@/app/components/DashBoard';
  export interface CourseInterface {
     id: string;
     name: string;
+    Description:string ,
     studentsEnrolled: number;
     tasEnrolled: number;
 }
@@ -21,34 +26,48 @@ import CourseCard from '@/app/components/CourseCard';
 const Page = () => {
     const pathname = usePathname();
     const [courses, setCourses] = useState<CourseInterface[]>([]);
-    const Coursearray = [
-        {
-            id: 'CS 11',
-            name: 'Introduction to Computer Science',
-            studentsEnrolled: 150,
-            tasEnrolled: 5,
-        },
-        {
-            id: 'CS 12',
-            name: 'Data Structures and Algorithms',
-            studentsEnrolled: 120,
-            tasEnrolled: 3,
-        },
-        {
-            id: 'CS 13',
-            name: 'Web Development',
-            studentsEnrolled: 130,
-            tasEnrolled: 4,
-        },
-        {
-            id: 'CS 14',
-            name: 'Database Systems',
-            studentsEnrolled: 110,
-            tasEnrolled: 2,
-        },
+    const { user, isAuthenticated } = useAuth();
+    const [Coursearray , setCoursearray] = useState<any>() ;
+    const professorId = 7 ;
+
+
+  const router = useRouter();
+
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     router.push('/login'); // Redirect to login page if not authenticated
+  //   }
+  // }, [isAuthenticated, router]);
+
+  
+    // const Coursearray = [
+    //     {
+    //         id: 'CS 11',
+    //         name: 'Introduction to Computer Science',
+    //         studentsEnrolled: 150,
+    //         tasEnrolled: 5,
+    //     },
+    //     {
+    //         id: 'CS 12',
+    //         name: 'Data Structures and Algorithms',
+    //         studentsEnrolled: 120,
+    //         tasEnrolled: 3,
+    //     },
+    //     {
+    //         id: 'CS 13',
+    //         name: 'Web Development',
+    //         studentsEnrolled: 130,
+    //         tasEnrolled: 4,
+    //     },
+    //     {
+    //         id: 'CS 14',
+    //         name: 'Database Systems',
+    //         studentsEnrolled: 110,
+    //         tasEnrolled: 2,
+    //     },
           
         
-    ]
+    // ]
     
     const [isLoading, setIsLoading] = useState(false);
     const form = useForm<Course>(
@@ -57,34 +76,74 @@ const Page = () => {
             defaultValues: {
                 id: '',
                 name: '',
+                Description:'' ,
+
                 studentsEnrolled: 0,
                 tasEnrolled: 0,
             }
         }
     );
     
-    const onSubmit = (data: Course) => {
-        setIsLoading(true);
+
+    useEffect(() => {
+      const fetchCourses = async () => {
         try {
-            console.log(data);
-            setCourses([...courses, data]);
+          const response = await fetch(`http://43.205.184.7:8000/api/professors/${professorId}/courses`);
+          if (!response.ok) {
+            throw new Error('Error while fetching courses');
+          }
+          const data = await response.json();
+          setCourses(data); // Update with fetched data
         } catch (error) {
-            console.error(error);
+          console.error('Error while fetching courses:', error);
+        }
+      };
+  
+      fetchCourses();
+    }, []);
+    
+    const onSubmit = async (data: Course) => {
+        setIsLoading(true);
+        console.log(data);
+      
+
+
+        try {
+           const response = await fetch(`http://43.205.184.7:8000/api/professors/${professorId}/courses` , {
+            method:'POST'  ,
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body:JSON.stringify({
+              name:data.name , 
+            description:data.Description
+            })
+           })
+           if(!response.ok) {
+            throw new Error("error whilr creating course") ;
+            console.log("error")
+           }
+           
+        } catch (error:any) {
+            console.error(error.message);
         } finally {
             setIsLoading(false);
         }
     }
     
- if(!Coursearray){
-    return (
-        <div className='h-screen w-[88%] flex justify-center items-center'>
-            <div className='flex flex-col justify-center items-center gap-4'>
-                <h1 className='text-primary-600 text-2xl tracking-normal leading-snug font-sans font-bold'>No Courses Found</h1>
-                <p className='text-gray-600 text-md tracking-normal leading-snug font-sans font-normal'>Add a course to get started</p>
-            </div>
-        </div>
-    )
- }
+    // if (!isAuthenticated) {
+    //   return <div>Loading...</div>;
+    // }
+//  if(!Coursearray){
+//     return (
+//         <div className='h-screen w-[88%] flex justify-center items-center'>
+//             <div className='flex flex-col justify-center items-center gap-4'>
+//                 <h1 className='text-primary-600 text-2xl tracking-normal leading-snug font-sans font-bold'>No Courses Found</h1>
+//                 <p className='text-gray-600 text-md tracking-normal leading-snug font-sans font-normal'>Add a course to get started</p>
+//             </div>
+//         </div>
+//     )
+//  }
   return (
     <div className='h-screen w-[88%] overflow-y-scroll overflow-x-hidden'>
       
@@ -96,6 +155,8 @@ const Page = () => {
     <div className='w-full px-4 h-[12%] flex justify-end items-center'>
       <Dialog >
         <DialogTrigger asChild>
+        
+       
           <Button variant={'outline'} size={'lg'} className='gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25'>
             Add Course
             <span><PlusIcon width={15} height={15} /></span>
@@ -171,7 +232,20 @@ const Page = () => {
                         <FormMessage />
                       </FormItem>
                     )}
-                    />      
+                    />     
+                    <FormField
+                    control={form.control}
+                    name="Description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>  
+                        <FormControl>  
+                         <Textarea placeholder='description of your course' {...field}/>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                    />   
                 </div>
                 <Button type="submit" disabled={isLoading} className='flex justify-center items-center gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)]'>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Add Course
@@ -183,14 +257,14 @@ const Page = () => {
       </Dialog>
     </div>
     <div className='w-full h-[80%]  p-7'>
-    {Coursearray.length === 0 ? (
+    {!Coursearray ? (
                     <div className='flex flex-col justify-center items-center gap-4 h-64'>
                         <h3 className='text-primary-600 text-xl font-bold'>No Courses Found</h3>
                         <p className='text-gray-600 text-md'>Add a course to get started</p>
                     </div>
                 ) : (
                     <div className=' grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-                        {Coursearray.map((course) => (
+                        {Coursearray.map((course:any) => (
                             <CourseCard key={course.id} course={course} />
                         ))}
                     </div>

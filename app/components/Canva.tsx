@@ -11,6 +11,7 @@ import { Label } from '@radix-ui/react-label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroupItem  ,  RadioGroup } from '@/components/ui/radio-group';
 import { AnimatePresence, motion } from 'framer-motion';
+import AnnotatedPDFViewer from './DiaplayingAnnotation';
 
 interface PDFViewerProps {
   fileUrl: string; // URL of the PDF file to load
@@ -31,8 +32,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
   const [keyword, setKeyword] = useState('');
   const [marks, setMarks] = useState('');
   const [markingType, setMarkingType] = useState('full');
+  const[savedannotation , setsavedannotation] = useState(false) ;
+
   const [annotationType, setAnnotationType] = useState('');
  const [overlayOpacity, setOverlayOpacity] = useState(0);
+ const [showannotatedPdf,setShowAnnotatedPDF] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && viewerRef.current) {
@@ -63,7 +67,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
                 strokeColor.R, 
                 strokeColor.G, 
                 strokeColor.B, 
-                0.5 // Set opacity to 50%
+                0.1 // Set opacity to 50%
               );
               
               // Force the annotation to redraw with the new appearance
@@ -92,7 +96,35 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
       }
     };
   }, [fileUrl]);
+   const handleDeleteAnnotation = () => {
+    if (selectedAnnotation) {
+      if (!webViewerInstanceRef.current) return;
 
+      const { annotationManager } = webViewerInstanceRef.current.Core;
+      annotationManager.deleteAnnotation(selectedAnnotation);
+
+      // Optionally remove the annotation from your state
+      setAnnotationsData(prevAnnotations =>
+        prevAnnotations.filter(annotation => annotation.id !== selectedAnnotation.Id)
+      );
+
+      setMenuPosition(null);
+      setSelectedAnnotation(null);
+      setOverlayOpacity(0); // Close overlay after deletion
+    }
+  };  
+  useEffect(()=>{
+    console.log(showannotatedPdf)
+  } , [showannotatedPdf , setShowAnnotatedPDF])
+  const handleViewAnnotatedPDF = () => {
+    if (annotatedPdfUrl) {
+      // Create an anchor element and simulate a click to download the PDF
+      const link = document.createElement('a');
+      link.href = annotatedPdfUrl;
+      link.download = `${courseTitle}-${examName}-Annotated.pdf`;
+      link.click();
+    }
+  };
   const handleSaveAnnotations = async () => {
     setIsSaving(true);
   try {
@@ -130,6 +162,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
     console.error('Error saving annotations:', error);
   } finally {
     setIsSaving(false);
+    setsavedannotation(true) ;
   }
   };
 
@@ -139,6 +172,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
       const annotationID = selectedAnnotation.Id;
       const rect = selectedAnnotation.getRect();
       const pageNumber = selectedAnnotation.PageNumber;
+      const color = selectedAnnotation.StrokeColor;
+      console.log("this is color",color)
 
       // Create object to store annotation data
       const annotationData = {
@@ -153,7 +188,14 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
         pageNumber,
         keyword,
         marks: parseFloat(marks),
-        markingType
+        markingType ,
+        color: {
+          r: color.R,
+          g: color.G,
+          b: color.B,
+          a: color.A
+        }
+
       };
 
       // Add this annotation data to the collective state
@@ -255,16 +297,22 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, onAnnotationsUpdated, co
       )}
 
       <div style={{ position: 'fixed', bottom: '10px', right: '10px' }}>
-        <Button className='gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25' onClick={handleSaveAnnotations}>
+        <Button  className='gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25'onClick={handleSaveAnnotations} >
           {isSaving ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
           Save annotation
         </Button>
       </div>
 
-      {annotatedPdfUrl && (
+      { 
+      savedannotation && 
+       (
         <div style={{ position: 'fixed', bottom: '50px', right: '10px' }}>
-          <a href={annotatedPdfUrl} target="_blank" rel="noopener noreferrer">View Annotated PDF</a>
+
+          <Button onClick={handleViewAnnotatedPDF}  rel="noopener noreferrer">View Annotated PDF</Button>
         </div>
+      )} 
+      {showannotatedPdf && (
+        <AnnotatedPDFViewer fileUrl={annotatedPdfUrl!} annotationsData={annotationsData} />
       )}
     </div>
   );

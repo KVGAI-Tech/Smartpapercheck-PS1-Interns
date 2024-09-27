@@ -1,20 +1,55 @@
 'use client'
 import Charts from '@/app/components/DashBoard';
-import { usePathname } from 'next/navigation';
-import React, { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bell, Users, BookOpen, GraduationCap, TrendingUp } from 'lucide-react'
 import Image from 'next/image'
+import { useAuth } from '@/app/context/AuthProvider';
+import { access } from 'fs/promises';
 
 const Page = () => {
     const pathname = usePathname();
     const [isLoading, setIsLoading] = useState(false);
-    const [user, setUser] = useState({
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        role: 'admin',
-        avatar: 'https://via.placeholder.com/150',
-    });
+    const [profile , setProfileData] = useState<any>() ;
+
+
+    const { user, isAuthenticated , decodedToken } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    const fetchProfile = async () => {
+        console.log(localStorage.getItem('access_token'))
+      try {
+        const response = await fetch('http://43.205.184.7:8000/api/me', {
+            method:'GET' ,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`
+          } 
+        });
+       const data = await response.json() ;
+       if(data){
+setProfileData(data)
+       }
+      } catch (error:any) {
+        alert('Error fetching profile: ' + error.response.data.detail);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+//   useEffect(() => {
+//     if (!isAuthenticated) {
+//       router.push('/login'); // Redirect to login page if not authenticated
+//     }
+//   }, [isAuthenticated, router]);
+
+
+    // const [user, setUser] = useState({
+    //     name: 'John Doe',
+    //     email: 'john.doe@example.com',
+    //     role: 'admin',
+    //     avatar: 'https://via.placeholder.com/150',
+    // });
 
     const stats = [
         { title: "Total Students", value: "1,234", icon: Users, color: "text-blue-500", trend: "+5.2%" },
@@ -23,20 +58,19 @@ const Page = () => {
         { title: "Notifications", value: "3", icon: Bell, color: "text-yellow-500", trend: "-0.5%" },
     ];
 
+    
+    // if (!isAuthenticated) {
+    //     return <div>Loading...</div>;
+    //   }
+
     return (
         <div className='h-screen w-[88%] overflow-y-auto bg-gray-50'>
-            <div className="w-full bg-gradient-to-r from-purple-700 to-indigo-800 text-white py-8 px-4">
+            <div className="w-full bg-[url('/dashboard_bg.png')] text-white py-8 px-4"
+            >
                 <div className='max-w-7xl mx-auto flex items-center'>
-                    <Image
-                        src={''}
-                        alt={user.name}
-                        width={80}
-                        height={80}
-                        className="rounded-full mr-6 border-4 border-white shadow-lg"
-                    />
+                    
                     <div>
-                        <h1 className='text-3xl font-bold mb-2'>Welcome,{user?.name}!</h1>
-                        <p className='text-purple-200'>Heres an overview of your dashboard</p>
+                        <h1 className='text-3xl text-primary-600 font-bold mb-2'>Welcome,{user}!</h1>
                     </div>
                 </div>
             </div>

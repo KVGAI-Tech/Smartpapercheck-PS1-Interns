@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, Form } from '@/components/ui/form';
 import { Loader2, Upload, X } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/app/context/AuthProvider';
 
 const PDFViewer = dynamic(() => import('@/app/components/Canva'), { ssr: false });
 
@@ -26,6 +27,16 @@ const Page = () => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [courseTitle, setCourseTitle] = useState('');
   const [examName, setExamName] = useState('');
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     router.push('/login'); // Redirect to login page if not authenticated
+  //   }
+  // }, [isAuthenticated, router]);
+
+  
 
   useEffect(() => {
     console.log(pdfURL);
@@ -72,6 +83,12 @@ const Page = () => {
  const handleOverlay = () => {
   setShowOverlay(false);
  }
+
+//  if (!isAuthenticated) {
+//   return <div>Loading...</div>;
+// }
+
+
   return (
     <div className='h-screen w-[88%]'>
       

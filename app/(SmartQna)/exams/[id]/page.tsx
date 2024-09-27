@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, Form } from '@/components/ui/form';
 import { Loader2, Upload, X } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/app/context/AuthProvider';
 
 const PDFViewer = dynamic(() => import('@/app/components/Canva'), { ssr: false });
 
@@ -24,10 +25,22 @@ const Page = () => {
   const [file, setFile] = useState<File | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [pdfURL, setPdfURL] = useState<string>('');
+  const[isOpen  , setIsopen] = useState(false); 
+
   const [showOverlay, setShowOverlay] = useState(false);
   const [courseTitle, setCourseTitle] = useState('');
   const [examName, setExamName] = useState('');
   const examNametoshow = decodeURIComponent(pathname.split('/').pop() || '');
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     router.push('/login'); // Redirect to login page if not authenticated
+  //   }
+  // }, [isAuthenticated, router]);
+
+ 
 
   useEffect(() => {
     console.log(pdfURL);
@@ -52,7 +65,9 @@ const Page = () => {
         reader.onload = (e) => {
           const fileURL = e.target?.result as string;
           setPdfURL(fileURL);
+          setIsopen(false) ;
           setShowOverlay(true);
+          
           console.log(fileURL);
         };
         reader.readAsDataURL(data.PDFURL);
@@ -74,6 +89,9 @@ const Page = () => {
  const handleOverlay = () => {
   setShowOverlay(false);
  }
+//  if (!isAuthenticated) {
+//   return <div>Loading...</div>;
+// }
   return (
     <div className='h-screen w-[88%]'>
       
@@ -83,9 +101,9 @@ const Page = () => {
         </div>
       </div>
       <div className='w-full px-4 h-[12%] flex justify-end items-center'>
-        <Dialog >
+        <Dialog open={isOpen} >
           <DialogTrigger asChild>
-            <Button variant={'outline'} size={'lg'} className='gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25'>
+            <Button onClick={()=>setIsopen(true)} variant={'outline'} size={'lg'} className='gap-2 bg-gradient-to-r from-[rgb(105,56,239)] to-[rgba(124,49,167,0.99)] via-[rgb(114,52,203)] text-gray-25 text-md font-semibold hover:bg-gradient-to-r hover:from-[rgb(105,56,239)] hover:to-[rgba(124,49,167,0.99)] hover:via-[rgb(114,52,203)] hover:text-gray-25'>
               Upload
               <span><Upload width={15} height={15} /></span>
             </Button>
