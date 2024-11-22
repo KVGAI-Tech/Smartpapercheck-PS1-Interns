@@ -51,7 +51,7 @@ export default function Home() {
       <div className="relative w-full h-screen bg-gradient-to-b from-blue-900 to-blue-700 flex flex-col  items-center text-white">
         <Navbar />
         <div className="max-w-4xl text-center m-36">
-          <h1 className="text-5xl font-bold mb-6">Empowering MBA Education with Cutting-Edge Datasets</h1>
+          <h1 className="text-5xl font-bold mb-6">Empowering MMBA Education with Cutting-Edge Datasets</h1>
           <p className="text-xl mb-8">
             DataMBA revolutionizes business education by providing comprehensive, real-world datasets tailored for MBA institutions. Our platform bridges the gap between theory and practice, enabling students to develop data-driven decision-making skills essential in today&apos;s business landscape.
           </p>
