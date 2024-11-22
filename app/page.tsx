@@ -130,9 +130,9 @@ export default function Home() {
         <h2 className="text-4xl font-bold text-center mb-8">What Our Users Say</h2>
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-xl italic">
-            “Smart QnA has completely transformed our grading process. It's fast, reliable, and incredibly accurate.”
+            “Smart QnA has completely transformed our grading process. It&apos;s fast, reliable, and incredibly accurate.”
           </p>
-          <p className="mt-4 text-gray-400">— Vinay Chamola, Associate Professor at BITS Pilani</p>
+          <p className="mt-4 text-gray-400">— Vinay Chamola,</p>
         </div>
       </section>
 
@@ -192,7 +192,7 @@ export default function Home() {
               Can I customize the scoring rules?
             </summary>
             <p className="mt-2 text-gray-400">
-              Yes, Aviator offers flexible options for customizing scoring to align with your institution's standards.
+              Yes, Aviator offers flexible options for customizing scoring to align with your institution&apos;s standards.
             </p>
           </details>
         </div>
