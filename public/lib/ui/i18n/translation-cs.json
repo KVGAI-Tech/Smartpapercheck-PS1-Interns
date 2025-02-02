@@ -26,6 +26,8 @@
     "ungroup": "Zrušit seskupení",
     "download": "Stažení",
     "edit": "Upravit",
+    "collapse": "Kolaps",
+    "expand": "Rozšířit",
     "extract": "Výpis",
     "extractPage": "Extrahovat stránku",
     "enterFullscreen": "Celá obrazovka",
@@ -35,7 +37,9 @@
     "fitToWidth": "Přizpůsobit na šířku",
     "more": "Více",
     "openFile": "Otevřít soubor",
+    "showMoreFiles": "Zobrazit více souborů",
     "page": "Strana",
+    "of": "z",
     "pagePrev": "Předchozí stránka",
     "pageNext": "Další strana",
     "pageSet": "Nastavit stránku",
@@ -43,6 +47,7 @@
     "proceed": "Pokračovat",
     "name": "název",
     "rename": "Přejmenovat",
+    "remove": "Odstranit",
     "ok": "OK",
     "rotate": "Orientace stránky",
     "rotate3D": "Točit se",
@@ -109,6 +114,10 @@
     "moveToBottom": "Přesunout dolů",
     "movePageToTop": "Přesunout stránku nahoru",
     "movePageToBottom": "Přesunout stránku dolů",
+    "moveUp": "Přesunout nahoru",
+    "moveDown": "Přesunout dolů",
+    "moveLeft": "Pohyb doleva",
+    "moveRight": "Pohyb doprava",
     "backToMenu": "Zpět do menu",
     "redactPages": "Upravit stránky",
     "playAudio": "Přehrát zvuk",
@@ -121,6 +130,7 @@
     "comparePages": "Porovnejte stránky",
     "startComparison": "Spusťte porovnávání",
     "showComparison": "Zobrazit srovnání",
+    "highlightChanges": "Zvýrazněte změny",
     "back": "Zadní",
     "clearSignature": "Jasný podpis",
     "clearInitial": "Jasná iniciála",
@@ -133,7 +143,8 @@
     "copySelectedColor": "Kopírovat vybranou barvu",
     "showMoreColors": "Zobrazit více barev",
     "showLessColors": "Zobrazit méně barev",
-    "fromCustomColorPicker": "z Custom Color Picker"
+    "fromCustomColorPicker": "z Custom Color Picker",
+    "newSheetDocument": "Nová tabulka"
   },
   "annotation": {
     "areaMeasurement": "Plocha",
@@ -225,6 +236,7 @@
     "searchPanel": "Vyhledávání",
     "menuOverlay": "Jídelní lístek",
     "notesPanel": "Komentáře",
+    "indexPanel": "Indexový panel",
     "outlinePanel": "Obrys",
     "outlinesPanel": "Obrysy",
     "newOutlineTitle": "Nový název osnovy",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "Miniatury",
     "toolsButton": "Nástroje",
     "redaction": "Redakce",
-    "viewControlsOverlay": "Ovládací prvky zobrazení",
+    "viewControls": "Ovládací prvky zobrazení",
+    "pageControls": "Ovládací prvky stránky",
     "calibration": "Kalibrace",
     "zoomOverlay": "Zoom Overlay",
     "textPopup": "Textové vyskakovací okno",
@@ -248,14 +261,17 @@
     "multiSelectButton": "Více násobný výběr",
     "pageReplaceModalTitle": "Nahradit stránku",
     "files": "Soubory",
+    "file": "Soubor",
     "editText": "Upravit text",
     "redactionPanel": "Redakční panel",
+    "tabLabel": "Tab",
     "noteGroupSection": {
       "open": "Zobrazit všechny anotace",
       "close": "Zavřít všechny anotace"
     },
     "comparePanel": "Panel porovnání",
-    "watermarkPanel": "Panel vodoznaku"
+    "watermarkPanel": "Panel vodoznaku",
+    "mainMenu": "Hlavní menu"
   },
   "message": {
     "showMore": "Zobrazit více",
@@ -288,6 +304,7 @@
     "searching": "Hledání...",
     "searchCommentsPlaceholder": "Hledat komentáře",
     "searchDocumentPlaceholder": "Vyhledat dokument",
+    "searchSettingsPlaceholder": "Nastavení vyhledávání",
     "searchSuggestionsPlaceholder": "Návrhy vyhledávání",
     "signHere": "Zde se podepište",
     "insertTextHere": "Zde vložte text",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "Skupiny lišty nástrojů",
+      "flyoutLabel": "Stuha",
       "toolbarGroup-View": "Pohled",
       "toolbarGroup-Annotate": "Opatřit poznámkami",
       "toolbarGroup-Shapes": "Tvary",
@@ -488,7 +506,10 @@
       "imageInitial": "Iniciály obrázku",
       "pickInitialsFile": "Vyberte Iniciály",
       "noSignatures": "Momentálně nejsou žádné uložené podpisy.",
-      "fontStyle": "styl fontu"
+      "fontStyle": "styl fontu",
+      "textSignature": {
+        "dropdownLabel": "Rodina písem"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "Vaše soubory",
@@ -543,7 +564,9 @@
       "autoSizeFont": "Dynamicky měnit velikost písma"
     },
     "measurementOption": {
-      "scale": "Měřítko"
+      "scale": "Měřítko",
+      "selectScale": "Vyberte možnost Měřítko",
+      "selectScaleDropdown": "Vyberte Rozbalovací nabídku Měřítko"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "Minuta",
       "second": "Druhý",
       "textColor": "Barva textu",
-      "backgroundColor": "Barva pozadí"
+      "backgroundColor": "Barva pozadí",
+      "dateToolTipLabel": "Další informace o formátu data",
+      "previewCustomStamp": "Náhled na"
     },
     "pageRedactModal": {
       "addMark": "Přidat Marka",
@@ -740,6 +765,7 @@
       "zoomOptions": "Možnosti přiblížení",
       "zoomIn": "Přiblížit",
       "zoomOut": "Oddálit",
+      "setHeaderFocus": "Nastaví fokus na záhlaví",
       "fitScreenWidth": "Přizpůsobte dokument šířce obrazovky na malé obrazovce (< 640 pixelů), jinak jej přizpůsobte původní velikosti",
       "print": "Tisk",
       "bookmarkOpenPanel": "Rychle přidejte stránku do záložek a otevřete panel záložek",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "Vyberte nástroj AnnotationCreateTextStrikeout",
       "selectCreateTextUnderlineTool": "Vyberte nástroj AnnotationCreateTextUnderline",
       "editKeyboardShorcut": "Upravit klávesovou zkratku",
-      "setShorcut": "Nastavte zástupce",
-      "pressKeyToSet": "Stiskněte klávesu nebo pro nastavení nové zkratky.",
+      "setShortcut": "Nastavit zástupce",
+      "editShortcut": "Upravit zástupce",
       "shortcutAlreadyExists": "Výše uvedená klávesová zkratka již existuje.",
       "close": "Zavřít popisek"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": "Neplatné datum/čas: Vstup by měl odpovídat formátu"
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "Seznam polí formuláře",
+      "notFields": "Tento dokument neobsahuje žádná pole formuláře"
+    },
     "formFieldPopup": {
       "fieldName": "Název pole",
       "fieldValue": "Výchozí hodnota",
@@ -954,11 +984,14 @@
       "apply": "Aplikovat",
       "cancel": "zrušení",
       "flags": "Pole vlajky",
+      "fieldSize": "Velikost pole",
       "options": "Možnosti",
+      "properties": "Vlastnosti",
       "radioGroups": "Přepínací tlačítka se stejným názvem pole budou patřit do stejného seskupení.",
       "nameRequired": "Název pole je povinný",
       "fieldIndicator": "Polní indikátory",
       "documentFieldIndicator": "Indikátory pole dokumentu",
+      "includeFieldIndicator": "Zahrnout indikátor pole",
       "indicatorPlaceHolders": {
         "TextFormField": "Sem vložte text",
         "CheckBoxFormField": "Šek",
@@ -978,6 +1011,14 @@
         "empty": "Název pole nesmí být prázdný"
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "Podpis pole Anotace",
+      "CheckBoxFormField": "Zaškrtávací políčko Anotace pole",
+      "RadioButtonFormField": "Anotace pole přepínače",
+      "ListBoxFormField": "Anotace pole seznamu",
+      "ComboBoxFormField": "Combo Box Field Anotace",
+      "TextFormField": "Anotace textového pole"
+    },
     "apply": "Použít pole",
     "type": "Typ pole",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "Zaškrtávací políčko",
       "radio": "Přepínač",
       "listbox": "Seznam",
-      "combobox": "Kombinovaný box"
+      "combobox": "Kombinovaný box",
+      "button": "Knoflík"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "Zarovnat vpravo",
     "justify": "Zdůvodněte",
     "lineSpacing": "Řádkování a řádkování",
+    "lineSpacingMenu": "Řádkování",
     "bulletList": "Seznam s odrážkami",
     "numberList": "Číslovaný seznam",
     "decreaseIndent": "Zmenšit odsazení",
     "increaseIndent": "Zvětšit odsazení",
+    "nonPrintingCharacters": "Netisknutelné znaky",
     "insertLink": "Vložit odkaz",
     "insertImage": "Vložit obrázek",
+    "image": "Obraz",
     "table": "Stůl",
     "insertRowAbove": "Vložit řádek výše",
     "insertRowBelow": "Vložit řádek níže",
@@ -1250,10 +1295,28 @@
     "pastingMessage": "Vkládání není ve vašem prohlížeči podporováno. Místo toho můžete použít klávesovou zkratku",
     "pastingWithoutFormatTitle": "Vkládání bez formátování není k dispozici",
     "pastingWithoutFormatMessage": "Vkládání bez formátování není ve vašem prohlížeči podporováno. Místo toho můžete použít klávesovou zkratku",
+    "lineSpacingOptions": {
+      "15": "1.5",
+      "115": "1.15",
+      "single": "Singl",
+      "double": "Dvojnásobek",
+      "custom": "Zvyk"
+    },
     "numberDropdown": {
+      "6": "Číslo latinské římské 1",
+      "7": "Číslo Desetinné",
+      "8": "Číslo latinské římské 2",
+      "10": "latinsky římský",
+      "11": "Římské latinské číslo",
       "dropdownLabel": "Předvolby číslování"
     },
     "bulletDropdown": {
+      "0": "Kulka",
+      "1": "Kulové náměstí",
+      "2": "Čtvercová kulka",
+      "3": "Diamant",
+      "4": "Kontrola",
+      "5": "Šipka",
       "dropdownLabel": "Předvolby odrážky"
     },
     "fontSize": {
@@ -1371,9 +1434,28 @@
       "redactionTextPlaceholder": "Vložte textový štítek",
       "contentEdit": "Úprava obsahu"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "Počáteční styl čáry",
+      "middleLineStyleLabel": "Styl střední čáry",
+      "endLineStyleLabel": "Styl koncové čáry"
+    },
     "addColorToCustom": "Přidat k vlastním barvám",
-    "noToolSelected": "Tento dokument neobsahuje žádné vrstvy.",
-    "noToolStyle": "Nástroj neobsahuje žádné stylingové vlastnosti."
+    "noToolSelected": "Chcete-li zobrazit vlastnosti nástroje, vyberte nástroj",
+    "noToolStyle": "Nástroj neobsahuje žádné stylingové vlastnosti.",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "Začátek řádku"
+      },
+      "end": {
+        "dropdownLabel": "Konec řádku"
+      },
+      "middle": {
+        "dropdownLabel": "Linka uprostřed"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "Pohraniční"
+    }
   },
   "signatureListPanel": {
     "header": "Seznam podpisů",
@@ -1390,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "Výběr barvy"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "Horní záhlaví",
+      "leftHeader": "Levé záhlaví",
+      "rightHeader": "Pravé záhlaví",
+      "bottomHeader": "Spodní záhlaví",
+      "documentContent": "Obsah dokumentu"
+    }
   }
 }

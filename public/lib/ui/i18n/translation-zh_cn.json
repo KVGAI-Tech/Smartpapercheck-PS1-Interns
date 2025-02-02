@@ -26,6 +26,8 @@
     "ungroup": "取消组合",
     "download": "下载",
     "edit": "编辑",
+    "collapse": "坍塌",
+    "expand": "扩张",
     "extract": "提取",
     "extractPage": "提取页面",
     "enterFullscreen": "全屏",
@@ -35,7 +37,9 @@
     "fitToWidth": "自身尺寸",
     "more": "更多",
     "openFile": "打开文件",
+    "showMoreFiles": "显示更多文件",
     "page": "页",
+    "of": "的",
     "pagePrev": "上一页",
     "pageNext": "下一页",
     "pageSet": "设定页面",
@@ -43,6 +47,7 @@
     "proceed": "继续",
     "name": "名称",
     "rename": "改名",
+    "remove": "消除",
     "ok": "好的",
     "rotate": "旋转",
     "rotate3D": "旋转",
@@ -109,6 +114,10 @@
     "moveToBottom": "移到底部",
     "movePageToTop": "将页面移至顶部",
     "movePageToBottom": "将页面移至底部",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "moveLeft": "左移",
+    "moveRight": "右移",
     "backToMenu": "返回菜单",
     "redactPages": "编辑页面",
     "playAudio": "播放音频",
@@ -121,6 +130,7 @@
     "comparePages": "比较页面",
     "startComparison": "开始比较",
     "showComparison": "显示比较",
+    "highlightChanges": "突出显示更改",
     "back": "后退",
     "clearSignature": "清晰的签名",
     "clearInitial": "清除首字母",
@@ -133,7 +143,8 @@
     "copySelectedColor": "复制选定的颜色",
     "showMoreColors": "显示更多颜色",
     "showLessColors": "显示较少颜色",
-    "fromCustomColorPicker": "来自自定义颜色选择器"
+    "fromCustomColorPicker": "来自自定义颜色选择器",
+    "newSheetDocument": "新建电子表格"
   },
   "annotation": {
     "areaMeasurement": "面积测量",
@@ -225,6 +236,7 @@
     "searchPanel": "搜索",
     "menuOverlay": "菜单",
     "notesPanel": "备注",
+    "indexPanel": "索引面板",
     "outlinePanel": "大纲",
     "outlinesPanel": "大纲",
     "newOutlineTitle": "新大纲标题",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "缩略图",
     "toolsButton": "工具",
     "redaction": "新版本",
-    "viewControlsOverlay": "调整浏览方式",
+    "viewControls": "调整浏览方式",
+    "pageControls": "页面控件",
     "calibration": "校准",
     "zoomOverlay": "缩放叠加",
     "textPopup": "文字弹出",
@@ -248,14 +261,17 @@
     "multiSelectButton": "多选",
     "pageReplaceModalTitle": "替换页面",
     "files": "文件",
+    "file": "文件",
     "editText": "编辑文本",
     "redactionPanel": "编辑面板",
+    "tabLabel": "Tab",
     "noteGroupSection": {
       "open": "查看所有注释",
       "close": "关闭所有注释"
     },
     "comparePanel": "比较面板",
-    "watermarkPanel": "水印面板"
+    "watermarkPanel": "水印面板",
+    "mainMenu": "主菜单"
   },
   "message": {
     "showMore": "展示更多",
@@ -288,6 +304,7 @@
     "searching": "正在搜索…",
     "searchCommentsPlaceholder": "搜索评论",
     "searchDocumentPlaceholder": "搜索文件",
+    "searchSettingsPlaceholder": "搜索设置",
     "searchSuggestionsPlaceholder": "搜索建议",
     "signHere": "在此处签名",
     "insertTextHere": "在这里插入文字",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "工具栏组",
+      "flyoutLabel": "丝带",
       "toolbarGroup-View": "视图",
       "toolbarGroup-Annotate": "注释",
       "toolbarGroup-Shapes": "形状",
@@ -488,7 +506,10 @@
       "imageInitial": "图像首字母",
       "pickInitialsFile": "选择缩写",
       "noSignatures": "当前没有保存的签名。",
-      "fontStyle": "字体样式"
+      "fontStyle": "字体样式",
+      "textSignature": {
+        "dropdownLabel": "字体系列"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "您的文件",
@@ -543,7 +564,9 @@
       "autoSizeFont": "动态缩放字体大小"
     },
     "measurementOption": {
-      "scale": "比例"
+      "scale": "比例",
+      "selectScale": "选择比例",
+      "selectScaleDropdown": "选择比例下拉菜单"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "分钟",
       "second": "第二",
       "textColor": "文字颜色",
-      "backgroundColor": "背景颜色"
+      "backgroundColor": "背景颜色",
+      "dateToolTipLabel": "有关日期格式的更多信息",
+      "previewCustomStamp": "预览"
     },
     "pageRedactModal": {
       "addMark": "添加标记",
@@ -740,6 +765,7 @@
       "zoomOptions": "缩放选项",
       "zoomIn": "放大",
       "zoomOut": "缩小",
+      "setHeaderFocus": "将焦点设置到标题上",
       "fitScreenWidth": "在小屏幕（< 640px）中将文档调整为屏幕宽度，否则将其调整为原始大小",
       "print": "打印",
       "bookmarkOpenPanel": "快速为页面添加书签并打开书签面板",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "选择 AnnotationCreateTextStrikeout 工具",
       "selectCreateTextUnderlineTool": "选择 AnnotationCreateTextUnderline 工具",
       "editKeyboardShorcut": "编辑快捷键",
-      "setShorcut": "设置快捷方式",
-      "pressKeyToSet": "按 键或 键设置新的快捷方式。",
+      "setShortcut": "设置快捷方式",
+      "editShortcut": "编辑快捷方式",
       "shortcutAlreadyExists": "上面的键盘快捷键已经存在。",
       "close": "关闭工具提示"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": "无效的日期/时间：输入应匹配格式"
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "表单字段列表",
+      "notFields": "此文档无表单字段"
+    },
     "formFieldPopup": {
       "fieldName": "栏位名称",
       "fieldValue": "默认值",
@@ -954,11 +984,14 @@
       "apply": "申请",
       "cancel": "取消",
       "flags": "场旗",
+      "fieldSize": "字段大小",
       "options": "选项",
+      "properties": "特性",
       "radioGroups": "具有相同字段名称的单选按钮将属于同一分组。",
       "nameRequired": "字段名称为必填项",
       "fieldIndicator": "现场指标",
       "documentFieldIndicator": "文档字段指示符",
+      "includeFieldIndicator": "包含字段指示符",
       "indicatorPlaceHolders": {
         "TextFormField": "在此处插入文本",
         "CheckBoxFormField": "查看",
@@ -978,6 +1011,14 @@
         "empty": "字段名称不能为空"
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "签名字段注释",
+      "CheckBoxFormField": "复选框字段注释",
+      "RadioButtonFormField": "单选按钮字段注释",
+      "ListBoxFormField": "列表框字段注释",
+      "ComboBoxFormField": "组合框字段注释",
+      "TextFormField": "文本字段注释"
+    },
     "apply": "套用栏位",
     "type": "字段类型",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "复选框",
       "radio": "单选按钮",
       "listbox": "列表框",
-      "combobox": "组合框"
+      "combobox": "组合框",
+      "button": "按钮"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "右对齐",
     "justify": "证明合法",
     "lineSpacing": "行间距和段落间距",
+    "lineSpacingMenu": "行距",
     "bulletList": "项目符号列表",
     "numberList": "编号列表",
     "decreaseIndent": "减少缩进",
     "increaseIndent": "增加缩进",
+    "nonPrintingCharacters": "非打印字符",
     "insertLink": "插入链接",
     "insertImage": "插入图片",
+    "image": "图像",
     "table": "桌子",
     "insertRowAbove": "在上方插入行",
     "insertRowBelow": "在下面插入行",
@@ -1250,10 +1295,28 @@
     "pastingMessage": "您的浏览器不支持粘贴。您可以使用键盘快捷键",
     "pastingWithoutFormatTitle": "无法进行无格式粘贴",
     "pastingWithoutFormatMessage": "您的浏览器不支持不带格式粘贴。您可以使用键盘快捷键",
+    "lineSpacingOptions": {
+      "15": "1.5",
+      "115": "1.15",
+      "single": "单身的",
+      "double": "双倍的",
+      "custom": "风俗"
+    },
     "numberDropdown": {
+      "6": "数字拉丁罗马 1",
+      "7": "数字 小数",
+      "8": "数字拉丁罗马 2",
+      "10": "拉丁罗马",
+      "11": "罗马拉丁数字",
       "dropdownLabel": "编号预设"
     },
     "bulletDropdown": {
+      "0": "子弹",
+      "1": "子弹方块",
+      "2": "方形子弹",
+      "3": "钻石",
+      "4": "查看",
+      "5": "箭",
       "dropdownLabel": "项目符号预设"
     },
     "fontSize": {
@@ -1371,9 +1434,28 @@
       "redactionTextPlaceholder": "插入文本标签",
       "contentEdit": "内容编辑"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "起始线样式",
+      "middleLineStyleLabel": "中线样式",
+      "endLineStyleLabel": "结束线样式"
+    },
     "addColorToCustom": "添加到自定义颜色",
-    "noToolSelected": "该文档不包含任何层。",
-    "noToolStyle": "工具不包含任何样式属性。"
+    "noToolSelected": "选择一个工具来查看工具属性",
+    "noToolStyle": "工具不包含任何样式属性。",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "行开始"
+      },
+      "end": {
+        "dropdownLabel": "行尾"
+      },
+      "middle": {
+        "dropdownLabel": "中间线"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "边界"
+    }
   },
   "signatureListPanel": {
     "header": "签名列表",
@@ -1390,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "颜色选择器"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "顶部标题",
+      "leftHeader": "左标题",
+      "rightHeader": "右标题",
+      "bottomHeader": "底部标题",
+      "documentContent": "文档内容"
+    }
   }
 }

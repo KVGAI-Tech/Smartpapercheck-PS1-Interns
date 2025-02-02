@@ -26,6 +26,8 @@
     "ungroup": "Dela upp gruppen",
     "download": "Ladda ner",
     "edit": "Redigera",
+    "collapse": "Kollapsa",
+    "expand": "Expandera",
     "extract": "Extrahera",
     "extractPage": "Extrahera sida",
     "enterFullscreen": "Fullskärm",
@@ -35,7 +37,9 @@
     "fitToWidth": "Passar till bredden",
     "more": "Mer",
     "openFile": "Öppna fil",
+    "showMoreFiles": "Visa fler filer",
     "page": "Sida",
+    "of": "av",
     "pagePrev": "Föregående sida",
     "pageNext": "Nästa sida",
     "pageSet": "Ställ in sida",
@@ -43,6 +47,7 @@
     "proceed": "Fortsätt",
     "name": "namn",
     "rename": "Döp om",
+    "remove": "Ta bort",
     "ok": "OK",
     "rotate": "Sidorientering",
     "rotate3D": "Rotera",
@@ -109,6 +114,10 @@
     "moveToBottom": "Flytta till botten",
     "movePageToTop": "Flytta sidan till toppen",
     "movePageToBottom": "Flytta sidan till botten",
+    "moveUp": "Flytta uppåt",
+    "moveDown": "Flytta nedåt",
+    "moveLeft": "Flytta vänster",
+    "moveRight": "Flytta höger",
     "backToMenu": "Tillbaka till menyn",
     "redactPages": "Redigera sidor",
     "playAudio": "Spela upp ljud",
@@ -121,6 +130,7 @@
     "comparePages": "Jämför sidor",
     "startComparison": "Starta jämförelse",
     "showComparison": "Visa jämförelse",
+    "highlightChanges": "Markera Ändringar",
     "back": "Tillbaka",
     "clearSignature": "Tydlig signatur",
     "clearInitial": "Tydlig initial",
@@ -133,7 +143,8 @@
     "copySelectedColor": "Kopiera vald färg",
     "showMoreColors": "Visa fler färger",
     "showLessColors": "Visa färre färger",
-    "fromCustomColorPicker": "från Custom Color Picker"
+    "fromCustomColorPicker": "från Custom Color Picker",
+    "newSheetDocument": "Nytt kalkylblad"
   },
   "annotation": {
     "areaMeasurement": "Område",
@@ -225,6 +236,7 @@
     "searchPanel": "Sök",
     "menuOverlay": "Meny",
     "notesPanel": "Kommentarer",
+    "indexPanel": "Indexpanel",
     "outlinePanel": "Översikt",
     "outlinesPanel": "Konturer",
     "newOutlineTitle": "Ny dispositionstitel",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "Miniatyrer",
     "toolsButton": "Verktyg",
     "redaction": "Redaktion",
-    "viewControlsOverlay": "Visa kontroller",
+    "viewControls": "Visa kontroller",
+    "pageControls": "Sidkontroller",
     "calibration": "Kalibrering",
     "zoomOverlay": "Zoomöverlägg",
     "textPopup": "Text popup",
@@ -248,14 +261,17 @@
     "multiSelectButton": "Flera val",
     "pageReplaceModalTitle": "Ersätt sida",
     "files": "Filer",
+    "file": "Fil",
     "editText": "Redigera text",
     "redactionPanel": "Redaktionspanel",
+    "tabLabel": "Flik",
     "noteGroupSection": {
       "open": "Visa alla kommentarer",
       "close": "Stäng alla anteckningar"
     },
     "comparePanel": "Jämför panel",
-    "watermarkPanel": "Vattenstämpelpanel"
+    "watermarkPanel": "Vattenstämpelpanel",
+    "mainMenu": "Huvudmeny"
   },
   "message": {
     "showMore": "Visa mer",
@@ -288,6 +304,7 @@
     "searching": "Sökande...",
     "searchCommentsPlaceholder": "Sök kommentarer",
     "searchDocumentPlaceholder": "Sök dokument",
+    "searchSettingsPlaceholder": "Sökinställningar",
     "searchSuggestionsPlaceholder": "Sökförslag",
     "signHere": "Skriv under här",
     "insertTextHere": "Infoga text här",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "Verktygsfältsgrupper",
+      "flyoutLabel": "Band",
       "toolbarGroup-View": "Se",
       "toolbarGroup-Annotate": "Kommentera",
       "toolbarGroup-Shapes": "Former",
@@ -488,7 +506,10 @@
       "imageInitial": "Bildinitialer",
       "pickInitialsFile": "Välj initialer",
       "noSignatures": "Det finns för närvarande inga sparade signaturer.",
-      "fontStyle": "typsnitt"
+      "fontStyle": "typsnitt",
+      "textSignature": {
+        "dropdownLabel": "Typsnittsfamilj"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "Dina filer",
@@ -543,7 +564,9 @@
       "autoSizeFont": "Skala teckenstorlek dynamiskt"
     },
     "measurementOption": {
-      "scale": "Skala"
+      "scale": "Skala",
+      "selectScale": "Välj Skala",
+      "selectScaleDropdown": "Välj Scale Dropdown"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "Minut",
       "second": "Andra",
       "textColor": "Text färg",
-      "backgroundColor": "Bakgrundsfärg"
+      "backgroundColor": "Bakgrundsfärg",
+      "dateToolTipLabel": "Mer information om datumformat",
+      "previewCustomStamp": "Förhandsvisning av"
     },
     "pageRedactModal": {
       "addMark": "Lägg till Mark",
@@ -740,6 +765,7 @@
       "zoomOptions": "Zoomalternativ",
       "zoomIn": "Zooma in",
       "zoomOut": "Zooma ut",
+      "setHeaderFocus": "Ställer in fokus på rubriken",
       "fitScreenWidth": "Anpassa dokumentet till skärmens bredd på en liten skärm (< 640px), annars anpassa det till dess ursprungliga storlek",
       "print": "Skriva ut",
       "bookmarkOpenPanel": "Bokmärk snabbt en sida och öppna bokmärkespanelen",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "Välj verktyget AnnotationCreateTextStrikeout",
       "selectCreateTextUnderlineTool": "Välj verktyget AnnotationCreateTextUnderline",
       "editKeyboardShorcut": "Redigera tangentbordsgenväg",
-      "setShorcut": "Ställ in genväg",
-      "pressKeyToSet": "Tryck på tangenten eller tangenterna för att ställa in ny genväg.",
+      "setShortcut": "Ställ in genväg",
+      "editShortcut": "Redigera genväg",
       "shortcutAlreadyExists": "Kortkommandot ovan finns redan.",
       "close": "Stäng verktygstips"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": "Ogiltigt datum/tid: Indata ska matcha formatet"
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "Formulärfältlista",
+      "notFields": "Detta dokument har inga formulärfält"
+    },
     "formFieldPopup": {
       "fieldName": "Fält namn",
       "fieldValue": "Standardvärde",
@@ -954,11 +984,14 @@
       "apply": "Tillämpa",
       "cancel": "Avbryt",
       "flags": "Fältflaggor",
+      "fieldSize": "Fältstorlek",
       "options": "alternativ",
+      "properties": "Egenskaper",
       "radioGroups": "Alternativknappar med samma fältnamn hör hemma i samma grupp.",
       "nameRequired": "Fältnamn krävs",
       "fieldIndicator": "Fältindikatorer",
       "documentFieldIndicator": "Dokumentfältindikatorer",
+      "includeFieldIndicator": "Inkludera fältindikator",
       "indicatorPlaceHolders": {
         "TextFormField": "Infoga text här",
         "CheckBoxFormField": "Kolla upp",
@@ -978,6 +1011,14 @@
         "empty": "Fältnamn får inte vara tomt"
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "Signaturfältanteckning",
+      "CheckBoxFormField": "Kryssruta Fältkommentar",
+      "RadioButtonFormField": "Radioknapp Fältanteckning",
+      "ListBoxFormField": "Fältkommentar för listruta",
+      "ComboBoxFormField": "Fältkommentar med kombinationsruta",
+      "TextFormField": "Textfältsanteckning"
+    },
     "apply": "Använd fält",
     "type": "Fälttyp",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "Kryssruta",
       "radio": "Radio knapp",
       "listbox": "Listruta",
-      "combobox": "Kombinationsrutan"
+      "combobox": "Kombinationsrutan",
+      "button": "Knapp"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "Högerjustera",
     "justify": "Rättfärdiga",
     "lineSpacing": "Rad- och styckeavstånd",
+    "lineSpacingMenu": "Linjeavstånd",
     "bulletList": "Punktlista",
     "numberList": "Numrerad lista",
     "decreaseIndent": "Minska indraget",
     "increaseIndent": "Öka indrag",
+    "nonPrintingCharacters": "Tecken som inte skrivs ut",
     "insertLink": "Infoga länk",
     "insertImage": "Infoga bild",
+    "image": "Bild",
     "table": "Tabell",
     "insertRowAbove": "Infoga rad ovanför",
     "insertRowBelow": "Infoga rad nedan",
@@ -1250,10 +1295,28 @@
     "pastingMessage": "Inklistring stöds inte i din webbläsare. Istället kan du använda ett kortkommando",
     "pastingWithoutFormatTitle": "Det går inte att klistra in utan formatering",
     "pastingWithoutFormatMessage": "Klistra in utan formatering stöds inte i din webbläsare. Istället kan du använda ett kortkommando",
+    "lineSpacingOptions": {
+      "15": "1.5",
+      "115": "1.15",
+      "single": "Enda",
+      "double": "Dubbel",
+      "custom": "Beställnings"
+    },
     "numberDropdown": {
+      "6": "Nummer Latin Roman 1",
+      "7": "Antal decimaler",
+      "8": "Nummer Latin Roman 2",
+      "10": "latinsk romersk",
+      "11": "romersk latinsk siffra",
       "dropdownLabel": "Förinställningar för numrering"
     },
     "bulletDropdown": {
+      "0": "Kula",
+      "1": "Bullet Square",
+      "2": "Fyrkantig kula",
+      "3": "Diamant",
+      "4": "Kontrollera",
+      "5": "Pil",
       "dropdownLabel": "Bullet Presets"
     },
     "fontSize": {
@@ -1371,9 +1434,28 @@
       "redactionTextPlaceholder": "Infoga textetikett",
       "contentEdit": "Redigera innehåll"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "Startlinjestil",
+      "middleLineStyleLabel": "Mittlinjestil",
+      "endLineStyleLabel": "Slutlinjestil"
+    },
     "addColorToCustom": "Lägg till anpassade färger",
-    "noToolSelected": "Detta dokument innehåller inga lager.",
-    "noToolStyle": "Verktyget innehåller inga stylingegenskaper."
+    "noToolSelected": "Välj ett verktyg för att se verktygets egenskaper",
+    "noToolStyle": "Verktyget innehåller inga stylingegenskaper.",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "Linjestart"
+      },
+      "end": {
+        "dropdownLabel": "Linjeslut"
+      },
+      "middle": {
+        "dropdownLabel": "Linje mitten"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "Gräns"
+    }
   },
   "signatureListPanel": {
     "header": "Signaturlista",
@@ -1390,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "Färgväljare"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "Topphuvud",
+      "leftHeader": "Vänster rubrik",
+      "rightHeader": "Höger rubrik",
+      "bottomHeader": "Nedre rubrik",
+      "documentContent": "Dokumentinnehåll"
+    }
   }
 }

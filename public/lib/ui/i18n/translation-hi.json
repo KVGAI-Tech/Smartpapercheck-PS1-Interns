@@ -26,6 +26,8 @@
     "ungroup": "असमूहीकृत",
     "download": "डाउनलोड",
     "edit": "संपादित करें",
+    "collapse": "गिर जाना",
+    "expand": "बढ़ाना",
     "extract": "निचोड़",
     "extractPage": "पेज निकालें",
     "enterFullscreen": "पूर्ण स्क्रीन",
@@ -35,7 +37,9 @@
     "fitToWidth": "चौड़ाई में फ़िट करें",
     "more": "अधिक",
     "openFile": "खुली फाइल",
+    "showMoreFiles": "अधिक फ़ाइलें दिखाएं",
     "page": "पृष्ठ",
+    "of": "का",
     "pagePrev": "पिछला पृष्ठ",
     "pageNext": "अगला पृष्ठ",
     "pageSet": "पृष्ठ स्थापित करें",
@@ -43,6 +47,7 @@
     "proceed": "आगे बढ़ना",
     "name": "नाम",
     "rename": "नाम बदलें",
+    "remove": "निकालना",
     "ok": "ठीक",
     "rotate": "पृष्ठ अभिविन्यास",
     "rotate3D": "घुमाएँ",
@@ -109,6 +114,10 @@
     "moveToBottom": "नीचे ले जाएँ",
     "movePageToTop": "पृष्ठ को शीर्ष पर ले जाएँ",
     "movePageToBottom": "पेज को नीचे ले जाएँ",
+    "moveUp": "ऊपर ले जाएं",
+    "moveDown": "नीचे ले जाएं",
+    "moveLeft": "बाएं खिसको",
+    "moveRight": "सही कदम",
     "backToMenu": "मैन्यू में वापस",
     "redactPages": "पृष्ठ सुधारें",
     "playAudio": "ऑडियो चलाएं",
@@ -121,6 +130,7 @@
     "comparePages": "पृष्ठों की तुलना करें",
     "startComparison": "तुलना शुरू करें",
     "showComparison": "तुलना दिखाएँ",
+    "highlightChanges": "बदलावों को हाइलाइट करें",
     "back": "पीछे",
     "clearSignature": "स्पष्ट हस्ताक्षर",
     "clearInitial": "प्रारंभिक साफ़ करें",
@@ -133,7 +143,8 @@
     "copySelectedColor": "चयनित रंग कॉपी करें",
     "showMoreColors": "और अधिक रंग दिखाएं",
     "showLessColors": "कम रंग दिखाएं",
-    "fromCustomColorPicker": "कस्टम कलर पिकर से"
+    "fromCustomColorPicker": "कस्टम कलर पिकर से",
+    "newSheetDocument": "नई स्प्रेडशीट"
   },
   "annotation": {
     "areaMeasurement": "क्षेत्र",
@@ -225,6 +236,7 @@
     "searchPanel": "खोज",
     "menuOverlay": "मेन्यू",
     "notesPanel": "टिप्पणियाँ",
+    "indexPanel": "सूचकांक पैनल",
     "outlinePanel": "खाका",
     "outlinesPanel": "रूपरेखा",
     "newOutlineTitle": "नया आउटलाइन शीर्षक",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "थंबनेल",
     "toolsButton": "उपकरण",
     "redaction": "लिखना",
-    "viewControlsOverlay": "नियंत्रण देखें",
+    "viewControls": "नियंत्रण देखें",
+    "pageControls": "पृष्ठ नियंत्रण",
     "calibration": "कैलिब्रेशन",
     "zoomOverlay": "ज़ूम ओवरले",
     "textPopup": "टेक्स्ट पॉपअप",
@@ -248,14 +261,17 @@
     "multiSelectButton": "बहु का चयन",
     "pageReplaceModalTitle": "पृष्ठ बदलें",
     "files": "फ़ाइलें",
+    "file": "फ़ाइल",
     "editText": "लिखाई में बदलाव",
     "redactionPanel": "रिडक्शन पैनल",
+    "tabLabel": "टैब",
     "noteGroupSection": {
       "open": "सभी टिप्पणियां देखें",
       "close": "सभी टिप्पणियां बंद करें"
     },
     "comparePanel": "पैनल की तुलना करें",
-    "watermarkPanel": "वॉटरमार्क पैनल"
+    "watermarkPanel": "वॉटरमार्क पैनल",
+    "mainMenu": "मुख्य मेन्यू"
   },
   "message": {
     "showMore": "और दिखाओ",
@@ -288,6 +304,7 @@
     "searching": "खोज कर...",
     "searchCommentsPlaceholder": "टिप्पणियाँ खोजें",
     "searchDocumentPlaceholder": "दस्तावेज़ खोजें",
+    "searchSettingsPlaceholder": "खोज सेटिंग",
     "searchSuggestionsPlaceholder": "खोज सुझाव",
     "signHere": "यहाँ पर हस्ताक्षर करे",
     "insertTextHere": "यहां टेक्स्ट डालें",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "टूलबार समूह",
+      "flyoutLabel": "रिबन",
       "toolbarGroup-View": "राय",
       "toolbarGroup-Annotate": "एन्नोटेट",
       "toolbarGroup-Shapes": "आकार",
@@ -488,7 +506,10 @@
       "imageInitial": "छवि के प्रारंभिक अक्षर",
       "pickInitialsFile": "आद्याक्षर चुनें",
       "noSignatures": "वर्तमान में कोई सहेजे गए हस्ताक्षर नहीं हैं।",
-      "fontStyle": "लिपि शैली"
+      "fontStyle": "लिपि शैली",
+      "textSignature": {
+        "dropdownLabel": "फुहारा परिवार"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "आपकी फ़ाइलें",
@@ -543,7 +564,9 @@
       "autoSizeFont": "फ़ॉन्ट आकार को गतिशील रूप से स्केल करें"
     },
     "measurementOption": {
-      "scale": "स्केल"
+      "scale": "स्केल",
+      "selectScale": "स्केल चुनें",
+      "selectScaleDropdown": "स्केल ड्रॉपडाउन चुनें"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "मिनट",
       "second": "दूसरा",
       "textColor": "लिखावट का रंग",
-      "backgroundColor": "पीछे का रंग"
+      "backgroundColor": "पीछे का रंग",
+      "dateToolTipLabel": "दिनांक प्रारूप के बारे में अधिक जानकारी",
+      "previewCustomStamp": "का पूर्वावलोकन"
     },
     "pageRedactModal": {
       "addMark": "मार्क जोड़ें",
@@ -740,6 +765,7 @@
       "zoomOptions": "ज़ूम विकल्प",
       "zoomIn": "ज़ूम इन",
       "zoomOut": "ज़ूम आउट",
+      "setHeaderFocus": "हेडर पर फोकस सेट करता है",
       "fitScreenWidth": "छोटे स्क्रीन में दस्तावेज़ को स्क्रीन की चौड़ाई में फ़िट करें (< 640px), अन्यथा इसे उसके मूल आकार में फ़िट करें",
       "print": "छाप",
       "bookmarkOpenPanel": "जल्दी से एक पेज बुकमार्क करें और बुकमार्क पैनल खोलें",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "AnnotationCreateTextStrikeout टूल चुनें",
       "selectCreateTextUnderlineTool": "AnnotationCreateTextUnderline टूल चुनें",
       "editKeyboardShorcut": "कीबोर्ड शॉर्टकट संपादित करें",
-      "setShorcut": "शॉर्टकट सेट करें",
-      "pressKeyToSet": "नया शॉर्टकट सेट करने के लिए कुंजी या कुंजियां दबाएं।",
+      "setShortcut": "शॉर्टकट सेट करें",
+      "editShortcut": "शॉर्टकट संपादित करें",
       "shortcutAlreadyExists": "ऊपर दिया गया कीबोर्ड शॉर्टकट पहले से मौजूद है।",
       "close": "टूलटिप बंद करें"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": "अमान्य दिनांक/समय: इनपुट प्रारूप से मेल खाना चाहिए"
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "फॉर्म फ़ील्ड सूची",
+      "notFields": "इस दस्तावेज़ में कोई फ़ॉर्म फ़ील्ड नहीं है"
+    },
     "formFieldPopup": {
       "fieldName": "क्षेत्र का नाम",
       "fieldValue": "डिफ़ॉल्ट मान",
@@ -954,11 +984,14 @@
       "apply": "लागू करना",
       "cancel": "रद्द करें",
       "flags": "फील्ड झंडे",
+      "fieldSize": "मैदान की माप",
       "options": "विकल्प",
+      "properties": "गुण",
       "radioGroups": "समान फ़ील्ड नाम वाले रेडियो बटन उसी समूह में होंगे।",
       "nameRequired": "फ़ील्ड नाम आवश्यक है",
       "fieldIndicator": "फील्ड संकेतक",
       "documentFieldIndicator": "दस्तावेज़ फ़ील्ड संकेतक",
+      "includeFieldIndicator": "फ़ील्ड संकेतक शामिल करें",
       "indicatorPlaceHolders": {
         "TextFormField": "यहां टेक्स्ट डालें",
         "CheckBoxFormField": "जांच",
@@ -978,6 +1011,14 @@
         "empty": "फ़ील्ड का नाम खाली नहीं हो सकता"
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "हस्ताक्षर फ़ील्ड एनोटेशन",
+      "CheckBoxFormField": "चेकबॉक्स फ़ील्ड एनोटेशन",
+      "RadioButtonFormField": "रेडियो बटन फ़ील्ड एनोटेशन",
+      "ListBoxFormField": "सूची बॉक्स फ़ील्ड एनोटेशन",
+      "ComboBoxFormField": "कॉम्बो बॉक्स फ़ील्ड एनोटेशन",
+      "TextFormField": "टेक्स्ट फ़ील्ड एनोटेशन"
+    },
     "apply": "फ़ील्ड लागू करें",
     "type": "क्षेत्र के जैसा",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "चेक बॉक्स",
       "radio": "रेडियो की बटन",
       "listbox": "सूची बाक्स",
-      "combobox": "सम्मिश्रण पटी"
+      "combobox": "सम्मिश्रण पटी",
+      "button": "बटन"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "सही संरेखित करें",
     "justify": "न्यायोचित ठहराना",
     "lineSpacing": "लाइन और पैराग्राफ स्पेसिंग",
+    "lineSpacingMenu": "पंक्ति रिक्ति",
     "bulletList": "बुलेटेड सूची",
     "numberList": "क्रमांकित सूची",
     "decreaseIndent": "समान का आर्डर कम करें",
     "increaseIndent": "बढ़ते हुए अंतर में",
+    "nonPrintingCharacters": "गैर-मुद्रण वर्ण",
     "insertLink": "लिंक डालें",
     "insertImage": "चित्र डालें",
+    "image": "छवि",
     "table": "मेज़",
     "insertRowAbove": "ऊपर पंक्ति सम्मिलित करें",
     "insertRowBelow": "नीचे पंक्ति सम्मिलित करें",
@@ -1250,10 +1295,28 @@
     "pastingMessage": "आपके ब्राउज़र में पेस्ट करना समर्थित नहीं है। इसके बजाय, आप कीबोर्ड शॉर्टकट का उपयोग कर सकते हैं",
     "pastingWithoutFormatTitle": "बिना फ़ॉर्मेटिंग के पेस्ट करना उपलब्ध नहीं है",
     "pastingWithoutFormatMessage": "आपके ब्राउज़र में बिना फ़ॉर्मेटिंग के पेस्ट करना समर्थित नहीं है। इसके बजाय, आप कीबोर्ड शॉर्टकट का उपयोग कर सकते हैं",
+    "lineSpacingOptions": {
+      "15": "1.5",
+      "115": "1.15",
+      "single": "अकेला",
+      "double": "दोहरा",
+      "custom": "रिवाज़"
+    },
     "numberDropdown": {
+      "6": "संख्या लैटिन रोमन 1",
+      "7": "संख्या दशमलव",
+      "8": "संख्या लैटिन रोमन 2",
+      "10": "लैटिन रोमन",
+      "11": "रोमन लैटिन संख्या",
       "dropdownLabel": "नंबरिंग प्रीसेट"
     },
     "bulletDropdown": {
+      "0": "गोली",
+      "1": "बुलेट स्क्वायर",
+      "2": "स्क्वायर बुलेट",
+      "3": "डायमंड",
+      "4": "जाँच करना",
+      "5": "तीर",
       "dropdownLabel": "बुलेट प्रीसेट"
     },
     "fontSize": {
@@ -1371,9 +1434,28 @@
       "redactionTextPlaceholder": "टेक्स्ट लेबल डालें",
       "contentEdit": "सामग्री संपादित करें"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "प्रारंभ पंक्ति शैली",
+      "middleLineStyleLabel": "मध्य रेखा शैली",
+      "endLineStyleLabel": "अंतिम पंक्ति शैली"
+    },
     "addColorToCustom": "कस्टम रंगों में जोड़ें",
-    "noToolSelected": "इस दस्तावेज़ में कोई परत नहीं है।",
-    "noToolStyle": "टूल में कोई स्टाइलिंग गुण नहीं हैं."
+    "noToolSelected": "उपकरण गुण देखने के लिए कोई उपकरण चुनें",
+    "noToolStyle": "टूल में कोई स्टाइलिंग गुण नहीं हैं.",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "लाइन प्रारंभ"
+      },
+      "end": {
+        "dropdownLabel": "पंक्ति अंत"
+      },
+      "middle": {
+        "dropdownLabel": "रेखा मध्य"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "सीमा"
+    }
   },
   "signatureListPanel": {
     "header": "हस्ताक्षर सूची",
@@ -1390,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "रंग चुनने वाली मशीन"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "शीर्ष हेडर",
+      "leftHeader": "बायां हेडर",
+      "rightHeader": "दायाँ हेडर",
+      "bottomHeader": "निचला हेडर",
+      "documentContent": "दस्तावेज़ सामग्री"
+    }
   }
 }

@@ -26,6 +26,8 @@
     "ungroup": "Κατάργηση ομαδοποίησης",
     "download": "Κατεβάστε",
     "edit": "Επεξεργασία",
+    "collapse": "Κατάρρευση",
+    "expand": "Διαστέλλω",
     "extract": "Εκχύλισμα",
     "extractPage": "Εξαγωγή σελίδας",
     "enterFullscreen": "ΠΛΗΡΗΣ ΟΘΟΝΗ",
@@ -35,7 +37,9 @@
     "fitToWidth": "Ταιριάζει στο πλάτος",
     "more": "Περισσότερο",
     "openFile": "Ανοιγμα αρχείου",
+    "showMoreFiles": "Εμφάνιση περισσότερων αρχείων",
     "page": "Σελίδα",
+    "of": "του",
     "pagePrev": "Προηγούμενη σελίδα",
     "pageNext": "Επόμενη σελίδα",
     "pageSet": "Ορισμός σελίδας",
@@ -43,6 +47,7 @@
     "proceed": "Προχωρώ",
     "name": "Ονομα",
     "rename": "Μετονομάζω",
+    "remove": "Αφαιρώ",
     "ok": "Εντάξει",
     "rotate": "Προσανατολισμός σελίδας",
     "rotate3D": "Γυρίζω",
@@ -109,6 +114,10 @@
     "moveToBottom": "Μετακίνηση προς τα κάτω",
     "movePageToTop": "Μετακίνηση σελίδας στην κορυφή",
     "movePageToBottom": "Μετακινήστε τη σελίδα στο κάτω μέρος",
+    "moveUp": "Μετακίνηση προς τα πάνω",
+    "moveDown": "Μετακίνηση προς τα κάτω",
+    "moveLeft": "Μετακίνηση Αριστερά",
+    "moveRight": "Μετακίνηση Δεξιά",
     "backToMenu": "Πίσω στο μενού",
     "redactPages": "Επεξεργασία σελίδων",
     "playAudio": "Αναπαραγωγή ήχου",
@@ -121,6 +130,7 @@
     "comparePages": "Συγκρίνετε σελίδες",
     "startComparison": "Έναρξη σύγκρισης",
     "showComparison": "Εμφάνιση σύγκρισης",
+    "highlightChanges": "Επισημάνετε τις αλλαγές",
     "back": "Πίσω",
     "clearSignature": "Καθαρή υπογραφή",
     "clearInitial": "Καθαρό αρχικό",
@@ -133,7 +143,8 @@
     "copySelectedColor": "Αντιγραφή επιλεγμένου χρώματος",
     "showMoreColors": "Εμφάνιση περισσότερων χρωμάτων",
     "showLessColors": "Εμφάνιση λιγότερων χρωμάτων",
-    "fromCustomColorPicker": "από το Custom Color Picker"
+    "fromCustomColorPicker": "από το Custom Color Picker",
+    "newSheetDocument": "Νέο υπολογιστικό φύλλο"
   },
   "annotation": {
     "areaMeasurement": "Περιοχή",
@@ -225,6 +236,7 @@
     "searchPanel": "Αναζήτηση",
     "menuOverlay": "Μενού",
     "notesPanel": "Σχόλια",
+    "indexPanel": "Πίνακας ευρετηρίου",
     "outlinePanel": "Περίγραμμα",
     "outlinesPanel": "Περιγράμματα",
     "newOutlineTitle": "Νέος τίτλος περιλήψεων",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "Μικρογραφίες",
     "toolsButton": "Εργαλεία",
     "redaction": "Γραφή",
-    "viewControlsOverlay": "Προβολή στοιχείων ελέγχου",
+    "viewControls": "Προβολή στοιχείων ελέγχου",
+    "pageControls": "Στοιχεία ελέγχου σελίδας",
     "calibration": "Βαθμονόμηση",
     "zoomOverlay": "Επικάλυψη ζουμ",
     "textPopup": "Αναδυόμενο παράθυρο κειμένου",
@@ -248,14 +261,17 @@
     "multiSelectButton": "Πολλαπλή επιλογή",
     "pageReplaceModalTitle": "Αντικατάσταση σελίδας",
     "files": "Αρχεία",
+    "file": "Αρχείο",
     "editText": "Επεξεργασία κειμένου",
     "redactionPanel": "Πίνακας Σύνταξης",
+    "tabLabel": "Αυτί",
     "noteGroupSection": {
       "open": "Προβολή όλων των σχολιασμών",
       "close": "Κλείστε όλους τους σχολιασμούς"
     },
     "comparePanel": "Πίνακας σύγκρισης",
-    "watermarkPanel": "Πίνακας υδατογραφήματος"
+    "watermarkPanel": "Πίνακας υδατογραφήματος",
+    "mainMenu": "Κύριο Μενού"
   },
   "message": {
     "showMore": "Δείτε περισσότερα",
@@ -288,6 +304,7 @@
     "searching": "Ερευνητικός...",
     "searchCommentsPlaceholder": "Αναζήτηση σχολίων",
     "searchDocumentPlaceholder": "Αναζήτηση εγγράφου",
+    "searchSettingsPlaceholder": "Ρυθμίσεις αναζήτησης",
     "searchSuggestionsPlaceholder": "Προτάσεις αναζήτησης",
     "signHere": "Υπόγραψε εδώ",
     "insertTextHere": "Εισαγάγετε κείμενο εδώ",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "Ομάδες γραμμής εργαλείων",
+      "flyoutLabel": "Ταινία",
       "toolbarGroup-View": "Θέα",
       "toolbarGroup-Annotate": "Σχολιάζω",
       "toolbarGroup-Shapes": "Σχήματα",
@@ -488,7 +506,10 @@
       "imageInitial": "Αρχικά εικόνας",
       "pickInitialsFile": "Επιλέξτε Αρχικά",
       "noSignatures": "Αυτήν τη στιγμή δεν υπάρχουν αποθηκευμένες υπογραφές.",
-      "fontStyle": "στυλ γραμματοσειράς"
+      "fontStyle": "στυλ γραμματοσειράς",
+      "textSignature": {
+        "dropdownLabel": "Οικογένεια γραμματοσειρών"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "Τα αρχεία σας",
@@ -543,7 +564,9 @@
       "autoSizeFont": "Κλιμάκωση μεγέθους γραμματοσειράς δυναμικά"
     },
     "measurementOption": {
-      "scale": "Κλίμακα"
+      "scale": "Κλίμακα",
+      "selectScale": "Επιλέξτε Κλίμακα",
+      "selectScaleDropdown": "Επιλέξτε Αναπτυσσόμενη κλίμακα"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "Λεπτό",
       "second": "Δεύτερος",
       "textColor": "Χρώμα κειμένου",
-      "backgroundColor": "Χρώμα του φόντου"
+      "backgroundColor": "Χρώμα του φόντου",
+      "dateToolTipLabel": "Περισσότερες πληροφορίες σχετικά με τη μορφή ημερομηνίας",
+      "previewCustomStamp": "Προεπισκόπηση του"
     },
     "pageRedactModal": {
       "addMark": "Προσθήκη σήμανσης",
@@ -740,6 +765,7 @@
       "zoomOptions": "Επιλογές ζουμ",
       "zoomIn": "Μεγέθυνση",
       "zoomOut": "Σμίκρυνση",
+      "setHeaderFocus": "Ορίζει την εστίαση στην κεφαλίδα",
       "fitScreenWidth": "Τοποθετήστε το έγγραφο στο πλάτος της οθόνης σε μια μικρή οθόνη (< 640 px), διαφορετικά προσαρμόστε το στο αρχικό του μέγεθος",
       "print": "Τυπώνω",
       "bookmarkOpenPanel": "Προσθέστε γρήγορα σελιδοδείκτη σε μια σελίδα και ανοίξτε τον πίνακα σελιδοδεικτών",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "Επιλέξτε το εργαλείο AnnotationCreateTextStrikeout",
       "selectCreateTextUnderlineTool": "Επιλέξτε το εργαλείο AnnotationCreateTextUnderline",
       "editKeyboardShorcut": "Επεξεργασία συντόμευσης πληκτρολογίου",
-      "setShorcut": "Ορισμός συντόμευσης",
-      "pressKeyToSet": "Πατήστε το πλήκτρο ή τα πλήκτρα για να ορίσετε νέα συντόμευση.",
+      "setShortcut": "Ορισμός συντόμευσης",
+      "editShortcut": "Επεξεργασία συντόμευσης",
       "shortcutAlreadyExists": "Η παραπάνω συντόμευση πληκτρολογίου υπάρχει ήδη.",
       "close": "Κλείστε την επεξήγηση εργαλείου"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": "Μη έγκυρη ημερομηνία/ώρα: Η εισαγωγή πρέπει να ταιριάζει με τη μορφή"
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "Λίστα πεδίων φόρμας",
+      "notFields": "Αυτό το έγγραφο δεν έχει πεδία φόρμας"
+    },
     "formFieldPopup": {
       "fieldName": "Ονομα πεδίου",
       "fieldValue": "Προεπιλεγμένη τιμή",
@@ -954,11 +984,14 @@
       "apply": "Ισχύουν",
       "cancel": "Ματαίωση",
       "flags": "Σημαίες πεδίου",
+      "fieldSize": "Μέγεθος πεδίου",
       "options": "Επιλογές",
+      "properties": "Ιδιότητες",
       "radioGroups": "Τα κουμπιά επιλογής με το ίδιο όνομα πεδίου θα ανήκουν στην ίδια ομαδοποίηση.",
       "nameRequired": "Το όνομα πεδίου είναι υποχρεωτικό",
       "fieldIndicator": "Ενδείξεις πεδίου",
       "documentFieldIndicator": "Ενδείξεις πεδίων εγγράφου",
+      "includeFieldIndicator": "Συμπεριλάβετε την ένδειξη πεδίου",
       "indicatorPlaceHolders": {
         "TextFormField": "Εισαγωγή κειμένου εδώ",
         "CheckBoxFormField": "Ελεγχος",
@@ -978,6 +1011,14 @@
         "empty": "Το όνομα πεδίου δεν μπορεί να είναι κενό"
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "Σχολιασμός πεδίου υπογραφής",
+      "CheckBoxFormField": "Σχολιασμός πεδίου πλαισίου ελέγχου",
+      "RadioButtonFormField": "Σχολιασμός πεδίου κουμπιού ραδιοφώνου",
+      "ListBoxFormField": "Σχολιασμός πεδίου πλαισίου λίστας",
+      "ComboBoxFormField": "Σχολιασμός πεδίου Combo Box",
+      "TextFormField": "Σχολιασμός πεδίου κειμένου"
+    },
     "apply": "Πεδία εφαρμογής",
     "type": "Τύπος πεδίου",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "Πλαίσιο ελέγχου",
       "radio": "Κουμπί ραδιοφώνου",
       "listbox": "Πλαίσιο λίστας",
-      "combobox": "Combo box"
+      "combobox": "Combo box",
+      "button": "Κουμπί"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "Δεξιά στοίχιση",
     "justify": "Δικαιολογώ",
     "lineSpacing": "Διάστιχο γραμμών και παραγράφων",
+    "lineSpacingMenu": "Διάστιχο",
     "bulletList": "Λίστα με κουκκίδες",
     "numberList": "Αριθμημένη λίστα",
     "decreaseIndent": "Μείωση εσοχής",
     "increaseIndent": "Αύξηση εσοχής",
+    "nonPrintingCharacters": "Μη εκτυπωτικοί χαρακτήρες",
     "insertLink": "Εισαγωγή συνδέσμου",
     "insertImage": "Εισαγωγή εικόνας",
+    "image": "Εικών",
     "table": "Τραπέζι",
     "insertRowAbove": "Εισαγάγετε τη σειρά πάνω",
     "insertRowBelow": "Εισαγάγετε τη σειρά παρακάτω",
@@ -1250,10 +1295,28 @@
     "pastingMessage": "Η επικόλληση δεν υποστηρίζεται στο πρόγραμμα περιήγησής σας. Αντίθετα, μπορείτε να χρησιμοποιήσετε μια συντόμευση πληκτρολογίου",
     "pastingWithoutFormatTitle": "Η επικόλληση χωρίς μορφοποίηση δεν είναι διαθέσιμη",
     "pastingWithoutFormatMessage": "Η επικόλληση χωρίς μορφοποίηση δεν υποστηρίζεται στο πρόγραμμα περιήγησής σας. Αντίθετα, μπορείτε να χρησιμοποιήσετε μια συντόμευση πληκτρολογίου",
+    "lineSpacingOptions": {
+      "15": "1.5",
+      "115": "1.15",
+      "single": "Μονόκλινο",
+      "double": "Διπλό",
+      "custom": "Εθιμο"
+    },
     "numberDropdown": {
+      "6": "Αριθμός Λατινική Ρωμαϊκή 1",
+      "7": "Αριθμός Δεκαδικός",
+      "8": "Αριθμός Λατινική Ρωμαϊκή 2",
+      "10": "Λατινική Ρωμαϊκή",
+      "11": "Ρωμαϊκός λατινικός αριθμός",
       "dropdownLabel": "Προεπιλογές αρίθμησης"
     },
     "bulletDropdown": {
+      "0": "Σφαίρα",
+      "1": "Πλατεία Bullet",
+      "2": "Τετράγωνη σφαίρα",
+      "3": "Διαμάντι",
+      "4": "Ελεγχος",
+      "5": "Βέλος",
       "dropdownLabel": "Προεπιλογές κουκκίδων"
     },
     "fontSize": {
@@ -1371,9 +1434,28 @@
       "redactionTextPlaceholder": "Εισαγωγή ετικέτας κειμένου",
       "contentEdit": "Επεξεργασία περιεχομένου"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "Στυλ γραμμής έναρξης",
+      "middleLineStyleLabel": "Στυλ μεσαίας γραμμής",
+      "endLineStyleLabel": "Στυλ Τελικής Γραμμής"
+    },
     "addColorToCustom": "Προσθήκη στα προσαρμοσμένα χρώματα",
-    "noToolSelected": "Αυτό το έγγραφο δεν περιέχει επίπεδα.",
-    "noToolStyle": "Το εργαλείο δεν περιέχει ιδιότητες styling."
+    "noToolSelected": "Επιλέξτε ένα εργαλείο για να δείτε τις ιδιότητες του εργαλείου",
+    "noToolStyle": "Το εργαλείο δεν περιέχει ιδιότητες styling.",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "Έναρξη γραμμής"
+      },
+      "end": {
+        "dropdownLabel": "Τέλος γραμμής"
+      },
+      "middle": {
+        "dropdownLabel": "Γραμμή Μέση"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "Σύνορο"
+    }
   },
   "signatureListPanel": {
     "header": "Λίστα υπογραφών",
@@ -1390,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "Επιλογέας χρώματος"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "Κορυφαία κεφαλίδα",
+      "leftHeader": "Αριστερή κεφαλίδα",
+      "rightHeader": "Δεξιά κεφαλίδα",
+      "bottomHeader": "Κάτω κεφαλίδα",
+      "documentContent": "Περιεχόμενο εγγράφου"
+    }
   }
 }

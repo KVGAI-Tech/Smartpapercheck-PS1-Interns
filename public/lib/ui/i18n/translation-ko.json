@@ -26,6 +26,8 @@
     "ungroup": "그룹해제",
     "download": "다운로드",
     "edit": "편집",
+    "collapse": "무너지다",
+    "expand": "확장하다",
     "extract": "선택페이지 다운로드",
     "extractPage": "페이지 추출",
     "enterFullscreen": "전체화면",
@@ -35,7 +37,9 @@
     "fitToWidth": "너비에 맞추기",
     "more": "더보기",
     "openFile": "파일열기",
+    "showMoreFiles": "더 많은 파일 표시",
     "page": "페이지",
+    "of": "~의",
     "pagePrev": "이전페이지",
     "pageNext": "다음페이지",
     "pageSet": "페이지설정",
@@ -43,6 +47,7 @@
     "proceed": "계속",
     "name": "이름",
     "rename": "이름바꾸기",
+    "remove": "제거하다",
     "ok": "확인",
     "rotate": "회전",
     "rotate3D": "3D회전",
@@ -109,6 +114,10 @@
     "moveToBottom": "맨 아래로 이동",
     "movePageToTop": "페이지를 맨 위로 이동",
     "movePageToBottom": "페이지를 아래쪽으로 이동",
+    "moveUp": "위로 이동",
+    "moveDown": "아래로 이동",
+    "moveLeft": "왼쪽으로 이동",
+    "moveRight": "오른쪽으로 이동",
     "backToMenu": "메뉴로 돌아가기",
     "redactPages": "페이지 수정",
     "playAudio": "재생",
@@ -121,6 +130,7 @@
     "comparePages": "페이지 비교",
     "startComparison": "비교 시작",
     "showComparison": "비교 표시",
+    "highlightChanges": "변경 사항 강조",
     "back": "뒤",
     "clearSignature": "명확한 서명",
     "clearInitial": "초기값 지우기",
@@ -133,7 +143,8 @@
     "copySelectedColor": "선택한 색상 복사",
     "showMoreColors": "더 많은 색상 표시",
     "showLessColors": "색상 줄이기",
-    "fromCustomColorPicker": "사용자 정의 색상 선택기에서"
+    "fromCustomColorPicker": "사용자 정의 색상 선택기에서",
+    "newSheetDocument": "새로운 스프레드시트"
   },
   "annotation": {
     "areaMeasurement": "면적측정",
@@ -225,6 +236,7 @@
     "searchPanel": "검색",
     "menuOverlay": "메뉴",
     "notesPanel": "참고",
+    "indexPanel": "인덱스 패널",
     "outlinePanel": "개요",
     "outlinesPanel": "개요",
     "newOutlineTitle": "새 개요 제목",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "미리보기",
     "toolsButton": "도구",
     "redaction": "수정 삭제",
-    "viewControlsOverlay": "컨트롤 보기",
+    "viewControls": "컨트롤 보기",
+    "pageControls": "페이지 컨트롤",
     "calibration": "구경 측정",
     "zoomOverlay": "줌 오버레이",
     "textPopup": "텍스트 팝업",
@@ -248,14 +261,17 @@
     "multiSelectButton": "다중 선택",
     "pageReplaceModalTitle": "페이지 바꾸기",
     "files": "파일",
+    "file": "파일",
     "editText": "텍스트 편집",
     "redactionPanel": "교정 패널",
+    "tabLabel": "꼬리표",
     "noteGroupSection": {
       "open": "모든 주석 보기",
       "close": "모든 주석 닫기"
     },
     "comparePanel": "비교 패널",
-    "watermarkPanel": "워터마크 패널"
+    "watermarkPanel": "워터마크 패널",
+    "mainMenu": "메인 메뉴"
   },
   "message": {
     "showMore": "자세히보기",
@@ -288,6 +304,7 @@
     "searching": "검색 중...",
     "searchCommentsPlaceholder": "코멘트 검색",
     "searchDocumentPlaceholder": "문서 검색",
+    "searchSettingsPlaceholder": "검색 설정",
     "searchSuggestionsPlaceholder": "검색 제안",
     "signHere": "여기에 서명하세요",
     "insertTextHere": "여기에 텍스트를 입력하세요",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "도구모음",
+      "flyoutLabel": "리본",
       "toolbarGroup-View": "보기",
       "toolbarGroup-Annotate": "주석",
       "toolbarGroup-Shapes": "도형",
@@ -488,7 +506,10 @@
       "imageInitial": "이미지 이니셜",
       "pickInitialsFile": "이니셜 선택",
       "noSignatures": "현재 저장된 서명이 없습니다.",
-      "fontStyle": "글꼴 스타일"
+      "fontStyle": "글꼴 스타일",
+      "textSignature": {
+        "dropdownLabel": "글꼴 패밀리"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "내 파일",
@@ -543,7 +564,9 @@
       "autoSizeFont": "글꼴 크기를 동적으로 조정"
     },
     "measurementOption": {
-      "scale": "배율"
+      "scale": "배율",
+      "selectScale": "스케일 선택",
+      "selectScaleDropdown": "스케일 드롭다운 선택"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "분",
       "second": "초",
       "textColor": "텍스트 색상",
-      "backgroundColor": "배경색"
+      "backgroundColor": "배경색",
+      "dateToolTipLabel": "날짜 형식에 대한 자세한 정보",
+      "previewCustomStamp": "미리보기"
     },
     "pageRedactModal": {
       "addMark": "마크 추가",
@@ -740,6 +765,7 @@
       "zoomOptions": "확대/축소 옵션",
       "zoomIn": "확대",
       "zoomOut": "축소",
+      "setHeaderFocus": "헤더에 초점을 맞춥니다.",
       "fitScreenWidth": "작은 화면(< 640px)에서 문서를 화면 너비에 맞춥니다. 그렇지 않으면 원본 크기에 맞춥니다.",
       "print": "인쇄",
       "bookmarkOpenPanel": "페이지를 빠르게 북마크하고 북마크 패널 열기",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "AnnotationCreateTextStrikeout 도구를 선택합니다.",
       "selectCreateTextUnderlineTool": "AnnotationCreateTextUnderline 도구를 선택합니다.",
       "editKeyboardShorcut": "키보드 단축키 편집",
-      "setShorcut": "바로 가기 설정",
-      "pressKeyToSet": "새 바로 가기를 설정하려면 키 또는 키를 누르십시오.",
+      "setShortcut": "바로가기 설정",
+      "editShortcut": "편집 단축키",
       "shortcutAlreadyExists": "위의 키보드 단축키가 이미 존재합니다.",
       "close": "툴팁 닫기"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": " 입력한 날짜/시간 형식이 일치하지 않습니다."
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "양식 필드 목록",
+      "notFields": "이 문서에는 양식 필드가 없습니다."
+    },
     "formFieldPopup": {
       "fieldName": "양식이름",
       "fieldValue": "기본값",
@@ -954,11 +984,14 @@
       "apply": "적용",
       "cancel": "취소",
       "flags": "양식옵션",
+      "fieldSize": "필드 크기",
       "options": "양식목록",
+      "properties": "속성",
       "radioGroups": "동일한 양식이름을 가진 라디오버튼은 동일한 그룹에 속합니다.",
       "nameRequired": "양식이름을 입력하세요.",
       "fieldIndicator": "필드 표시기",
       "documentFieldIndicator": "문서 필드 표시기",
+      "includeFieldIndicator": "필드 표시기 포함",
       "indicatorPlaceHolders": {
         "TextFormField": "여기에 텍스트 삽입",
         "CheckBoxFormField": "확인하다",
@@ -978,6 +1011,14 @@
         "empty": "양식이름을 입력하세요."
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "서명 필드 주석",
+      "CheckBoxFormField": "체크박스 필드 주석",
+      "RadioButtonFormField": "라디오 버튼 필드 주석",
+      "ListBoxFormField": "목록 상자 필드 주석",
+      "ComboBoxFormField": "콤보 상자 필드 주석",
+      "TextFormField": "텍스트 필드 주석"
+    },
     "apply": "적용",
     "type": "양식유형",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "체크박스",
       "radio": "라디오버튼",
       "listbox": "리스트박스",
-      "combobox": "콤보박스"
+      "combobox": "콤보박스",
+      "button": "단추"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "오른쪽 정렬",
     "justify": "신이 옳다고 하다",
     "lineSpacing": "줄 및 단락 간격",
+    "lineSpacingMenu": "줄 간격",
     "bulletList": "요점 목록",
     "numberList": "번호가 매겨진 목록",
     "decreaseIndent": "들여쓰기 줄이기",
     "increaseIndent": "들여쓰기 증가",
+    "nonPrintingCharacters": "인쇄할 수 없는 문자",
     "insertLink": "링크 삽입",
     "insertImage": "이미지 삽입",
+    "image": "영상",
     "table": "테이블",
     "insertRowAbove": "위에 행 삽입",
     "insertRowBelow": "아래에 행 삽입",
@@ -1250,10 +1295,28 @@
     "pastingMessage": "귀하의 브라우저에서는 붙여넣기가 지원되지 않습니다. 대신 키보드 단축키를 사용할 수 있습니다.",
     "pastingWithoutFormatTitle": "서식을 지정하지 않고 붙여넣을 수 없습니다.",
     "pastingWithoutFormatMessage": "서식을 지정하지 않고 붙여넣는 기능은 해당 브라우저에서 지원되지 않습니다. 대신 키보드 단축키를 사용할 수 있습니다.",
+    "lineSpacingOptions": {
+      "15": "1.5",
+      "115": "1.15",
+      "single": "하나의",
+      "double": "더블",
+      "custom": "관습"
+    },
     "numberDropdown": {
+      "6": "숫자 라틴 로마 1",
+      "7": "숫자 소수점",
+      "8": "숫자 라틴 로마 2",
+      "10": "라틴 로마",
+      "11": "로마 라틴 숫자",
       "dropdownLabel": "번호 매기기 사전 설정"
     },
     "bulletDropdown": {
+      "0": "총알",
+      "1": "총알 광장",
+      "2": "정사각형 총알",
+      "3": "다이아몬드",
+      "4": "확인하다",
+      "5": "화살",
       "dropdownLabel": "총알 사전 설정"
     },
     "fontSize": {
@@ -1371,9 +1434,28 @@
       "redactionTextPlaceholder": "텍스트 라벨 삽입",
       "contentEdit": "내용 편집"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "시작 라인 스타일",
+      "middleLineStyleLabel": "중간선 스타일",
+      "endLineStyleLabel": "종료 라인 스타일"
+    },
     "addColorToCustom": "사용자 정의 색상에 추가",
-    "noToolSelected": "이 문서에는 레이어가 포함되어 있지 않습니다.",
-    "noToolStyle": "도구에는 스타일 속성이 포함되어 있지 않습니다."
+    "noToolSelected": "도구 속성을 보려면 도구를 선택하세요",
+    "noToolStyle": "도구에는 스타일 속성이 포함되어 있지 않습니다.",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "라인 시작"
+      },
+      "end": {
+        "dropdownLabel": "라인 종료"
+      },
+      "middle": {
+        "dropdownLabel": "라인 중간"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "국경"
+    }
   },
   "signatureListPanel": {
     "header": "서명 목록",
@@ -1390,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "색상 선택기"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "상단 헤더",
+      "leftHeader": "왼쪽 헤더",
+      "rightHeader": "오른쪽 헤더",
+      "bottomHeader": "하단 헤더",
+      "documentContent": "문서 내용"
+    }
   }
 }

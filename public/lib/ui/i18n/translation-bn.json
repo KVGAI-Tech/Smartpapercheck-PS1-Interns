@@ -26,6 +26,8 @@
     "ungroup": "আনগ্রুপ করুন",
     "download": "ডাউনলোড করুন",
     "edit": "সম্পাদনা করুন",
+    "collapse": "সঙ্কুচিত",
+    "expand": "প্রসারিত করুন",
     "extract": "নির্যাস",
     "extractPage": "পৃষ্ঠা এক্সট্র্যাক্ট করুন",
     "enterFullscreen": "পূর্ণ পর্দা",
@@ -35,7 +37,9 @@
     "fitToWidth": "প্রস্থে মাপসই",
     "more": "আরও",
     "openFile": "খোলা ফাইল",
+    "showMoreFiles": "আরও ফাইল দেখান",
     "page": "পাতা",
+    "of": "এর",
     "pagePrev": "আগের পৃষ্ঠা",
     "pageNext": "পরবর্তী পৃষ্ঠা",
     "pageSet": "পৃষ্ঠা সেট করুন",
@@ -43,6 +47,7 @@
     "proceed": "এগিয়ে যান",
     "name": "নাম",
     "rename": "নাম পরিবর্তন করুন",
+    "remove": "সরান",
     "ok": "ঠিক আছে",
     "rotate": "পৃষ্ঠা ওরিয়েন্টেশন",
     "rotate3D": "আবর্তিত",
@@ -109,6 +114,10 @@
     "moveToBottom": "নীচে সরান",
     "movePageToTop": "পৃষ্ঠাটি শীর্ষে সরান৷",
     "movePageToBottom": "পৃষ্ঠাটি নীচে সরান",
+    "moveUp": "উপরে যান",
+    "moveDown": "নিচে যান",
+    "moveLeft": "বামে সরান",
+    "moveRight": "ডানদিকে সরান",
     "backToMenu": "মেনুতে ফিরে যান",
     "redactPages": "পৃষ্ঠাগুলি সংশোধন করুন",
     "playAudio": "অডিও চালান",
@@ -121,6 +130,7 @@
     "comparePages": "পৃষ্ঠাগুলির তুলনা করুন",
     "startComparison": "তুলনা শুরু করুন",
     "showComparison": "তুলনা দেখান",
+    "highlightChanges": "হাইলাইট পরিবর্তন",
     "back": "পেছনে",
     "clearSignature": "সাফ স্বাক্ষর",
     "clearInitial": "পরিষ্কার প্রাথমিক",
@@ -133,7 +143,8 @@
     "copySelectedColor": "নির্বাচিত রঙ অনুলিপি করুন",
     "showMoreColors": "আরো রং দেখান",
     "showLessColors": "কম রং দেখান",
-    "fromCustomColorPicker": "কাস্টম কালার পিকার থেকে"
+    "fromCustomColorPicker": "কাস্টম কালার পিকার থেকে",
+    "newSheetDocument": "নতুন স্প্রেডশীট"
   },
   "annotation": {
     "areaMeasurement": "এলাকা",
@@ -225,6 +236,7 @@
     "searchPanel": "অনুসন্ধান করুন",
     "menuOverlay": "তালিকা",
     "notesPanel": "মন্তব্য",
+    "indexPanel": "সূচক প্যানেল",
     "outlinePanel": "রূপরেখা",
     "outlinesPanel": "রূপরেখা",
     "newOutlineTitle": "নতুন আউটলাইন শিরোনাম",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "থাম্বনেল",
     "toolsButton": "টুলস",
     "redaction": "লেখা",
-    "viewControlsOverlay": "কন্ট্রোল দেখুন",
+    "viewControls": "কন্ট্রোল দেখুন",
+    "pageControls": "পৃষ্ঠা নিয়ন্ত্রণ",
     "calibration": "ক্রমাঙ্কন",
     "zoomOverlay": "জুম ওভারলে",
     "textPopup": "পাঠ্য পপআপ",
@@ -248,14 +261,17 @@
     "multiSelectButton": "মাল্টি সিলেক্ট",
     "pageReplaceModalTitle": "পৃষ্ঠা প্রতিস্থাপন করুন",
     "files": "নথি পত্র",
+    "file": "ফাইল",
     "editText": "লেখা সম্পাদনা",
     "redactionPanel": "রিডাকশন প্যানেল",
+    "tabLabel": "ট্যাব",
     "noteGroupSection": {
       "open": "সমস্ত টীকা দেখুন",
       "close": "সমস্ত টীকা বন্ধ করুন"
     },
     "comparePanel": "প্যানেল তুলনা করুন",
-    "watermarkPanel": "ওয়াটারমার্ক প্যানেল"
+    "watermarkPanel": "ওয়াটারমার্ক প্যানেল",
+    "mainMenu": "প্রধান মেনু"
   },
   "message": {
     "showMore": "আরো দেখুন",
@@ -288,6 +304,7 @@
     "searching": "অনুসন্ধান করা হচ্ছে...",
     "searchCommentsPlaceholder": "মন্তব্য অনুসন্ধান করুন",
     "searchDocumentPlaceholder": "নথি অনুসন্ধান করুন",
+    "searchSettingsPlaceholder": "অনুসন্ধান সেটিংস",
     "searchSuggestionsPlaceholder": "অনুসন্ধান পরামর্শ",
     "signHere": "এখানে স্বাক্ষর কর",
     "insertTextHere": "এখানে পাঠ্য সন্নিবেশ করুন",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "টুলবার গ্রুপ",
+      "flyoutLabel": "ফিতা",
       "toolbarGroup-View": "দেখুন",
       "toolbarGroup-Annotate": "টীকা",
       "toolbarGroup-Shapes": "আকার",
@@ -488,7 +506,10 @@
       "imageInitial": "ছবির আদ্যক্ষর",
       "pickInitialsFile": "আদ্যক্ষর নির্বাচন করুন",
       "noSignatures": "বর্তমানে কোনো সংরক্ষিত স্বাক্ষর নেই।",
-      "fontStyle": "ফন্ট-স্টাইল"
+      "fontStyle": "ফন্ট-স্টাইল",
+      "textSignature": {
+        "dropdownLabel": "ফন্ট পরিবার"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "আপনার ফাইল",
@@ -543,7 +564,9 @@
       "autoSizeFont": "গতিশীলভাবে ফন্টের আকার স্কেল করুন"
     },
     "measurementOption": {
-      "scale": "স্কেল"
+      "scale": "স্কেল",
+      "selectScale": "স্কেল নির্বাচন করুন",
+      "selectScaleDropdown": "স্কেল ড্রপডাউন নির্বাচন করুন"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "মিনিট",
       "second": "দ্বিতীয়",
       "textColor": "লেখার রঙ",
-      "backgroundColor": "পেছনের রং"
+      "backgroundColor": "পেছনের রং",
+      "dateToolTipLabel": "তারিখ বিন্যাস সম্পর্কে আরো তথ্য",
+      "previewCustomStamp": "এর পূর্বরূপ"
     },
     "pageRedactModal": {
       "addMark": "মার্ক যোগ করুন",
@@ -740,6 +765,7 @@
       "zoomOptions": "জুম অপশন",
       "zoomIn": "প্রসারিত করো",
       "zoomOut": "ছোট করা",
+      "setHeaderFocus": "হেডারে ফোকাস সেট করে",
       "fitScreenWidth": "একটি ছোট স্ক্রিনে (< 640px) পর্দার প্রস্থে ডকুমেন্টটি ফিট করুন, অন্যথায় এটি তার আসল আকারে ফিট করুন",
       "print": "ছাপা",
       "bookmarkOpenPanel": "দ্রুত একটি পৃষ্ঠা বুকমার্ক করুন এবং বুকমার্ক প্যানেল খুলুন",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "AnnotationCreateTextStrikeout টুলটি নির্বাচন করুন",
       "selectCreateTextUnderlineTool": "AnnotationCreateTextUnderline টুলটি নির্বাচন করুন",
       "editKeyboardShorcut": "কীবোর্ড শর্টকাট সম্পাদনা করুন",
-      "setShorcut": "শর্টকাট সেট করুন",
-      "pressKeyToSet": "নতুন শর্টকাট সেট করতে কী বা কী টিপুন।",
+      "setShortcut": "শর্টকাট সেট করুন",
+      "editShortcut": "শর্টকাট সম্পাদনা করুন",
       "shortcutAlreadyExists": "উপরের কীবোর্ড শর্টকাট ইতিমধ্যেই বিদ্যমান।",
       "close": "টুলটিপ বন্ধ করুন"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": "অবৈধ তারিখ/সময়: ইনপুট ফর্ম্যাটের সাথে মিলিত হওয়া উচিত"
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "ফর্ম ফিল্ড তালিকা",
+      "notFields": "এই নথিতে কোনো ফর্ম ক্ষেত্র নেই৷"
+    },
     "formFieldPopup": {
       "fieldName": "ক্ষেত্র নাম",
       "fieldValue": "ডিফল্ট মান",
@@ -954,11 +984,14 @@
       "apply": "আবেদন করুন",
       "cancel": "বাতিল করুন",
       "flags": "মাঠের পতাকা",
+      "fieldSize": "মাঠ আকৃতি",
       "options": "অপশন",
+      "properties": "বৈশিষ্ট্য",
       "radioGroups": "একই ক্ষেত্র নামের রেডিও বোতাম একই গোষ্ঠীভুক্ত হবে।",
       "nameRequired": "ক্ষেত্রের নাম প্রয়োজন",
       "fieldIndicator": "ক্ষেত্র নির্দেশক",
       "documentFieldIndicator": "ডকুমেন্ট ফিল্ড ইন্ডিকেটর",
+      "includeFieldIndicator": "ক্ষেত্র নির্দেশক অন্তর্ভুক্ত করুন",
       "indicatorPlaceHolders": {
         "TextFormField": "এখানে পাঠ্য সন্নিবেশ করুন",
         "CheckBoxFormField": "চেক করুন",
@@ -978,6 +1011,14 @@
         "empty": "ক্ষেত্রের নাম খালি রাখা যাবে না"
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "স্বাক্ষর ক্ষেত্রের টীকা",
+      "CheckBoxFormField": "চেকবক্স ফিল্ড টীকা",
+      "RadioButtonFormField": "রেডিও বোতাম ফিল্ড টীকা",
+      "ListBoxFormField": "লিস্ট বক্স ফিল্ড টীকা",
+      "ComboBoxFormField": "কম্বো বক্স ফিল্ড টীকা",
+      "TextFormField": "টেক্সট ফিল্ড টীকা"
+    },
     "apply": "ক্ষেত্র প্রয়োগ করুন",
     "type": "ক্ষেত্র প্রকার",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "চেক বক্স",
       "radio": "রেডিও বোতাম",
       "listbox": "তালিকা বাক্স",
-      "combobox": "কম্বো বাক্স"
+      "combobox": "কম্বো বাক্স",
+      "button": "বোতাম"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "ডান সারিবদ্ধ",
     "justify": "ন্যায্যতা",
     "lineSpacing": "লাইন এবং অনুচ্ছেদের ব্যবধান",
+    "lineSpacingMenu": "লাইন ব্যবধান",
     "bulletList": "বুলেটেড তালিকা",
     "numberList": "সংখ্যাযুক্ত তালিকা",
     "decreaseIndent": "ঘটণা হ্রাস",
     "increaseIndent": "ইন্ডেন্ট বাড়ান",
+    "nonPrintingCharacters": "অ মুদ্রণ অক্ষর",
     "insertLink": "লিঙ্ক ঢোকান",
     "insertImage": "ছবি ঢোকান",
+    "image": "ছবি",
     "table": "টেবিল",
     "insertRowAbove": "উপরে সারি ঢোকান",
     "insertRowBelow": "নীচে সারি সন্নিবেশ করান",
@@ -1250,10 +1295,28 @@
     "pastingMessage": "পেস্ট করা আপনার ব্রাউজারে সমর্থিত নয়। পরিবর্তে, আপনি একটি কীবোর্ড শর্টকাট ব্যবহার করতে পারেন",
     "pastingWithoutFormatTitle": "বিন্যাস ছাড়া আটকানো উপলব্ধ নয়",
     "pastingWithoutFormatMessage": "বিন্যাস ছাড়া পেস্ট করা আপনার ব্রাউজারে সমর্থিত নয়। পরিবর্তে, আপনি একটি কীবোর্ড শর্টকাট ব্যবহার করতে পারেন",
+    "lineSpacingOptions": {
+      "15": "1.5",
+      "115": "1.15",
+      "single": "একক",
+      "double": "ডাবল",
+      "custom": "কাস্টম"
+    },
     "numberDropdown": {
+      "6": "সংখ্যা ল্যাটিন রোমান 1",
+      "7": "সংখ্যা দশমিক",
+      "8": "সংখ্যা ল্যাটিন রোমান 2",
+      "10": "ল্যাটিন রোমান",
+      "11": "রোমান ল্যাটিন সংখ্যা",
       "dropdownLabel": "সংখ্যায়ন প্রিসেট"
     },
     "bulletDropdown": {
+      "0": "বুলেট",
+      "1": "বুলেট স্কোয়ার",
+      "2": "স্কয়ার বুলেট",
+      "3": "হীরা",
+      "4": "চেক করুন",
+      "5": "তীর",
       "dropdownLabel": "বুলেট প্রিসেট"
     },
     "fontSize": {
@@ -1371,9 +1434,28 @@
       "redactionTextPlaceholder": "টেক্সট লেবেল ঢোকান",
       "contentEdit": "বিষয়বস্তু সম্পাদনা"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "লাইন স্টাইল শুরু করুন",
+      "middleLineStyleLabel": "মিডল লাইন স্টাইল",
+      "endLineStyleLabel": "শেষ লাইন শৈলী"
+    },
     "addColorToCustom": "কাস্টম রং যোগ করুন",
-    "noToolSelected": "এই নথিতে কোনো স্তর নেই।",
-    "noToolStyle": "টুলে কোনো স্টাইলিং বৈশিষ্ট্য নেই।"
+    "noToolSelected": "টুল বৈশিষ্ট্য দেখতে একটি টুল নির্বাচন করুন",
+    "noToolStyle": "টুলে কোনো স্টাইলিং বৈশিষ্ট্য নেই।",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "লাইন স্টার্ট"
+      },
+      "end": {
+        "dropdownLabel": "লাইন শেষ"
+      },
+      "middle": {
+        "dropdownLabel": "লাইন মিডল"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "বর্ডার"
+    }
   },
   "signatureListPanel": {
     "header": "স্বাক্ষর তালিকা",
@@ -1390,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "কালার পিকার"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "শীর্ষ শিরোনাম",
+      "leftHeader": "বাম হেডার",
+      "rightHeader": "ডান হেডার",
+      "bottomHeader": "নীচের শিরোনাম",
+      "documentContent": "নথি বিষয়বস্তু"
+    }
   }
 }

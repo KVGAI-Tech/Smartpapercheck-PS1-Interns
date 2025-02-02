@@ -26,6 +26,8 @@
     "ungroup": "Ungroup",
     "download": "Download",
     "edit": "Edit",
+    "collapse": "Collapse",
+    "expand": "Expand",
     "extract": "Extract",
     "extractPage": "Extract Page",
     "enterFullscreen": "Enter Full Screen",
@@ -35,7 +37,9 @@
     "fitToWidth": "Fit to width",
     "more": "More",
     "openFile": "Open file",
+    "showMoreFiles": "Show More Files",
     "page": "Page",
+    "of": "of",
     "pagePrev": "Previous page",
     "pageNext": "Next page",
     "pageSet": "Set page",
@@ -43,6 +47,7 @@
     "proceed": "Proceed",
     "name": "Name",
     "rename": "Rename",
+    "remove": "Remove",
     "ok": "OK",
     "rotate": "Page Orientation",
     "rotate3D": "Rotate",
@@ -109,6 +114,10 @@
     "moveToBottom": "Move to Bottom",
     "movePageToTop": "Move Page to Top",
     "movePageToBottom": "Move Page to Bottom",
+    "moveUp": "Move Up",
+    "moveDown": "Move Down",
+    "moveLeft": "Move Left",
+    "moveRight": "Move Right",
     "backToMenu": "Back to Menu",
     "redactPages": "Redact Pages",
     "playAudio": "Play audio",
@@ -121,6 +130,7 @@
     "comparePages": "Compare pages",
     "startComparison": "Start Comparison",
     "showComparison": "Show Comparison",
+    "highlightChanges": "Highlight Changes",
     "back": "Back",
     "clearSignature": "Clear signature",
     "clearInitial": "Clear initial",
@@ -133,7 +143,8 @@
     "copySelectedColor": "Copy Selected Color",
     "showMoreColors": "Show More Colors",
     "showLessColors": "Show Less Colors",
-    "fromCustomColorPicker": "from Custom Color Picker"
+    "fromCustomColorPicker": "from Custom Color Picker",
+    "newSheetDocument": "New Spreadsheet"
   },
   "annotation": {
     "areaMeasurement": "Area",
@@ -225,6 +236,7 @@
     "searchPanel": "Search",
     "menuOverlay": "Menu",
     "notesPanel": "Comments",
+    "indexPanel": "Index Panel",
     "outlinePanel": "Outline",
     "outlinesPanel": "Outlines",
     "newOutlineTitle": "New Outline Title",
@@ -239,7 +251,8 @@
     "thumbnailsPanel": "Thumbnails",
     "toolsButton": "Tools",
     "redaction": "Redaction",
-    "viewControlsOverlay": "View Controls",
+    "viewControls": "View Controls",
+    "pageControls": "Page Controls",
     "calibration": "Calibration",
     "zoomOverlay": "Zoom Overlay",
     "textPopup": "Text Popup",
@@ -248,14 +261,17 @@
     "multiSelectButton": "Multi Select",
     "pageReplaceModalTitle": "Replace Page",
     "files": "Files",
+    "file": "File",
     "editText": "Edit Text",
     "redactionPanel": "Redaction Panel",
+    "tabLabel": "Tab",
     "noteGroupSection": {
       "open": "View All Annotations",
       "close": "Close All Annotations"
     },
     "comparePanel": "Compare Panel",
-    "watermarkPanel": "Watermark Panel"
+    "watermarkPanel": "Watermark Panel",
+    "mainMenu": "Main Menu"
   },
   "message": {
     "showMore": "Show More",
@@ -288,6 +304,7 @@
     "searching": "Searching...",
     "searchCommentsPlaceholder": "Search comments",
     "searchDocumentPlaceholder": "Search document",
+    "searchSettingsPlaceholder": "Search settings",
     "searchSuggestionsPlaceholder": "Search suggestions",
     "signHere": "Sign here",
     "insertTextHere": "Insert text here",
@@ -364,6 +381,7 @@
     },
     "toolbarGroup": {
       "dropdownLabel": "Toolbar Groups",
+      "flyoutLabel": "Ribbon",
       "toolbarGroup-View": "View",
       "toolbarGroup-Annotate": "Annotate",
       "toolbarGroup-Shapes": "Shapes",
@@ -488,7 +506,10 @@
       "imageInitial": "Image Initials",
       "pickInitialsFile": "Choose Initials",
       "noSignatures": "There are currently no saved signatures.",
-      "fontStyle": "Font style"
+      "fontStyle": "Font style",
+      "textSignature": {
+        "dropdownLabel": "Font Family"
+      }
     },
     "pageReplacementModal": {
       "yourFiles": "Your Files",
@@ -543,7 +564,9 @@
       "autoSizeFont": "Scale font size dynamically"
     },
     "measurementOption": {
-      "scale": "Scale"
+      "scale": "Scale",
+      "selectScale": "Select Scale",
+      "selectScaleDropdown": "Select Scale Dropdown"
     },
     "measurement": {
       "scaleModal": {
@@ -677,7 +700,9 @@
       "minute": "Minute",
       "second": "Second",
       "textColor": "Text color",
-      "backgroundColor": "Background color"
+      "backgroundColor": "Background color",
+      "dateToolTipLabel": "More info about date format",
+      "previewCustomStamp": "Preview of"
     },
     "pageRedactModal": {
       "addMark": "Add Mark",
@@ -740,6 +765,7 @@
       "zoomOptions": "Zoom Options",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
+      "setHeaderFocus": "Sets the focus to the header",
       "fitScreenWidth": "Fit the document to the screen width in a small screen(< 640px), otherwise fit it to its original size",
       "print": "Print",
       "bookmarkOpenPanel": "Quickly bookmark a page and open the bookmark panel",
@@ -767,8 +793,8 @@
       "selectCreateTextStrikeoutTool": "Select the AnnotationCreateTextStrikeout tool",
       "selectCreateTextUnderlineTool": "Select the AnnotationCreateTextUnderline tool",
       "editKeyboardShorcut": "Edit Keyboard Shorcut",
-      "setShorcut": "Set Shorcut",
-      "pressKeyToSet": "Press key or keys to set new shorcut.",
+      "setShortcut": "Set Shortcut",
+      "editShortcut": "Edit Shortcut",
       "shortcutAlreadyExists": "The keyboard shortcut above already exists.",
       "close": "Close tooltip"
     }
@@ -944,6 +970,10 @@
     "invalidDateTime": "Invalid Date/Time: Input should match format"
   },
   "formField": {
+    "indexPanel": {
+      "formFieldList": "Form Field List",
+      "notFields": "This document has no form fields"
+    },
     "formFieldPopup": {
       "fieldName": "Field Name",
       "fieldValue": "Default Value",
@@ -954,11 +984,14 @@
       "apply": "Apply",
       "cancel": "Cancel",
       "flags": "Field Flags",
+      "fieldSize": "Field Size",
       "options": "Options",
+      "properties": "Properties",
       "radioGroups": "Radio buttons with the same Field Name will belong in the same grouping.",
       "nameRequired": "Field name is required",
       "fieldIndicator": "Field Indicators",
       "documentFieldIndicator": "Document Field Indicators",
+      "includeFieldIndicator": "Include Field Indicator",
       "indicatorPlaceHolders": {
         "TextFormField": "Insert Text Here",
         "CheckBoxFormField": "Check",
@@ -978,6 +1011,14 @@
         "empty": "Field Name cannot be empty"
       }
     },
+    "formFieldPanel": {
+      "SignatureFormField": "Signature Field Annotation",
+      "CheckBoxFormField": "Checkbox Field Annotation",
+      "RadioButtonFormField": "Radio Button Field Annotation",
+      "ListBoxFormField": "List Box Field Annotation",
+      "ComboBoxFormField": "Combo Box Field Annotation",
+      "TextFormField": "Text Field Annotation"
+    },
     "apply": "Apply Fields",
     "type": "Field Type",
     "types": {
@@ -986,7 +1027,8 @@
       "checkbox": "Check box",
       "radio": "Radio button",
       "listbox": "List box",
-      "combobox": "Combo box"
+      "combobox": "Combo box",
+      "button": "Button"
     }
   },
   "alignmentPopup": {
@@ -1219,12 +1261,15 @@
     "rightAlign": "Right align",
     "justify": "Justify",
     "lineSpacing": "Line & paragraph spacing",
+    "lineSpacingMenu": "Line Spacing",
     "bulletList": "Bulleted list",
     "numberList": "Numbered list",
     "decreaseIndent": "Decrease indent",
     "increaseIndent": "Increase indent",
+    "nonPrintingCharacters": "Non-printing characters",
     "insertLink": "Insert link",
     "insertImage": "Insert image",
+    "image": "Image",
     "table": "Table",
     "insertRowAbove": "Insert Row Above",
     "insertRowBelow": "Insert Row Below",
@@ -1250,13 +1295,29 @@
     "pastingMessage": "Pasting is not supported in your browser. Instead, you can use a keyboard shortcut",
     "pastingWithoutFormatTitle": "Pasting without formatting not available",
     "pastingWithoutFormatMessage": "Pasting without formatting is not supported in your browser. Instead, you can use a keyboard shortcut",
-    "numberList": "Numbered list",
-    "bulletList": "Bulleted list",
+    "lineSpacingOptions": {
+      "single": "Single",
+      "115": "1.15",
+      "15": "1.5",
+      "double": "Double",
+      "custom": "Custom"
+    },
     "numberDropdown": {
-      "dropdownLabel": "Numbering Presets"
+      "dropdownLabel": "Numbering Presets",
+      "6": "Number Latin Roman 1",
+      "7": "Number Decimal",
+      "8": "Number Latin Roman 2",
+      "10": "Latin Roman",
+      "11": "Roman Latin Number"
     },
     "bulletDropdown": {
-      "dropdownLabel": "Bullet Presets"
+      "dropdownLabel": "Bullet Presets",
+      "0": "Bullet",
+      "1": "Bullet Square",
+      "2": "Square Bullet",
+      "3": "Diamond",
+      "4": "Check",
+      "5": "Arrow"
     },
     "fontSize": {
       "dropdownLabel": "Font Size"
@@ -1373,9 +1434,28 @@
       "redactionTextPlaceholder": "Insert text label",
       "contentEdit": "Content Edit"
     },
+    "lineStyles": {
+      "startLineStyleLabel": "Start Line Style",
+      "middleLineStyleLabel": "Middle Line Style",
+      "endLineStyleLabel": "End Line Style"
+    },
     "addColorToCustom": "Add to custom colors",
-    "noToolSelected": "This document does not contain any layers.",
-    "noToolStyle": "Tool does not contain any styling properties."
+    "noToolSelected": "Select a tool to view tool properties",
+    "noToolStyle": "Tool does not contain any styling properties.",
+    "lineEnding": {
+      "start": {
+        "dropdownLabel": "Line Start"
+      },
+      "end": {
+        "dropdownLabel": "Line End"
+      },
+      "middle": {
+        "dropdownLabel": "Line Middle"
+      }
+    },
+    "borderStyle": {
+      "dropdownLabel": "Border"
+    }
   },
   "signatureListPanel": {
     "header": "Signature List",
@@ -1392,5 +1472,14 @@
   },
   "colorPickerModal": {
     "modalTitle": "Color Picker"
+  },
+  "accessibility": {
+    "landmarks": {
+      "topHeader": "Top Header",
+      "leftHeader": "Left Header",
+      "rightHeader": "Right Header",
+      "bottomHeader": "Bottom Header",
+      "documentContent": "Document Content"
+    }
   }
 }
