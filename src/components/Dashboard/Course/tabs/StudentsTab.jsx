@@ -1,62 +1,133 @@
-import React from 'react';
-import { Search, Upload, Plus, Edit2, Trash2 } from 'lucide-react';
-
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, Upload, Plus, Edit2, Trash2,
+  Users, AlertCircle, Loader 
+} from 'lucide-react';
+import { studentApi } from './studentApi';
 const StudentsTab = ({
-  students,
-  sections,
-  searchQuery,
-  selectedSection,
-  onSearchChange,
-  onSectionChange,
-  onAdd,
-  onEdit,
-  onDelete,
-  onImport
+  courseId, 
+  sections = [],
+  searchQuery = '',
+  selectedSection = 'All sections',
+  onAdd = () => {},
+  onEdit = () => {},
+  onDelete = () => {},
+  onImport = () => {}
 }) => {
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search students..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedSection}
-            onChange={(e) => onSectionChange(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option>All sections</option>
-            {sections.map(section => (
-              <option key={section}>{section}</option>
-            ))}
-          </select>
-          
-          <button
-            onClick={onImport}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <Upload size={20} />
-            Import
-          </button>
-          
-          <button
-            onClick={onAdd}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            <Plus size={20} />
-            Add Student
-          </button>
-        </div>
-      </div>
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!courseId) {
+        setError('Course ID is required');
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const fetchedStudents = await studentApi.getStudents(courseId);
+        setStudents(fetchedStudents);
+        setError(null);
+      } catch (err) {
+        setError(err.message || 'Failed to load students');
+        setStudents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudents();
+  }, [courseId]);
 
+  const handleRemoveStudent = async (student) => {
+    try {
+      await studentApi.removeStudent(courseId, student.id);
+      setStudents(prev => prev.filter(s => s.id !== student.id));
+    } catch (err) {
+      console.error('Failed to remove student:', err.message);
+    }
+  };
+  const handleImportStudents = async (file) => {
+    try {
+      const result = await studentApi.uploadStudents(courseId, file);
+      studentApi.pollUploadStatus(
+        result.upload_id,
+        (processedCount) => {
+          console.log(`Processed: ${processedCount}`);
+        },
+        async () => {
+          try {
+            const updatedStudents = await studentApi.getStudents(courseId);
+            setStudents(updatedStudents);
+          } catch (err) {
+            console.error('Failed to refresh students:', err.message);
+          }
+        },
+        (error) => {
+          console.error('Import failed:', error);
+        }
+      );
+    } catch (err) {
+      console.error('Failed to import students:', err.message);
+    }
+  };
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = !searchQuery || 
+      [student.user_name, student.roll_number, student.user_email]
+        .some(field => 
+          field.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    const matchesSection = selectedSection === 'All sections' || 
+      student.section === selectedSection;
+    return matchesSearch && matchesSection;
+  });
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-8">
+          <div className="flex justify-center items-center">
+            <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+            <span className="ml-3 text-gray-600">Loading students...</span>
+          </div>
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-8">
+          <div className="flex flex-col items-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Error loading students
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">{error}</p>
+          </div>
+        </div>
+      );
+    }
+    if (!students.length) {
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+          <div className="flex flex-col items-center">
+            <Users className="w-12 h-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No students found
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Get started by adding students to this course
+            </p>
+            <button
+              onClick={onAdd}
+              className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            >
+              <Plus size={20} />
+              Add First Student
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -65,7 +136,7 @@ const StudentsTab = ({
                 Student Details
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                ID
+                Roll Number
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Section
@@ -73,48 +144,55 @@ const StudentsTab = ({
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Email
               </th>
-              <th scope="col" className="relative px-6 py-3">
+              <th scope="col" className="relative px-6 py-3 w-20">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {students.map((student) => (
+            {filteredStudents.map((student) => (
               <tr key={student.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                       <span className="text-sm font-medium text-blue-600">
-                        {student.name.charAt(0)}
+                        {student.user_name?.charAt(0) || '?'}
                       </span>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {student.user_name || 'Unknown'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Batch: {student.batch}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {student.studentId}
+                  {student.roll_number}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                    {student.section}
+                    {student.section || 'Unassigned'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {student.email}
+                  {student.user_email}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center justify-end space-x-3">
+                  <div className="flex items-center justify-end space-x-2">
                     <button
                       onClick={() => onEdit(student)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit student"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button
-                      onClick={() => onDelete(student)}
-                      className="text-red-600 hover:text-red-900"
+                      onClick={() => handleRemoveStudent(student)}
+                      className="p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remove student"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -125,8 +203,56 @@ const StudentsTab = ({
           </tbody>
         </table>
       </div>
+    );
+  };
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search students..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          {sections.length > 0 && (
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            >
+              <option value="All sections">All sections</option>
+              {sections.map(section => (
+                <option key={section} value={section}>{section}</option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={onImport}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
+              rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <Upload size={20} />
+            Import
+          </button>
+          <button
+            onClick={onAdd}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg 
+              hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <Plus size={20} />
+            Add Student
+          </button>
+        </div>
+      </div>
+      {renderContent()}
     </div>
   );
 };
-
 export default StudentsTab;

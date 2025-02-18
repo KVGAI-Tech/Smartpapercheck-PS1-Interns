@@ -1,22 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="preconnect" href="https://pdftron.s3.amazonaws.com" crossorigin>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self' blob: data: https://*.cloudflare.com https://unpkg.com https://documentcloud.adobe.com https://jsonplaceholder.typicode.com;
+      default-src 'self' blob: data: https://*.cloudflare.com https://unpkg.com https://documentcloud.adobe.com http://43.205.184.7:8000;
       script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://*.cloudflare.com https://unpkg.com https://cdnjs.cloudflare.com https://documentcloud.adobe.com;
       worker-src 'self' blob: https://cdnjs.cloudflare.com;
       style-src 'self' 'unsafe-inline' https://*.cloudflare.com;
       font-src 'self' data:;
       img-src 'self' blob: data:;
-      connect-src 'self' blob: https://*.cloudflare.com https://cdnjs.cloudflare.com https://unpkg.com https://documentcloud.adobe.com https://jsonplaceholder.typicode.com;
+      connect-src 'self' blob: https://*.cloudflare.com https://cdnjs.cloudflare.com https://unpkg.com https://documentcloud.adobe.com http://43.205.184.7:8000;
       frame-src 'self' blob:;">
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
     <title>SmartQNA</title>
   </head>
   <body>

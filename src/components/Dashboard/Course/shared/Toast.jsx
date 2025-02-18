@@ -27,3 +27,4 @@ const Toast = ({ message, type = 'success', show, onClose }) => {
 };
 
 export default Toast;
+

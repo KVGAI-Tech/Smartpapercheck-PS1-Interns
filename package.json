@@ -35,6 +35,7 @@
     "react-pdf": "7.1.2",
     "react-pdf-annotations": "^3.2.8",
     "react-router-dom": "^7.1.3",
+    "react-toastify": "^11.0.3",
     "recharts": "^2.15.0",
     "tailwind-merge": "^2.6.0",
     "vite-plugin-commonjs": "^0.10.4"

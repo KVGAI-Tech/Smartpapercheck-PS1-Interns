@@ -2,430 +2,595 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 
-
 import StudentsTab from './tabs/StudentsTab';
 import InstructorsTab from './tabs/InstructorsTab';
 import TATab from './tabs/TATab';
 import ExamsTab from './tabs/ExamsTab';
-
 
 import StudentForm from './forms/StudentForm';
 import InstructorForm from './forms/InstructorForm';
 import TAForm from './forms/TAForm';
 import ExamForm from './forms/ExamForm';
 
-
-import { Modal } from './shared/Modal';  
+import { Modal } from './shared/Modal';
 import Toast from './shared/Toast';
 import ImportModal from './modals/ImportModal';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
-import EvaluationModal from './modals/EvaluationModal';
+
+import {
+    fetchApi,
+    getCourseDetails,
+    getCourseTAs,
+    addTA,
+    removeTA,
+    uploadTAs,
+    getCourseStudents,
+    addStudent,
+    removeStudent,
+    uploadStudents,
+    getCourseExams,
+    createExam,
+    uploadCourseHandout,
+    checkUploadStatus,
+    pollUploadStatus
+} from './api';
+
+const addInstructor = async (courseId, data) => {
+    try {
+        const response = await fetchApi(`/professors/courses/${courseId}/co-instructors`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        return response;
+    } catch (error) {
+        throw new Error(error.message || 'Failed to add instructor');
+    }
+};
+
+const getCourseInstructors = async (courseId) => {
+    try {
+        const response = await fetchApi(`/professors/courses/${courseId}/co-instructors`);
+        return response;
+    } catch (error) {
+        throw new Error(error.message || 'Failed to get instructors');
+    }
+};
+
+const uploadInstructors = async (courseId, file) => {
+    try {
+        const formData = new FormData();
+        formData.append('co_instructor_list', file);
+
+        const response = await fetchApi(`/professors/courses/${courseId}/co-instructors/upload`, {
+            method: 'POST',
+            formData: true,
+            body: formData
+        });
+        return response;
+    } catch (error) {
+        throw new Error(error.message || 'Failed to upload instructors');
+    }
+};
 
 
-import { mockCourses } from './mockData';
+const MOCK_COURSE = {
+    course_name: "Computer Programming",
+    course_code: "CS F111",
+    sections: ["A1", "A2", "A3", "B1", "B2"],
+    description: "Introduction to Programming Concepts",
+    status: "active",
+    start_date: "2024-01-01",
+    end_date: "2024-05-31"
+};
 
 const CourseDetails = () => {
-  const { courseId } = useParams();
-  const navigate = useNavigate();
+    const { courseId } = useParams();
+    const navigate = useNavigate();
 
-  
-  const [loading, setLoading] = useState(true);
-  const [courseDetails, setCourseDetails] = useState(null);
-  const [activeTab, setActiveTab] = useState('students');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSection, setSelectedSection] = useState('All sections');
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [courseDetails, setCourseDetails] = useState(null);
+    const [activeTab, setActiveTab] = useState('students');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedSection, setSelectedSection] = useState('All sections');
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [selectedItem, setSelectedItem] = useState(null);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+    const [selectedItem, setSelectedItem] = useState(null);
 
+    const [students, setStudents] = useState([]);
+    const [instructors, setInstructors] = useState([]);
+    const [teachingAssistants, setTeachingAssistants] = useState([]);
+    const [exams, setExams] = useState([]);
+    const [uploadStatus, setUploadStatus] = useState(null);
+const handleCreateExam = async (formData) => {
+    try {
+      const response = await fetchApi(`/professors/courses/${courseId}/exams/`, {
+        method: 'POST',
+        body: JSON.stringify(formData)
+      });
+    } catch (error) {
+    }
+  };
   
-  const [students, setStudents] = useState([]);
-  const [instructors, setInstructors] = useState([]);
-  const [teachingAssistants, setTeachingAssistants] = useState([]);
-  const [exams, setExams] = useState([]);
+  const handleUpdateExam = async (examId, formData) => {
+    try {
+      const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}/`, {
+        method: 'PUT',
+        body: JSON.stringify(formData)
+      });
+    } catch (error) {
+    }
+  };
+  
+  const handleDeleteExam = async (examId) => {
+    try {
+      await fetchApi(`/professors/courses/${courseId}/exams/${examId}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+    }
+  };
+    useEffect(() => {
+        const loadCourseData = async () => {
+            if (!courseId) {
+                setError('Invalid course ID');
+                setLoading(false);
+                return;
+            }
 
-  
-  useEffect(() => {
-    const loadCourse = async () => {
-      setLoading(true);
-      try {
-        const course = mockCourses[courseId];
-        if (course) {
-          setCourseDetails(course);
-          setStudents(course.students || []);
-          setInstructors(course.instructors || []);
-          setTeachingAssistants(course.teachingAssistants || []);
-          setExams(course.exams || []);
-        }
-      } catch (error) {
-        showToast('Error loading course details', 'error');
-      } finally {
-        setLoading(false);
-      }
+            setLoading(true);
+            setError(null);
+
+            try {
+                const courseResponse = await getCourseDetails(courseId);
+
+                if (!courseResponse || !courseResponse.data) {
+                    console.warn('Using mock data as fallback');
+                    setCourseDetails(MOCK_COURSE);
+                } else {
+                    setCourseDetails(courseResponse.data);
+                }
+
+                try {
+                    const [studentsResp, instructorsResp, tasResp, examsResp] = await Promise.all([
+                        getCourseStudents(courseId),
+                        getCourseInstructors(courseId),
+                        getCourseTAs(courseId),
+                        getCourseExams(courseId)
+                    ]);
+
+                    setStudents(studentsResp?.data || []);
+                    setInstructors(instructorsResp?.data || []);
+                    setTeachingAssistants(tasResp?.data || []);
+                    setExams(examsResp?.data || []);
+                } catch (error) {
+                    console.error('Error loading related data:', error);
+                    showToast('Some course data could not be loaded', 'warning');
+                }
+            } catch (error) {
+                console.error('Error loading course:', error);
+                setError(error.message || 'Failed to load course details');
+                if (error.message !== 'Course not found') {
+                    setCourseDetails(MOCK_COURSE);
+                }
+                showToast(error.message || 'Error loading course details', 'error');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadCourseData();
+    }, [courseId]);
+
+    const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+        setTimeout(() => setToast({ show: false, message: '', type }), 3000);
     };
 
-    loadCourse();
-  }, [courseId]);
+    const handleEdit = (item, type) => {
+        setSelectedItem(item);
+        setShowAddModal(true);
+    };
 
-  
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type }), 3000);
-  };
+    const handleEvaluate = (exam) => {
+        setSelectedItem(exam);
+        setShowEvaluationModal(true);
+    };
 
-  
-  const handleAdd = (type, data) => {
-    try {
-      const newId = Date.now();
-      switch (type) {
-        case 'student':
-          setStudents(prev => [...prev, { ...data, id: newId }]);
-          break;
-        case 'instructor':
-          setInstructors(prev => [...prev, { ...data, id: newId }]);
-          break;
-        case 'ta':
-          setTeachingAssistants(prev => [...prev, { ...data, id: newId }]);
-          break;
-        case 'exam':
-          setExams(prev => [...prev, { ...data, id: newId }]);
-          break;
-        default:
-          throw new Error(`Invalid type: ${type}`);
-      }
-      setShowAddModal(false);
-      showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} added successfully`);
-    } catch (error) {
-      showToast(`Error adding ${type}: ${error.message}`, 'error');
-    }
-  };
+    const handleAdd = async (type, data) => {
+        try {
+            let response;
+            switch (type) {
+                case 'student':
+                    response = await addStudent({ ...data, courseId });
+                    setStudents(prev => [...prev, response.data]);
+                    break;
+                case 'instructor':
+                    response = await addInstructor(courseId, data);
+                    setInstructors(prev => [...prev, response.data]);
+                    break;
+                case 'ta':
+                    response = await addTA(courseId, data);
+                    setTeachingAssistants(prev => [...prev, response.data]);
+                    break;
+                case 'exam':
+                    response = await createExam(courseId, data);
+                    setExams(prev => [...prev, response.data]);
+                    break;
+                default:
+                    throw new Error(`Invalid type: ${type}`);
+            }
+            setShowAddModal(false);
+            showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} added successfully`);
+        } catch (error) {
+            showToast(`Error adding ${type}: ${error.message}`, 'error');
+        }
+    };
 
-  const handleImport = (type, data) => {
-    const newItems = data.map((item, index) => ({
-      ...item,
-      id: Date.now() + index
-    }));
+    const handleImport = async (type, file) => {
+        if (!file) {
+            showToast('Please select a file to import', 'error');
+            return;
+        }
 
-    switch (type) {
-      case 'student':
-        setStudents(prev => [...prev, ...newItems]);
-        break;
-      case 'instructor':
-        setInstructors(prev => [...prev, ...newItems]);
-        break;
-      case 'ta':
-        setTeachingAssistants(prev => [...prev, ...newItems]);
-        break;
-      default:
-        break;
-    }
-    setShowImportModal(false);
-    showToast(`${type}s imported successfully`);
-  };
+        try {
+            let response;
+            switch (type) {
+                case 'student':
+                    response = await uploadStudents(courseId, file);
+                    break;
+                case 'instructor':
+                    response = await uploadInstructors(courseId, file);
+                    break;
+                case 'ta':
+                    response = await uploadTAs(courseId, file);
+                    break;
+                default:
+                    throw new Error(`Invalid import type: ${type}`);
+            }
 
-  const handleDelete = () => {
-    if (!itemToDelete) return;
+            const uploadId = response.data.upload_id;
+            setUploadStatus('processing');
 
-    const { type, id } = itemToDelete;
-    switch (type) {
-      case 'student':
-        setStudents(prev => prev.filter(item => item.id !== id));
-        break;
-      case 'instructor':
-        setInstructors(prev => prev.filter(item => item.id !== id));
-        break;
-      case 'ta':
-        setTeachingAssistants(prev => prev.filter(item => item.id !== id));
-        break;
-      case 'exam':
-        setExams(prev => prev.filter(item => item.id !== id));
-        break;
-      default:
-        break;
-    }
-    setShowDeleteModal(false);
-    setItemToDelete(null);
-    showToast(`${type} deleted successfully`);
-  };
+            pollUploadStatus(
+                uploadId,
+                async (data) => {
+                    setUploadStatus('completed');
+                    switch (type) {
+                        case 'student':
+                            const studentsResponse = await getCourseStudents(courseId);
+                            setStudents(studentsResponse.data || []);
+                            break;
+                        case 'instructor':
+                            const instructorsResponse = await getCourseInstructors(courseId);
+                            setInstructors(instructorsResponse.data || []);
+                            break;
+                        case 'ta':
+                            const tasResponse = await getCourseTAs(courseId);
+                            setTeachingAssistants(tasResponse.data || []);
+                            break;
+                    }
+                    showToast(`${type}s imported successfully`);
+                },
+                (error) => {
+                    setUploadStatus('failed');
+                    showToast(`Error importing ${type}s: ${error}`, 'error');
+                }
+            );
 
-  const handleEdit = (item, type) => {
-    setSelectedItem(item);
-    setShowAddModal(true);
-  };
+            setShowImportModal(false);
+        } catch (error) {
+            setUploadStatus('failed');
+            showToast(`Error initiating ${type} import: ${error.message}`, 'error');
+        }
+    };
 
-  const handleEvaluate = (exam) => {
-    setSelectedItem(exam);
-    setShowEvaluationModal(true);
-  };
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
 
-  
-  const getFilteredItems = (items = [], type) => {
-    if (!Array.isArray(items)) return [];
-    
-    return items.filter(item => {
-      const matchesSearch = 
-        (item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-        (item.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-        (item.studentId?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-      
-      const matchesSection = selectedSection === 'All sections' || 
-        (type === 'student' ? item.section === selectedSection :
-         type === 'ta' ? (item.sections?.includes(selectedSection) ?? false) : true);
-      
-      return matchesSearch && matchesSection;
-    });
-  };
+        try {
+            const { type, id } = itemToDelete;
+            switch (type) {
+                case 'student':
+                    await removeStudent(courseId, id);
+                    setStudents(prev => prev.filter(item => item.id !== id));
+                    break;
+                case 'instructor':
+                    setInstructors(prev => prev.filter(item => item.id !== id));
+                    break;
+                case 'ta':
+                    await removeTA(courseId, id);
+                    setTeachingAssistants(prev => prev.filter(item => item.id !== id));
+                    break;
+                default:
+                    throw new Error(`Invalid delete type: ${type}`);
+            }
+            setShowDeleteModal(false);
+            setItemToDelete(null);
+            showToast(`${type} deleted successfully`);
+        } catch (error) {
+            showToast(`Error deleting ${itemToDelete.type}: ${error.message}`, 'error');
+        }
+    };
 
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading course details...</p>
-        </div>
-      </div>
-    );
-  }
+    const handleHandoutUpload = async (file) => {
+        if (!file) {
+            showToast('Please select a file to upload', 'error');
+            return;
+        }
 
-  
-  if (!courseDetails) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-100 text-red-600 rounded-full p-4 mb-4 inline-block">
-            <AlertCircle size={32} />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Course not found</h2>
-          <p className="text-gray-500 mb-6">
-            The course you're looking for doesn't exist or has been removed.
-          </p>
-          <Link
-            to="/courses"
-            className="inline-flex items-center text-blue-600 hover:text-blue-700"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Courses
-          </Link>
-        </div>
-      </div>
-    );
-  }
+        try {
+            const response = await uploadCourseHandout(courseId, file);
+            setCourseDetails(prev => ({
+                ...prev,
+                handouts_url: response.data.handouts_url
+            }));
+            showToast('Course handout uploaded successfully');
+        } catch (error) {
+            showToast(`Error uploading handout: ${error.message}`, 'error');
+        }
+    };
 
-  
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'students':
+    const getFilteredItems = (items = [], type) => {
+        if (!Array.isArray(items)) return [];
+
+        return items.filter(item => {
+            const searchFields = [
+                item.user_name,
+                item.user_email,
+                item.roll_number,
+                item.id,
+                item.name,
+                item.email
+            ].filter(Boolean);
+
+            return searchFields.some(field =>
+                field.toString().toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        });
+    };
+
+    if (loading) {
         return (
-          <StudentsTab
-            students={getFilteredItems(students, 'student')}
-            sections={courseDetails.sections}
-            searchQuery={searchQuery}
-            selectedSection={selectedSection}
-            onSearchChange={setSearchQuery}
-            onSectionChange={setSelectedSection}
-            onAdd={() => {
-              setSelectedItem(null);
-              setShowAddModal(true);
-            }}
-            onEdit={(student) => handleEdit(student, 'student')}
-            onDelete={(student) => {
-              setItemToDelete({ type: 'student', id: student.id });
-              setShowDeleteModal(true);
-            }}
-            onImport={() => setShowImportModal(true)}
-          />
-        );
-
-      case 'instructors':
-        return (
-          <InstructorsTab
-            instructors={getFilteredItems(instructors, 'instructor')}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onAdd={() => {
-              setSelectedItem(null);
-              setShowAddModal(true);
-            }}
-            onEdit={(instructor) => handleEdit(instructor, 'instructor')}
-            onDelete={(instructor) => {
-              setItemToDelete({ type: 'instructor', id: instructor.id });
-              setShowDeleteModal(true);
-            }}
-            onImport={() => setShowImportModal(true)}
-          />
-        );
-
-      case 'tas':
-        return (
-          <TATab
-            teachingAssistants={getFilteredItems(teachingAssistants, 'ta')}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onAdd={() => {
-              setSelectedItem(null);
-              setShowAddModal(true);
-            }}
-            onEdit={(ta) => handleEdit(ta, 'ta')}
-            onDelete={(ta) => {
-              setItemToDelete({ type: 'ta', id: ta.id });
-              setShowDeleteModal(true);
-            }}
-            onImport={() => setShowImportModal(true)}
-          />
-        );
-
-      case 'exams':
-        return (
-          <ExamsTab
-            exams={getFilteredItems(exams, 'exam')}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onAdd={() => {
-              setSelectedItem(null);
-              setShowAddModal(true);
-            }}
-            onEdit={(exam) => handleEdit(exam, 'exam')}
-            onDelete={(exam) => {
-              setItemToDelete({ type: 'exam', id: exam.id });
-              setShowDeleteModal(true);
-            }}
-            onEvaluate={handleEvaluate}
-          />
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Link
-                  to="/courses"
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Link>
-                <h1 className="text-2xl font-bold text-gray-900">{courseDetails.name}</h1>
-              </div>
-              <p className="text-sm text-gray-500">{courseDetails.code}</p>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading course details...</p>
+                </div>
             </div>
-          </div>
+        );
+    }
 
-          <div className="flex space-x-6 mt-6">
-            {[
-              { id: 'students', label: 'Students' },
-              { id: 'instructors', label: 'Instructors' },
-              { id: 'tas', label: 'Teaching Assistants' },
-              { id: 'exams', label: 'Exams' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setSearchQuery('');
-                  setSelectedSection('All sections');
+    if (error && !courseDetails) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="bg-red-100 text-red-600 rounded-full p-4 mb-4 inline-block">
+                        <AlertCircle size={32} />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Course not found</h2>
+                    <p className="text-gray-500 mb-6">
+                        The course you're looking for doesn't exist or has been removed.
+                    </p>
+                    <Link
+                        to="/courses"
+                        className="inline-flex items-center text-blue-600 hover:text-blue-700"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Courses
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'students':
+                return (
+                    <StudentsTab
+                        courseId={courseId}
+                        students={getFilteredItems(students, 'student')}          
+                        sections={['A1', 'A2', 'B1']}
+                        searchQuery={searchQuery}
+                        selectedSection={selectedSection}
+                        onSearchChange={setSearchQuery}
+                        onSectionChange={setSelectedSection}
+                        onAdd={() => setShowAddModal(true)}
+                        onEdit={(student) => {
+                            setSelectedStudent(student);
+                            setShowEditModal(true);
+                          }}                        
+                        onDelete={(student) => {
+                            setItemToDelete({ type: 'student', id: student.id });
+                            setShowDeleteModal(true);
+                        }}
+                        onImport={() => setShowImportModal(true)}
+                    />
+                );
+
+            case 'instructors':
+                return (
+                    <InstructorsTab
+                        instructors={getFilteredItems(instructors, 'instructor')}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        onAdd={() => {
+                            setSelectedItem(null);
+                            setShowAddModal(true);
+                        }}
+                        onEdit={(instructor) => handleEdit(instructor, 'instructor')}
+                        onDelete={(instructor) => {
+                            setItemToDelete({ type: 'instructor', id: instructor.id });
+                            setShowDeleteModal(true);
+                        }}
+                        onImport={() => setShowImportModal(true)}
+                    />
+                );
+
+            case 'tas':
+                return (
+                    <TATab
+                        courseId={courseId} 
+                        teachingAssistants={getFilteredItems(teachingAssistants, 'ta')}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        onAdd={() => {
+                            setSelectedItem(null);
+                            setShowAddModal(true);
+                        }}
+                        onEdit={(ta) => handleEdit(ta, 'ta')}
+                        onDelete={(ta) => {
+                            setItemToDelete({ type: 'ta', id: ta.id });
+                            setShowDeleteModal(true);
+                        }}
+                        onImport={() => setShowImportModal(true)}
+                    />
+                );
+            case 'exams':
+                return (
+                    <ExamsTab
+                        exams={getFilteredItems(exams, 'exam')}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        onAdd={() => {
+                            setSelectedItem(null);
+                            setShowAddModal(true);
+                        }}
+                        onEdit={(exam) => handleEdit(exam, 'exam')}
+                        onDelete={(exam) => {
+                            setItemToDelete({ type: 'exam', id: exam.id });
+                            setShowDeleteModal(true);
+                        }}
+                        onEvaluate={handleEvaluate}
+                    />
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Link to="/courses" className="text-gray-400 hover:text-gray-600">
+                                    <ArrowLeft className="w-5 h-5" />
+                                </Link>
+                                <h1 className="text-2xl font-bold text-gray-900">
+                                    {courseDetails.course_name}
+                                </h1>
+                            </div>
+                            <p className="text-sm text-gray-500">{courseDetails.course_code}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex space-x-6 mt-6">
+                        {[
+                            { id: 'students', label: 'Students' },
+                            { id: 'instructors', label: 'Instructors' },
+                            { id: 'tas', label: 'Teaching Assistants' },
+                            { id: 'exams', label: 'Exams' }
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => {
+                                    setActiveTab(tab.id);
+                                    setSearchQuery('');
+                                    setSelectedSection('All sections');
+                                }}
+                                className={`pb-4 text-sm font-medium transition-colors relative
+                  ${activeTab === tab.id
+                                        ? 'text-blue-600 border-b-2 border-blue-600'
+                                        : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {renderTabContent()}
+            </div>
+
+            <Modal
+                isOpen={showAddModal}
+                onClose={() => {
+                    setShowAddModal(false);
+                    setSelectedItem(null);
                 }}
-                className={`pb-4 text-sm font-medium transition-colors relative
-                  ${activeTab === tab.id 
-                    ? 'text-blue-600 border-b-2 border-blue-600' 
-                    : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+                title={`${selectedItem ? 'Edit' : 'Add'} ${activeTab.slice(0, -1)}`}
+            >
+                {activeTab === 'students' && (
+                    <StudentForm
+                        initialData={selectedItem}
+                        onSubmit={(data) => handleAdd('student', data)}
+                        sections={courseDetails.sections}
+                    />
+                )}
+                {activeTab === 'instructors' && (
+                    <InstructorForm
+                        initialData={selectedItem}
+                        onSubmit={(data) => handleAdd('instructor', data)}
+                    />
+                )}
+                {activeTab === 'tas' && (
+                    <TAForm
+                        initialData={selectedItem}
+                        onSubmit={(data) => handleAdd('ta', data)}
+                        sections={courseDetails.sections}
+                    />
+                )}
+                {activeTab === 'exams' && (
+                    <ExamForm
+                        initialData={selectedItem}
+                        onSubmit={(data) => handleAdd('exam', data)}
+                        instructors={instructors}
+                        teachingAssistants={teachingAssistants}
+                    />
+                )}
+            </Modal>
+
+            <ImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                onImport={(file) => handleImport(activeTab.slice(0, -1), file)}
+                type={activeTab}
+                uploadStatus={uploadStatus}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setItemToDelete(null);
+                }}
+                onConfirm={handleDelete}
+                itemType={itemToDelete?.type}
+                itemName={itemToDelete?.name || itemToDelete?.user_name || `${itemToDelete?.type || 'item'}`}
+            />
+
+           
+
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast({ show: false, message: '', type: toast.type })}
+            />
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {renderTabContent()}
-      </div>
-
-      <Modal
-        isOpen={showAddModal}
-        onClose={() => {
-          setShowAddModal(false);
-          setSelectedItem(null);
-        }}
-        title={`${selectedItem ? 'Edit' : 'Add'} ${activeTab.slice(0, -1)}`}
-      >
-        {activeTab === 'students' && (
-          <StudentForm
-            initialData={selectedItem}
-            onSubmit={(data) => handleAdd('student', data)}
-            sections={courseDetails.sections}
-          />
-        )}
-        {activeTab === 'instructors' && (
-          <InstructorForm
-            initialData={selectedItem}
-            onSubmit={(data) => handleAdd('instructor', data)}
-          />
-        )}
-        {activeTab === 'tas' && (
-          <TAForm
-            initialData={selectedItem}
-            onSubmit={(data) => handleAdd('ta', data)}
-            sections={courseDetails.sections}
-          />
-        )}
-        {activeTab === 'exams' && (
-          <ExamForm
-            initialData={selectedItem}
-            onSubmit={(data) => handleAdd('exam', data)}
-            instructors={instructors}
-            teachingAssistants={teachingAssistants}
-          />
-        )}
-      </Modal>
-
-      <ImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={(data) => handleImport(activeTab.slice(0, -1), data)}
-        type={activeTab}
-      />
-
-      <DeleteConfirmationModal
-  isOpen={showDeleteModal}
-  onClose={() => {
-    setShowDeleteModal(false);
-    setItemToDelete(null);
-  }}
-  onConfirm={handleDelete}
-  itemType={itemToDelete?.type}
-  itemName={itemToDelete?.name || `${itemToDelete?.type || 'item'}`}
-/>
-
-<EvaluationModal
-        isOpen={showEvaluationModal}
-        onClose={() => setShowEvaluationModal(false)}
-        exam={selectedItem}
-        instructors={instructors}
-        teachingAssistants={teachingAssistants}
-      />
-
-      <Toast
-        show={toast.show}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast({ ...toast, show: false })}
-      />
-    </div>
-  );
+    );
 };
 
 export default CourseDetails;

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, ChevronLeft, ChevronRight, LayoutDashboard, 
   BookOpen, LineChart, GraduationCap, Users,
@@ -10,7 +10,51 @@ const DashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/auth');
+        return;
+      }
+
+      const response = await fetch('http://43.205.184.7:8000/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        method: 'GET'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const data = await response.json();
+      console.log('User data:', data);
+      
+      if (data && data.data && data.data.name) {
+        setUserData(data.data);
+      } else {
+        throw new Error('Invalid user data format');
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      localStorage.removeItem('accessToken');
+      navigate('/auth');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -25,8 +69,18 @@ const DashboardLayout = ({ children }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      localStorage.removeItem('accessToken');
+      navigate('/auth');
+    } catch (error) {
+      console.error('Logout error:', error);
+      navigate('/auth');
+    }
+  };
+
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
+    { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard' },
     { icon: BookOpen, label: 'Courses', to: '/courses' },
     { icon: LineChart, label: 'Analytics', to: '/analytics' },
     { icon: GraduationCap, label: 'Grade Management', to: '/grades' },
@@ -42,8 +96,17 @@ const DashboardLayout = ({ children }) => {
   ];
 
   const isActive = (path) => {
+    if (path === '/dashboard') {
+      return location.pathname === path || location.pathname === '/';
+    }
     return location.pathname === path;
   };
+
+  if (isLoading) {
+    return <div className="flex min-h-screen items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>;
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -136,7 +199,7 @@ const DashboardLayout = ({ children }) => {
 
           <div className="px-3 pb-4">
             <button
-              onClick={() => console.log('Logging out...')}
+              onClick={handleLogout}
               className={`w-full flex items-center px-3 py-2.5 rounded-lg cursor-pointer
                 transition-all duration-300 ease-in-out relative overflow-hidden
                 text-gray-600 hover:bg-red-50 hover:text-red-600 group`}
@@ -170,6 +233,7 @@ const DashboardLayout = ({ children }) => {
                 </button>
               )}
               <h2 className="text-xl font-semibold text-gray-800">
+                {menuItems.find(item => isActive(item.to))?.label || 'Dashboard'}
               </h2>
             </div>
             <div className="flex items-center space-x-4">
@@ -189,7 +253,9 @@ const DashboardLayout = ({ children }) => {
                   />
                   <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 rounded-full border border-white" />
                 </div>
-                <span className="text-sm font-medium text-gray-700 hidden lg:block">John Doe</span>
+                <span className="text-sm font-medium text-gray-700 hidden lg:block">
+                  {userData?.name || 'Guest User'}
+                </span>
               </div>
             </div>
           </div>

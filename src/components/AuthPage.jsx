@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,6 +15,8 @@ import {
   Brain,
   LineChart
 } from 'lucide-react';
+import { loginUser, signupUser } from './auth';
+import { useAuth } from './AuthContext';
 
 const FeatureCard = ({ icon: Icon, text, delay }) => (
   <motion.div
@@ -116,6 +118,7 @@ const HeartbeatLine = ({ className }) => (
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, setIsAuthenticated } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -128,6 +131,13 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const validatePassword = (password) => {
     const errors = [];
@@ -155,7 +165,6 @@ const AuthPage = () => {
       ...prev,
       [name]: value
     }));
-
     
     if (name === 'password' || name === 'confirmPassword') {
       const newErrors = { ...validationErrors };
@@ -213,25 +222,15 @@ const AuthPage = () => {
     setError('');
 
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
+      const result = isLogin
+        ? await loginUser(formData.email, formData.password)
+        : await signupUser(formData.name, formData.email, formData.password);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        localStorage.setItem('token', data.token);
-        
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        navigate('/');
+      if (result.success) {
+        setIsAuthenticated(true);
+        navigate('/dashboard');
       } else {
-        throw new Error(data.message || 'Authentication failed');
+        setError(result.error || 'Authentication failed');
       }
     } catch (error) {
       setError(error.message || 'An unexpected error occurred');
@@ -318,7 +317,8 @@ const AuthPage = () => {
                 onClick={() => {
                   setIsLogin(!isLogin);
                   setError('');
-                  setFormData({ name: '', email: '', password: '' });
+                  setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+                  setValidationErrors({});
                 }}
                 className="text-teal-600 hover:text-teal-700 font-medium"
               >
@@ -401,57 +401,57 @@ const AuthPage = () => {
 
               {!isLogin && (
                 <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-gray-500 space-y-2 bg-gray-50 p-4 rounded-lg"
-                >
-                  <div className="font-medium">Password must contain:</div>
-                  <ul className="space-y-1">
-                    {[
-                      { req: formData.password.length >= 8, text: 'At least 8 characters' },
-                      { req: /[A-Z]/.test(formData.password), text: 'One uppercase letter' },
-                      { req: /[a-z]/.test(formData.password), text: 'One lowercase letter' },
-                      { req: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password), text: 'One special character' },
-                      { req: /\d/.test(formData.password), text: 'One number' },
-                      { req: formData.password === formData.confirmPassword && formData.confirmPassword, text: 'Passwords match' }
-                    ].map((requirement, index) => (
-                      <li key={index} className="flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full transition-colors duration-300 ${requirement.req ? 'bg-green-500' : 'bg-gray-300'}`} />
-                        <span>{requirement.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </motion.div>
-              )}
-
-              <motion.button
-                type="submit"
-                disabled={!isFormValid() || isLoading}
-                whileHover={{ scale: isFormValid() && !isLoading ? 1.02 : 1 }}
-                whileTap={{ scale: isFormValid() && !isLoading ? 0.98 : 1 }}
-                className={`w-full bg-gradient-to-r from-teal-500 to-blue-600 text-white py-3 rounded-lg
-                  flex items-center justify-center gap-3 transition-all duration-300
-                  ${!isFormValid() || isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 hover:shadow-lg'}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-sm text-gray-500 space-y-2 bg-gray-50 p-4 rounded-lg"
               >
-                {isLoading ? (
-                  <motion.div 
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
-                  />
-                ) : (
-                  <>
-                    <LogIn className="h-5 w-5" />
-                    <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
-                  </>
-                )}
-              </motion.button>
-            </form>
-          </div>
-        </motion.div>
-      </div>
+                <div className="font-medium">Password must contain:</div>
+                <ul className="space-y-1">
+                  {[
+                    { req: formData.password.length >= 8, text: 'At least 8 characters' },
+                    { req: /[A-Z]/.test(formData.password), text: 'One uppercase letter' },
+                    { req: /[a-z]/.test(formData.password), text: 'One lowercase letter' },
+                    { req: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password), text: 'One special character' },
+                    { req: /\d/.test(formData.password), text: 'One number' },
+                    { req: formData.password === formData.confirmPassword && formData.confirmPassword, text: 'Passwords match' }
+                  ].map((requirement, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <div className={`h-2 w-2 rounded-full transition-colors duration-300 ${requirement.req ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span>{requirement.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
+
+            <motion.button
+              type="submit"
+              disabled={!isFormValid() || isLoading}
+              whileHover={{ scale: isFormValid() && !isLoading ? 1.02 : 1 }}
+              whileTap={{ scale: isFormValid() && !isLoading ? 0.98 : 1 }}
+              className={`w-full bg-gradient-to-r from-teal-500 to-blue-600 text-white py-3 rounded-lg
+                flex items-center justify-center gap-3 transition-all duration-300
+                ${!isFormValid() || isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 hover:shadow-lg'}`}
+            >
+              {isLoading ? (
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
+                />
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5" />
+                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                </>
+              )}
+            </motion.button>
+          </form>
+        </div>
+      </motion.div>
     </div>
-  );
+  </div>
+);
 };
 
 export default AuthPage;

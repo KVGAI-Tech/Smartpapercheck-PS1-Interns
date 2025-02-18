@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "../../lib/utils.js"
+import { cn } from "/Users/rishigarg/SmartQNA-Frontend/src/lib/utils.js"
 
 const Card = React.forwardRef(({ className, ...props }, ref) => (
   <div

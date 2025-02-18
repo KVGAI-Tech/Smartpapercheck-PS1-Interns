@@ -1,96 +1,142 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, Loader } from 'lucide-react';
 
-const InstructorForm = ({ initialData, onSubmit }) => {
+const INSTRUCTOR_ROLES = [
+  { value: 'Professor', label: 'Professor' },
+  { value: 'Associate Professor', label: 'Associate Professor' },
+  { value: 'Assistant Professor', label: 'Assistant Professor' },
+  { value: 'Visiting Faculty', label: 'Visiting Faculty' }
+];
+
+const InstructorForm = ({ 
+  initialData = null,
+  onSubmit = () => {},
+  onClose = () => {}
+}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError, setApiError] = useState(null);
-  const [formData, setFormData] = useState(initialData || {
+  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
     role: '',
     office: '',
     officeHours: '',
-    expertise: ''
+    expertise: '',
+    ...initialData
   });
 
-  const createPayload = () => {
-    return {
-          name: formData.name,
-          email: formData.email,
-          role: formData.role,
-          office: formData.office || null,
-          officeHours: formData.officeHours || null,
-          expertise: formData.expertise || null
-    };
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setApiError(null);
-
-    try {
-      const payload = createPayload();
-      
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-type': 'application/json; charset=UTF-8',
-        },
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: '',
+        email: '',
+        role: '',
+        office: '',
+        officeHours: '',
+        expertise: '',
+        ...initialData
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to submit instructor data: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('API Response:', data);
-      
-      onSubmit(formData, data);
-
-    } catch (error) {
-      console.error('API Error:', error);
-      setApiError(error.message);
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  }, [initialData]);
 
   const validateEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   };
 
-  const handleInputChange = (e, field) => {
-    const value = e.target.value;
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    } else if (formData.name.length < 2) {
+      newErrors.name = 'Name must be at least 2 characters long';
+    } else if (formData.name.length > 100) {
+      newErrors.name = 'Name must be less than 100 characters';
+    }
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+
+    if (!formData.role) {
+      newErrors.role = 'Role is required';
+    }
+
+    if (formData.office && formData.office.length > 100) {
+      newErrors.office = 'Office location must be less than 100 characters';
+    }
+
+    if (formData.officeHours && formData.officeHours.length > 100) {
+      newErrors.officeHours = 'Office hours must be less than 100 characters';
+    }
+
+    if (formData.expertise && formData.expertise.length > 500) {
+      newErrors.expertise = 'Expertise must be less than 500 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     
-    if (apiError) {
-      setApiError(null);
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (error) {
+      setErrors({ submit: error.message || 'Failed to submit form' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {apiError && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {apiError}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {errors.submit && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-5 h-5" />
+          <p>{errors.submit}</p>
         </div>
       )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Name *
+          Full Name *
         </label>
         <input
           type="text"
+          name="name"
           value={formData.name}
-          onChange={(e) => handleInputChange(e, 'name')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.name ? 'border-red-300' : 'border-gray-300'}`}
           required
-          minLength={2}
-          maxLength={100}
+          placeholder="Enter instructor's full name"
         />
+        {errors.name && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.name}
+          </p>
+        )}
       </div>
 
       <div>
@@ -99,18 +145,18 @@ const InstructorForm = ({ initialData, onSubmit }) => {
         </label>
         <input
           type="email"
+          name="email"
           value={formData.email}
-          onChange={(e) => handleInputChange(e, 'email')}
+          onChange={handleInputChange}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
-            ${!formData.email || validateEmail(formData.email) 
-              ? 'border-gray-300' 
-              : 'border-red-300'}`}
+            ${errors.email ? 'border-red-300' : 'border-gray-300'}`}
           required
-          pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+          placeholder="Enter instructor's email address"
         />
-        {formData.email && !validateEmail(formData.email) && (
-          <p className="mt-1 text-sm text-red-500">
-            Please enter a valid email address
+        {errors.email && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.email}
           </p>
         )}
       </div>
@@ -120,30 +166,46 @@ const InstructorForm = ({ initialData, onSubmit }) => {
           Role *
         </label>
         <select
+          name="role"
           value={formData.role}
-          onChange={(e) => handleInputChange(e, 'role')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.role ? 'border-red-300' : 'border-gray-300'}`}
           required
         >
           <option value="">Select Role</option>
-          <option value="Professor">Professor</option>
-          <option value="Associate Professor">Associate Professor</option>
-          <option value="Assistant Professor">Assistant Professor</option>
-          <option value="Visiting Faculty">Visiting Faculty</option>
+          {INSTRUCTOR_ROLES.map(role => (
+            <option key={role.value} value={role.value}>
+              {role.label}
+            </option>))}
         </select>
+        {errors.role && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.role}
+          </p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Office
+          Office Location
         </label>
         <input
           type="text"
+          name="office"
           value={formData.office}
-          onChange={(e) => handleInputChange(e, 'office')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.office ? 'border-red-300' : 'border-gray-300'}`}
           placeholder="e.g., Room 301, CS Building"
         />
+        {errors.office && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.office}
+          </p>
+        )}
       </div>
 
       <div>
@@ -152,44 +214,65 @@ const InstructorForm = ({ initialData, onSubmit }) => {
         </label>
         <input
           type="text"
+          name="officeHours"
           value={formData.officeHours}
-          onChange={(e) => handleInputChange(e, 'officeHours')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.officeHours ? 'border-red-300' : 'border-gray-300'}`}
           placeholder="e.g., Mon-Wed 2-4 PM"
         />
+        {errors.officeHours && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.officeHours}
+          </p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Expertise
+          Areas of Expertise
         </label>
         <textarea
+          name="expertise"
           value={formData.expertise}
-          onChange={(e) => handleInputChange(e, 'expertise')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.expertise ? 'border-red-300' : 'border-gray-300'}`}
           rows={3}
           placeholder="Enter areas of expertise, separated by commas"
         />
+        {errors.expertise && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.expertise}
+          </p>
+        )}
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end gap-3 pt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-            ${isSubmitting ? 'bg-blue-400' : ''}`}
+            flex items-center gap-2`}
         >
           {isSubmitting ? (
-            <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Submitting...
-            </span>
+            <>
+              <Loader className="w-4 h-4 animate-spin" />
+              <span>Submitting...</span>
+            </>
           ) : (
-            initialData ? 'Update Instructor' : 'Add Instructor'
+            <span>{initialData ? 'Update Instructor' : 'Add Instructor'}</span>
           )}
         </button>
       </div>

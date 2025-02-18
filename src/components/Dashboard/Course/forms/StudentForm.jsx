@@ -1,75 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, Loader } from 'lucide-react';
 
-const StudentForm = ({ initialData, onSubmit, sections }) => {
+const StudentForm = ({ 
+  initialData = null,
+  sections = [], 
+  onSubmit = () => {},
+  onClose = () => {}
+}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError, setApiError] = useState(null);
-  const [formData, setFormData] = useState(initialData || {
+  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState({
     name: '',
-    studentId: '',
+    roll_number: '',
     email: '',
-    section: sections[0]
+    batch: '',
+    section: sections[0] || 'A1',
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.user_name || '',
+        roll_number: initialData.roll_number || '',
+        email: initialData.user_email || '',
+        batch: initialData.batch || '',
+        section: initialData.section || sections[0] || 'A1',
+      });
+    }
+  }, [initialData, sections]);
 
   const validateEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   };
 
-  const validateStudentId = (id) => {
-    const regex = /^[0-9]{4}[A-Z]{2}[0-9]{4}$/;
-    return regex.test(id);
-  };
+  const validateForm = () => {
+    const newErrors = {};
 
-  const createPayload = () => {
-    return {
-          name: formData.name,
-          studentId: formData.studentId,
-          email: formData.email,
-          section: formData.section
-    };
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+
+    if (!formData.roll_number) {
+      newErrors.roll_number = 'Roll number is required';
+    }
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+
+    if (!formData.batch) {
+      newErrors.batch = 'Batch is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
-    setApiError(null);
-
     try {
-      const payload = createPayload();
+      const submitData = {
+        name: formData.name,
+        email: formData.email,
+        roll_number: formData.roll_number,
+        batch: formData.batch
+      };
       
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-type': 'application/json; charset=UTF-8',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to submit student data: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      onSubmit(formData, data);
-
+      await onSubmit(submitData);
+      onClose();
     } catch (error) {
-      setApiError(error.message);
+      setErrors({ submit: error.message || 'Failed to submit form' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (e, field) => {
-    const value = e.target.value;
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setApiError(null);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {apiError && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {apiError}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {errors.submit && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-5 h-5" />
+          <p>{errors.submit}</p>
         </div>
       )}
 
@@ -79,34 +108,40 @@ const StudentForm = ({ initialData, onSubmit, sections }) => {
         </label>
         <input
           type="text"
+          name="name"
           value={formData.name}
-          onChange={(e) => handleInputChange(e, 'name')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.name ? 'border-red-300' : 'border-gray-300'}`}
           required
-          minLength={2}
-          maxLength={100}
+          placeholder="Enter student's full name"
         />
+        {errors.name && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.name}
+          </p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Student ID *
+          Roll Number *
         </label>
         <input
           type="text"
-          value={formData.studentId}
-          onChange={(e) => handleInputChange(e, 'studentId')}
+          name="roll_number"
+          value={formData.roll_number}
+          onChange={handleInputChange}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
-            ${!formData.studentId || validateStudentId(formData.studentId) 
-              ? 'border-gray-300' 
-              : 'border-red-300'}`}
+            ${errors.roll_number ? 'border-red-300' : 'border-gray-300'}`}
           required
-          pattern="[0-9]{4}[A-Z]{2}[0-9]{4}"
-          placeholder="e.g., 2024CS1234"
+          placeholder="Enter roll number"
         />
-        {formData.studentId && !validateStudentId(formData.studentId) && (
-          <p className="mt-1 text-sm text-red-500">
-            Please enter a valid student ID (e.g., 2024CS1234)
+        {errors.roll_number && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.roll_number}
           </p>
         )}
       </div>
@@ -117,56 +152,87 @@ const StudentForm = ({ initialData, onSubmit, sections }) => {
         </label>
         <input
           type="email"
+          name="email"
           value={formData.email}
-          onChange={(e) => handleInputChange(e, 'email')}
+          onChange={handleInputChange}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
-            ${!formData.email || validateEmail(formData.email) 
-              ? 'border-gray-300' 
-              : 'border-red-300'}`}
+            ${errors.email ? 'border-red-300' : 'border-gray-300'}`}
           required
-          pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+          placeholder="Enter student's email address"
         />
-        {formData.email && !validateEmail(formData.email) && (
-          <p className="mt-1 text-sm text-red-500">
-            Please enter a valid email address
+        {errors.email && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.email}
           </p>
         )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Section *
+          Batch *
+        </label>
+        <input
+          type="text"
+          name="batch"
+          value={formData.batch}
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.batch ? 'border-red-300' : 'border-gray-300'}`}
+          required
+          placeholder="Enter batch (e.g., 2024)"
+        />
+        {errors.batch && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.batch}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Section
         </label>
         <select
+          name="section"
           value={formData.section}
-          onChange={(e) => handleInputChange(e, 'section')}
+          onChange={handleInputChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          required
         >
-          {sections.map(section => (
-            <option key={section} value={section}>{section}</option>
-          ))}
+          {sections.length > 0 ? (
+            sections.map(section => (
+              <option key={section} value={section}>{section}</option>
+            ))
+          ) : (
+            <option value="A1">A1</option>
+          )}
         </select>
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end gap-3 pt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-            ${isSubmitting ? 'bg-blue-400' : ''}`}
+            flex items-center gap-2`}
         >
           {isSubmitting ? (
-            <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Submitting...
-            </span>
+            <>
+              <Loader className="w-4 h-4 animate-spin" />
+              <span>Submitting...</span>
+            </>
           ) : (
-            initialData ? 'Update Student' : 'Add Student'
+            <span>{initialData ? 'Update Student' : 'Add Student'}</span>
           )}
         </button>
       </div>
