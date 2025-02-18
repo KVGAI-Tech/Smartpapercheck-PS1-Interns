@@ -1,13 +1,10 @@
 import * as React from "react"
-import { cn } from "/Users/rishigarg/SmartQNA-Frontend/src/lib/utils.js"
+import { cn } from "@/lib/utils"
 
 const Card = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
-      className
-    )}
+    className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)}
     {...props}
   />
 ))
@@ -25,10 +22,7 @@ CardHeader.displayName = "CardHeader"
 const CardTitle = React.forwardRef(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
-      className
-    )}
+    className={cn("text-2xl font-semibold leading-none tracking-tight", className)}
     {...props}
   />
 ))

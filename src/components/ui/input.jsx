@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "/Users/rishigarg/SmartQNA-Frontend/src/lib/utils.js"
+import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef(({ className, type, ...props }, ref) => {
   return (
