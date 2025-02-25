@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
-  Users, PlayCircle, X, AlertCircle, CheckCircle
+  Users, PlayCircle, X, AlertCircle, CheckCircle,
+  Check, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UploadQnAModal from '../modals/UploadQnAModal';
@@ -41,39 +42,73 @@ const Toast = ({ message, type, show, onClose }) => {
 };
 
 const StepDot = ({ number, isActive, isCompleted, onClick }) => (
-  <motion.div
+  <motion.button
     whileHover={{ scale: 1.1 }}
     whileTap={{ scale: 0.95 }}
     onClick={onClick}
-    className={`w-12 h-12 rounded-full flex items-center justify-center text-base 
-      cursor-pointer shadow-sm transition-all duration-300 ease-out 
-      ${isActive ? 'bg-blue-500 text-white scale-110 shadow-lg' :
-        isCompleted ? 'bg-green-100 text-green-600 border-2 border-green-500' :
-          'bg-white text-gray-400 border-2 border-gray-200 hover:border-blue-300'
-      }`}
+    className="relative"
   >
-    <motion.span
-      initial={{ scale: 0.8 }}
-      animate={{ scale: 1 }}
-      transition={{ type: "spring", stiffness: 300 }}
+    <motion.div
+      initial={{ scale: 0.9 }}
+      animate={{ 
+        scale: isActive ? 1.1 : 1,
+        boxShadow: isActive 
+          ? '0 0 0 6px rgba(59, 130, 246, 0.15)' 
+          : isCompleted 
+            ? '0 0 0 4px rgba(16, 185, 129, 0.15)' 
+            : '0 0 0 4px rgba(229, 231, 235, 0.6)'
+      }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 300,
+        duration: 0.3
+      }}
+      className={`w-14 h-14 rounded-full flex items-center justify-center text-base 
+        font-semibold cursor-pointer transition-all duration-300 
+        ${isActive 
+          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25' 
+          : isCompleted 
+            ? 'bg-gradient-to-br from-green-100 to-green-200 text-green-700 border-2 border-green-500' 
+            : 'bg-white text-gray-500 border-2 border-gray-200 hover:border-blue-300'
+        }`}
     >
-      {number}
-    </motion.span>
-  </motion.div>
+      {isCompleted ? (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, delay: 0.1 }}
+        >
+          <Check className="w-6 h-6" />
+        </motion.div>
+      ) : (
+        <motion.span
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          {number}
+        </motion.span>
+      )}
+    </motion.div>
+  </motion.button>
 );
 
 const StepConnector = ({ isActive, isCompleted }) => (
-  <div className="flex-1 px-6">
-    <motion.div
-      initial={{ scaleX: 0 }}
-      animate={{ scaleX: 1 }}
-      transition={{ duration: 0.5 }}
-      className={`h-0.5 origin-left transition-all duration-300 ease-out 
-        ${isCompleted ? 'bg-green-500' :
-          isActive ? 'bg-blue-500' :
-            'bg-gray-200'
-        }`}
-    />
+  <div className="flex-1 px-2 sm:px-6 flex items-center">
+    <div className="w-full relative h-2 rounded-full bg-gray-100 overflow-hidden">
+      <motion.div
+        initial={{ width: "0%" }}
+        animate={{ 
+          width: isCompleted ? "100%" : isActive ? "50%" : "0%" 
+        }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+        className={`absolute inset-0 h-full rounded-full 
+          ${isCompleted 
+            ? 'bg-gradient-to-r from-green-400 to-green-500' 
+            : 'bg-gradient-to-r from-blue-400 to-blue-500'
+          }`}
+      />
+    </div>
   </div>
 );
 
@@ -279,9 +314,24 @@ const ExamCard = ({
   const [activeStep, setActiveStep] = useState(0);
   
   const steps = [
-    { label: 'Upload Q&A', action: () => onUploadQnA(exam.id) },
-    { label: 'Generate Rubrics', action: () => onGenerateRubrics(exam.id) },
-    { label: 'Upload Answer Sheets', action: () => onUploadAnswers(exam.id) }
+    { 
+      label: 'Upload Q&A', 
+      description: 'Upload your question paper',
+      icon: Upload,
+      action: () => onUploadQnA(exam.id) 
+    },
+    { 
+      label: 'Generate Rubrics', 
+      description: 'Create marking criteria',
+      icon: CheckCircle,
+      action: () => onGenerateRubrics(exam.id) 
+    },
+    { 
+      label: 'Upload Answer Sheets', 
+      description: 'Upload student answer files',
+      icon: Upload,
+      action: () => onUploadAnswers(exam.id) 
+    }
   ];
 
   return (
@@ -350,37 +400,94 @@ const ExamCard = ({
         </div>
       </div>
 
-      <div className="px-6 sm:px-16 py-10">
-        <div className="flex items-center justify-center">
-          {steps.map((step, index) => (
-            <React.Fragment key={index}>
-              <StepDot
-                number={index + 1}
-                isActive={activeStep === index}
-                isCompleted={index < activeStep}
-                onClick={() => {
-                  setActiveStep(index);
-                  step.action();
-                }}
-              />
-              {index < steps.length - 1 && (
-                <StepConnector
-                  isActive={activeStep > index}
-                  isCompleted={index < activeStep - 1}
+      <div className="px-6 sm:px-10 py-10 bg-gradient-to-b from-white to-gray-50">
+        <div className="flex flex-col items-center">
+          <div className="flex items-center justify-center w-full max-w-3xl mx-auto mb-8">
+            {steps.map((step, index) => (
+              <React.Fragment key={index}>
+                <StepDot
+                  number={index + 1}
+                  isActive={activeStep === index}
+                  isCompleted={index < activeStep}
+                  onClick={() => {
+                    setActiveStep(index);
+                    step.action();
+                  }}
                 />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-        <div className="text-center mt-6">
-          <motion.span
-            key={activeStep}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-sm font-medium text-gray-600"
+                {index < steps.length - 1 && (
+                  <StepConnector
+                    isActive={activeStep > index}
+                    isCompleted={index < activeStep - 1}
+                  />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+          
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeStep}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="text-center mb-4"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <motion.div 
+                  className="p-3 bg-blue-50 rounded-full mb-2" 
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  {React.createElement(steps[activeStep].icon, { className: "w-6 h-6 text-blue-600" })}
+                </motion.div>
+                <h4 className="text-lg font-semibold text-gray-800">
+                  {steps[activeStep].label}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  {steps[activeStep].description}
+                </p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={steps[activeStep].action}
+            className="mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-full flex items-center gap-2
+              shadow-md hover:shadow-lg hover:bg-blue-700 transition-all duration-300"
           >
-            {steps[activeStep].label}
-          </motion.span>
+            {React.createElement(steps[activeStep].icon, { className: "w-4 h-4" })}
+            <span>{steps[activeStep].label}</span>
+          </motion.button>
+          
+          <div className="flex items-center justify-center gap-4 mt-6">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+              disabled={activeStep === 0}
+              className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
+                disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight className="w-5 h-5 transform rotate-180" />
+            </motion.button>
+            <div className="text-sm text-gray-500">
+              Step {activeStep + 1} of {steps.length}
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
+              disabled={activeStep === steps.length - 1}
+              className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
+                disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>
