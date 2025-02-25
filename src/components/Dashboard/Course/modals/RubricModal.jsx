@@ -281,7 +281,7 @@ const RubricModal = ({
       
       try {
         const response = await fetch(
-          `http://43.205.184.7:8000/api/exams/${examId}/questions/${questionNumber}/rubric`,
+          `https://api.whyujjwal.com/api/exams/${examId}/questions/${questionNumber}/rubric`,
           {
             method: 'GET',
             headers: {
@@ -313,9 +313,9 @@ const RubricModal = ({
       setError('');
       try {
         const response = await fetch(
-          `http://43.205.184.7:8000/api/exams/${examId}/questions/${selectedQuestion}/rubric`,
+          `https://api.whyujjwal.com/api/exams/${examId}/questions/${selectedQuestion}/rubric`,
           {
-            method: 'PATCH',
+            method: 'PUT',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
               'Content-Type': 'application/json'

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
 
-const API_BASE_URL = 'http://43.205.184.7:8000';
+const API_BASE_URL = 'https://api.whyujjwal.com';
 
 const StepDot = ({ number, isActive, isCompleted, onClick }) => (
   <motion.div

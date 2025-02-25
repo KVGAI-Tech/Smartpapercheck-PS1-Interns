@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://43.205.184.7:8000/api';
+const API_BASE_URL = 'https://api.whyujjwal.com/api';
 
 export const fetchApi = async (endpoint, options = {}) => {
   const token = localStorage.getItem('accessToken');
