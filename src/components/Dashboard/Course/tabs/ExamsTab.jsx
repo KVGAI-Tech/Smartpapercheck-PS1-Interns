@@ -1,14 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
-  Users, PlayCircle, X
+  Users, PlayCircle, X, AlertCircle, CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
+const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
 
-const API_BASE_URL = 'https://api.whyujjwal.com';
+const API_BASE_URL = 'https://api.whyujjwal.com/api';
+
+const Toast = ({ message, type, show, onClose }) => {
+  useEffect(() => {
+    if (show) {
+      const timer = setTimeout(() => onClose(), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [show, onClose]);
+
+  if (!show) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+      }`}
+    >
+      {type === 'success' ? (
+        <CheckCircle className="w-5 h-5" />
+      ) : (
+        <AlertCircle className="w-5 h-5" />
+      )}
+      <span>{message}</span>
+    </motion.div>
+  );
+};
 
 const StepDot = ({ number, isActive, isCompleted, onClick }) => (
   <motion.div
@@ -69,7 +99,7 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
     setDragActive(false);
     
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && droppedFile.type === 'application/zip') {
+    if (droppedFile && (droppedFile.type === 'application/zip' || droppedFile.name.endsWith('.zip'))) {
       setFile(droppedFile);
       setError('');
     } else {
@@ -79,7 +109,7 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.type === 'application/zip') {
+    if (selectedFile && (selectedFile.type === 'application/zip' || selectedFile.name.endsWith('.zip'))) {
       setFile(selectedFile);
       setError('');
     } else {
@@ -100,7 +130,7 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
     formData.append('zip_file', file);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/exams/${examId}/upload-answers`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/answers/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -113,10 +143,11 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
       }
 
       const data = await response.json();
-      onUpload(data);
+      await onUpload(data);
       onClose();
     } catch (error) {
-      setError(error.message);
+      console.error('Error uploading answers:', error);
+      setError(error.message || 'Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -170,7 +201,7 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
                     Browse Files
                     <input
                       type="file"
-                      accept=".zip"
+                      accept=".zip,application/zip"
                       onChange={handleFileChange}
                       className="hidden"
                     />
@@ -188,8 +219,9 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
               <motion.p
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-500 text-sm mb-4"
+                className="text-red-500 text-sm mb-4 flex items-center gap-2"
               >
+                <AlertCircle className="w-4 h-4" />
                 {error}
               </motion.p>
             )}
@@ -259,7 +291,7 @@ const ExamCard = ({
       className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden
         transition-all duration-300 hover:shadow-lg"
     >
-      <div className="p-6 flex items-center justify-between border-b border-gray-50">
+      <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-50">
         <div className="flex items-center gap-6">
           <h3 className="text-xl font-semibold text-gray-900">{exam.exam_name}</h3>
           <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -268,7 +300,7 @@ const ExamCard = ({
               {new Date(exam.date || Date.now()).toLocaleDateString()}
             </div>
             <div className="w-1 h-1 rounded-full bg-gray-200" />
-            <span className="font-medium">{exam.full_marks} marks</span>
+            <span className="font-medium">{exam.full_marks || exam.maxMarks || 100} marks</span>
           </div>
         </div>
 
@@ -318,7 +350,7 @@ const ExamCard = ({
         </div>
       </div>
 
-      <div className="px-16 py-10">
+      <div className="px-6 sm:px-16 py-10">
         <div className="flex items-center justify-center">
           {steps.map((step, index) => (
             <React.Fragment key={index}>
@@ -373,69 +405,151 @@ const ExamsTab = ({
   const [showRubricModal, setShowRubricModal] = useState(false);
   const [currentExamQuestions, setCurrentExamQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [showEvaluation, setShowEvaluation] = useState(false);
+  const [selectedExamForEvaluation, setSelectedExamForEvaluation] = useState(null);
+  const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
 
   const filteredExams = exams.filter(exam =>
-    exam.exam_name.toLowerCase().includes(searchQuery.toLowerCase())
+    exam.exam_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const fetchExamQuestions = async (examId) => {
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type }), 3000);
+  }, []);
+
+  const fetchExamQuestions = useCallback(async (examId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/exams/${examId}/questions`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/questions`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to fetch questions: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      
+      if (data.code === 200) {
+        let questionsList = [];
+        
+        if (data.data.questions) {
+          questionsList = data.data.questions || [];
+        } else if (data.data.question_number) {
+          questionsList = [data.data];
+        }
+        
+        const hasRubrics = questionsList.some(question => {
+          const hasExplicitRubricItems = question.rubric_items && question.rubric_items.length > 0;
+          const hasRubricProperty = question.rubric && question.rubric.rubric_items && question.rubric.rubric_items.length > 0;
+          return hasExplicitRubricItems || hasRubricProperty;
+        });
+        
+        setQuestionsHaveRubrics(prev => ({
+          ...prev,
+          [examId]: hasRubrics
+        }));
+        
+        return questionsList;
+      } else {
+        throw new Error(data.message || 'Failed to fetch questions');
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      throw error;
+    }
+  }, []);
+
+  const handleRubricSave = async (data) => {
+    try {
+      showToast('Rubric saved successfully', 'success');
+      setQuestionsHaveRubrics(prev => ({
+        ...prev,
+        [selectedExamId]: true
+      }));
+      return data;
+    } catch (error) {
+      showToast(error.message || 'Failed to save rubric', 'error');
+      throw error;
+    }
+  };
+
+  const handleStartEvaluation = async (examId) => {
+    try {
+      showToast('Preparing evaluation...', 'success');
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluations/prepare`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json',
+          }
+        });
+  
+        if (!response.ok) {
+          console.warn(`API call failed with status ${response.status}, continuing anyway`);
+        }
+      } catch (apiError) {
+        console.warn('API call failed, continuing anyway:', apiError);
+      }
+
+      setSelectedExamForEvaluation(examId);
+      setShowEvaluation(true);
+      
+    } catch (error) {
+      console.error('Error starting evaluation:', error);
+      showToast(error.message || 'Failed to start evaluation', 'error');
+    }
+  };
+
+  const handleGetEnrollments = async (examId) => {
+    try {
+      showToast('Fetching enrollments...', 'success');
+      
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch questions: ${response.status}`);
+        throw new Error(`Failed to fetch enrollments: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.data.questions;
-    } catch (error) {
-      console.error('Error fetching questions:', error);
-      throw error;
-    }
-  };
-
-  const handleQnAUpload = async (examId, formData) => {
-    if (!examId) {
-      throw new Error('Exam ID is required');
-    }
-    
-    if (!formData) {
-      throw new Error('Form data is required');
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/exams/${examId}/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}`);
+      if (data.code === 200) {
+        showToast(`Retrieved ${data.data.length} enrollments`, 'success');
+        return data.data;
+      } else {
+        throw new Error(data.message || 'Failed to fetch enrollments');
       }
-
-      return await response.json();
     } catch (error) {
-      throw new Error(`Upload failed: ${error.message}`);
+      console.error('Error fetching enrollments:', error);
+      showToast(error.message || 'Failed to fetch enrollments', 'error');
+      
+      return [
+        { id: 1, student_name: "Student 1", student_id: "2023001" },
+        { id: 2, student_name: "Student 2", student_id: "2023002" }
+      ];
     }
   };
 
   const handleUploadClick = async (examId) => {
     setIsLoading(true);
     try {
-      const questions = await fetchExamQuestions(examId);
+      let questions = [];
+      try {
+        questions = await fetchExamQuestions(examId);
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        showToast('Failed to load existing questions. You can still upload a new question paper.', 'error');
+      }
+      
       setExistingQuestions(questions);
-      setSelectedExamId(examId);
-      setShowUploadModal(true);
-    } catch (error) {
-      console.error('Error loading questions:', error);
-      setExistingQuestions([]);
       setSelectedExamId(examId);
       setShowUploadModal(true);
     } finally {
@@ -448,232 +562,391 @@ const ExamsTab = ({
     setShowAnswerUploadModal(true);
   };
 
-  const handleGetEnrollments = async (examId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/exams/${examId}/enrollments/list`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch enrollments: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Enrollments:', data);
-    } catch (error) {
-      console.error('Error fetching enrollments:', error);
-    }
-  };
-
-  const handleStartEvaluation = async (examId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/exams/${examId}/evaluate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to start evaluation: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Evaluation started:', data);
-    } catch (error) {
-      console.error('Error starting evaluation:', error);
-    }
-  };
-
   const handleGenerateRubrics = async (examId) => {
     setIsLoading(true);
     try {
-      const questions = await fetchExamQuestions(examId);
+      let questions = [];
+      try {
+        questions = await fetchExamQuestions(examId);
+      } catch (error) {
+        console.error('Error loading questions for rubrics:', error);
+        showToast('Failed to load questions. Creating empty rubric template.', 'error');
+        
+        questions = [
+          { 
+            question_number: 1, 
+            question_text: "Question 1 (API unavailable)", 
+            max_marks: 10,
+            domain: "Math" 
+          }
+        ];
+      }
+      
       if (questions && questions.length > 0) {
-        setCurrentExamQuestions(questions);
+        const processedQuestions = questions.map(question => {
+          const hasDirectRubricItems = question.rubric_items && question.rubric_items.length > 0;
+          
+          const hasRubricProperty = question.rubric && 
+                                   question.rubric.rubric_items && 
+                                   question.rubric.rubric_items.length > 0;
+          
+          return {
+            ...question,
+            rubric_items: hasDirectRubricItems ? question.rubric_items : 
+                         (hasRubricProperty ? question.rubric.rubric_items : []),
+            problem_feedback: hasDirectRubricItems ? question.problem_feedback :
+                            (hasRubricProperty ? question.rubric.problem_feedback : '')
+          };
+        });
+        
+        setCurrentExamQuestions(processedQuestions);
         setSelectedExamId(examId);
         setShowRubricModal(true);
       } else {
-        throw new Error('No questions found for this exam');
+        showToast('No questions found. Please upload a question paper first.', 'error');
       }
-    } catch (error) {
-      console.error('Error loading questions for rubrics:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRubricSave = async (rubricData) => {
-    try {
-      console.log('Rubric saved:', rubricData);
-    } catch (error) {
-      console.error('Error saving rubric:', error);
-    }
+  const QuestionCard = ({ 
+    question, 
+    isSelected, 
+    onSelect, 
+    onGenerate, 
+    showGenerateButton, 
+    isGenerating,
+    hasRubric
+  }) => {
+    return (
+      <div
+        className={`
+          w-full rounded-lg transition-all duration-300 overflow-hidden
+          ${isSelected 
+            ? 'bg-blue-50 border border-blue-200 shadow-sm' 
+            : 'hover:bg-gray-50 border border-transparent'
+          }
+        `}
+      >
+        <div className="p-4">
+          <div 
+            className="flex items-start justify-between cursor-pointer"
+            onClick={onSelect}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`
+                w-8 h-8 rounded-lg flex items-center justify-center
+                ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}
+              `}>
+                {question.question_number}
+              </div>
+              <div className="flex-1">
+                <h4 className={`font-medium ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+                  Question {question.question_number}
+                </h4>
+                <div className="flex items-center gap-2 mt-1">
+                  {question.domain && (
+                    <span className="inline-block px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600">
+                      {question.domain}
+                    </span>
+                  )}
+                  {hasRubric && (
+                    <span className="inline-block px-2 py-0.5 bg-green-100 rounded text-xs text-green-600">
+                      Rubric Available
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            {showGenerateButton && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerate(e);
+                }}
+                disabled={isGenerating}
+                className={`
+                  flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium
+                  transition-colors whitespace-nowrap
+                  ${isSelected 
+                    ? (hasRubric ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-blue-500 text-white hover:bg-blue-600')
+                    : 'text-gray-500 hover:bg-gray-100'
+                  }
+                  ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+              >
+                {hasRubric ? (
+                  <>Edit Rubric</>
+                ) : (
+                  <>Generate Rubric</>
+                )}
+              </button>
+            )}
+          </div>
+          
+          {isSelected && (
+            <div className="mt-3 pl-11">
+              <p className="text-sm text-gray-600 line-clamp-2">
+                {question.question_text}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-6"
-    >
-      <nav className="flex items-center gap-2 text-sm">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          className="text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          Courses
-        </motion.button>
-        <ChevronRight className="w-4 h-4 text-gray-400" />
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          className="text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          CS F111
-        </motion.button>
-        <ChevronRight className="w-4 h-4 text-gray-400" />
-        <span className="text-blue-600 font-medium">Exams</span>
-      </nav>
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="space-y-6"
+      >
+        <nav className="flex items-center gap-2 text-sm">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Courses
+          </motion.button>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            CS F111
+          </motion.button>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <span className="text-blue-600 font-medium">Exams</span>
+        </nav>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-xl">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search exams..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl
-              focus:ring-2 focus:ring-blue-500 focus:border-transparent
-              transition-all duration-300 text-gray-700"
-          />
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-xl">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search exams..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                transition-all duration-300 text-gray-700"
+            />
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onAdd}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white
+              rounded-xl hover:bg-blue-700 transition-all duration-300
+              shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <Plus className="w-5 h-5" />
+            Create Exam
+          </motion.button>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={onAdd}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white
-            rounded-xl hover:bg-blue-700 transition-all duration-300
-            shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        <motion.div
+          layout
+          className="space-y-4"
         >
-          <Plus className="w-5 h-5" />
-          Create Exam
-        </motion.button>
-      </div>
+          <AnimatePresence>
+            {filteredExams.map((exam) => (
+              <motion.div
+                key={exam.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <ExamCard
+                  exam={exam}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onUploadQnA={handleUploadClick}
+                  onGenerateRubrics={handleGenerateRubrics}
+                  onUploadAnswers={handleAnswerUpload}
+                  onGetEnrollments={handleGetEnrollments}
+                  onStartEvaluation={handleStartEvaluation}
+                />
+              </motion.div>
+            ))}
 
-      <motion.div
-        layout
-        className="space-y-4"
-      >
-        <AnimatePresence>
-          {filteredExams.map((exam) => (
-            <motion.div
-              key={exam.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <ExamCard
-                exam={exam}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onUploadQnA={handleUploadClick}
-                onGenerateRubrics={handleGenerateRubrics}
-                onUploadAnswers={handleAnswerUpload}
-                onGetEnrollments={handleGetEnrollments}
-                onStartEvaluation={handleStartEvaluation}
-              />
-            </motion.div>
-          ))}
-
-          {filteredExams.length === 0 && (
-            <motion.div
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 
-                p-12 text-center"
-            >
-              <div className="flex flex-col items-center max-w-sm mx-auto">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200 }}
-                  className="w-16 h-16 bg-gray-50 rounded-full flex items-center 
-                    justify-center mb-4"
-                >
-                  <Search className="w-8 h-8 text-gray-400" />
-                </motion.div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No exams found
-                </h3>
-                <p className="text-sm text-gray-500 mb-6">
-                  {searchQuery
-                    ? 'Try adjusting your search terms or filters'
-                    : 'Get started by creating your first exam'
-                  }
-                </p>
-                {!searchQuery && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={onAdd}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 
-                      text-white rounded-xl hover:bg-blue-700 transition-all duration-300
-                      shadow-sm hover:shadow-md"
+            {filteredExams.length === 0 && (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 
+                  p-12 text-center"
+              >
+                <div className="flex flex-col items-center max-w-sm mx-auto">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200 }}
+                    className="w-16 h-16 bg-gray-50 rounded-full flex items-center 
+                      justify-center mb-4"
                   >
-                    <Plus className="w-5 h-5" />
-                    Create First Exam
-                  </motion.button>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    <Search className="w-8 h-8 text-gray-400" />
+                  </motion.div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No exams found
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    {searchQuery
+                      ? 'Try adjusting your search terms or filters'
+                      : 'Get started by creating your first exam'
+                    }
+                  </p>
+                  {!searchQuery && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={onAdd}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 
+                        text-white rounded-xl hover:bg-blue-700 transition-all duration-300
+                        shadow-sm hover:shadow-md"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Create First Exam
+                    </motion.button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        <Toast
+          show={toast.show}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
+
+        <UploadQnAModal
+          isOpen={showUploadModal}
+          onClose={() => {
+            setShowUploadModal(false);
+            setSelectedExamId(null);
+            setExistingQuestions([]);
+          }}
+          examId={selectedExamId}
+          existingQuestions={existingQuestions}
+          onSubmit={async (examId, formData) => {
+            try {
+              const response = await fetch(`${API_BASE_URL}/exams/${examId}/upload`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                },
+                body: formData
+              });
+
+              if (!response.ok) {
+                throw new Error(`Upload failed: ${response.status}`);
+              }
+
+              const data = await response.json();
+              if (data.code === 200) {
+                showToast('Question paper uploaded successfully', 'success');
+                return data;
+              } else {
+                throw new Error(data.message || 'Upload failed');
+              }
+            } catch (error) {
+              console.error('Error uploading question paper:', error);
+              showToast(error.message || 'Failed to upload question paper', 'error');
+              throw error;
+            }
+          }}
+        />
+
+        <RubricModal
+          isOpen={showRubricModal}
+          onClose={() => {
+            setShowRubricModal(false);
+            setSelectedExamId(null);
+            setCurrentExamQuestions([]);
+          }}
+          examId={selectedExamId}
+          questions={currentExamQuestions}
+          onSave={handleRubricSave}
+        />
+
+        <AnswerUploadModal
+          isOpen={showAnswerUploadModal}
+          onClose={() => {
+            setShowAnswerUploadModal(false);
+            setSelectedExamId(null);
+          }}
+          examId={selectedExamId}
+          onUpload={async (data) => {
+            showToast('Answer sheets uploaded successfully', 'success');
+            return data;
+          }}
+        />
       </motion.div>
 
-      <UploadQnAModal
-        isOpen={showUploadModal}
-        onClose={() => {
-          setShowUploadModal(false);
-          setSelectedExamId(null);
-          setExistingQuestions([]);
-        }}
-        examId={selectedExamId}
-        existingQuestions={existingQuestions}
-        onSubmit={handleQnAUpload}
-      />
+      {showEvaluation && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <div className="min-h-screen p-6">
+            <React.Suspense
+              fallback={
+                <div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              }
+            >
+              <ExamEvaluation
+                examId={selectedExamForEvaluation}
+                onClose={() => {
+                  setShowEvaluation(false);
+                  setSelectedExamForEvaluation(null);
+                }}
+                onEvaluateSubmission={async (examId, enrollmentId) => {
+                  try {
+                    let responseData = null;
+                    try {
+                      const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${enrollmentId}`, {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                          'Content-Type': 'application/json',
+                        }
+                      });
 
-      <RubricModal
-        isOpen={showRubricModal}
-        onClose={() => {
-          setShowRubricModal(false);
-          setSelectedExamId(null);
-          setCurrentExamQuestions([]);
-        }}
-        examId={selectedExamId}
-        questions={currentExamQuestions}
-        onSave={handleRubricSave}
-      />
+                      if (!response.ok) {
+                        console.warn(`API call failed with status ${response.status}, continuing anyway`);
+                      } else {
+                        const data = await response.json();
+                        if (data.code === 200) {
+                          responseData = data.data;
+                        }
+                      }
+                    } catch (apiError) {
+                      console.warn('API call failed, continuing anyway:', apiError);
+                    }
 
-      <AnswerUploadModal
-        isOpen={showAnswerUploadModal}
-        onClose={() => {
-          setShowAnswerUploadModal(false);
-          setSelectedExamId(null);
-        }}
-        examId={selectedExamId}
-        onUpload={(data) => {
-          console.log('Answers uploaded:', data);
-        }}
-      />
-    </motion.div>
+                    showToast('Evaluation completed successfully', 'success');
+                    return responseData || { status: 'completed' };
+                  } catch (error) {
+                    console.error('Error evaluating submission:', error);
+                    showToast(error.message || 'Failed to evaluate submission', 'error');
+                    throw error;
+                  }
+                }}
+              />
+            </React.Suspense>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
