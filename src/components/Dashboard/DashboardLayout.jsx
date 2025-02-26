@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../BaseURL';
 import { 
   Menu, ChevronLeft, ChevronRight, LayoutDashboard, 
   BookOpen, LineChart, GraduationCap, Users,
@@ -23,7 +24,7 @@ const DashboardLayout = ({ children }) => {
         return;
       }
 
-      const response = await fetch('https://api.whyujjwal.com/api/users/me', {
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

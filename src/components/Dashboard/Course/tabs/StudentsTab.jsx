@@ -4,11 +4,16 @@ import {
   Users, AlertCircle, Loader 
 } from 'lucide-react';
 import { studentApi } from './studentApi';
+import { StudentImportModal } from '../modals/ImportModal';
+
 const StudentsTab = ({
   courseId, 
+  students: externalStudents = null,
   sections = [],
   searchQuery = '',
   selectedSection = 'All sections',
+  onSearchChange = () => {},
+  onSectionChange = () => {},
   onAdd = () => {},
   onEdit = () => {},
   onDelete = () => {},
@@ -17,7 +22,16 @@ const StudentsTab = ({
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
+
   useEffect(() => {
+    if (externalStudents) {
+      setStudents(externalStudents);
+      setLoading(false);
+      return;
+    }
+
     const fetchStudents = async () => {
       if (!courseId) {
         setError('Course ID is required');
@@ -36,51 +50,66 @@ const StudentsTab = ({
         setLoading(false);
       }
     };
+
     fetchStudents();
-  }, [courseId]);
+  }, [courseId, externalStudents]);
 
   const handleRemoveStudent = async (student) => {
     try {
       await studentApi.removeStudent(courseId, student.id);
       setStudents(prev => prev.filter(s => s.id !== student.id));
+      onDelete && onDelete(student);
     } catch (err) {
       console.error('Failed to remove student:', err.message);
     }
   };
+
   const handleImportStudents = async (file) => {
     try {
+      setUploadStatus('uploading');
       const result = await studentApi.uploadStudents(courseId, file);
+      
+      setUploadStatus('processing');
       studentApi.pollUploadStatus(
         result.upload_id,
         (processedCount) => {
           console.log(`Processed: ${processedCount}`);
         },
         async () => {
+          setUploadStatus('completed');
           try {
             const updatedStudents = await studentApi.getStudents(courseId);
             setStudents(updatedStudents);
+            setTimeout(() => {
+              setShowImportModal(false);
+              setUploadStatus(null);
+            }, 2000);
           } catch (err) {
             console.error('Failed to refresh students:', err.message);
           }
         },
         (error) => {
           console.error('Import failed:', error);
+          setUploadStatus('failed');
         }
       );
     } catch (err) {
       console.error('Failed to import students:', err.message);
+      setUploadStatus('failed');
     }
   };
+
   const filteredStudents = students.filter(student => {
     const matchesSearch = !searchQuery || 
       [student.user_name, student.roll_number, student.user_email]
         .some(field => 
-          field.toLowerCase().includes(searchQuery.toLowerCase())
+          field?.toLowerCase().includes(searchQuery.toLowerCase())
         );
     const matchesSection = selectedSection === 'All sections' || 
       student.section === selectedSection;
     return matchesSearch && matchesSection;
   });
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -92,6 +121,7 @@ const StudentsTab = ({
         </div>
       );
     }
+
     if (error) {
       return (
         <div className="bg-white rounded-lg shadow-sm p-8">
@@ -105,6 +135,7 @@ const StudentsTab = ({
         </div>
       );
     }
+
     if (!students.length) {
       return (
         <div className="bg-white rounded-lg shadow-sm p-8 text-center">
@@ -127,6 +158,7 @@ const StudentsTab = ({
         </div>
       );
     }
+
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
@@ -205,6 +237,7 @@ const StudentsTab = ({
       </div>
     );
   };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
@@ -214,7 +247,7 @@ const StudentsTab = ({
             type="text"
             placeholder="Search students..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           />
@@ -223,7 +256,7 @@ const StudentsTab = ({
           {sections.length > 0 && (
             <select
               value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
+              onChange={(e) => onSectionChange(e.target.value)}
               className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
               disabled={loading}
             >
@@ -234,7 +267,7 @@ const StudentsTab = ({
             </select>
           )}
           <button
-            onClick={onImport}
+            onClick={() => setShowImportModal(true)}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
               rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -251,8 +284,21 @@ const StudentsTab = ({
           </button>
         </div>
       </div>
+      
       {renderContent()}
+
+      <StudentImportModal 
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setUploadStatus(null);
+        }}
+        onImport={handleImportStudents}
+        courseId={courseId}
+        uploadStatus={uploadStatus}
+      />
     </div>
   );
 };
+
 export default StudentsTab;

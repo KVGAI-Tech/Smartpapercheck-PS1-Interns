@@ -8,8 +8,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const API_BASE_URL = 'https://api.whyujjwal.com/api';
-
+import { API_BASE_URL } from '../../../../BaseURL';
 const GenerateLoader = () => (
     <div className="flex flex-col items-center justify-center py-12 space-y-6">
         <div className="relative">

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Search, Upload, Plus, Edit2, Trash2,
   Mail, Building, Clock, GraduationCap,
   Users 
 } from 'lucide-react';
-
+import { InstructorImportModal } from '../modals/ImportModal';
+import { API_BASE_URL } from '../../../../BaseURL';
 const InstructorsTab = ({
+  courseId,
   instructors = [], 
   searchQuery = '',
   onSearchChange = () => {},
@@ -14,6 +16,82 @@ const InstructorsTab = ({
   onDelete = () => {},
   onImport = () => {}
 }) => {
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
+
+  const handleImportInstructors = async (file) => {
+    try {
+      setUploadStatus('uploading');
+      
+      const response = await fetch(`${API_BASE_URL}/api/professors/courses/${courseId}/co-instructors/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: (() => {
+          const formData = new FormData();
+          formData.append('co_instructor_list', file);
+          return formData;
+        })(),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.code !== 202) {
+        throw new Error(result.message || 'Upload failed');
+      }
+      
+      const uploadId = result.data.upload_id;
+      setUploadStatus('processing');
+      
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`${API_BASE_URL}/api/professors/uploads/${uploadId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+          });
+          
+          if (!statusResponse.ok) {
+            throw new Error(`Status check failed: ${statusResponse.status}`);
+          }
+          
+          const statusData = await statusResponse.json();
+          
+          if (statusData.data.status === 'completed') {
+            clearInterval(pollInterval);
+            setUploadStatus('completed');
+            
+            onImport && onImport(file);
+            
+            setTimeout(() => {
+              setShowImportModal(false);
+              setUploadStatus(null);
+            }, 2000);
+            
+          } else if (statusData.data.status === 'failed') {
+            clearInterval(pollInterval);
+            setUploadStatus('failed');
+            throw new Error(statusData.data.error_message || 'Import failed');
+          }
+          
+        } catch (error) {
+          clearInterval(pollInterval);
+          setUploadStatus('failed');
+          console.error('Error checking upload status:', error);
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error importing instructors:', error);
+      setUploadStatus('failed');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -30,7 +108,7 @@ const InstructorsTab = ({
         
         <div className="flex items-center gap-3">
           <button
-            onClick={onImport}
+            onClick={() => setShowImportModal(true)}
             className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <Upload size={20} />
@@ -126,6 +204,17 @@ const InstructorsTab = ({
           </div>
         </div>
       )}
+
+      <InstructorImportModal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setUploadStatus(null);
+        }}
+        onImport={handleImportInstructors}
+        courseId={courseId}
+        uploadStatus={uploadStatus}
+      />
     </div>
   );
 };

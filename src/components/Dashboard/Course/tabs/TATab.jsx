@@ -1,23 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Upload, Plus, Edit2, Trash2,
-  Mail, Users, Clock, BookOpen, AlertCircle,
-  BadgeCheck, Check
+  Mail, Users, AlertCircle
 } from 'lucide-react';
 import TAForm from '../forms/TAForm';
 import { Modal } from '../shared/Modal';
-import ImportModal from '../modals/ImportModal';
 import DeleteConfirmationModal from '../modals/DeleteConfirmationModal';
 import Toast from '../shared/Toast';
+import { TAImportModal } from '../modals/ImportModal';
 
 import {
   getCourseTAs,
   addTA,
-  removeTA,
-  uploadTAs,
-  pollUploadStatus
+  removeTA
 } from '../api';
-
+import { API_BASE_URL } from '../../../../BaseURL';
 const TATab = ({ courseId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,6 +38,8 @@ const TATab = ({ courseId }) => {
   }, [courseId]);
 
   const loadTAs = async () => {
+    if (!courseId) return;
+    
     try {
       setLoading(true);
       const data = await getCourseTAs(courseId);
@@ -84,30 +83,76 @@ const TATab = ({ courseId }) => {
     }
   };
 
-  const handleImport = async (file) => {
+  const handleImportTAs = async (file) => {
     try {
       setUploadStatus('uploading');
-      const { uploadId } = await uploadTAs(courseId, file);
-
-      pollUploadStatus(
-        uploadId,
-        (status) => {
-          setUploadStatus('processing');
+      
+      const formData = new FormData();
+      formData.append('ta_list', file);
+      
+      const response = await fetch(`${API_BASE_URL}/api/professors/courses/${courseId}/tas/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
-        async () => {
-          setUploadStatus('completed');
-          await loadTAs(); 
-          showToast('Teaching Assistants imported successfully');
-          setShowImportModal(false);
-        },
-        (error) => {
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.data?.upload_id) {
+        throw new Error('Invalid response from server');
+      }
+      
+      const uploadId = result.data.upload_id;
+      setUploadStatus('processing');
+      
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`${API_BASE_URL}/api/professors/uploads/${uploadId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+          });
+          
+          if (!statusResponse.ok) {
+            throw new Error(`Status check failed: ${statusResponse.status}`);
+          }
+          
+          const statusData = await statusResponse.json();
+          
+          if (statusData.data.status === 'completed') {
+            clearInterval(pollInterval);
+            setUploadStatus('completed');
+            
+            await loadTAs();
+            
+            setTimeout(() => {
+              setShowImportModal(false);
+              setUploadStatus(null);
+            }, 2000);
+            
+            showToast('Teaching Assistants imported successfully');
+          } else if (statusData.data.status === 'failed') {
+            clearInterval(pollInterval);
+            setUploadStatus('failed');
+            throw new Error(statusData.data.error_message || 'Import failed');
+          }
+          
+        } catch (error) {
+          clearInterval(pollInterval);
           setUploadStatus('failed');
-          showToast(error.message, 'error');
+          showToast(error.message || 'Error checking upload status', 'error');
         }
-      );
-    } catch (err) {
+      }, 2000);
+      
+    } catch (error) {
       setUploadStatus('failed');
-      showToast(err.message, 'error');
+      showToast(error.message || 'Error importing teaching assistants', 'error');
     }
   };
 
@@ -303,13 +348,14 @@ const TATab = ({ courseId }) => {
         />
       </Modal>
 
-      <ImportModal
+      <TAImportModal
         isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={handleImport}
-        type="Teaching Assistants"
-        allowedTypes={['text/csv']}
-        maxSize={5 * 1024 * 1024}
+        onClose={() => {
+          setShowImportModal(false);
+          setUploadStatus(null);
+        }}
+        onImport={handleImportTAs}
+        courseId={courseId}
         uploadStatus={uploadStatus}
       />
 

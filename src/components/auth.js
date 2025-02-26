@@ -1,5 +1,4 @@
-const API_BASE_URL = 'https://api.whyujjwal.com/api';
-
+import { API_BASE_URL } from '../BaseURL';
 export const getTokens = () => {
   return {
     accessToken: localStorage.getItem('accessToken'),

@@ -14,8 +14,9 @@ import ExamForm from './forms/ExamForm';
 
 import { Modal } from './shared/Modal';
 import Toast from './shared/Toast';
-import ImportModal from './modals/ImportModal';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
+
+import { StudentImportModal, InstructorImportModal, TAImportModal } from './modals/ImportModal';
 
 import {
     fetchApi,
@@ -86,7 +87,6 @@ const MOCK_COURSE = {
 const CourseDetails = () => {
     const { courseId } = useParams();
     const navigate = useNavigate();
-
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [courseDetails, setCourseDetails] = useState(null);
@@ -94,47 +94,49 @@ const CourseDetails = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSection, setSelectedSection] = useState('All sections');
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
     const [showAddModal, setShowAddModal] = useState(false);
-    const [showImportModal, setShowImportModal] = useState(false);
+    const [showStudentImportModal, setShowStudentImportModal] = useState(false);
+    const [showInstructorImportModal, setShowInstructorImportModal] = useState(false);
+    const [showTAImportModal, setShowTAImportModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showEvaluationModal, setShowEvaluationModal] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
-
     const [students, setStudents] = useState([]);
     const [instructors, setInstructors] = useState([]);
     const [teachingAssistants, setTeachingAssistants] = useState([]);
     const [exams, setExams] = useState([]);
     const [uploadStatus, setUploadStatus] = useState(null);
-const handleCreateExam = async (formData) => {
-    try {
-      const response = await fetchApi(`/professors/courses/${courseId}/exams/`, {
-        method: 'POST',
-        body: JSON.stringify(formData)
-      });
-    } catch (error) {
-    }
-  };
+
+    const handleCreateExam = async (formData) => {
+        try {
+            const response = await fetchApi(`/professors/courses/${courseId}/exams/`, {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+        } catch (error) {
+        }
+    };
   
-  const handleUpdateExam = async (examId, formData) => {
-    try {
-      const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}/`, {
-        method: 'PUT',
-        body: JSON.stringify(formData)
-      });
-    } catch (error) {
-    }
-  };
+    const handleUpdateExam = async (examId, formData) => {
+        try {
+            const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}/`, {
+                method: 'PUT',
+                body: JSON.stringify(formData)
+            });
+        } catch (error) {
+        }
+    };
   
-  const handleDeleteExam = async (examId) => {
-    try {
-      await fetchApi(`/professors/courses/${courseId}/exams/${examId}`, {
-        method: 'DELETE'
-      });
-    } catch (error) {
-    }
-  };
+    const handleDeleteExam = async (examId) => {
+        try {
+            await fetchApi(`/professors/courses/${courseId}/exams/${examId}`, {
+                method: 'DELETE'
+            });
+        } catch (error) {
+        }
+    };
+    
     useEffect(() => {
         const loadCourseData = async () => {
             if (!courseId) {
@@ -166,7 +168,7 @@ const handleCreateExam = async (formData) => {
 
                     setStudents(studentsResp?.data || []);
                     setInstructors(instructorsResp?.data || []);
-                    setTeachingAssistants(tasResp?.data || []);
+                    setTeachingAssistants(tasResp || []);
                     setExams(examsResp?.data || []);
                 } catch (error) {
                     console.error('Error loading related data:', error);
@@ -232,61 +234,102 @@ const handleCreateExam = async (formData) => {
         }
     };
 
-    const handleImport = async (type, file) => {
-        if (!file) {
-            showToast('Please select a file to import', 'error');
-            return;
-        }
-
+    const handleImportStudents = async (file) => {
         try {
-            let response;
-            switch (type) {
-                case 'student':
-                    response = await uploadStudents(courseId, file);
-                    break;
-                case 'instructor':
-                    response = await uploadInstructors(courseId, file);
-                    break;
-                case 'ta':
-                    response = await uploadTAs(courseId, file);
-                    break;
-                default:
-                    throw new Error(`Invalid import type: ${type}`);
-            }
-
+            setUploadStatus('uploading');
+            const response = await uploadStudents(courseId, file);
+            
             const uploadId = response.data.upload_id;
             setUploadStatus('processing');
 
             pollUploadStatus(
                 uploadId,
+                null,
                 async (data) => {
                     setUploadStatus('completed');
-                    switch (type) {
-                        case 'student':
-                            const studentsResponse = await getCourseStudents(courseId);
-                            setStudents(studentsResponse.data || []);
-                            break;
-                        case 'instructor':
-                            const instructorsResponse = await getCourseInstructors(courseId);
-                            setInstructors(instructorsResponse.data || []);
-                            break;
-                        case 'ta':
-                            const tasResponse = await getCourseTAs(courseId);
-                            setTeachingAssistants(tasResponse.data || []);
-                            break;
-                    }
-                    showToast(`${type}s imported successfully`);
+                    const studentsResponse = await getCourseStudents(courseId);
+                    setStudents(studentsResponse.data || []);
+                    showToast('Students imported successfully');
+                    
+                    setTimeout(() => {
+                        setShowStudentImportModal(false);
+                        setUploadStatus(null);
+                    }, 2000);
                 },
                 (error) => {
                     setUploadStatus('failed');
-                    showToast(`Error importing ${type}s: ${error}`, 'error');
+                    showToast(`Error importing students: ${error}`, 'error');
                 }
             );
-
-            setShowImportModal(false);
         } catch (error) {
             setUploadStatus('failed');
-            showToast(`Error initiating ${type} import: ${error.message}`, 'error');
+            showToast(`Error initiating student import: ${error.message}`, 'error');
+        }
+    };
+
+    const handleImportInstructors = async (file) => {
+        try {
+            setUploadStatus('uploading');
+            const response = await uploadInstructors(courseId, file);
+            
+            const uploadId = response.data.upload_id;
+            setUploadStatus('processing');
+
+            pollUploadStatus(
+                uploadId,
+                null,
+                async (data) => {
+                    setUploadStatus('completed');
+                    const instructorsResponse = await getCourseInstructors(courseId);
+                    setInstructors(instructorsResponse.data || []);
+                    showToast('Instructors imported successfully');
+                    
+                    setTimeout(() => {
+                        setShowInstructorImportModal(false);
+                        setUploadStatus(null);
+                    }, 2000);
+                },
+                (error) => {
+                    setUploadStatus('failed');
+                    showToast(`Error importing instructors: ${error}`, 'error');
+                }
+            );
+        } catch (error) {
+            setUploadStatus('failed');
+            showToast(`Error initiating instructor import: ${error.message}`, 'error');
+        }
+    };
+
+    const handleImportTAs = async (file) => {
+        try {
+            setUploadStatus('uploading');
+            const response = await uploadTAs(courseId, file);
+            
+            const uploadId = response.data.upload_id;
+            setUploadStatus('processing');
+
+            pollUploadStatus(
+                uploadId,
+                null,
+                async (data) => {
+                    setUploadStatus('completed');
+                    const tasResponse = await getCourseTAs(courseId);
+                    setTeachingAssistants(tasResponse || []);
+                    showToast('Teaching Assistants imported successfully');
+                    
+                    setTimeout(() => {
+                        setShowTAImportModal(false);
+                        setUploadStatus(null);
+                    }, 2000);
+                },
+                (error) => {
+                    setUploadStatus('failed');
+                    showToast(`Error importing teaching assistants: ${error}`, 'error');
+                }
+            );
+        } catch (error) {
+            setUploadStatus('failed');
+            showToast(`Error initiating teaching assistant import: ${error.message}`, 'error');
         }
     };
 
@@ -396,27 +439,28 @@ const handleCreateExam = async (formData) => {
                     <StudentsTab
                         courseId={courseId}
                         students={getFilteredItems(students, 'student')}          
-                        sections={['A1', 'A2', 'B1']}
+                        sections={courseDetails?.sections || ['A1', 'A2', 'B1']}
                         searchQuery={searchQuery}
                         selectedSection={selectedSection}
                         onSearchChange={setSearchQuery}
                         onSectionChange={setSelectedSection}
-                        onAdd={() => setShowAddModal(true)}
-                        onEdit={(student) => {
-                            setSelectedStudent(student);
-                            setShowEditModal(true);
-                          }}                        
+                        onAdd={() => {
+                            setSelectedItem(null);
+                            setShowAddModal(true);
+                        }}
+                        onEdit={(student) => handleEdit(student, 'student')}                      
                         onDelete={(student) => {
                             setItemToDelete({ type: 'student', id: student.id });
                             setShowDeleteModal(true);
                         }}
-                        onImport={() => setShowImportModal(true)}
+                        onImport={() => setShowStudentImportModal(true)}
                     />
                 );
 
             case 'instructors':
                 return (
                     <InstructorsTab
+                        courseId={courseId}
                         instructors={getFilteredItems(instructors, 'instructor')}
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
@@ -429,29 +473,17 @@ const handleCreateExam = async (formData) => {
                             setItemToDelete({ type: 'instructor', id: instructor.id });
                             setShowDeleteModal(true);
                         }}
-                        onImport={() => setShowImportModal(true)}
+                        onImport={() => setShowInstructorImportModal(true)}
                     />
                 );
 
             case 'tas':
                 return (
                     <TATab
-                        courseId={courseId} 
-                        teachingAssistants={getFilteredItems(teachingAssistants, 'ta')}
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        onAdd={() => {
-                            setSelectedItem(null);
-                            setShowAddModal(true);
-                        }}
-                        onEdit={(ta) => handleEdit(ta, 'ta')}
-                        onDelete={(ta) => {
-                            setItemToDelete({ type: 'ta', id: ta.id });
-                            setShowDeleteModal(true);
-                        }}
-                        onImport={() => setShowImportModal(true)}
+                        courseId={courseId}
                     />
                 );
+                
             case 'exams':
                 return (
                     <ExamsTab
@@ -509,7 +541,7 @@ const handleCreateExam = async (formData) => {
                                     setSelectedSection('All sections');
                                 }}
                                 className={`pb-4 text-sm font-medium transition-colors relative
-                  ${activeTab === tab.id
+                                    ${activeTab === tab.id
                                         ? 'text-blue-600 border-b-2 border-blue-600'
                                         : 'text-gray-500 hover:text-gray-700'}`}
                             >
@@ -536,6 +568,10 @@ const handleCreateExam = async (formData) => {
                     <StudentForm
                         initialData={selectedItem}
                         onSubmit={(data) => handleAdd('student', data)}
+                        onClose={() => {
+                            setShowAddModal(false);
+                            setSelectedItem(null);
+                        }}
                         sections={courseDetails.sections}
                     />
                 )}
@@ -543,30 +579,56 @@ const handleCreateExam = async (formData) => {
                     <InstructorForm
                         initialData={selectedItem}
                         onSubmit={(data) => handleAdd('instructor', data)}
+                        onClose={() => {
+                            setShowAddModal(false);
+                            setSelectedItem(null);
+                        }}
                     />
                 )}
                 {activeTab === 'tas' && (
                     <TAForm
                         initialData={selectedItem}
                         onSubmit={(data) => handleAdd('ta', data)}
-                        sections={courseDetails.sections}
+                        onClose={() => {
+                            setShowAddModal(false);
+                            setSelectedItem(null);
+                        }}
+                        sections={courseDetails?.sections}
                     />
                 )}
                 {activeTab === 'exams' && (
                     <ExamForm
                         initialData={selectedItem}
                         onSubmit={(data) => handleAdd('exam', data)}
+                        onClose={() => {
+                            setShowAddModal(false);
+                            setSelectedItem(null);
+                        }}
                         instructors={instructors}
                         teachingAssistants={teachingAssistants}
                     />
                 )}
             </Modal>
 
-            <ImportModal
-                isOpen={showImportModal}
-                onClose={() => setShowImportModal(false)}
-                onImport={(file) => handleImport(activeTab.slice(0, -1), file)}
-                type={activeTab}
+            <StudentImportModal
+                isOpen={showStudentImportModal}
+                onClose={() => {
+                    setShowStudentImportModal(false);
+                    setUploadStatus(null);
+                }}
+                onImport={handleImportStudents}
+                courseId={courseId}
+                uploadStatus={uploadStatus}
+            />
+
+            <InstructorImportModal
+                isOpen={showInstructorImportModal}
+                onClose={() => {
+                    setShowInstructorImportModal(false);
+                    setUploadStatus(null);
+                }}
+                onImport={handleImportInstructors}
+                courseId={courseId}
                 uploadStatus={uploadStatus}
             />
 
@@ -580,8 +642,6 @@ const handleCreateExam = async (formData) => {
                 itemType={itemToDelete?.type}
                 itemName={itemToDelete?.name || itemToDelete?.user_name || `${itemToDelete?.type || 'item'}`}
             />
-
-           
 
             <Toast
                 show={toast.show}

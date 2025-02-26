@@ -15,9 +15,7 @@ import {
   Filter
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-
-const API_BASE_URL = 'https://api.whyujjwal.com/api';
-
+import { API_BASE_URL } from '../../../../BaseURL';
 const StatusBadge = ({ status }) => {
   const colors = {
     pending: 'bg-yellow-100 text-yellow-800',

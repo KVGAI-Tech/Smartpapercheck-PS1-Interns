@@ -10,8 +10,7 @@ import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
 const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
 
-const API_BASE_URL = 'https://api.whyujjwal.com/api';
-
+import { API_BASE_URL } from '../../../../BaseURL';
 const Toast = ({ message, type, show, onClose }) => {
   useEffect(() => {
     if (show) {
