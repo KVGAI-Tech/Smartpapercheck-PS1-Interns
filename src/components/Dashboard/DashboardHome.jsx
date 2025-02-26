@@ -83,7 +83,8 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome {userData?.name || 'Guest User'}
+          </h1>
         </div>
         
         <div className="flex items-center space-x-4">

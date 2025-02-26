@@ -3,7 +3,7 @@ import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
   Users, PlayCircle, X, AlertCircle, CheckCircle,
-  Check, Clock
+  Check, Clock, FilePlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UploadQnAModal from '../modals/UploadQnAModal';
@@ -11,6 +11,7 @@ import RubricModal from '../modals/RubricModal';
 const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
 
 import { API_BASE_URL } from '../../../../BaseURL';
+
 const Toast = ({ message, type, show, onClose }) => {
   useEffect(() => {
     if (show) {
@@ -716,6 +717,54 @@ const ExamsTab = ({
     }
   };
 
+  const handleUploadQuestionAndAnswerPdfs = async (examId, questionPdf, goldenPdf) => {
+    try {
+      if (questionPdf) {
+        const questionFormData = new FormData();
+        questionFormData.append('question_pdf', questionPdf);
+        
+        const questionResponse = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/question-pdf`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: questionFormData
+        });
+        
+        if (!questionResponse.ok) {
+          throw new Error(`Question PDF upload failed: ${questionResponse.status}`);
+        }
+        
+        showToast('Question PDF uploaded successfully', 'success');
+      }
+      
+      if (goldenPdf) {
+        const goldenFormData = new FormData();
+        goldenFormData.append('golden_pdf', goldenPdf);
+        
+        const goldenResponse = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/golden-pdf`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: goldenFormData
+        });
+        
+        if (!goldenResponse.ok) {
+          throw new Error(`Golden PDF upload failed: ${goldenResponse.status}`);
+        }
+        
+        showToast('Golden answer PDF uploaded successfully', 'success');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error uploading PDFs:', error);
+      showToast(error.message || 'Failed to upload PDF files', 'error');
+      return false;
+    }
+  };
+
   const QuestionCard = ({ 
     question, 
     isSelected, 
@@ -946,6 +995,14 @@ const ExamsTab = ({
           existingQuestions={existingQuestions}
           onSubmit={async (examId, formData) => {
             try {
+              if (formData.get('golden_pdf') || formData.get('question_pdf')) {
+                return await handleUploadQuestionAndAnswerPdfs(
+                  examId,
+                  formData.get('question_pdf'),
+                  formData.get('golden_pdf')
+                );
+              }
+              
               const response = await fetch(`${API_BASE_URL}/exams/${examId}/upload`, {
                 method: 'POST',
                 headers: {
