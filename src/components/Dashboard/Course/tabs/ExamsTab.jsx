@@ -679,10 +679,10 @@ const ExamsTab = ({
       showToast('Fetching enrollments...', 'success');
       
       // Log the URL for debugging
-      console.log(`Fetching enrollments: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/enrollments`);
+      console.log(`Fetching enrollments: ${API_BASE_URL}/exams/${examId}/enrollments/list`);
       
       // Updated API endpoint with courseId
-      const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/enrollments`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
