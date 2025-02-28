@@ -91,7 +91,7 @@ const Dashboard = () => {
         return;
       }
 
-      const response = await fetch('http://43.205.184.7:8000/api/users/me', {
+      const response = await fetch('http://api.whyujjwal.com/api/users/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
