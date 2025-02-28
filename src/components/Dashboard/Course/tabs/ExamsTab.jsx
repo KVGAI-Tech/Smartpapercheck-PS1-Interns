@@ -118,6 +118,14 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
 
+  // Validation check for courseId when component mounts or courseId changes
+  useEffect(() => {
+    if (isOpen && !courseId) {
+      console.error('CourseId is undefined in AnswerUploadModal');
+      setError('Course ID is missing. Please try again or contact support.');
+    }
+  }, [isOpen, courseId]);
+
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -160,11 +168,21 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
       return;
     }
 
+    // Check if courseId is defined
+    if (!courseId) {
+      setError('Course ID is missing. Please try again or contact support.');
+      console.error('CourseId is undefined in AnswerUploadModal handleSubmit');
+      return;
+    }
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append('zip_file', file);
 
     try {
+      // Log the URL for debugging
+      console.log(`Uploading to: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/answers/upload`);
+      
       // Updated API endpoint with courseId
       const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/answers/upload`, {
         method: 'POST',
@@ -273,7 +291,7 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
               </button>
               <button
                 type="submit"
-                disabled={isUploading || !file}
+                disabled={isUploading || !file || !courseId}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg 
                   hover:bg-blue-700 transition-colors disabled:bg-blue-300
                   disabled:cursor-not-allowed flex items-center gap-2"
@@ -519,6 +537,16 @@ const ExamsTab = ({
   const [selectedExamForEvaluation, setSelectedExamForEvaluation] = useState(null);
   const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
 
+  // Validation check for courseId
+  useEffect(() => {
+    if (!courseId) {
+      console.error('CourseId is undefined in ExamsTab component');
+      showToast('Error: Course ID is missing. Some features may not work correctly.', 'error');
+    } else {
+      console.log(`ExamsTab initialized with courseId: ${courseId}`);
+    }
+  }, [courseId]);
+
   const filteredExams = exams.filter(exam =>
     exam.exam_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -530,6 +558,15 @@ const ExamsTab = ({
 
   const fetchExamQuestions = useCallback(async (examId) => {
     try {
+      // Check if courseId is defined
+      if (!courseId) {
+        console.error('CourseId is undefined in fetchExamQuestions');
+        throw new Error('Course ID is missing');
+      }
+      
+      // Log the URL for debugging
+      console.log(`Fetching questions from: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/questions`);
+      
       // Updated API endpoint with courseId
       const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/questions`, {
         headers: {
@@ -589,9 +626,19 @@ const ExamsTab = ({
 
   const handleStartEvaluation = async (examId) => {
     try {
+      // Check if courseId is defined
+      if (!courseId) {
+        console.error('CourseId is undefined in handleStartEvaluation');
+        showToast('Error: Course ID is missing', 'error');
+        return;
+      }
+      
       showToast('Preparing evaluation...', 'success');
       
       try {
+        // Log the URL for debugging
+        console.log(`Preparing evaluation: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/evaluations/prepare`);
+        
         // Updated API endpoint with courseId
         const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/evaluations/prepare`, {
           method: 'POST',
@@ -619,7 +666,20 @@ const ExamsTab = ({
 
   const handleGetEnrollments = async (examId) => {
     try {
+      // Check if courseId is defined
+      if (!courseId) {
+        console.error('CourseId is undefined in handleGetEnrollments');
+        showToast('Error: Course ID is missing', 'error');
+        return [
+          { id: 1, student_name: "Student 1", student_id: "2023001" },
+          { id: 2, student_name: "Student 2", student_id: "2023002" }
+        ];
+      }
+      
       showToast('Fetching enrollments...', 'success');
+      
+      // Log the URL for debugging
+      console.log(`Fetching enrollments: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/enrollments`);
       
       // Updated API endpoint with courseId
       const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/enrollments`, {
@@ -651,6 +711,13 @@ const ExamsTab = ({
   };
 
   const handleUploadClick = async (examId) => {
+    // Check if courseId is defined
+    if (!courseId) {
+      console.error('CourseId is undefined in handleUploadClick');
+      showToast('Error: Course ID is missing', 'error');
+      return;
+    }
+    
     setIsLoading(true);
     try {
       let questions = [];
@@ -670,11 +737,25 @@ const ExamsTab = ({
   };
 
   const handleAnswerUpload = async (examId) => {
+    // Check if courseId is defined
+    if (!courseId) {
+      console.error('CourseId is undefined in handleAnswerUpload');
+      showToast('Error: Course ID is missing', 'error');
+      return;
+    }
+    
     setSelectedExamId(examId);
     setShowAnswerUploadModal(true);
   };
 
   const handleGenerateRubrics = async (examId) => {
+    // Check if courseId is defined
+    if (!courseId) {
+      console.error('CourseId is undefined in handleGenerateRubrics');
+      showToast('Error: Course ID is missing', 'error');
+      return;
+    }
+    
     setIsLoading(true);
     try {
       let questions = [];
@@ -724,9 +805,19 @@ const ExamsTab = ({
 
   const handleUploadQuestionAndAnswerPdfs = async (examId, questionPdf, goldenPdf) => {
     try {
+      // Check if courseId is defined
+      if (!courseId) {
+        console.error('CourseId is undefined in handleUploadQuestionAndAnswerPdfs');
+        showToast('Error: Course ID is missing', 'error');
+        return false;
+      }
+      
       if (questionPdf) {
         const questionFormData = new FormData();
         questionFormData.append('question_pdf', questionPdf);
+        
+        // Log the URL for debugging
+        console.log(`Uploading question PDF: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/question-pdf`);
         
         const questionResponse = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/question-pdf`, {
           method: 'POST',
@@ -746,6 +837,9 @@ const ExamsTab = ({
       if (goldenPdf) {
         const goldenFormData = new FormData();
         goldenFormData.append('golden_pdf', goldenPdf);
+        
+        // Log the URL for debugging
+        console.log(`Uploading golden PDF: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/golden-pdf`);
         
         const goldenResponse = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/golden-pdf`, {
           method: 'POST',
@@ -997,9 +1091,17 @@ const ExamsTab = ({
             setExistingQuestions([]);
           }}
           examId={selectedExamId}
+          courseId={courseId} // Pass courseId to the modal
           existingQuestions={existingQuestions}
           onSubmit={async (examId, formData) => {
             try {
+              // Check if courseId is defined
+              if (!courseId) {
+                console.error('CourseId is undefined in UploadQnAModal onSubmit');
+                showToast('Error: Course ID is missing', 'error');
+                throw new Error('Course ID is missing');
+              }
+              
               if (formData.get('golden_pdf') || formData.get('question_pdf')) {
                 return await handleUploadQuestionAndAnswerPdfs(
                   examId,
@@ -1007,6 +1109,9 @@ const ExamsTab = ({
                   formData.get('golden_pdf')
                 );
               }
+              
+              // Log the URL for debugging
+              console.log(`Uploading to: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/upload-answers`);
               
               const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/upload-answers`, {
                 method: 'POST',
@@ -1043,7 +1148,7 @@ const ExamsTab = ({
             setCurrentExamQuestions([]);
           }}
           examId={selectedExamId}
-          courseId={courseId}
+          courseId={courseId} // Pass courseId to the modal
           questions={currentExamQuestions}
           onSave={handleRubricSave}
         />
@@ -1055,7 +1160,7 @@ const ExamsTab = ({
             setSelectedExamId(null);
           }}
           examId={selectedExamId}
-          courseId={courseId}
+          courseId={courseId} // Pass courseId to the modal
           onUpload={async (data) => {
             showToast('Answer sheets uploaded successfully', 'success');
             return data;
@@ -1075,15 +1180,25 @@ const ExamsTab = ({
             >
               <ExamEvaluation
                 examId={selectedExamForEvaluation}
-                courseId={courseId}
+                courseId={courseId} // Pass courseId to the component
                 onClose={() => {
                   setShowEvaluation(false);
                   setSelectedExamForEvaluation(null);
                 }}
                 onEvaluateSubmission={async (examId, enrollmentId) => {
                   try {
+                    // Check if courseId is defined
+                    if (!courseId) {
+                      console.error('CourseId is undefined in onEvaluateSubmission');
+                      showToast('Error: Course ID is missing', 'error');
+                      return { status: 'failed', message: 'Course ID is missing' };
+                    }
+                    
                     let responseData = null;
                     try {
+                      // Log the URL for debugging
+                      console.log(`Evaluating submission: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/evaluate/${enrollmentId}`);
+                      
                       const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/evaluate/${enrollmentId}`, {
                         method: 'POST',
                         headers: {
