@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import { 
   BookOpen, 
   GraduationCap,
@@ -78,13 +80,56 @@ const EvaluationCard = ({ course, total, evaluated, timeLeft }) => (
 
 const Dashboard = () => {
   const [searchFocused, setSearchFocused] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const navigate = useNavigate();
+  
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/auth');
+        return;
+      }
+
+      const response = await fetch('http://43.205.184.7:8000/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        method: 'GET'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const data = await response.json();
+      console.log('User data:', data);
+      
+      if (data && data.data && data.data.name) {
+        setUserData(data.data);
+      } else {
+        throw new Error('Invalid user data format');
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      localStorage.removeItem('accessToken');
+      navigate('/auth');
+    } 
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
+
+  // Default user name if userData is not loaded yet
+  const userName = userData?.name || 'Guest User';
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome {userData?.name || 'Guest User'}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome {userName}!</h1>
         </div>
         
         <div className="flex items-center space-x-4">
