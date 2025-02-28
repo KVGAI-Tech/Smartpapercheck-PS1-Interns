@@ -565,10 +565,10 @@ const ExamsTab = ({
       }
       
       // Log the URL for debugging
-      console.log(`Fetching questions from: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/questions`);
+      console.log(`Fetching questions from: ${API_BASE_URL}/exams/${examId}/questions`);
       
       // Updated API endpoint with courseId
-      const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/questions`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/questions`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
