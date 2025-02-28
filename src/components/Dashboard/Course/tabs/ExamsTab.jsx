@@ -112,7 +112,7 @@ const StepConnector = ({ isActive, isCompleted }) => (
   </div>
 );
 
-const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
+const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
@@ -165,7 +165,8 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, onUpload }) => {
     formData.append('zip_file', file);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/answers/upload`, {
+      // Updated API endpoint with courseId
+      const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/answers/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -496,6 +497,7 @@ const ExamCard = ({
 
 const ExamsTab = ({
   exams = [],
+  courseId, 
   searchQuery = '',
   onSearchChange = () => { },
   onAdd = () => { },
@@ -528,7 +530,8 @@ const ExamsTab = ({
 
   const fetchExamQuestions = useCallback(async (examId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/questions`, {
+      // Updated API endpoint with courseId
+      const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/questions`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
@@ -568,7 +571,7 @@ const ExamsTab = ({
       console.error('Error fetching questions:', error);
       throw error;
     }
-  }, []);
+  }, [courseId]);
 
   const handleRubricSave = async (data) => {
     try {
@@ -589,7 +592,8 @@ const ExamsTab = ({
       showToast('Preparing evaluation...', 'success');
       
       try {
-        const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluations/prepare`, {
+        // Updated API endpoint with courseId
+        const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/evaluations/prepare`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -617,7 +621,8 @@ const ExamsTab = ({
     try {
       showToast('Fetching enrollments...', 'success');
       
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
+      // Updated API endpoint with courseId
+      const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/enrollments`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
@@ -723,7 +728,7 @@ const ExamsTab = ({
         const questionFormData = new FormData();
         questionFormData.append('question_pdf', questionPdf);
         
-        const questionResponse = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/question-pdf`, {
+        const questionResponse = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/question-pdf`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -742,7 +747,7 @@ const ExamsTab = ({
         const goldenFormData = new FormData();
         goldenFormData.append('golden_pdf', goldenPdf);
         
-        const goldenResponse = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/golden-pdf`, {
+        const goldenResponse = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/golden-pdf`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -1003,7 +1008,7 @@ const ExamsTab = ({
                 );
               }
               
-              const response = await fetch(`${API_BASE_URL}/exams/${examId}/upload`, {
+              const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/upload-answers`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -1038,6 +1043,7 @@ const ExamsTab = ({
             setCurrentExamQuestions([]);
           }}
           examId={selectedExamId}
+          courseId={courseId}
           questions={currentExamQuestions}
           onSave={handleRubricSave}
         />
@@ -1049,6 +1055,7 @@ const ExamsTab = ({
             setSelectedExamId(null);
           }}
           examId={selectedExamId}
+          courseId={courseId}
           onUpload={async (data) => {
             showToast('Answer sheets uploaded successfully', 'success');
             return data;
@@ -1068,6 +1075,7 @@ const ExamsTab = ({
             >
               <ExamEvaluation
                 examId={selectedExamForEvaluation}
+                courseId={courseId}
                 onClose={() => {
                   setShowEvaluation(false);
                   setSelectedExamForEvaluation(null);
@@ -1076,7 +1084,7 @@ const ExamsTab = ({
                   try {
                     let responseData = null;
                     try {
-                      const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${enrollmentId}`, {
+                      const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/evaluate/${enrollmentId}`, {
                         method: 'POST',
                         headers: {
                           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
