@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../BaseURL';
 
 import { 
   BookOpen, 
@@ -91,7 +92,7 @@ const Dashboard = () => {
         return;
       }
 
-      const response = await fetch('http://api.whyujjwal.com/api/users/me', {
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
