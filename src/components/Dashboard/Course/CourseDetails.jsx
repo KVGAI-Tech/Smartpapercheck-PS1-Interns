@@ -488,6 +488,7 @@ const CourseDetails = () => {
                 return (
                     <ExamsTab
                         exams={getFilteredItems(exams, 'exam')}
+                        courseId={courseId} 
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
                         onAdd={() => {
