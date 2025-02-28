@@ -180,11 +180,11 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
     formData.append('zip_file', file);
 
     try {
-      // Log the URL for debugging
-      console.log(`Uploading to: ${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/upload-answers`);
+      // Log the URL for debugging  
+      console.log(`Uploading to: ${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers`);
       
       // Updated API endpoint with courseId
-      const response = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/exams/${examId}/upload-answers`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
