@@ -18,29 +18,28 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
+          
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
-          <Route
-            path="/*"
+          <Route 
+            path="/"
             element={
               <ProtectedRoute>
-                <DashboardLayout>
-                  <Routes>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="courses" element={<Courses />} />
-                    <Route path="courses/:courseId" element={<CourseDetails />} />
-                    <Route path="analytics" element={<AnalyticsDashboard />} />
-                    <Route path="grades" element={<GradeManagement />} />
-                    <Route path="manage">
-                      <Route path="students" element={<StudentManagement />} />
-                      <Route path="tas" element={<TeachingAssistantsPage />} />
-                    </Route>
-                    <Route path="settings" element={<SettingsPage />} />
-                  </Routes>
-                </DashboardLayout>
+                <DashboardLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="courses" element={<Courses />} />
+            <Route path="courses/:courseId" element={<CourseDetails />} />
+            <Route path="analytics" element={<AnalyticsDashboard />} />
+            <Route path="grades" element={<GradeManagement />} />
+            <Route path="manage/students" element={<StudentManagement />} />
+            <Route path="manage/tas" element={<TeachingAssistantsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+          
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
