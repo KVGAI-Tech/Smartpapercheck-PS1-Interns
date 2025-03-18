@@ -11,22 +11,29 @@ import TeachingAssistantsPage from './components/Dashboard/TeachingAssistantsPag
 import SettingsPage from './components/Dashboard/SettingsPage';
 import CourseDetails from './components/Dashboard/Course/CourseDetails';
 import AuthPage from './components/AuthPage';
+import LandingPage from './components/LandingPage/LandingPage';
+import PricingPage from './pages/pricing';
+import ResourcesPage from './pages/resources';
+import ContactPage from './pages/contact';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           
           <Route
-            path="/*"
+            path="/dashboard/*"
             element={
               <ProtectedRoute>
                 <DashboardLayout>
                   <Routes>
-                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="/" element={<Dashboard />} />
                     <Route path="courses" element={<Courses />} />
                     <Route path="courses/:courseId" element={<CourseDetails />} />
                     <Route path="analytics" element={<AnalyticsDashboard />} />
