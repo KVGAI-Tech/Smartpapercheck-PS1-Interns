@@ -11,7 +11,7 @@ import TeachingAssistantsPage from './components/Dashboard/TeachingAssistantsPag
 import SettingsPage from './components/Dashboard/SettingsPage';
 import CourseDetails from './components/Dashboard/Course/CourseDetails';
 import AuthPage from './components/AuthPage';
-import LandingPage from './components/LandingPage/LandingPage';
+import LandingPage from './components/LandingPage';
 import PricingPage from './pages/pricing';
 import ResourcesPage from './pages/resources';
 import ContactPage from './pages/contact';
