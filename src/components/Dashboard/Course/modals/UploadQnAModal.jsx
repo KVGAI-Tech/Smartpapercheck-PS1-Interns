@@ -50,7 +50,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         questionUrl: q.question_file_url || '',
         answer: "Answer",
         answerPreview: '',
-        answerUrl: q.answer?.answer_file_url || '',
+        answerUrl: q.answer_file_url || '',
         marks: q.max_marks || '',
         questionText: q.question_text || '',
         answerText: q.answer?.answer_text || 'answer',

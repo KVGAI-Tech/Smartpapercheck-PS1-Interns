@@ -1,6 +1,5 @@
 import React from "react";
 
-// FeedbackCard Component
 const FeedbackCard = ({ desc, user }) => {
   return (
     <div className="feedback-container">
@@ -15,7 +14,6 @@ const FeedbackCard = ({ desc, user }) => {
 };
 
 const Feedbacks = () => {
-  // Feedback data
   const feedbacks1 = [
     {
       desc: "Smart QnA has completely transformed our grading process. It's fast, reliable, and incredibly accurate.",

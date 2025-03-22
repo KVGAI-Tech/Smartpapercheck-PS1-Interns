@@ -941,12 +941,11 @@ const ExamEvaluationDetail = ({
       
       try {
         const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${enrollmentId}`, {
-          method: 'POST',
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(evaluationData)
         });
         
         if (!response.ok) {

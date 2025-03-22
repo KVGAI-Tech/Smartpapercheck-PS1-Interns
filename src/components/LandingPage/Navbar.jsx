@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Hamburger Component for Mobile Menu
 const Hamburger = ({ isOpen, onClick }) => {
   return (
     <button
@@ -60,10 +59,23 @@ const MobileMenu = () => {
               </a>
             ))}
           </nav>
+          
+          <a 
+            href="https://www.blog.smart-qna.com/"
+            className="mt-8 bg-blue-600 w-full py-3 px-6 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors duration-200 block text-center"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsOpen(false)}
+          >
+            Our Blogs
+          </a>
 
           <button 
-            className="mt-8 bg-teal-button w-full py-3 px-6 rounded-lg text-lg font-medium hover:bg-teal-button transition-colors duration-200"
-            onClick={() => navigate('/auth')}
+            className="mt-4 bg-teal-500 w-full py-3 px-6 rounded-lg text-lg font-medium hover:bg-teal-600 transition-colors duration-200"
+            onClick={() => {
+              setIsOpen(false);
+              navigate('/auth');
+            }}
           >
             Get Started
           </button>
@@ -100,12 +112,23 @@ const Navbar = () => {
         ))}
       </div>
 
-      <button 
-        className="bg-teal-button py-2 px-6 rounded-md text-sm md:text-base hidden md:block"
-        onClick={() => navigate('/auth')}
-      >
-        Get Started
-      </button>
+      <div className="hidden md:flex items-center space-x-4">
+        <a 
+          href="https://www.blog.smart-qna.com/"
+          className="bg-blue-600 py-2 px-6 rounded-md text-sm md:text-base hover:bg-blue-700 transition-colors duration-200"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Our Blogs
+        </a>
+
+        <button 
+          className="bg-teal-500 py-2 px-6 rounded-md text-sm md:text-base hover:bg-teal-600 transition-colors duration-200"
+          onClick={() => navigate('/auth')}
+        >
+          Get Started
+        </button>
+      </div>
 
       <MobileMenu />
     </nav>
