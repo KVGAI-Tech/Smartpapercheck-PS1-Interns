@@ -2,13 +2,14 @@ import React, { useState, useCallback } from 'react';
 import { 
   X, Upload, Download, FileUp, File,
   CheckCircle, AlertCircle, ChevronDown,
-  FileText
+  FileText, Loader
 } from 'lucide-react';
 
-const UploadModal = ({ isOpen, onClose, onUpload }) => {
+const UploadModal = ({ isOpen, onClose, onUpload, title = "Upload Question Paper" }) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleDrag = useCallback((e) => {
     e.preventDefault();
@@ -24,7 +25,7 @@ const UploadModal = ({ isOpen, onClose, onUpload }) => {
     const validTypes = ['application/pdf', 'application/msword', 
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     
-    if (!validTypes.includes(file.type)) {
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.pdf') && !file.name.endsWith('.doc') && !file.name.endsWith('.docx')) {
       setError('Please upload a PDF or Word document');
       return false;
     }
@@ -56,10 +57,17 @@ const UploadModal = ({ isOpen, onClose, onUpload }) => {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (selectedFile) {
-      onUpload(selectedFile);
-      onClose();
+      setIsUploading(true);
+      try {
+        await onUpload(selectedFile);
+        onClose();
+      } catch (error) {
+        setError(error.message || 'Upload failed');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -74,8 +82,8 @@ const UploadModal = ({ isOpen, onClose, onUpload }) => {
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl m-4">
         <div className="flex items-center justify-between p-6 border-b">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Upload Question Paper</h2>
-            <p className="mt-1 text-sm text-gray-500">Upload your exam question paper in PDF or Word format</p>
+            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+            <p className="mt-1 text-sm text-gray-500">Upload your exam document in PDF or Word format</p>
           </div>
           <button
             onClick={onClose}
@@ -159,7 +167,7 @@ const UploadModal = ({ isOpen, onClose, onUpload }) => {
               <div>
                 <h3 className="text-sm font-medium text-gray-900">Download Templates</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Use our pre-designed templates to create your question paper
+                  Use our pre-designed templates to create your document
                 </p>
               </div>
               <ChevronDown className="w-5 h-5 text-gray-400" />
@@ -202,21 +210,31 @@ const UploadModal = ({ isOpen, onClose, onUpload }) => {
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 
               transition-colors"
+            disabled={isUploading}
           >
             Cancel
           </button>
           <button
             onClick={handleUpload}
-            disabled={!selectedFile}
+            disabled={!selectedFile || isUploading}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
               transition-all duration-200 ${
-              selectedFile
+              selectedFile && !isUploading
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            <FileUp className="w-4 h-4" />
-            Upload Paper
+            {isUploading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <FileUp className="w-4 h-4" />
+                <span>Upload Paper</span>
+              </>
+            )}
           </button>
         </div>
       </div>

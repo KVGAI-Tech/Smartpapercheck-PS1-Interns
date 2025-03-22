@@ -36,6 +36,7 @@
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
     "react-pdf": "7.1.2",
     "react-pdf-annotations": "^3.2.8",
     "react-router-dom": "^7.1.3",

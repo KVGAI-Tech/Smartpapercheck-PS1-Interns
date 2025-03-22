@@ -59,21 +59,24 @@ export const getCourseStudents = async (courseId) => {
   };
   
   export const addStudent = async (data) => {
-    if (!data || !data.name || !data.email || !data.roll_number || !data.batch) {
+    if (!data || !data.name || !data.email) {
       throw new Error('Invalid student data');
     }
-    return fetchApi('/professors/students', {
+    const { courseId, name, email, roll_number, batch } = data;
+    if (!courseId) {
+      throw new Error('Course ID is required');
+    }
+    return fetchApi(`/professors/students?course_id=${courseId}`, {
       method: 'POST',
       body: JSON.stringify({
-        name: data.name,
-        email: data.email,
-        roll_number: data.roll_number,
-        batch: data.batch
+        name,
+        email,
+        roll_number: roll_number || '',
+        batch: batch || ''
       })
     });
   };
-  
-  export const removeStudent = async (courseId, studentId) => {
+    export const removeStudent = async (courseId, studentId) => {
     if (!courseId || !studentId) {
       throw new Error('Course ID and Student ID are required');
     }

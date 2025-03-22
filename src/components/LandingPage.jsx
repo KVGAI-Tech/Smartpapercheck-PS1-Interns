@@ -1,46 +1,89 @@
-import React from 'react';
-import Navbar from './navbar.jsx';
-import Footer from './Footer.jsx';
-import Features from './Features.jsx';
-import ProductFlow from './ProductFlow.jsx';
-import HowItWorks from './HowItWorks.jsx';
-import Impact from './Impact.jsx';
-import CollegeShowcase from './CollegeShowcase.jsx';
+import React, { useEffect, useState } from 'react';
+
+import Navbar from './LandingPage/Navbar';
+import Hero from './LandingPage/Hero';
+import Features from './LandingPage/Features';
+import Glow from './LandingPage/Glow';
+import Feedbacks from './LandingPage/Feedbacks';
+import Pricing from './LandingPage/Pricing';
 
 const LandingPage = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900">
-      <Navbar />
-      <main>
-        <section className="py-20 px-4">
-          <div className="container mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              Transform Your Grading Experience
-            </h1>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Revolutionize answer script evaluation with AI-powered solutions.
-              Save time, ensure consistency, and provide better feedback.
-            </p>
-            <div className="flex justify-center gap-4">
-              <button className="px-8 py-3 bg-white text-blue-900 rounded-full font-semibold hover:bg-gray-100 transition-colors">
-                Get Started
-              </button>
-              <button className="px-8 py-3 border-2 border-white text-white rounded-full font-semibold hover:bg-white/10 transition-colors">
-                Watch Demo
-              </button>
-            </div>
-          </div>
-        </section>
+  const [isLoaded, setIsLoaded] = useState(false);
 
-        <Features />
-        <ProductFlow />
-        <HowItWorks />
-        <Impact />
-        <CollegeShowcase />
-      </main>
-      <Footer />
+  useEffect(() => {
+    document.body.style.backgroundColor = "#0B1011";
+    document.body.style.color = "#ffffff";
+    
+    const preloadImages = [
+      '/chess_background.png',
+      '/Group 72 (1).png',
+      '/check.png'
+    ];
+    
+    let loadedCount = 0;
+    
+    preloadImages.forEach(src => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        loadedCount++;
+        if (loadedCount === preloadImages.length) {
+          setTimeout(() => setIsLoaded(true), 100);
+        }
+      };
+      img.onerror = () => {
+        loadedCount++;
+        console.log(`Failed to preload image: ${src}`);
+        if (loadedCount === preloadImages.length) {
+          setTimeout(() => setIsLoaded(true), 100);
+        }
+      };
+    });
+    const timer = setTimeout(() => setIsLoaded(true), 1000);
+    
+    document.documentElement.classList.add('landing-page-html');
+    
+    return () => {
+      clearTimeout(timer);
+      document.documentElement.classList.remove('landing-page-html');
+    };
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div style={{ 
+        backgroundColor: "#0B1011", 
+        color: "#ffffff", 
+        height: "100vh", 
+        width: "100vw",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "1.5rem"
+      }}>
+        <div>Loading Smart QnA...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="landing-page">
+      <div className="relative">
+        <Navbar />
+        <Hero />
+      </div>
+
+      <Features />
+
+      <Glow />
+
+      <Feedbacks />
+
+      <Glow />
+
+      <Pricing />
     </div>
   );
 };
 
-export default LandingPage; 
+export default LandingPage;

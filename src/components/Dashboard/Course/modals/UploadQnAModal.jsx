@@ -18,7 +18,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     answerUrl: '',
     marks: '',
     questionText: '',
-    answerText: '',
+    answerText: 'answer',
     domain: ''
   }]);
 
@@ -48,12 +48,12 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         question: null,
         questionPreview: '',
         questionUrl: q.question_file_url || '',
-        answer: null,
+        answer: "Answer",
         answerPreview: '',
         answerUrl: q.answer?.answer_file_url || '',
         marks: q.max_marks || '',
         questionText: q.question_text || '',
-        answerText: q.answer?.answer_text || '',
+        answerText: q.answer?.answer_text || 'answer',
         domain: q.domain || ''
       }));
       setQuestions(formattedQuestions);
@@ -133,7 +133,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         answerUrl: '',
         marks: '',
         questionText: '',
-        answerText: '',
+        answerText: 'answer',
         domain: ''
       }
     ]);
@@ -274,7 +274,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
               questionFormData.append('question_number', (i + 1).toString());
               questionFormData.append('file_type', 'question');
               questionFormData.append('file', q.question);
-              questionFormData.append('answer_text', '');
+              questionFormData.append('answer_text', q.answerText || 'answer');
               questionFormData.append('max_marks', q.marks);
               questionFormData.append('question_text', q.questionText);
               questionFormData.append('domain', q.domain);
@@ -286,7 +286,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
               answerFormData.append('question_number', (i + 1).toString());
               answerFormData.append('file_type', 'answer');
               answerFormData.append('file', q.answer);
-              answerFormData.append('answer_text', q.answerText || '');
+              answerFormData.append('answer_text', q.answerText || 'answer');
               answerFormData.append('max_marks', q.marks);
               answerFormData.append('question_text', q.questionText);
               answerFormData.append('domain', q.domain);
