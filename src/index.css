@@ -7,8 +7,8 @@
   --text-color: #000000;
 }
 
-html, 
-body, 
+html,
+body,
 #root {
   margin: 0;
   padding: 0;
@@ -20,12 +20,12 @@ body,
 }
 
 .landing-page-html {
-  background-color: #0B1011 !important;
+  background-color: #0b1011 !important;
   color: #ffffff !important;
 }
 
 .landing-page {
-  background-color: #0B1011 !important;
+  background-color: #0b1011 !important;
   min-height: 100vh;
   color: #ffffff !important;
   position: relative;
@@ -33,21 +33,29 @@ body,
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out forwards;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   color: #000000 !important;
   background-color: #ffffff !important;
 }
 
 input::placeholder {
-  color: #9ca3af !important; 
+  color: #9ca3af !important;
   opacity: 1 !important;
 }
 
@@ -64,7 +72,7 @@ input::placeholder {
 }
 
 .text-teal-highlight {
-  color: #70EEF2;
+  color: #70eef2;
 }
 
 .bg-teal-transparent {
@@ -73,21 +81,23 @@ input::placeholder {
 }
 
 .bg-teal-button {
-  background-color: #209DA1;
+  background-color: #209da1;
 }
 
 .border-teal-button {
-  border-color: #209DA1;
+  border-color: #209da1;
 }
 
 .text-grad {
-  color: #70EEF2;
+  color: #70eef2;
 }
 
 .grid-perspective {
   background-color: transparent;
-  background-image: 
-    linear-gradient(rgba(32, 157, 161, 0.2) 1px, transparent 1px),
+  background-image: linear-gradient(
+      rgba(32, 157, 161, 0.2) 1px,
+      transparent 1px
+    ),
     linear-gradient(90deg, rgba(32, 157, 161, 0.2) 1px, transparent 1px);
   background-size: 100px 100px;
   background-position: center;
@@ -242,7 +252,7 @@ input::placeholder {
   backdrop-filter: blur(3px);
 }
 
-.radial-text__cyan, 
+.radial-text__cyan,
 .radial-text__cyan__30 {
   position: relative;
   z-index: 10;
@@ -255,7 +265,7 @@ section {
 
 .conversation-component input,
 .conversation-component textarea {
-  color: #000000 !important; 
+  color: #000000 !important;
   background-color: #ffffff !important;
 }
 
@@ -270,8 +280,9 @@ section {
 [role="menu"] {
   background-color: #ffffff !important;
   border: 1px solid #e5e7eb !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-  color: #1f2937 !important; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  color: #1f2937 !important;
 }
 
 .evaluation-modal,
@@ -281,7 +292,8 @@ section {
 .custom-modal {
   background-color: #ffffff !important;
   border: 1px solid #e5e7eb !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
 
 .modal-header,
@@ -309,7 +321,7 @@ section {
 
 .react-select__option--is-focused,
 .select-option:hover {
-  background-color: #f3f4f6 !important; 
+  background-color: #f3f4f6 !important;
 }
 
 .react-datepicker,
@@ -333,7 +345,7 @@ section {
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
-  border-color: #3b82f6 !important; 
+  border-color: #3b82f6 !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
 }
 
