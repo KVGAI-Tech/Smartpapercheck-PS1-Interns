@@ -14,11 +14,30 @@ import AuthPage from "./components/AuthPage";
 import LandingPage from "./components/LandingPage";
 import ResourcesPage from "./components/ResourcesPage";
 import AboutUsPage from "./components/AboutUsPage";
+import LoadingIndicator from "./components/Loader";
+import { useEffect, useState } from "react";
 
 function App() {
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setLoading(true);
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    };
+
+    window.addEventListener("popstate", handleRouteChange);
+    return () => window.removeEventListener("popstate", handleRouteChange);
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
+        {loading && <LoadingIndicator />}
+
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
