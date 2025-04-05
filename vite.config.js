@@ -5,20 +5,28 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['localhost'],
+    host: '0.0.0.0', 
+    port: 5173,
+    allowedHosts: ['dev.smart-qna.com', 'localhost'],
+    cors: {
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
+      credentials: true
+    },
     headers: {
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Content-Security-Policy': [
-        "default-src 'self' https://smart-qna.com/api/;",
-        "connect-src 'self' https://smart-qna.com/api/ blob: https://*.cloudflare.com https://cdnjs.cloudflare.com https://unpkg.com https://documentcloud.adobe.com https://*.s3.amazonaws.com https://smartqna-pdf.s3.amazonaws.com https://*.s3.ap-south-1.amazonaws.com https://smartqna-pdf.s3.ap-south-1.amazonaws.com;",
-        "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com;",
-        "style-src 'self' 'unsafe-inline';",
-        "img-src 'self' blob: data: https://*.s3.amazonaws.com https://smartqna-pdf.s3.amazonaws.com https://*.s3.ap-south-1.amazonaws.com https://smartqna-pdf.s3.ap-south-1.amazonaws.com;",
-        "font-src 'self' data:;",
-        "worker-src 'self' blob:;",
-        "frame-src 'self' blob:;"
-      ].join('; ')
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
+      'Cross-Origin-Opener-Policy': 'unsafe-none',
+      'Cross-Origin-Resource-Policy': 'cross-origin'
+    },
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost'
     }
   },
   resolve: {
