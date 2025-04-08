@@ -5,13 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/SmartQnA.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self' blob: data: https://*.cloudflare.com https://unpkg.com https://documentcloud.adobe.com http://64.227.151.174:8000 https://smart-qna.com/api/;
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://*.cloudflare.com https://unpkg.com https://cdnjs.cloudflare.com https://documentcloud.adobe.com;
-      worker-src 'self' blob: https://cdnjs.cloudflare.com;
-      style-src 'self' 'unsafe-inline' https://*.cloudflare.com;
-      font-src 'self' data:;
+      default-src 'self' https://dev.smart-qna.com blob: data:;
+      connect-src 'self' https://dev.smart-qna.com blob: wss://localhost:* ws://localhost:* https://*.cloudflare.com https://cdnjs.cloudflare.com https://unpkg.com https://documentcloud.adobe.com https://*.s3.amazonaws.com https://smartqna-pdf.s3.amazonaws.com https://*.s3.ap-south-1.amazonaws.com https://smartqna-pdf.s3.ap-south-1.amazonaws.com;
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com;
+      style-src 'self' 'unsafe-inline';
       img-src 'self' blob: data: https://*.s3.amazonaws.com https://smartqna-pdf.s3.amazonaws.com https://*.s3.ap-south-1.amazonaws.com https://smartqna-pdf.s3.ap-south-1.amazonaws.com;
-      connect-src 'self' blob: https://*.cloudflare.com https://cdnjs.cloudflare.com https://unpkg.com https://documentcloud.adobe.com http://64.227.151.174:8000 https://smart-qna.com/api https://*.s3.amazonaws.com https://smartqna-pdf.s3.amazonaws.com https://*.s3.ap-south-1.amazonaws.com https://smartqna-pdf.s3.ap-south-1.amazonaws.com;
+      font-src 'self' data:;
+      worker-src 'self' blob:;
       frame-src 'self' blob:;">
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="credentialless">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">

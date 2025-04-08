@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkAuthStatus, setupTokenRefresh } from './auth';
 
 const AuthContext = createContext(null);
 
@@ -9,34 +8,76 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
 
+  
   useEffect(() => {
-    let cleanupFunction;
-
-    const initAuth = async () => {
-      const isAuthed = await checkAuthStatus();
-      setIsAuthenticated(isAuthed);
-      setIsLoading(false);
-
-      if (isAuthed) {
-        cleanupFunction = setupTokenRefresh();
+    const initAuth = () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const role = localStorage.getItem('userRole');
+        
+        if (token && role) {
+          setIsAuthenticated(true);
+          setUserRole(role);
+        } else {
+          setIsAuthenticated(false);
+          setUserRole(null);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        setIsAuthenticated(false);
+        setUserRole(null);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     initAuth();
-
-    return () => {
-      if (typeof cleanupFunction === 'function') {
-        cleanupFunction();
-      }
-    };
   }, []);
+
+  const login = (token, role) => {
+    
+    if (role === 'student') {
+      navigate('/student-dashboard', { replace: true });
+      return;
+    }
+
+    
+    localStorage.setItem('accessToken', token);
+    localStorage.setItem('userRole', role);
+    setIsAuthenticated(true);
+    setUserRole(role);
+
+    switch (role) {
+      case 'professor':
+        navigate('/dashboard', { replace: true });
+        break;
+      case 'ta':
+        navigate('/ta-dashboard', { replace: true });
+        break;
+      default:
+        navigate('/dashboard', { replace: true });
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('userRole');
+    setIsAuthenticated(false);
+    setUserRole(null);
+    navigate('/auth', { replace: true });
+  };
 
   const value = {
     isAuthenticated,
     setIsAuthenticated,
-    isLoading
+    isLoading,
+    userRole,
+    setUserRole,
+    login,
+    logout
   };
 
   return (
