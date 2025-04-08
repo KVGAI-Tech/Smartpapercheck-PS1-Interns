@@ -161,7 +161,7 @@ const Footer = () => {
         
         <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm mb-4 md:mb-0">
-            © {new Date().getFullYear()} Smart QnA. All rights reserved.
+            © {new Date().getFullYear()} Smart QnA by KVGAI Tech Pvt. Ltd. All rights reserved.
           </p>
           <p className="text-gray-400 text-xs">
             Revolutionizing educational assessment with AI

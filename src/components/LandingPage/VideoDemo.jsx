@@ -5,8 +5,8 @@ import { FaPlay } from 'react-icons/fa';
 const VideoDemo = () => {
   const [videoPlaying, setVideoPlaying] = useState(false);
   
-  // Replace this with your actual YouTube video ID
-  const videoId = "your-youtube-video-id";
+  // Use the actual YouTube video ID
+  const videoId = "3egoZx6St5Y";
   
   return (
     <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
@@ -41,7 +41,7 @@ const VideoDemo = () => {
         >
           {!videoPlaying ? (
             <div className="absolute inset-0 bg-gradient-to-r from-teal-100/50 to-blue-100/50">
-              <div className="absolute inset-0 bg-[url('/placeholder-732pxX732px.png')] bg-cover bg-center opacity-80" />
+              <div className="absolute inset-0 bg-[url('https://img.youtube.com/vi/3egoZx6St5Y/maxresdefault.jpg')] bg-cover bg-center opacity-80" />
               
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <motion.button
@@ -61,10 +61,10 @@ const VideoDemo = () => {
           ) : (
             <iframe
               className="absolute top-0 left-0 w-full h-full"
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`}
               title="SmartQnA Demo Video"
               frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; microphone"
               allowFullScreen
             ></iframe>
           )}

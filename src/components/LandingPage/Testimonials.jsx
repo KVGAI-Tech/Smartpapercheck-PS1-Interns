@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FaQuoteLeft, FaQuoteRight } from 'react-icons/fa';
 
-const TestimonialCard = ({ quote, name, designation, avatar, index }) => {
+const TestimonialCard = ({ quote, name, designation, institute, avatar, index }) => {
   return (
     <motion.div 
       className="bg-white shadow-md border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300"
@@ -17,7 +17,7 @@ const TestimonialCard = ({ quote, name, designation, avatar, index }) => {
     >
       <div className="flex items-start mb-4">
         <div className="mr-4">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-teal-500 to-blue-500 p-0.5 shadow-md">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-r from-teal-500 to-blue-500 p-0.5 shadow-md">
             <div className="bg-gray-50 w-full h-full rounded-full overflow-hidden">
               {avatar ? (
                 <img 
@@ -26,6 +26,7 @@ const TestimonialCard = ({ quote, name, designation, avatar, index }) => {
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.style.display = 'none';
+                    e.target.parentNode.innerHTML = name.charAt(0);
                   }}
                 />
               ) : (
@@ -39,6 +40,7 @@ const TestimonialCard = ({ quote, name, designation, avatar, index }) => {
         <div>
           <h4 className="font-semibold text-gray-900">{name}</h4>
           <p className="text-sm text-gray-600">{designation}</p>
+          <p className="text-sm text-teal-600 font-medium">{institute}</p>
         </div>
       </div>
       
@@ -59,25 +61,29 @@ const Testimonials = () => {
       quote: "SmartQnA saves us hours every exam season. The consistency and accuracy in grading has been truly remarkable.",
       name: "Dr. Sharma",
       designation: "Professor, Computer Science",
-      avatar: "/testimonials/prof1.jpg"
+      institute: "Indian Institute of Technology, Delhi",
+      avatar: "https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=400&auto=format&fit=crop&q=60"
     },
     {
       quote: "The AI rubric generator brings unprecedented consistency in marking across our department.",
       name: "Dr. Patel",
       designation: "Department Head, Engineering",
-      avatar: "/testimonials/prof2.jpg"
+      institute: "BITS Pilani, Hyderabad Campus",
+      avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=400&auto=format&fit=crop&q=60"
     },
     {
       quote: "We've reduced our grading time by 80% and improved feedback quality with SmartQnA's automated evaluation system.",
       name: "Prof. Gupta",
       designation: "Associate Professor, Mathematics",
-      avatar: "/testimonials/prof3.jpg"
+      institute: "Delhi University",
+      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=60"
     },
     {
       quote: "The detailed analytics for each student has revolutionized how we approach curriculum improvements.",
       name: "Dr. Singh",
       designation: "Dean of Academics",
-      avatar: "/testimonials/prof4.jpg"
+      institute: "Indian School of Business",
+      avatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=400&auto=format&fit=crop&q=60"
     }
   ];
 
@@ -112,6 +118,7 @@ const Testimonials = () => {
               quote={testimonial.quote}
               name={testimonial.name}
               designation={testimonial.designation}
+              institute={testimonial.institute}
               avatar={testimonial.avatar}
               index={index}
             />
