@@ -23,12 +23,13 @@ const LandingPage = () => {
   };
 
   useEffect(() => {
-    document.body.style.backgroundColor = "#0B1011";
-    document.body.style.color = "#ffffff";
+    document.body.style.backgroundColor = "#f8f9fa";
+    document.body.style.color = "#212529";
     
     const preloadImages = [
       '/logo_smartqna.png',
-      '/check.png'
+      '/check.png',
+      '/placeholder-732pxX732px.png'
     ];
     
     let loadedCount = 0;
@@ -63,8 +64,8 @@ const LandingPage = () => {
   if (!isLoaded) {
     return (
       <div style={{ 
-        backgroundColor: "#0B1011", 
-        color: "#ffffff", 
+        backgroundColor: "#f8f9fa", 
+        color: "#212529", 
         height: "100vh", 
         width: "100vw",
         display: "flex",
@@ -78,7 +79,7 @@ const LandingPage = () => {
   }
 
   return (
-    <div className="landing-page overflow-x-hidden bg-[#0B1011] text-white">
+    <div className="landing-page overflow-x-hidden bg-[#f8f9fa] text-[#212529]">
       <div className="relative">
         <Navbar />
         <Hero scrollToDemo={scrollToDemo} />

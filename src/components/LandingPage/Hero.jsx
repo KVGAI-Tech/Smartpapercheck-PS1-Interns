@@ -28,7 +28,7 @@ const Hero = ({ scrollToDemo }) => {
   ];
   
   return (
-    <section className="min-h-screen pt-24 lg:pt-28 px-4 md:px-12 relative overflow-hidden">
+    <section className="min-h-screen pt-24 lg:pt-28 px-4 md:px-12 relative overflow-hidden bg-gradient-to-b from-white to-gray-50">
       {/* Animated Background Shapes */}
       {backgroundShapes.map((shape, index) => (
         <motion.div 
@@ -57,37 +57,37 @@ const Hero = ({ scrollToDemo }) => {
       
       {/* Grid background */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute h-full w-full opacity-20 bg-grid-pattern" />
+        <div className="absolute h-full w-full opacity-10 bg-grid-pattern" />
       </div>
       
       <div className="container mx-auto max-w-6xl relative z-10 flex flex-col items-center justify-center pt-16 md:pt-28">
         {/* Badge */}
         <motion.div
-          className="flex items-center gap-2 mb-6 bg-gradient-to-r from-teal-500/20 to-blue-500/20 rounded-full px-4 py-2 text-sm font-medium"
+          className="flex items-center gap-2 mb-6 bg-gradient-to-r from-teal-200 to-blue-100 rounded-full px-4 py-2 text-sm font-medium"
           custom={0}
           initial="hidden"
           animate="visible"
           variants={fadeIn}
         >
           <div className="bg-gradient-to-r from-teal-400 to-blue-500 rounded-full w-2 h-2 animate-pulse"></div>
-          <span className="text-white">Built with Explainable AI · Powered by LLMs · Trusted by Institutions</span>
+          <span className="text-gray-700">Built with Explainable AI · Powered by LLMs · Trusted by Institutions</span>
         </motion.div>
         
         {/* Headline */}
         <motion.h1 
-          className="text-4xl md:text-6xl lg:text-7xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-white"
+          className="text-4xl md:text-6xl lg:text-7xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-teal-800 to-gray-900"
           custom={1}
           initial="hidden"
           animate="visible"
           variants={fadeIn}
         >
           Revolutionizing Answer Script <br className="hidden md:block" /> 
-          Evaluation with AI & LLMs 🧠📄
+          Evaluation with AI & LLMs
         </motion.h1>
         
         {/* Subheadline */}
         <motion.p 
-          className="text-lg md:text-xl text-center text-white/80 max-w-4xl mb-12"
+          className="text-lg md:text-xl text-center text-gray-700 max-w-4xl mb-12"
           custom={2}
           initial="hidden"
           animate="visible"
@@ -107,17 +107,17 @@ const Hero = ({ scrollToDemo }) => {
         >
           <motion.button
             onClick={scrollToDemo}
-            className="group flex items-center justify-center gap-2 bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-sm px-8 py-4 rounded-full text-white font-medium transition-all duration-300"
+            className="group flex items-center justify-center gap-2 bg-gray-100 border border-gray-200 hover:bg-gray-200 shadow-sm px-8 py-4 rounded-full text-gray-800 font-medium transition-all duration-300"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <FaPlay className="text-teal-400 group-hover:text-white transition-colors duration-300" />
+            <FaPlay className="text-teal-600 group-hover:text-teal-700 transition-colors duration-300" />
             <span>Watch Demo</span>
           </motion.button>
           
           <motion.button
             onClick={() => navigate('/auth')}
-            className="group flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-4 rounded-full text-white font-medium transition-all duration-300"
+            className="group flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-4 rounded-full text-white font-medium transition-all duration-300 shadow-md"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -126,45 +126,96 @@ const Hero = ({ scrollToDemo }) => {
           </motion.button>
         </motion.div>
         
-        {/* Animated Visual */}
-        <motion.div
-          className="relative w-full max-w-4xl aspect-video bg-gradient-to-r from-teal-500/20 to-blue-500/20 rounded-xl overflow-hidden shadow-2xl shadow-teal-900/20"
-          custom={4}
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.8 }}
-        >
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative w-4/5 h-4/5 border-2 border-dashed border-white/30 rounded-lg overflow-hidden">
+        {/* Hero Image with Animation */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          {/* Animated Text and Features */}
+          <motion.div
+            className="order-2 md:order-1"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          >
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+              <h3 className="text-2xl font-bold mb-4 text-gray-900">Smart Evaluation System</h3>
+              <ul className="space-y-3">
+                <li className="flex items-start">
+                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                    <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  <span className="text-gray-700">AI-powered handwritten text recognition</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                    <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  <span className="text-gray-700">Advanced diagram and equation evaluation</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                    <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  <span className="text-gray-700">Detailed automated feedback generation</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                    <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  <span className="text-gray-700">Comprehensive analytics dashboard</span>
+                </li>
+              </ul>
+            </div>
+          </motion.div>
+          
+          {/* Dashboard Mockup */}
+          <motion.div 
+            className="order-1 md:order-2 relative"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          >
+            <div className="relative">
               <motion.div 
-                className="absolute inset-0 bg-[url('/public/papers-bg.jpg')] bg-cover bg-center opacity-40"
-                initial={{ scale: 1.2 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 1.5 }}
-              />
-              
-              <motion.div 
-                className="absolute inset-0 flex flex-col items-center justify-center gap-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2, duration: 0.8 }}
+                className="absolute -top-5 -right-5 bg-yellow-100 px-3 py-1 rounded-lg text-yellow-700 text-sm font-medium shadow-sm"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2 }}
               >
-                <div className="animate-pulse w-16 h-16 rounded-full bg-teal-500/30 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-teal-500/50 flex items-center justify-center">
-                    <div className="w-8 h-8 rounded-full bg-teal-500"></div>
-                  </div>
-                </div>
-                <p className="text-white/70 text-center font-light">
-                  AI processing handwritten answers...
-                </p>
+                AI-Powered
+              </motion.div>
+              <motion.div
+                className="bg-gradient-to-r from-gray-100 to-white p-2 rounded-2xl shadow-xl border border-gray-200 overflow-hidden"
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <img 
+                  src="/placeholder-732pxX732px.png" 
+                  alt="SmartQnA Dashboard" 
+                  className="rounded-xl object-cover w-full h-auto"
+                />
+              </motion.div>
+              <motion.div 
+                className="absolute -bottom-5 -left-5 bg-blue-100 px-3 py-1 rounded-lg text-blue-700 text-sm font-medium shadow-sm"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.4 }}
+              >
+                Real-time Analytics
               </motion.div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
       
       {/* Wave separator */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0B1011] to-transparent z-10" />
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-50 to-transparent z-10" />
     </section>
   );
 };

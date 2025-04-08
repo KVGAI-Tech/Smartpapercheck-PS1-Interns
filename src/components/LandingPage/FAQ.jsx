@@ -5,7 +5,7 @@ import { HiChevronDown } from "react-icons/hi";
 const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
   return (
     <motion.div
-      className="border-b border-white/10 overflow-hidden"
+      className="border-b border-gray-200 overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -17,12 +17,12 @@ const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
         whileHover={{ scale: 1.01 }}
         transition={{ duration: 0.2 }}
       >
-        <h3 className="text-lg font-medium">{question}</h3>
+        <h3 className="text-lg font-medium text-gray-900">{question}</h3>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3 }}
         >
-          <HiChevronDown className="w-5 h-5 text-teal-400" />
+          <HiChevronDown className="w-5 h-5 text-teal-600" />
         </motion.div>
       </motion.button>
       <AnimatePresence>
@@ -33,7 +33,7 @@ const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="pb-5 text-white/70">
+            <div className="pb-5 text-gray-600">
               {answer}
             </div>
           </motion.div>
@@ -74,7 +74,7 @@ const FAQ = () => {
   ];
 
   return (
-    <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8">
+    <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-3xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -84,20 +84,20 @@ const FAQ = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-500/20 to-blue-500/20 text-white/90 text-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">❓</span>
               <span>FAQ</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Frequently Asked <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">Questions</span>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+            Frequently Asked <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Questions</span>
           </h2>
-          <p className="text-lg text-white/70 max-w-3xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Find answers to common questions about SmartQnA's capabilities and features
           </p>
         </motion.div>
 
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-2 sm:p-6">
+        <div className="bg-gray-50 shadow-sm border border-gray-100 rounded-xl p-2 sm:p-6">
           {faqs.map((faq, index) => (
             <FAQItem
               key={index}
@@ -117,8 +117,8 @@ const FAQ = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <p className="text-white/70">
-            Still have questions? <a href="#contact" className="text-teal-400 font-medium hover:text-teal-300 transition-colors duration-200">Contact us</a> for more information
+          <p className="text-gray-600">
+            Still have questions? <a href="#contact" className="text-teal-600 font-medium hover:text-teal-700 transition-colors duration-200">Contact us</a> for more information
           </p>
         </motion.div>
       </div>

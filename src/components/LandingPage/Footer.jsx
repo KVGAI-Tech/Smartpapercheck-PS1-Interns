@@ -4,7 +4,7 @@ import { HiOutlineSun, HiOutlineMoon } from "react-icons/hi";
 
 const Footer = () => {
   // Simulated dark mode state
-  const [isDarkMode, setIsDarkMode] = React.useState(true);
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
@@ -56,7 +56,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-[#0A0D0E] border-t border-white/10">
+    <footer className="bg-gray-50 border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           <div className="col-span-1 md:col-span-1">
@@ -66,11 +66,11 @@ const Footer = () => {
                 alt="SmartQnA Logo" 
                 className="h-8 mr-3" 
               />
-              <div className="font-medium text-xl text-white">
-                Smart<span className="font-light italic text-teal-400">QnA</span>
+              <div className="font-medium text-xl text-gray-900">
+                Smart<span className="font-light italic text-teal-600">QnA</span>
               </div>
             </div>
-            <p className="text-white/60 mb-6 text-sm">
+            <p className="text-gray-600 mb-6 text-sm">
               AI-powered script evaluation platform for universities and educational institutions.
             </p>
             <div className="flex space-x-4">
@@ -78,7 +78,7 @@ const Footer = () => {
                 <a 
                   key={index} 
                   href={link.href}
-                  className="text-white/60 hover:text-teal-400 transition-colors duration-200"
+                  className="text-gray-500 hover:text-teal-600 transition-colors duration-200"
                   aria-label={link.name}
                 >
                   {link.icon}
@@ -88,13 +88,13 @@ const Footer = () => {
           </div>
           
           <div className="col-span-1 md:col-span-1">
-            <h3 className="text-white font-medium mb-4">Quick Links</h3>
+            <h3 className="text-gray-900 font-medium mb-4">Quick Links</h3>
             <ul className="space-y-3">
               {quickLinks.map((link, index) => (
                 <li key={index}>
                   <a 
                     href={link.href} 
-                    className="text-white/60 hover:text-teal-400 transition-colors duration-200 text-sm"
+                    className="text-gray-600 hover:text-teal-600 transition-colors duration-200 text-sm"
                   >
                     {link.name}
                   </a>
@@ -104,35 +104,35 @@ const Footer = () => {
           </div>
           
           <div className="col-span-1 md:col-span-1">
-            <h3 className="text-white font-medium mb-4">Contact Us</h3>
+            <h3 className="text-gray-900 font-medium mb-4">Contact Us</h3>
             <ul className="space-y-3 text-sm">
-              <li className="text-white/60">
-                <strong className="text-white">Email:</strong><br />
-                <a href="mailto:info@smart-qna.com" className="hover:text-teal-400 transition-colors duration-200">
+              <li className="text-gray-600">
+                <strong className="text-gray-900">Email:</strong><br />
+                <a href="mailto:info@smart-qna.com" className="hover:text-teal-600 transition-colors duration-200">
                   info@smart-qna.com
                 </a>
               </li>
-              <li className="text-white/60">
-                <strong className="text-white">Support:</strong><br />
-                <a href="mailto:support@smart-qna.com" className="hover:text-teal-400 transition-colors duration-200">
+              <li className="text-gray-600">
+                <strong className="text-gray-900">Support:</strong><br />
+                <a href="mailto:support@smart-qna.com" className="hover:text-teal-600 transition-colors duration-200">
                   support@smart-qna.com
                 </a>
               </li>
-              <li className="text-white/60">
-                <strong className="text-white">Location:</strong><br />
+              <li className="text-gray-600">
+                <strong className="text-gray-900">Location:</strong><br />
                 New Delhi, India
               </li>
             </ul>
           </div>
           
           <div className="col-span-1 md:col-span-1">
-            <h3 className="text-white font-medium mb-4">Legal</h3>
+            <h3 className="text-gray-900 font-medium mb-4">Legal</h3>
             <ul className="space-y-3 mb-6">
               {legalLinks.map((link, index) => (
                 <li key={index}>
                   <a 
                     href={link.href} 
-                    className="text-white/60 hover:text-teal-400 transition-colors duration-200 text-sm"
+                    className="text-gray-600 hover:text-teal-600 transition-colors duration-200 text-sm"
                   >
                     {link.name}
                   </a>
@@ -143,27 +143,27 @@ const Footer = () => {
             <div className="flex items-center">
               <button
                 onClick={toggleDarkMode}
-                className="flex items-center justify-center rounded-full p-2 bg-white/10 hover:bg-white/20 transition-colors duration-200"
+                className="flex items-center justify-center rounded-full p-2 bg-gray-200 hover:bg-gray-300 transition-colors duration-200"
                 aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
                 {isDarkMode ? (
-                  <HiOutlineSun className="w-5 h-5 text-teal-400" />
+                  <HiOutlineSun className="w-5 h-5 text-teal-600" />
                 ) : (
-                  <HiOutlineMoon className="w-5 h-5 text-blue-400" />
+                  <HiOutlineMoon className="w-5 h-5 text-blue-600" />
                 )}
               </button>
-              <span className="ml-2 text-white/60 text-sm">
+              <span className="ml-2 text-gray-600 text-sm">
                 {isDarkMode ? "Light Mode" : "Dark Mode"}
               </span>
             </div>
           </div>
         </div>
         
-        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-white/60 text-sm mb-4 md:mb-0">
-            © {new Date().getFullYear()} Smart QnA. All rights reserved.
+        <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-gray-500 text-sm mb-4 md:mb-0">
+            © {new Date().getFullYear()} Smart QnA by KVGAI Tech Pvt. Ltd. All rights reserved.
           </p>
-          <p className="text-white/40 text-xs">
+          <p className="text-gray-400 text-xs">
             Revolutionizing educational assessment with AI
           </p>
         </div>
