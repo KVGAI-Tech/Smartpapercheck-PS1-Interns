@@ -4,26 +4,40 @@ import { motion } from 'framer-motion';
 const Clientele = () => {
   const clients = [
     { 
-      name: 'WILP BITS Pilani', 
-      logo: '/clients/bits-pilani.png',
+      name: 'Harvard University', 
+      logo: '/harvard.png',
       type: 'institution'
     },
     { 
-      name: 'PIEDS', 
-      logo: '/clients/pieds.png',
-      type: 'incubator'
+      name: 'Stanford University', 
+      logo: '/stanford.png',
+      type: 'institution'
     },
     { 
-      name: 'Campus Fund', 
-      logo: '/clients/campus-fund.png',
-      type: 'incubator'
+      name: 'BITS Pilani', 
+      logo: '/bitspilani.png',
+      type: 'institution'
     },
     { 
-      name: 'FutureX', 
-      logo: '/clients/futurex.png',
-      type: 'incubator'
+      name: 'Wharton School', 
+      logo: '/wharton.png',
+      type: 'institution'
     },
-    // Add more clients as needed
+    { 
+      name: 'IIT Delhi', 
+      logo: '/iitdelhi.png',
+      type: 'institution'
+    },
+    { 
+      name: 'ISB', 
+      logo: '/isb.png',
+      type: 'institution'
+    },
+    { 
+      name: 'IIM Bangalore', 
+      logo: '/iimbangalore.png',
+      type: 'institution'
+    }
   ];
 
   const fadeInUpItem = {
@@ -37,8 +51,32 @@ const Clientele = () => {
     }
   };
 
+  const hoverAnimation = {
+    rest: { scale: 1 },
+    hover: { 
+      scale: 1.05,
+      transition: {
+        duration: 0.3,
+        type: "spring",
+        stiffness: 300
+      }
+    }
+  };
+
+  const logoAnimation = {
+    rest: { y: 0 },
+    hover: { 
+      y: [-5, 0, -5],
+      transition: {
+        duration: 2,
+        ease: "easeInOut",
+        repeat: Infinity
+      }
+    }
+  };
+
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-[#0B1011] to-[#101618]">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -47,16 +85,22 @@ const Clientele = () => {
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Who <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">Trusts Us</span>
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+              <span className="mr-2">🏛️</span>
+              <span>Leading Institutions</span>
+            </div>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+            Trusted by <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Global Leaders</span> in Education
           </h2>
-          <p className="text-lg text-white/70 max-w-3xl mx-auto">
-            Leading academic programs and EdTech organizations are using SmartQnA to streamline assessments.
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Leading academic institutions and organizations use SmartQnA to streamline assessments.
           </p>
         </motion.div>
 
         <motion.div 
-          className="grid grid-cols-2 md:grid-cols-4 gap-8"
+          className="flex flex-wrap justify-center gap-8"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
@@ -65,14 +109,22 @@ const Clientele = () => {
           {clients.map((client, index) => (
             <motion.div
               key={index}
-              className="flex flex-col items-center justify-center"
+              className="flex flex-col items-center"
               variants={fadeInUpItem}
+              initial="rest"
+              whileHover="hover"
+              animate="rest"
             >
-              <div className="h-24 w-full flex items-center justify-center bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 mb-3 hover:bg-white/10 transition-all duration-300">
-                <div className="relative h-16 w-full flex items-center justify-center">
+              <motion.div 
+                className="h-28 w-44 flex items-center justify-center bg-white shadow-md border border-gray-100 rounded-xl p-4 mb-3 hover:shadow-lg transition-all duration-300"
+                variants={hoverAnimation}
+              >
+                <motion.div 
+                  className="relative h-20 w-full flex items-center justify-center"
+                  variants={logoAnimation}
+                >
                   <div className="absolute inset-0 flex items-center justify-center">
-                    {/* Placeholder colored div when image fails to load */}
-                    <div className="h-12 w-32 rounded bg-gradient-to-r from-teal-500/30 to-blue-500/30" />
+                    <div className="h-16 w-36 rounded bg-gradient-to-r from-teal-50 to-blue-50" />
                   </div>
                   <img
                     src={client.logo}
@@ -82,17 +134,11 @@ const Clientele = () => {
                       e.target.style.opacity = "0";
                     }}
                   />
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-white">{client.name}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  client.type === 'institution' 
-                    ? 'bg-blue-500/20 text-blue-300' 
-                    : client.type === 'incubator' 
-                    ? 'bg-teal-500/20 text-teal-300'
-                    : 'bg-purple-500/20 text-purple-300'
-                }`}>
+                <span className="text-sm font-medium text-gray-800">{client.name}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                   {client.type === 'institution' ? 'Institution' : 
                    client.type === 'incubator' ? 'Incubator' : 'Award'}
                 </span>
@@ -108,8 +154,8 @@ const Clientele = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-teal-500/10 to-blue-500/10 border border-blue-500/20">
-            <p className="text-white/80 text-sm">
+          <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-teal-50 to-blue-50 border border-blue-100 shadow-sm">
+            <p className="text-gray-700 text-sm">
               Join our growing list of partners and transform your evaluation process
             </p>
           </div>

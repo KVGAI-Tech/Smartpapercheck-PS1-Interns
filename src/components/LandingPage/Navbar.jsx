@@ -18,15 +18,15 @@ const MobileMenu = () => {
   return (
     <div className="lg:hidden">
       <button
-        className="p-2 rounded-md bg-teal-500/20"
+        className="p-2 rounded-md bg-teal-100 text-teal-700"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label="Toggle menu"
       >
         {isOpen ? (
-          <HiX className="w-6 h-6 text-white" />
+          <HiX className="w-6 h-6" />
         ) : (
-          <HiOutlineMenu className="w-6 h-6 text-white" />
+          <HiOutlineMenu className="w-6 h-6" />
         )}
       </button>
 
@@ -34,9 +34,9 @@ const MobileMenu = () => {
         initial={{ x: "100%" }}
         animate={{ x: isOpen ? 0 : "100%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="fixed top-0 right-0 h-full w-full max-w-xs bg-[#0B1011]/95 backdrop-blur-lg z-50 shadow-xl"
+        className="fixed top-0 right-0 h-full w-full max-w-xs bg-white shadow-xl z-50"
       >
-        <div className="p-6 text-white">
+        <div className="p-6 text-gray-900">
           <div className="flex justify-between items-center mb-8">
             <img 
               src="/logo_smartqna.png" 
@@ -44,7 +44,7 @@ const MobileMenu = () => {
               className="h-8"
             />
             <button onClick={() => setIsOpen(false)}>
-              <HiX className="w-6 h-6 text-white" />
+              <HiX className="w-6 h-6 text-gray-600" />
             </button>
           </div>
           
@@ -53,7 +53,7 @@ const MobileMenu = () => {
               <a
                 key={item.name}
                 href={item.link}
-                className="block py-3 px-4 border-l-2 border-transparent hover:border-teal-500 hover:bg-teal-500/10 rounded-r-lg transition-all duration-200 text-lg"
+                className="block py-3 px-4 border-l-2 border-transparent hover:border-teal-500 hover:bg-teal-50 rounded-r-lg transition-all duration-200 text-lg text-gray-800"
                 onClick={() => setIsOpen(false)}
               >
                 {item.name}
@@ -64,7 +64,7 @@ const MobileMenu = () => {
           <div className="mt-8 space-y-4">
             <a 
               href="https://www.blog.smart-qna.com/"
-              className="w-full py-3 px-6 border border-blue-500 text-blue-500 rounded-md text-lg font-medium hover:bg-blue-500/10 transition-colors duration-200 block text-center"
+              className="w-full py-3 px-6 border border-blue-500 text-blue-600 rounded-md text-lg font-medium hover:bg-blue-50 transition-colors duration-200 block text-center"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setIsOpen(false)}
@@ -73,7 +73,7 @@ const MobileMenu = () => {
             </a>
 
             <button 
-              className="w-full bg-gradient-to-r from-teal-500 to-blue-500 py-3 px-6 rounded-md text-lg font-medium hover:opacity-90 transition-opacity duration-200"
+              className="w-full bg-gradient-to-r from-teal-500 to-blue-500 py-3 px-6 rounded-md text-lg font-medium hover:opacity-90 transition-opacity duration-200 text-white"
               onClick={() => {
                 setIsOpen(false);
                 navigate('/auth');
@@ -116,7 +116,7 @@ const Navbar = () => {
   return (
     <motion.nav 
       className={`fixed w-full py-4 px-4 lg:px-12 z-40 transition-all duration-300 ${
-        scrolled ? 'bg-[#0B1011]/80 backdrop-blur-lg shadow-lg' : 'bg-transparent'
+        scrolled ? 'bg-white/90 backdrop-blur-lg shadow-md' : 'bg-transparent'
       }`}
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -133,8 +133,8 @@ const Navbar = () => {
             alt="SmartQnA Logo" 
             className="h-8 mr-3" 
           />
-          <div className="font-medium text-2xl md:text-2xl text-white">
-            Smart<span className="font-light italic text-teal-400">QnA</span>
+          <div className="font-medium text-2xl md:text-2xl text-gray-900">
+            Smart<span className="font-light italic text-teal-600">QnA</span>
           </div>
         </motion.div>
 
@@ -143,7 +143,7 @@ const Navbar = () => {
             <motion.a
               key={idx}
               href={item.link}
-              className="font-medium py-2 px-3 text-base text-white/80 hover:text-white transition-colors duration-200"
+              className="font-medium py-2 px-3 text-base text-gray-700 hover:text-teal-600 transition-colors duration-200"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
@@ -155,7 +155,7 @@ const Navbar = () => {
         <div className="hidden lg:flex items-center space-x-4">
           <motion.a 
             href="https://www.blog.smart-qna.com/"
-            className="py-2 px-6 border border-blue-500 text-blue-500 rounded-md font-medium hover:bg-blue-500/10 transition-colors duration-200"
+            className="py-2 px-6 border border-blue-500 text-blue-600 rounded-md font-medium hover:bg-blue-50 transition-colors duration-200"
             target="_blank"
             rel="noopener noreferrer"
             whileHover={{ scale: 1.05 }}
@@ -165,7 +165,7 @@ const Navbar = () => {
           </motion.a>
 
           <motion.button 
-            className="bg-gradient-to-r from-teal-500 to-blue-500 py-2 px-6 rounded-md font-medium hover:opacity-90 transition-opacity duration-200"
+            className="bg-gradient-to-r from-teal-500 to-blue-500 py-2 px-6 rounded-md font-medium text-white hover:opacity-90 transition-opacity duration-200 shadow-md"
             onClick={() => navigate('/auth')}
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}

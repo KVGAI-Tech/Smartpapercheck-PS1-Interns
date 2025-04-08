@@ -10,34 +10,34 @@ import {
 const InsightCard = ({ icon, title, description, chart, index }) => {
   return (
     <motion.div
-      className="relative overflow-hidden bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl"
+      className="relative overflow-hidden bg-white shadow-md border border-gray-100 rounded-xl"
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: index * 0.2 }}
       viewport={{ once: true }}
-      whileHover={{ y: -5 }}
+      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
     >
       <div className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="flex items-center mb-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-teal-500/20 to-blue-500/20 flex items-center justify-center mr-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 flex items-center justify-center mr-3">
                 {icon}
               </div>
-              <h3 className="text-lg font-medium">{title}</h3>
+              <h3 className="text-lg font-medium text-gray-800">{title}</h3>
             </div>
-            <p className="text-white/70 text-sm">{description}</p>
+            <p className="text-gray-600 text-sm">{description}</p>
           </div>
-          <div className="bg-gradient-to-r from-teal-500/20 to-blue-500/20 rounded-full px-2 py-1 text-xs flex items-center">
-            <HiOutlineArrowSmUp className="text-teal-400 mr-1" />
-            <span className="text-white">Live</span>
+          <div className="bg-gradient-to-r from-teal-100 to-blue-100 rounded-full px-2 py-1 text-xs flex items-center">
+            <HiOutlineArrowSmUp className="text-teal-600 mr-1" />
+            <span className="text-gray-800">Live</span>
           </div>
         </div>
       </div>
       
       {chart && (
         <div className="px-4 pb-4">
-          <div className="h-40 w-full bg-white/5 rounded-lg overflow-hidden">
+          <div className="h-40 w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
             {chart}
           </div>
         </div>
@@ -54,10 +54,10 @@ const StrengthChart = () => (
           <motion.div 
             className={`${
               height > 75 
-                ? 'bg-teal-400/80' 
+                ? 'bg-teal-500' 
                 : height > 50 
-                ? 'bg-blue-400/80' 
-                : 'bg-white/30'
+                ? 'bg-blue-500' 
+                : 'bg-gray-300'
             } rounded-t-sm`}
             initial={{ height: 0 }}
             whileInView={{ height: `${height}%` }}
@@ -67,8 +67,8 @@ const StrengthChart = () => (
         </div>
       ))}
     </div>
-    <div className="absolute bottom-0 left-0 w-full border-t border-white/20 text-center">
-      <span className="text-xs text-white/50">Student Strengths by Topic</span>
+    <div className="absolute bottom-0 left-0 w-full border-t border-gray-200 text-center">
+      <span className="text-xs text-gray-500">Student Strengths by Topic</span>
     </div>
   </div>
 );
@@ -80,11 +80,11 @@ const HeatmapChart = () => (
         const intensity = Math.random(); // 0 to 1
         let bgColor;
         
-        if (intensity > 0.8) bgColor = 'bg-teal-500/90';
-        else if (intensity > 0.6) bgColor = 'bg-teal-500/70';
-        else if (intensity > 0.4) bgColor = 'bg-teal-500/50';
-        else if (intensity > 0.2) bgColor = 'bg-teal-500/30';
-        else bgColor = 'bg-teal-500/10';
+        if (intensity > 0.8) bgColor = 'bg-teal-500';
+        else if (intensity > 0.6) bgColor = 'bg-teal-400';
+        else if (intensity > 0.4) bgColor = 'bg-teal-300';
+        else if (intensity > 0.2) bgColor = 'bg-teal-200';
+        else bgColor = 'bg-teal-100';
         
         return (
           <motion.div 
@@ -98,8 +98,8 @@ const HeatmapChart = () => (
         );
       })}
     </div>
-    <div className="absolute bottom-0 left-0 w-full border-t border-white/20 text-center">
-      <span className="text-xs text-white/50">Rubric-to-Score Heatmap</span>
+    <div className="absolute bottom-0 left-0 w-full border-t border-gray-200 text-center">
+      <span className="text-xs text-gray-500">Rubric-to-Score Heatmap</span>
     </div>
   </div>
 );
@@ -114,7 +114,7 @@ const PerformanceChart = () => (
             cy="50"
             r="45"
             fill="none"
-            stroke="#1e293b"
+            stroke="#e2e8f0"
             strokeWidth="10"
           />
           <motion.circle
@@ -122,7 +122,7 @@ const PerformanceChart = () => (
             cy="50"
             r="45"
             fill="none"
-            stroke="#2dd4bf"
+            stroke="#0ea5e9"
             strokeLinecap="round"
             strokeWidth="10"
             initial={{ strokeDasharray: "283 283", strokeDashoffset: 283 }}
@@ -133,7 +133,7 @@ const PerformanceChart = () => (
         </svg>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
           <motion.span 
-            className="text-xl font-bold text-white"
+            className="text-xl font-bold text-gray-800"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ delay: 1.5 }}
@@ -144,15 +144,15 @@ const PerformanceChart = () => (
         </div>
       </div>
     </div>
-    <div className="absolute bottom-0 left-0 w-full border-t border-white/20 text-center">
-      <span className="text-xs text-white/50">Class Average Performance</span>
+    <div className="absolute bottom-0 left-0 w-full border-t border-gray-200 text-center">
+      <span className="text-xs text-gray-500">Class Average Performance</span>
     </div>
   </div>
 );
 
 const Insights = () => {
   return (
-    <section id="insights" className="py-24 px-4 sm:px-6 lg:px-8">
+    <section id="insights" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -162,22 +162,22 @@ const Insights = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-500/20 to-blue-500/20 text-white/90 text-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">📊</span>
               <span>Analytics</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Get Powerful <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">Insights</span> From Every Answer
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+            Get Powerful <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Insights</span> From Every Answer
           </h2>
-          <p className="text-lg text-white/70 max-w-3xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Transform evaluation data into actionable insights with comprehensive analytics that help you understand student performance and learning patterns.
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <InsightCard
-            icon={<HiOutlineChartBar className="w-5 h-5 text-teal-400" />}
+            icon={<HiOutlineChartBar className="w-5 h-5 text-teal-600" />}
             title="Student Strength Analysis"
             description="Identify each student's strengths and areas for improvement across topics and concepts."
             chart={<StrengthChart />}
@@ -185,7 +185,7 @@ const Insights = () => {
           />
           
           <InsightCard
-            icon={<HiOutlineChartPie className="w-5 h-5 text-blue-400" />}
+            icon={<HiOutlineChartPie className="w-5 h-5 text-blue-600" />}
             title="Rubric-to-Score Heatmaps"
             description="Visualize how different rubric components contribute to overall scores, highlighting patterns."
             chart={<HeatmapChart />}
@@ -193,7 +193,7 @@ const Insights = () => {
           />
           
           <InsightCard
-            icon={<HiOutlineChartSquareBar className="w-5 h-5 text-purple-400" />}
+            icon={<HiOutlineChartSquareBar className="w-5 h-5 text-purple-600" />}
             title="Class Performance Overview"
             description="Get a comprehensive view of your class's performance with detailed analytics and progression tracking."
             chart={<PerformanceChart />}
@@ -209,8 +209,8 @@ const Insights = () => {
           viewport={{ once: true }}
         >
           <motion.button 
-            className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-3 rounded-full text-white font-medium transition-all duration-300"
-            whileHover={{ scale: 1.05 }}
+            className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-3 rounded-full text-white font-medium shadow-md transition-all duration-300"
+            whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
             whileTap={{ scale: 0.95 }}
           >
             Explore All Analytics Features
