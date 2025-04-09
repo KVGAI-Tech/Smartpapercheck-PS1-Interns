@@ -21,9 +21,10 @@ import AboutUsPage from "./components/AboutUsPage";
 import LoadingIndicator from "./components/Loader";
 import { useEffect, useState } from "react";
 import { Toaster } from "react-hot-toast";
-import StudentEvaluations from './components/StudentEvaluations';
-import CourseEvaluations from './components/CourseEvaluations';
-import StudentExamDetails from './components/StudentExamDetails';
+import StudentEvaluations from "./components/StudentEvaluations";
+import CourseEvaluations from "./components/CourseEvaluations";
+import StudentExamDetails from "./components/StudentExamDetails";
+import StudentRecheckRequests from "./components/StudentRecheckRequests";
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -123,7 +124,7 @@ function App() {
               </RoleRoute>
             }
           />
-          
+
           <Route
             path="/student-dashboard"
             element={
@@ -172,7 +173,18 @@ function App() {
               </RoleRoute>
             }
           />
-          
+
+          <Route
+            path="/student/recheck"
+            element={
+              <RoleRoute requiredRole="student">
+                <StudentDashboardLayout>
+                  <StudentRecheckRequests />
+                </StudentDashboardLayout>
+              </RoleRoute>
+            }
+          />
+
           <Route
             path="/ta-dashboard"
             element={
@@ -183,7 +195,7 @@ function App() {
               </RoleRoute>
             }
           />
-          
+
           <Route
             path="/settings"
             element={
