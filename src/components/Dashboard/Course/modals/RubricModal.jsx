@@ -481,7 +481,7 @@ const RubricModal = ({
 
         try {
             const response = await fetch(
-                `${API_BASE_URL}/exams/${examId}/questions/${questionNumber}/rubric/`,
+                `${API_BASE_URL}/exams/${examId}/questions/${questionNumber}/rubric`,
                 {
                     method: 'GET',
                     headers: {

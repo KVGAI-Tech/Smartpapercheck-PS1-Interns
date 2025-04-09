@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../../BaseURL';
+
 export const fetchApi = async (endpoint, options = {}) => {
   const token = localStorage.getItem('accessToken');
   
@@ -7,7 +8,11 @@ export const fetchApi = async (endpoint, options = {}) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const apiUrl = 'https://dev.smart-qna.com/api' + endpoint;
+    
+    console.log('Fetching from:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
       ...options,
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -17,7 +22,9 @@ export const fetchApi = async (endpoint, options = {}) => {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({ 
+        message: `Request failed with status ${response.status}` 
+      }));
       throw new Error(error.message || error.detail || `Request failed with status ${response.status}`);
     }
 
@@ -28,8 +35,6 @@ export const fetchApi = async (endpoint, options = {}) => {
     throw error;
   }
 };
-
-
 export const getCourseDetails = async (courseId) => {
   try {
     const response = await fetchApi(`/professors/courses`);
@@ -156,7 +161,7 @@ export const createExam = async (courseId, data) => {
   if (!courseId || !data) {
     throw new Error('Course ID and exam data are required');
   }
-  return fetchApi(`/professors/courses/${courseId}/exams/`, {
+  return fetchApi(`/professors/courses/${courseId}/exams`, {
     method: 'POST',
     body: JSON.stringify(data)
   });

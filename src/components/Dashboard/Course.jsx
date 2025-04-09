@@ -9,7 +9,6 @@ import {
 
 import { API_BASE_URL } from '../../BaseURL';
 
-
 const fadeIn = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.3 } }
@@ -105,12 +104,12 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               className={`px-2 py-1 text-xs font-medium rounded-full ${
-                course.course_status === 'ACTIVE' 
+                course.is_active 
                   ? 'bg-green-50 text-green-600'
                   : 'bg-gray-50 text-gray-600'
               }`}
             >
-              {course.course_status === 'ACTIVE' ? 'Active' : 'Inactive'}
+              {course.is_active ? 'Active' : 'Inactive'}
             </motion.span>
           </div>
           <h4 className="text-xl font-bold text-gray-800 mb-2">{course.course_name}</h4>
@@ -179,7 +178,7 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
 
       <div className="mt-auto">
         <AnimatePresence>
-          {(isHovered || course.course_status === 'ACTIVE') && (
+          {(isHovered || course.is_active) && (
             <motion.button
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -212,7 +211,7 @@ const CourseModal = ({ isOpen, onClose, course, onSubmit, isEditing }) => {
     end_date: course?.end_date?.split('T')[0] || '',
     year: course?.year || new Date().getFullYear(),
     semester: course?.semester || '1',
-    course_status: course?.course_status || 'INACTIVE'
+    is_active: course?.is_active !== undefined ? course.is_active : true
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -229,7 +228,7 @@ const CourseModal = ({ isOpen, onClose, course, onSubmit, isEditing }) => {
         end_date: course?.end_date?.split('T')[0] || '',
         year: course?.year || new Date().getFullYear(),
         semester: course?.semester || '1',
-        course_status: course?.course_status || 'INACTIVE'
+        is_active: course?.is_active !== undefined ? course.is_active : true
       });
       setTouched({});
       setError('');
@@ -237,8 +236,12 @@ const CourseModal = ({ isOpen, onClose, course, onSubmit, isEditing }) => {
   }, [isOpen, course]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    
+    
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    setFormData(prev => ({ ...prev, [name]: newValue }));
     setTouched(prev => ({ ...prev, [name]: true }));
   };
 
@@ -490,22 +493,19 @@ const CourseModal = ({ isOpen, onClose, course, onSubmit, isEditing }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Status
                   </label>
-                  <motion.div 
-                    className="relative"
-                    whileFocus={{ scale: 1.01 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    <select
-                      name="course_status"
-                      value={formData.course_status}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="is-active"
+                      name="is_active"
+                      checked={formData.is_active}
                       onChange={handleInputChange}
-                      className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-10"
-                    >
-                      <option value="ACTIVE">Active</option>
-                      <option value="INACTIVE">Inactive</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-2.5 w-5 h-5 text-gray-400 pointer-events-none" />
-                  </motion.div>
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="is-active" className="ml-2 block text-sm text-gray-700">
+                      Active
+                    </label>
+                  </div>
                 </div>
               )}
 
@@ -615,6 +615,70 @@ const CourseCardSkeleton = ({ index }) => (
   </motion.div>
 );
 
+
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, courseName }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 400 }}
+            className="bg-white rounded-xl p-6 max-w-md w-full"
+          >
+            <div className="text-center">
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1, rotate: [0, 10, 0] }}
+                transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                className="mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-red-100 mb-4"
+              >
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </motion.div>
+              
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Course</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Are you sure you want to delete <span className="font-semibold">{courseName}</span>? 
+                This action cannot be undone.
+              </p>
+              
+              <div className="flex gap-3 justify-center">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={onClose}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={onConfirm}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete</span>
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+
 const Courses = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
@@ -699,69 +763,6 @@ const Courses = () => {
     
     return courseName.includes(query) || courseCode.includes(query);
   });
-
-  
-  const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, courseName }) => {
-    if (!isOpen) return null;
-    
-    return (
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0bg-black/50 flex items-center justify-center z-50 p-4"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", damping: 30, stiffness: 400 }}
-              className="bg-white rounded-xl p-6 max-w-md w-full"
-            >
-              <div className="text-center">
-                <motion.div 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1, rotate: [0, 10, 0] }}
-                  transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                  className="mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-red-100 mb-4"
-                >
-                  <AlertTriangle className="h-8 w-8 text-red-600" />
-                </motion.div>
-                
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Course</h3>
-                <p className="text-sm text-gray-500 mb-6">
-                  Are you sure you want to delete <span className="font-semibold">{courseName}</span>? 
-                  This action cannot be undone.
-                </p>
-                
-                <div className="flex gap-3 justify-center">
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={onClose}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={onConfirm}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete</span>
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    );
-  };
 
   
   const EmptyState = () => (

@@ -10,12 +10,19 @@ const ExamForm = ({
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     exam_name: initialData?.exam_name || '',
-    full_marks: initialData?.full_marks || ''
+    full_marks: initialData?.full_marks || '',
+    start_time: initialData?.start_time || '',
+    duration: initialData?.duration || '',
+    room_id: initialData?.room_id || '',
+    allow_recheck: initialData?.allow_recheck || false,
+    max_recheck_attempts: initialData?.max_recheck_attempts || 1
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.exam_name || !formData.full_marks) {
+    if (!formData.exam_name || !formData.full_marks || !formData.start_time || 
+        !formData.duration || !formData.room_id === '' || 
+        formData.max_recheck_attempts === '') {
       setError('Please fill in all required fields');
       return;
     }
@@ -61,7 +68,77 @@ const ExamForm = ({
           <input
             type="number"
             value={formData.full_marks}
-            onChange={(e) => setFormData(prev => ({ ...prev, full_marks: parseInt(e.target.value) }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, full_marks: parseFloat(e.target.value) }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            min="1"
+            step="0.1"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Start Time *
+          </label>
+          <input
+            type="datetime-local"
+            value={formData.start_time}
+            onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Duration (HH:MM:SS) *
+          </label>
+          <input
+            type="time"
+            value={formData.duration}
+            onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            step="1"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Room ID *
+          </label>
+          <input
+            type="number"
+            value={formData.room_id}
+            onChange={(e) => setFormData(prev => ({ ...prev, room_id: parseInt(e.target.value) }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            min="1"
+            required
+          />
+        </div>
+
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="allow-recheck"
+            checked={formData.allow_recheck}
+            onChange={(e) => setFormData(prev => ({ ...prev, allow_recheck: e.target.checked }))}
+            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            required
+          />
+          <label htmlFor="allow-recheck" className="ml-2 block text-sm font-medium text-gray-700">
+            Allow Recheck *
+          </label>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Max Recheck Attempts *
+          </label>
+          <input
+            type="number"
+            value={formData.max_recheck_attempts}
+            onChange={(e) => setFormData(prev => ({ ...prev, max_recheck_attempts: parseInt(e.target.value) }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             min="1"
             required

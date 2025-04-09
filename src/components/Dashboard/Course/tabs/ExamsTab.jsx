@@ -554,7 +554,7 @@ const ExamsTab = ({
         throw new Error('Exam ID is missing');
       }
       
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/questions`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
@@ -635,7 +635,7 @@ const ExamsTab = ({
       
       showToast('Fetching enrollments...', 'success');
       
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
