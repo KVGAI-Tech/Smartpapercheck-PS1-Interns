@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "../BaseURL";
+import axios from "axios";
+import { useParams } from "react-router-dom";
 
 const mockDocument = {
   Document: ({ children }) => children,
@@ -942,6 +944,7 @@ const AnnotationTool = ({ onAnnotationChange, currentPage }) => {
 };
 
 const StudentExamViewer = ({ isHistory = false }) => {
+  const { courseId, id } = useParams();
   const [currentTab, setCurrentTab] = useState("overview");
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -1083,6 +1086,14 @@ const StudentExamViewer = ({ isHistory = false }) => {
 
   const handleRecheckSubmit = (data) => {
     console.log("Recheck data submitted:", data);
+    axios
+      .post(`${API_BASE_URL}/students/exams/${id}/request-recheck`, data)
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
 
     const mockResponse = {
       id: Math.floor(Math.random() * 10000),
