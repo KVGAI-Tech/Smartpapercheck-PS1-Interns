@@ -1204,7 +1204,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
               )}
             </motion.div>
 
-            {isHistory && (
+            {isHistory ? null : (
               <>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -1360,7 +1360,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
               )}
             </motion.button>
 
-            {isHistory && (
+            {isHistory ? null : (
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}

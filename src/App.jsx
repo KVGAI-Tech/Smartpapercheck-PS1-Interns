@@ -183,7 +183,7 @@ function App() {
           />
 
           <Route
-            path="/student/recheck"
+            path="/student/recheck-history"
             element={
               <RoleRoute requiredRole="student">
                 <StudentDashboardLayout>

@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
   Menu,
-  ChevronLeft, 
+  ChevronLeft,
   ChevronRight,
   LayoutDashboard,
   FileText,
   History,
   Settings,
   LogOut,
-  Bell
-} from 'lucide-react';
+  Bell,
+} from "lucide-react";
 
 const StudentDashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -21,34 +21,34 @@ const StudentDashboardLayout = ({ children }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    navigate('/auth');
+    navigate("/auth");
   };
 
   const menuItems = [
-    { 
-      icon: LayoutDashboard, 
-      label: 'Dashboard', 
-      to: '/student-dashboard',
-      description: 'Overview of your evaluations'
+    {
+      icon: LayoutDashboard,
+      label: "Dashboard",
+      to: "/student-dashboard",
+      description: "Overview of your evaluations",
     },
-    { 
-      icon: FileText, 
-      label: 'My Evaluations', 
-      to: '/student/evaluations',
-      description: 'View your evaluated assignments'
+    {
+      icon: FileText,
+      label: "My Evaluations",
+      to: "/student/evaluations",
+      description: "View your evaluated assignments",
     },
-    { 
-      icon: Settings, 
-      label: 'Settings', 
-      to: '/student/settings',
-      description: 'Edit your profile and preferences'
+    {
+      icon: Settings,
+      label: "Settings",
+      to: "/student/settings",
+      description: "Edit your profile and preferences",
     },
-    { 
-      icon: History, 
-      label: 'Recheck Requests', 
-      to: '/student/recheck',
-      description: 'Track your recheck requests'
-    }
+    {
+      icon: History,
+      label: "Recheck History",
+      to: "/student/recheck-history",
+      description: "Track your recheck requests",
+    },
   ];
 
   const isActive = (path) => {
@@ -58,24 +58,34 @@ const StudentDashboardLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {isMobile && isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-
-      <aside 
+      <aside
         className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300
-          ${isSidebarOpen ? 'w-64' : 'w-20'} 
+          ${isSidebarOpen ? "w-64" : "w-20"} 
           bg-white border-r border-gray-100 shadow-lg
-          ${isMobile ? (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}`}
+          ${
+            isMobile
+              ? isSidebarOpen
+                ? "translate-x-0"
+                : "-translate-x-full"
+              : "translate-x-0"
+          }`}
       >
         <div className="flex flex-col h-full">
-
-          <div className={`flex items-center h-16 px-4 border-b border-gray-100
-            ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}>
-            <div className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-40' : 'w-0'}`}>
+          <div
+            className={`flex items-center h-16 px-4 border-b border-gray-100
+            ${isSidebarOpen ? "justify-between" : "justify-center"}`}
+          >
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                isSidebarOpen ? "w-40" : "w-0"
+              }`}
+            >
               <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">
                 Smart QnA
               </h1>
@@ -92,7 +102,6 @@ const StudentDashboardLayout = ({ children }) => {
             </button>
           </div>
 
-
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {menuItems.map((item, index) => (
               <Link
@@ -100,18 +109,28 @@ const StudentDashboardLayout = ({ children }) => {
                 to={item.to}
                 className={`flex items-center px-3 py-2.5 rounded-lg cursor-pointer
                   transition-all duration-300 relative group
-                  ${isActive(item.to) ? 
-                    'bg-green-50 text-green-600' : 
-                    'text-gray-600 hover:bg-gray-50'}`}
+                  ${
+                    isActive(item.to)
+                      ? "bg-green-50 text-green-600"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
                 onMouseEnter={() => setHoveredItem(item.label)}
                 onMouseLeave={() => setHoveredItem(null)}
               >
-                <item.icon className={`w-5 h-5 ${
-                  isActive(item.to) ? 'text-green-600' : 'text-gray-400'
-                }`} />
-                
-                <div className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-40 ml-3' : 'w-0'}`}>
-                  <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                <item.icon
+                  className={`w-5 h-5 ${
+                    isActive(item.to) ? "text-green-600" : "text-gray-400"
+                  }`}
+                />
+
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    isSidebarOpen ? "w-40 ml-3" : "w-0"
+                  }`}
+                >
+                  <span className="text-sm font-medium whitespace-nowrap">
+                    {item.label}
+                  </span>
                 </div>
 
                 {!isSidebarOpen && hoveredItem === item.label && (
@@ -128,7 +147,6 @@ const StudentDashboardLayout = ({ children }) => {
             ))}
           </nav>
 
-
           <div className="px-3 pb-4 space-y-2">
             <button
               onClick={handleLogout}
@@ -136,7 +154,11 @@ const StudentDashboardLayout = ({ children }) => {
                 transition-all duration-300 text-gray-600 hover:bg-red-50 hover:text-red-600`}
             >
               <LogOut className="w-5 h-5 text-gray-400" />
-              <div className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-40 ml-3' : 'w-0'}`}>
+              <div
+                className={`overflow-hidden transition-all duration-300 ${
+                  isSidebarOpen ? "w-40 ml-3" : "w-0"
+                }`}
+              >
                 <span className="text-sm font-medium">Exit Dashboard</span>
               </div>
             </button>
@@ -144,16 +166,15 @@ const StudentDashboardLayout = ({ children }) => {
         </div>
       </aside>
 
-
-      <div className={`flex-1 transition-all duration-300
-        ${isSidebarOpen ? 'md:ml-64' : 'md:ml-20'} ${isMobile ? 'ml-0' : ''}`}
+      <div
+        className={`flex-1 transition-all duration-300
+        ${isSidebarOpen ? "md:ml-64" : "md:ml-20"} ${isMobile ? "ml-0" : ""}`}
       >
-
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 h-16">
             <div className="flex items-center gap-3">
               {isMobile && (
-                <button 
+                <button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                   className="p-2 rounded-lg hover:bg-gray-50"
                 >
@@ -161,7 +182,8 @@ const StudentDashboardLayout = ({ children }) => {
                 </button>
               )}
               <h2 className="text-xl font-semibold text-gray-800">
-                {menuItems.find(item => isActive(item.to))?.label || 'Dashboard'}
+                {menuItems.find((item) => isActive(item.to))?.label ||
+                  "Dashboard"}
               </h2>
             </div>
 
@@ -184,13 +206,11 @@ const StudentDashboardLayout = ({ children }) => {
         </header>
 
         <main className="p-6">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
+          <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>
   );
 };
 
-export default StudentDashboardLayout; 
+export default StudentDashboardLayout;
