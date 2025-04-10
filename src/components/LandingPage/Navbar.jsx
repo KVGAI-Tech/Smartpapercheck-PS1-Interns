@@ -13,7 +13,7 @@ const MobileMenu = () => {
     { name: "Pricing", link: "#pricing" },
     { name: "FAQ", link: "#faq" },
     { name: "Contact", link: "#contact" },
-    { name: "Docs", link: "/" }
+    { name: "Docs", link: "https://docs.smart-qna.com/" }
   ];
 
   return (
@@ -112,7 +112,7 @@ const Navbar = () => {
     { name: "Pricing", link: "#pricing" },
     { name: "FAQ", link: "#faq" },
     { name: "Contact", link: "#contact" },
-    { name: "Docs", link: "/" },
+    { name: "Docs", link: "https://docs.smart-qna.com/" },
   ];
 
   return (
