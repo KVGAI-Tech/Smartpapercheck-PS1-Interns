@@ -481,7 +481,15 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations }) => {
 };
 
 const AnnotationTool = ({ onAnnotationChange, currentPage }) => {
-  const [annotations, setAnnotations] = useState([]);
+  const [annotations, setAnnotations] = useState(() => {
+    try {
+      const savedAnnotations = localStorage.getItem(STORAGE_KEY);
+      return savedAnnotations ? JSON.parse(savedAnnotations) : [];
+    } catch (error) {
+      console.error("Error loading annotations from localStorage:", error);
+      return [];
+    }
+  });
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentAnnotation, setCurrentAnnotation] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -494,17 +502,6 @@ const AnnotationTool = ({ onAnnotationChange, currentPage }) => {
   });
 
   const canvasRef = useRef(null);
-
-  useEffect(() => {
-    try {
-      const savedAnnotations = localStorage.getItem(STORAGE_KEY);
-      if (savedAnnotations) {
-        setAnnotations(JSON.parse(savedAnnotations));
-      }
-    } catch (error) {
-      console.error("Error loading annotations from localStorage:", error);
-    }
-  }, []);
 
   useEffect(() => {
     try {
@@ -1204,7 +1201,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
               )}
             </motion.div>
 
-            {isHistory ? null : (
+            {/* {isHistory ? null : (
               <>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -1239,7 +1236,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
                   Request Recheck
                 </motion.button>
               </>
-            )}
+            )} */}
           </div>
         </div>
       </header>
