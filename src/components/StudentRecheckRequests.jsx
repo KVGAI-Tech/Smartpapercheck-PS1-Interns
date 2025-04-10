@@ -13,6 +13,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_BASE_URL } from "../BaseURL";
+import axios from "axios";
 
 // Filter dropdown component
 const FilterDropdown = ({ label, options, value, onChange }) => {
@@ -267,6 +269,18 @@ const StudentRecheckRequests = () => {
       ],
     },
   ]);
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/students/courses`)
+      .then((res) => {
+        console.log(res);
+        setCoursesWithRequests(res.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }, []);
 
   // Filter options
   const statusOptions = ["All Status", "Pending", "Approved", "Rejected"];

@@ -24,6 +24,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_BASE_URL } from "../BaseURL";
 
 const mockDocument = {
   Document: ({ children }) => children,
