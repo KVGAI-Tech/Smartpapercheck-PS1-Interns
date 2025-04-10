@@ -173,6 +173,14 @@ function App() {
               </RoleRoute>
             }
           />
+          <Route
+            path="/student/history/:courseId/exam/:id"
+            element={
+              <RoleRoute requiredRole="student">
+                <StudentExamDetails isHistory />
+              </RoleRoute>
+            }
+          />
 
           <Route
             path="/student/recheck"
