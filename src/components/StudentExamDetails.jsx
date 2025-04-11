@@ -52,44 +52,44 @@ const mockDocument = {
 
 const STORAGE_KEY = "exam-viewer-annotations";
 
-const examData = {
-  id: 1,
-  title: "Mid-term Examination",
-  type: "Mid-term",
-  date: "Oct 15, 2023",
-  score: 85,
-  maxScore: 100,
-  status: "evaluated",
-  questions: [
-    {
-      question_number: 1,
-      question_text:
-        "Explain the principles of fault tolerance and describe a redundancy technique along with an error detection and recovery strategy.",
-      max_marks: 10,
-      marks_obtained: 8.5,
-      feedback:
-        "Good explanation of fault tolerance principles. The redundancy technique was well described, but the error recovery strategy lacked detail.",
-    },
-    {
-      question_number: 2,
-      question_text:
-        "Compare and contrast virtualization and containerization in cloud computing.",
-      max_marks: 10,
-      marks_obtained: 9,
-      feedback:
-        "Excellent comparison of virtualization and containerization. Very clear understanding of the differences and use cases.",
-    },
-    {
-      question_number: 3,
-      question_text:
-        "Design a distributed system for handling microservices with emphasis on scalability and reliability.",
-      max_marks: 10,
-      marks_obtained: 7.5,
-      feedback:
-        "The architecture design was good but needed more emphasis on the reliability measures. The scalability approach was well thought out.",
-    },
-  ],
-};
+// const examData = {
+//   id: 1,
+//   title: "Mid-term Examination",
+//   type: "Mid-term",
+//   date: "Oct 15, 2023",
+//   score: 85,
+//   maxScore: 100,
+//   status: "evaluated",
+//   questions: [
+//     {
+//       question_number: 1,
+//       question_text:
+//         "Explain the principles of fault tolerance and describe a redundancy technique along with an error detection and recovery strategy.",
+//       max_marks: 10,
+//       marks_obtained: 8.5,
+//       feedback:
+//         "Good explanation of fault tolerance principles. The redundancy technique was well described, but the error recovery strategy lacked detail.",
+//     },
+//     {
+//       question_number: 2,
+//       question_text:
+//         "Compare and contrast virtualization and containerization in cloud computing.",
+//       max_marks: 10,
+//       marks_obtained: 9,
+//       feedback:
+//         "Excellent comparison of virtualization and containerization. Very clear understanding of the differences and use cases.",
+//     },
+//     {
+//       question_number: 3,
+//       question_text:
+//         "Design a distributed system for handling microservices with emphasis on scalability and reliability.",
+//       max_marks: 10,
+//       marks_obtained: 7.5,
+//       feedback:
+//         "The architecture design was good but needed more emphasis on the reliability measures. The scalability approach was well thought out.",
+//     },
+//   ],
+// };
 
 const Toast = ({ message, type, visible, onClose }) => {
   useEffect(() => {
@@ -264,7 +264,7 @@ const PDFViewer = ({
   );
 };
 
-const RecheckModal = ({ isOpen, onClose, onSubmit, annotations }) => {
+const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData }) => {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -483,7 +483,7 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations }) => {
   );
 };
 
-const AnnotationTool = ({ onAnnotationChange, currentPage }) => {
+const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
   const [annotations, setAnnotations] = useState(() => {
     try {
       const savedAnnotations = localStorage.getItem(STORAGE_KEY);
@@ -961,10 +961,35 @@ const StudentExamViewer = ({ isHistory = false }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [pdfFile, setPdfFile] = useState(null);
   const [requestStatus, setRequestStatus] = useState(null);
+  const [examData, setExamData] = useState(null);
+  const [progressPercentage, setProgressPercentage] = useState(0);
+  const [annotationsByQuestion, setAnnotationsByQuestion] = useState([]);
 
   const mainContentRef = useRef(null);
 
   useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/students/courses/${courseId}/exams`)
+      .then((res) => {
+        setExamData(res.data.data.find((exam) => exam.id === parseInt(id)));
+        setProgressPercentage(
+          (res.data.data.score / res.data.data.maxScore) * 100
+        );
+        setAnnotationsByQuestion(
+          res.data.data.questions.map((question) => {
+            return {
+              questionNumber: question.question_number,
+              count: annotations.filter(
+                (a) => a.metadata.questionNumber === question.question_number
+              ).length,
+            };
+          })
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+
     const createMockPDF = () => {
       const canvas = document.createElement("canvas");
       canvas.width = 800;
@@ -1004,6 +1029,11 @@ const StudentExamViewer = ({ isHistory = false }) => {
       }
     };
   }, []);
+
+  if (!examData) {
+    console.log(examData);
+    return <h1>Loading exam data...</h1>;
+  }
 
   useEffect(() => {
     if (!totalPages || totalPages === 1) {
@@ -1073,7 +1103,6 @@ const StudentExamViewer = ({ isHistory = false }) => {
       console.error("Error loading annotations from localStorage:", error);
     }
   }, []);
-
   const handleAnnotationChange = (newAnnotations) => {
     setAnnotations(newAnnotations);
 
@@ -1139,23 +1168,6 @@ const StudentExamViewer = ({ isHistory = false }) => {
   const handleTotalPagesChange = (numPages) => {
     setTotalPages(numPages);
   };
-
-  const progressPercentage = (examData.score / examData.maxScore) * 100;
-  const scoreClass =
-    progressPercentage >= 70
-      ? "text-green-600"
-      : progressPercentage >= 40
-      ? "text-blue-600"
-      : "text-amber-600";
-
-  const annotationsByQuestion = examData.questions.map((question) => {
-    return {
-      questionNumber: question.question_number,
-      count: annotations.filter(
-        (a) => a.metadata.questionNumber === question.question_number
-      ).length,
-    };
-  });
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col relative">
@@ -1274,7 +1286,15 @@ const StudentExamViewer = ({ isHistory = false }) => {
                 progressPercentage >= 70 ? "bg-green-100" : "bg-amber-100"
               }`}
             >
-              <span className={`text-xl font-bold ${scoreClass}`}>
+              <span
+                className={`text-xl font-bold ${
+                  progressPercentage >= 70
+                    ? "text-green-600"
+                    : progressPercentage >= 40
+                    ? "text-blue-600"
+                    : "text-amber-600"
+                }`}
+              >
                 {Math.round(progressPercentage)}%
               </span>
             </motion.div>
@@ -1461,6 +1481,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
                 <AnnotationTool
                   onAnnotationChange={handleAnnotationChange}
                   currentPage={pageNumber}
+                  examData={examData}
                 />
               </div>
             )}
@@ -2079,6 +2100,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
             onClose={() => setShowRecheckModal(false)}
             onSubmit={handleRecheckSubmit}
             annotations={annotations}
+            examData={examData}
           />
         )}
       </AnimatePresence>
