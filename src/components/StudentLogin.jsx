@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { loginUser, signupUser } from "./auth";
+import { useAuth } from "./AuthContext";
 
 const ParticleAnimation = () => {
   const particles = Array.from({ length: 20 }, (_, i) => ({
@@ -111,7 +112,16 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
           isStudent
         );
       }
-      return await loginUser(formData.email, formData.password, isStudent);
+      const data = await loginUser(
+        formData.email,
+        formData.password,
+        isStudent
+      );
+      if (data.success) {
+        onLoginSuccess(data.access_token, "student");
+      } else {
+        throw new Error(data.error || "Login failed");
+      }
     } catch (error) {
       setError(error.message || "An unexpected error occurred");
     } finally {
