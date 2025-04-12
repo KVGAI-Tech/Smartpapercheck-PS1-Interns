@@ -50,6 +50,7 @@ const PasswordRequirements = React.memo(({ password }) => {
     hasUppercase: /[A-Z]/.test(password),
     hasLowercase: /[a-z]/.test(password),
     hasNumber: /\d/.test(password),
+    hasSymbol: /[!@#$%^&*(),.?":{}|<>]/.test(password),
   }), [password]);
 
   return (
@@ -60,21 +61,26 @@ const PasswordRequirements = React.memo(({ password }) => {
       </div>
       <div className="grid grid-cols-2 gap-1 mt-1">
         <div className="flex items-center">
-          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.minLength ? 'bg-green-500' : 'bg-gray-300'} mr-1.5`}></div>
-          <span className={`text-xs ${passwordChecks.minLength ? 'text-green-600' : 'text-gray-500'}`}>At least 8 characters</span>
+          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.minLength ? 'bg-green-500' : 'bg-red-300'} mr-1.5`}></div>
+          <span className={`text-xs ${passwordChecks.minLength ? 'text-green-600' : 'text-red-500'}`}>At least 8 characters</span>
         </div>
         <div className="flex items-center">
-          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasUppercase ? 'bg-green-500' : 'bg-gray-300'} mr-1.5`}></div>
-          <span className={`text-xs ${passwordChecks.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>One uppercase letter</span>
+          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasUppercase ? 'bg-green-500' : 'bg-red-300'} mr-1.5`}></div>
+          <span className={`text-xs ${passwordChecks.hasUppercase ? 'text-green-600' : 'text-red-500'}`}>One uppercase letter</span>
         </div>
         <div className="flex items-center">
-          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasLowercase ? 'bg-green-500' : 'bg-gray-300'} mr-1.5`}></div>
-          <span className={`text-xs ${passwordChecks.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>One lowercase letter</span>
+          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasLowercase ? 'bg-green-500' : 'bg-red-300'} mr-1.5`}></div>
+          <span className={`text-xs ${passwordChecks.hasLowercase ? 'text-green-600' : 'text-red-500'}`}>One lowercase letter</span>
         </div>
         <div className="flex items-center">
-          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasNumber ? 'bg-green-500' : 'bg-gray-300'} mr-1.5`}></div>
-          <span className={`text-xs ${passwordChecks.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>One number</span>
+          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasNumber ? 'bg-green-500' : 'bg-red-300'} mr-1.5`}></div>
+          <span className={`text-xs ${passwordChecks.hasNumber ? 'text-green-600' : 'text-red-500'}`}>One number</span>
         </div>
+        <div className="flex items-center">
+          <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasSymbol ? 'bg-green-500' : 'bg-red-300'} mr-1.5`}></div>
+          <span className={`text-xs ${passwordChecks.hasSymbol ? 'text-green-600' : 'text-red-500'}`}>One special character</span>
+        </div>
+
       </div>
     </div>
   );
