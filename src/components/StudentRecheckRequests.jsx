@@ -274,7 +274,7 @@ const StudentRecheckRequests = () => {
     axios
       .get(`${API_BASE_URL}/students/courses`)
       .then((res) => {
-        console.log(res);
+        console.log(res.data);
         setCoursesWithRequests(res.data);
       })
       .catch((err) => {
