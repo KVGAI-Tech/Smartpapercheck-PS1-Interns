@@ -1,14 +1,10 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import {
   BookOpen,
-  Calendar,
   CheckCircle,
   Clock,
   FileText,
   Search,
-  Bell,
-  User,
   Download,
   ExternalLink,
   AlertCircle,

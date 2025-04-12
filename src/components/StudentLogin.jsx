@@ -11,9 +11,7 @@ import {
   ChevronRight,
   User,
 } from "lucide-react";
-import axios from "axios";
 import { loginUser, signupUser } from "./auth";
-import { useAuth } from "./AuthContext";
 
 const ParticleAnimation = () => {
   const particles = Array.from({ length: 20 }, (_, i) => ({

@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Search,
-  BookOpen,
-  ChevronDown,
-  Filter,
-  SortAsc,
-  Calendar,
-} from "lucide-react";
+import { Search, BookOpen, ChevronDown, Filter, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../BaseURL";

@@ -12,16 +12,12 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCw,
-  Plus,
-  Minus,
   Save,
   ThumbsUp,
   ThumbsDown,
   ChevronLeft,
   ChevronRight,
   MessageSquare,
-  Clipboard,
-  RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "../BaseURL";
