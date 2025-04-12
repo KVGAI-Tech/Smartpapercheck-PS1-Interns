@@ -9,9 +9,10 @@ import {
   AlertCircle,
   BookOpen,
   ChevronRight,
+  User,
 } from "lucide-react";
 import axios from "axios";
-import { loginUser } from "./auth";
+import { loginUser, signupUser } from "./auth";
 
 const ParticleAnimation = () => {
   const particles = Array.from({ length: 20 }, (_, i) => ({
@@ -54,11 +55,14 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
+    fullName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [currentFocus, setCurrentFocus] = useState(null);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const formFieldVariants = {
     focus: { scale: 1.02, boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)" },
@@ -79,6 +83,16 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
   };
 
   const isFormValid = () => {
+    if (isSignUp) {
+      return (
+        formData.fullName &&
+        formData.email &&
+        formData.password &&
+        formData.confirmPassword &&
+        validateEmail(formData.email) &&
+        formData.password === formData.confirmPassword
+      );
+    }
     return formData.email && formData.password && validateEmail(formData.email);
   };
 
@@ -89,6 +103,14 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
     setIsLoading(true);
 
     try {
+      if (isSignUp) {
+        return await signupUser(
+          formData.fullName,
+          formData.email,
+          formData.password,
+          isStudent
+        );
+      }
       return await loginUser(formData.email, formData.password, isStudent);
     } catch (error) {
       setError(error.message || "An unexpected error occurred");
@@ -125,7 +147,7 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
             transition={{ duration: 0.3 }}
             className="text-2xl font-bold text-gray-900"
           >
-            Student Login
+            {isSignUp ? "Student Sign Up" : "Student Login"}
           </motion.h2>
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -137,6 +159,29 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
           </motion.div>
         </div>
 
+        <div className="flex justify-center gap-4 mb-6">
+          <button
+            onClick={() => setIsSignUp(false)}
+            className={`text-lg font-medium ${
+              !isSignUp
+                ? "text-green-600 border-b-2 border-green-600"
+                : "text-gray-600"
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => setIsSignUp(true)}
+            className={`text-lg font-medium ${
+              isSignUp
+                ? "text-green-600 border-b-2 border-green-600"
+                : "text-gray-600"
+            }`}
+          >
+            Sign Up
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
             <motion.div
@@ -146,6 +191,41 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
             >
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span>{error}</span>
+            </motion.div>
+          )}
+
+          {isSignUp && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.0 }}
+              className="space-y-1.5"
+            >
+              <label
+                htmlFor="fullName"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Full Name
+              </label>
+              <motion.div
+                className="relative"
+                variants={formFieldVariants}
+                animate={currentFocus === "fullName" ? "focus" : "blur"}
+              >
+                <User className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  required
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  onFocus={() => setCurrentFocus("fullName")}
+                  onBlur={() => setCurrentFocus(null)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-gray-900"
+                  placeholder="Enter your full name"
+                />
+              </motion.div>
             </motion.div>
           )}
 
@@ -181,6 +261,53 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
               />
             </motion.div>
           </motion.div>
+
+          {isSignUp && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.25 }}
+              className="space-y-1.5"
+            >
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Confirm Password
+              </label>
+              <motion.div
+                className="relative"
+                variants={formFieldVariants}
+                animate={currentFocus === "confirmPassword" ? "focus" : "blur"}
+              >
+                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  onFocus={() => setCurrentFocus("confirmPassword")}
+                  onBlur={() => setCurrentFocus(null)}
+                  className="w-full pl-11 pr-11 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-gray-900"
+                  placeholder="Confirm your password"
+                />
+                <motion.button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  whileTap={{ scale: 0.9 }}
+                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -287,7 +414,7 @@ const StudentLogin = ({ onBack, onLoginSuccess, isStudent = false }) => {
               </>
             ) : (
               <span className="flex items-center">
-                Login to Account
+                {isSignUp ? "Sign Up for Account" : "Login to Account"}
                 <ChevronRight className="ml-2 w-5 h-5" />
               </span>
             )}
