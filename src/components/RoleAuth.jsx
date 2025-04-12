@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProfessorLogin from "./ProfessorLogin";
@@ -310,6 +310,7 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
 const RoleAuth = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [step, setStep] = useState("select-role");
+  const [loginComponentReady, setLoginComponentReady] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -319,15 +320,27 @@ const RoleAuth = () => {
     out: { opacity: 0, y: -20 },
   };
 
+  useEffect(() => {
+    if (selectedRole && step === "login") {
+      setLoginComponentReady(true);
+    } else {
+      setLoginComponentReady(false);
+    }
+  }, [selectedRole, step]);
+
   const handleRoleSelect = (role, confirmed = false) => {
     setSelectedRole(role);
+    
     if (confirmed) {
-      setStep("login");
+      setTimeout(() => {
+        setStep("login");
+      }, 100);
     }
   };
 
   const handleBackToRoles = () => {
     setStep("select-role");
+    setLoginComponentReady(false);
   };
 
   const handleLoginSuccess = (token, role) => {
@@ -349,6 +362,8 @@ const RoleAuth = () => {
   };
 
   const renderLoginForm = () => {
+    if (!loginComponentReady) return null;
+    
     switch (selectedRole) {
       case "professor":
         return (
@@ -376,6 +391,10 @@ const RoleAuth = () => {
         return null;
     }
   };
+
+  useEffect(() => {
+    console.log(`Selected role: ${selectedRole}, Step: ${step}, Login Component Ready: ${loginComponentReady}`);
+  }, [selectedRole, step, loginComponentReady]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-10 relative">
