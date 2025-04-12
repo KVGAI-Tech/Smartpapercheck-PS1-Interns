@@ -25,7 +25,7 @@ import StudentEvaluations from "./components/StudentEvaluations";
 import CourseEvaluations from "./components/CourseEvaluations";
 import StudentExamDetails from "./components/StudentExamDetails";
 import StudentRecheckRequests from "./components/StudentRecheckRequests";
-
+import ProfessorRecheckDetail from "./components/Dashboard/Course/ProfessorRecheckDetail";
 function App() {
   const [loading, setLoading] = useState(false);
 
@@ -214,6 +214,12 @@ function App() {
               </ProtectedRoute>
             }
           />
+<Route 
+  path="/professor/recheck-requests" 
+  element={
+          <ProfessorRecheckDetail />
+  } 
+/>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

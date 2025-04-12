@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, ChevronRight, ChevronLeft, Download, Share,
-  FileText, MessageSquare, BarChart, CheckCircle, Bookmark,
-  AlertCircle, Loader, User, Mail, Hash, Award, ThumbsUp, ThumbsDown,
-  ZoomIn, ZoomOut, RefreshCw, ExternalLink, Eye, EyeOff, Search, Filter
+  FileText, MessageSquare, BarChart, CheckCircle,
+  AlertCircle, User, Mail, Hash, Award, ThumbsUp, ThumbsDown,
+  ZoomIn, ZoomOut, RefreshCw, ExternalLink, Eye, EyeOff, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
@@ -651,7 +651,7 @@ const StudentEvaluationLoader = ({
           >
             <Award className="w-4 h-4" />
             <span className="font-medium">
-              <AnimatedCounter value={studentData?.marks_obtained || 0} />
+              {studentData?.marks_obtained || 0}
             </span>
             <span className="text-blue-500">/</span>
             <span>{getCurrentQuestion()?.max_marks || 10}</span>
@@ -1157,7 +1157,7 @@ const StudentEvaluationLoader = ({
                               <div className="text-sm text-gray-500">{stat.label}</div>
                               <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-700 to-gray-900 mt-1">
                                 {typeof stat.value === 'number' ? 
-                                  <AnimatedCounter value={stat.value} /> : 
+                                  stat.value : 
                                   stat.value
                                 }
                               </div>
