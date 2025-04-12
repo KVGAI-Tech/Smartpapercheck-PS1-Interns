@@ -30,86 +30,6 @@ const StatCard = ({ title, value, icon: Icon, className }) => (
     </div>
   </div>
 );
-
-const CourseCard = ({
-  course,
-  currentModule,
-  progress,
-  timeLeft,
-  assignments,
-}) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-green-50 rounded-lg">
-          <BookOpen className="w-5 h-5 text-green-600" />
-        </div>
-        <div>
-          <h4 className="font-semibold text-gray-900">{course}</h4>
-          <p className="text-sm text-gray-500">
-            Current Module: {currentModule}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div className="space-y-4">
-      <div>
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-600">Progress</span>
-          <span className="font-medium text-green-600">{progress}%</span>
-        </div>
-        <div className="w-full bg-gray-100 rounded-full h-2">
-          <div
-            className="bg-green-500 h-2 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-500 flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          {timeLeft}
-        </span>
-        <span className="text-gray-500">{assignments}</span>
-      </div>
-    </div>
-  </div>
-);
-
-const AssignmentItem = ({ title, course, dueDate, status }) => (
-  <div className="flex items-center justify-between p-4 border-b border-gray-100 last:border-0">
-    <div className="flex items-center gap-3">
-      <div
-        className={`p-2 rounded-lg ${
-          status === "overdue" ? "bg-red-50" : "bg-green-50"
-        }`}
-      >
-        <FileText
-          className={`w-5 h-5 ${
-            status === "overdue" ? "text-red-500" : "text-green-500"
-          }`}
-        />
-      </div>
-      <div>
-        <h4 className="font-medium text-gray-900">{title}</h4>
-        <p className="text-sm text-gray-500">{course}</p>
-      </div>
-    </div>
-    <div className="text-right">
-      <p
-        className={`text-sm font-medium ${
-          status === "overdue" ? "text-red-600" : "text-gray-700"
-        }`}
-      >
-        {dueDate}
-      </p>
-      {status === "overdue" && <p className="text-xs text-red-500">Overdue</p>}
-    </div>
-  </div>
-);
-
 const EvaluationCard = ({
   title,
   subject,
@@ -245,37 +165,6 @@ const StudentDashboard = () => {
       value: "2",
       icon: AlertCircle,
       className: "bg-purple-500",
-    },
-  ];
-
-  const courses = [
-    {
-      course: "Computer Programming (CS F111)",
-      currentModule: "Functions & Objects",
-      progress: 65,
-      timeLeft: "2 days left",
-      assignments: "4/6 assignments",
-    },
-    {
-      course: "Data Structures (CS F212)",
-      currentModule: "Graph Algorithms",
-      progress: 88,
-      timeLeft: "5 days left",
-      assignments: "7/8 assignments",
-    },
-    {
-      course: "Machine Learning (CS F318)",
-      currentModule: "Neural Networks",
-      progress: 42,
-      timeLeft: "3 days left",
-      assignments: "3/7 assignments",
-    },
-    {
-      course: "Mathematics II (MATH F113)",
-      currentModule: "Differential Equations",
-      progress: 75,
-      timeLeft: "1 day left",
-      assignments: "6/8 assignments",
     },
   ];
 

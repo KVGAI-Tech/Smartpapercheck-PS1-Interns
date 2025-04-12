@@ -6,7 +6,6 @@ import {
   Mail, 
   Lock,
   User,
-  CheckCircle,
   AlertCircle,
   Eye,
   EyeOff,

@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from
 import { 
   Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader, 
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
-  BarChart, ChevronRight, PieChart, RefreshCw, List, BarChart2,
-  BookOpen, Calendar, User, Sparkles, Star, Download, Share
+  BarChart, RefreshCw, List, BarChart2, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
@@ -192,7 +191,7 @@ const ProgressBar = ({ value, max, color = 'blue' }) => {
 };
 
 
-const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => {
+const ExamEvaluation = ({ examId, onClose }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -558,43 +557,6 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
       ? <ArrowUp className="w-4 h-4" />
       : <ArrowDown className="w-4 h-4" />;
   };
-
-  const handleDetailViewComplete = useCallback((evaluationData) => {
-    if (!evaluationData || !detailEnrollmentId) {
-      showToast('No evaluation data received', 'warning');
-      setShowDetailView(false);
-      setDetailEnrollmentId(null);
-      return;
-    }
-    
-    try {
-      
-      if (typeof evaluationData.total_marks !== 'number') {
-        throw new Error('Invalid evaluation data returned');
-      }
-      
-      setStudents(prev => prev.map(s => 
-        s.enrollment_id === detailEnrollmentId
-          ? {
-              ...s,
-              marks_obtained: evaluationData.total_marks,
-              feedback: Array.isArray(evaluationData.overall_feedback)
-                ? evaluationData.overall_feedback.join('\n')
-                : (evaluationData.overall_feedback || s.feedback || ''),
-              evaluation_status: 'completed'
-            }
-          : s
-      ));
-      
-      showToast('Evaluation data updated successfully', 'success');
-    } catch (error) {
-      console.error("Error updating evaluation data:", error);
-      showToast('Failed to update evaluation data: ' + error.message, 'error');
-    } finally {
-      setShowDetailView(false);
-      setDetailEnrollmentId(null);
-    }
-  }, [detailEnrollmentId, showToast]);
 
   const handleRetry = useCallback(() => {
     setRetryCount(prev => prev + 1);

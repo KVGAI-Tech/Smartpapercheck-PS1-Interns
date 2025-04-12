@@ -11,7 +11,7 @@ const ExamForm = ({
   const [formData, setFormData] = useState({
     exam_name: initialData?.exam_name || '',
     full_marks: initialData?.full_marks || '',
-    allow_recheck: True,
+    allow_recheck: true,
     max_recheck_attempts: 1
   });
 

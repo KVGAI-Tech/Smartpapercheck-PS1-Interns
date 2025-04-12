@@ -8,11 +8,6 @@ import Dashboard from "./components/Dashboard/DashboardHome";
 import StudentDashboard from "./components/StudentDashboard";
 import TADashboard from "./components/TADashboard";
 import Courses from "./components/Dashboard/Course";
-import AnalyticsDashboard from "./components/Dashboard/AnalyticsDashboard";
-import GradeManagement from "./components/Dashboard/GradeManagement";
-import StudentManagement from "./components/Dashboard/StudentManagement";
-import TeachingAssistantsPage from "./components/Dashboard/TeachingAssistantsPage";
-import SettingsPage from "./components/Dashboard/SettingsPage";
 import CourseDetails from "./components/Dashboard/Course/CourseDetails";
 import RoleAuth from "./components/RoleAuth";
 import LandingPage from "./components/LandingPage";
@@ -84,47 +79,6 @@ function App() {
               </RoleRoute>
             }
           />
-          <Route
-            path="/analytics"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <AnalyticsDashboard />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/grades"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <GradeManagement />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/manage/students"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <StudentManagement />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/manage/tas"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <TeachingAssistantsPage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-
           <Route
             path="/student-dashboard"
             element={
@@ -203,23 +157,12 @@ function App() {
               </RoleRoute>
             }
           />
-
           <Route
-            path="/settings"
+            path="/professor/recheck-requests"
             element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <SettingsPage />
-                </DashboardLayout>
-              </ProtectedRoute>
+              <ProfessorRecheckDetail />
             }
           />
-<Route 
-  path="/professor/recheck-requests" 
-  element={
-          <ProfessorRecheckDetail />
-  } 
-/>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

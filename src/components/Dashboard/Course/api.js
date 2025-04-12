@@ -8,10 +8,8 @@ export const fetchApi = async (endpoint, options = {}) => {
   }
 
   try {
-    const apiUrl = 'https://dev.smart-qna.com/api' + endpoint;
-    
+    const apiUrl = `${API_BASE_URL}${endpoint}`;
     console.log('Fetching from:', apiUrl);
-    
     const response = await fetch(apiUrl, {
       ...options,
       headers: {

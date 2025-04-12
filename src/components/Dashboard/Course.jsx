@@ -2,28 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, ChevronRight, Search, Plus, MoreVertical, Download,
-  Users, Pencil, Trash2, School, Calendar, X, CheckCircle,
-  BookOpen, Loader, Filter, ArrowRight, AlertTriangle, RefreshCw, ChevronDown
+   Search, Plus, MoreVertical, 
+   Pencil, Trash2, Calendar, X, CheckCircle,
+  BookOpen, Filter, ArrowRight, AlertTriangle, RefreshCw
 } from 'lucide-react';
 
 import { API_BASE_URL } from '../../BaseURL';
 
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3 } }
-};
 
 const slideUp = {
   hidden: { y: 20, opacity: 0 },
   visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } }
 };
-
-const pop = {
-  hidden: { scale: 0.9, opacity: 0 },
-  visible: { scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 25 } }
-};
-
 
 const fetchApi = async (endpoint, options = {}) => {
   const token = localStorage.getItem('accessToken');

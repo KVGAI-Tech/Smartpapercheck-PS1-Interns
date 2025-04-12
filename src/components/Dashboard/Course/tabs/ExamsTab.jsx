@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
@@ -10,13 +9,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
 import { API_BASE_URL } from '../../../../BaseURL';
-
 const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
-
-
 import ProfessorRecheckRequests from '../ProfessorRecheckRequests';
-
-
 const Toast = ({ message, type, show, onClose }) => {
   useEffect(() => {
     if (show) {
@@ -392,8 +386,6 @@ const ExamCard = ({
             <Users className="w-4 h-4" />
             <span>Enrollments</span>
           </motion.button>
-          
-          {}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -549,11 +541,7 @@ const ExamsTab = ({
   onAdd = () => { },
   onEdit = () => { },
   onDelete = () => { },
-  onUploadQnA = () => { },
-  onGenerateRubrics = () => { },
-  onUploadAnswers = () => { }
 }) => {
-  const navigate = useNavigate();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
   const [selectedExamId, setSelectedExamId] = useState(null);
@@ -565,8 +553,6 @@ const ExamsTab = ({
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [selectedExamForEvaluation, setSelectedExamForEvaluation] = useState(null);
   const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
-  
-  
   const [showRecheckRequests, setShowRecheckRequests] = useState(false);
   const [selectedExamForRecheck, setSelectedExamForRecheck] = useState(null);
 
@@ -861,18 +847,10 @@ const ExamsTab = ({
 
   
   const handleViewRecheckRequests = (examId) => {
-    
-    
     setSelectedExamForRecheck(examId);
     setShowRecheckRequests(true);
-    
-    
-    
-    
-    
     showToast('Loading recheck requests...', 'success');
   };
-
   return (
     <>
       <motion.div
@@ -1043,7 +1021,6 @@ const ExamsTab = ({
               if (!response.ok) {
                 throw new Error(`Upload failed: ${response.status}`);
               }
-
               const data = await response.json();
               if (data.code === 200) {
                 showToast('Question paper uploaded successfully', 'success');
@@ -1058,7 +1035,6 @@ const ExamsTab = ({
             }
           }}
         />
-
         <RubricModal
           isOpen={showRubricModal}
           onClose={() => {
@@ -1145,8 +1121,6 @@ const ExamsTab = ({
           </div>
         </div>
       )}
-
-      {}
       {showRecheckRequests && (
         <div className="fixed inset-0 z-50 bg-white">
           <div className="min-h-screen p-6">

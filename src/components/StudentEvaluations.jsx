@@ -55,39 +55,6 @@ const StudentEvaluations = () => {
   const [sortBy, setSortBy] = useState("Recent");
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
-
-  // Mock data - replace with actual API call
-  // const courses = [
-  //   {
-  //     code: 'CS F111',
-  //     name: 'Computer Programming',
-  //     instructor: 'Dr. John Smith',
-  //     semester: 'Fall 2023',
-  //     examCount: 3
-  //   },
-  //   {
-  //     code: 'CS F212',
-  //     name: 'Data Structures',
-  //     instructor: 'Dr. Sarah Johnson',
-  //     semester: 'Fall 2023',
-  //     examCount: 4
-  //   },
-  //   {
-  //     code: 'CS F318',
-  //     name: 'Machine Learning',
-  //     instructor: 'Dr. Michael Brown',
-  //     semester: 'Spring 2024',
-  //     examCount: 2
-  //   },
-  //   {
-  //     code: 'MATH F113',
-  //     name: 'Mathematics II',
-  //     instructor: 'Dr. Emily Davis',
-  //     semester: 'Spring 2024',
-  //     examCount: 5
-  //   }
-  // ];
-
   useEffect(() => {
     axios
       .get(`${API_BASE_URL}/api/students/courses`)
@@ -126,15 +93,12 @@ const StudentEvaluations = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My Evaluations</h1>
         <p className="text-gray-500 mt-1">
           View and manage your course evaluations
         </p>
       </div>
-
-      {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl shadow-sm">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -170,14 +134,11 @@ const StudentEvaluations = () => {
 
       {filteredCourses.length > 0 ? (
         <>
-          {/* Course Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredCourses.map((course, index) => (
               <CourseCard key={index} {...course} />
             ))}
           </div>
-
-          {/* Empty State */}
           {filteredCourses.length === 0 && (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

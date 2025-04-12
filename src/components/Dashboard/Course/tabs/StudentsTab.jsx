@@ -17,7 +17,6 @@ const StudentsTab = ({
   onAdd = () => {},
   onEdit = () => {},
   onDelete = () => {},
-  onImport = () => {}
 }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,8 +40,6 @@ const StudentsTab = ({
       try {
         setLoading(true);
         const fetchedStudents = await studentApi.getStudents(courseId);
-        
-        
         console.log("Fetched students:", fetchedStudents);
         
         if (Array.isArray(fetchedStudents)) {

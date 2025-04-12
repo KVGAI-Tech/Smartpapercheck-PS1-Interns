@@ -5,7 +5,6 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  XCircle,
   AlertTriangle,
   Download,
   Eye,
@@ -21,9 +20,7 @@ const ExamCard = ({
   score, 
   maxScore, 
   status, 
-  feedback,
   canRequestRecheck,
-  onViewDetails
 }) => {
   const navigate = useNavigate();
   const { courseId } = useParams();

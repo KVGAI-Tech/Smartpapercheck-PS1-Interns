@@ -1,23 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-
 import StudentsTab from './tabs/StudentsTab';
 import InstructorsTab from './tabs/InstructorsTab';
 import TATab from './tabs/TATab';
 import ExamsTab from './tabs/ExamsTab';
-
 import StudentForm from './forms/StudentForm';
 import InstructorForm from './forms/InstructorForm';
 import TAForm from './forms/TAForm';
 import ExamForm from './forms/ExamForm';
-
 import { Modal } from './shared/Modal';
 import Toast from './shared/Toast';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
-
-import { StudentImportModal, InstructorImportModal, TAImportModal } from './modals/ImportModal';
-
+import { StudentImportModal, InstructorImportModal } from './modals/ImportModal';
 import {
     fetchApi,
     getCourseDetails,
@@ -32,7 +27,6 @@ import {
     getCourseExams,
     createExam,
     uploadCourseHandout,
-    checkUploadStatus,
     pollUploadStatus
 } from './api';
 
@@ -86,7 +80,6 @@ const MOCK_COURSE = {
 
 const CourseDetails = () => {
     const { courseId } = useParams();
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [courseDetails, setCourseDetails] = useState(null);
@@ -107,35 +100,6 @@ const CourseDetails = () => {
     const [teachingAssistants, setTeachingAssistants] = useState([]);
     const [exams, setExams] = useState([]);
     const [uploadStatus, setUploadStatus] = useState(null);
-
-    const handleCreateExam = async (formData) => {
-        try {
-            const response = await fetchApi(`/professors/courses/${courseId}/exams/`, {
-                method: 'POST',
-                body: JSON.stringify(formData)
-            });
-        } catch (error) {
-        }
-    };
-  
-    const handleUpdateExam = async (examId, formData) => {
-        try {
-            const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}/`, {
-                method: 'PUT',
-                body: JSON.stringify(formData)
-            });
-        } catch (error) {
-        }
-    };
-  
-    const handleDeleteExam = async (examId) => {
-        try {
-            await fetchApi(`/professors/courses/${courseId}/exams/${examId}`, {
-                method: 'DELETE'
-            });
-        } catch (error) {
-        }
-    };
     
     useEffect(() => {
         const loadCourseData = async () => {
@@ -300,39 +264,6 @@ const CourseDetails = () => {
         }
     };
 
-    const handleImportTAs = async (file) => {
-        try {
-            setUploadStatus('uploading');
-            const response = await uploadTAs(courseId, file);
-            
-            const uploadId = response.data.upload_id;
-            setUploadStatus('processing');
-
-            pollUploadStatus(
-                uploadId,
-                null,
-                async (data) => {
-                    setUploadStatus('completed');
-                    const tasResponse = await getCourseTAs(courseId);
-                    setTeachingAssistants(tasResponse || []);
-                    showToast('Teaching Assistants imported successfully');
-                    
-                    setTimeout(() => {
-                        setShowTAImportModal(false);
-                        setUploadStatus(null);
-                    }, 2000);
-                },
-                (error) => {
-                    setUploadStatus('failed');
-                    showToast(`Error importing teaching assistants: ${error}`, 'error');
-                }
-            );
-        } catch (error) {
-            setUploadStatus('failed');
-            showToast(`Error initiating teaching assistant import: ${error.message}`, 'error');
-        }
-    };
-
     const handleDelete = async () => {
         if (!itemToDelete) return;
 
@@ -358,24 +289,6 @@ const CourseDetails = () => {
             showToast(`${type} deleted successfully`);
         } catch (error) {
             showToast(`Error deleting ${itemToDelete.type}: ${error.message}`, 'error');
-        }
-    };
-
-    const handleHandoutUpload = async (file) => {
-        if (!file) {
-            showToast('Please select a file to upload', 'error');
-            return;
-        }
-
-        try {
-            const response = await uploadCourseHandout(courseId, file);
-            setCourseDetails(prev => ({
-                ...prev,
-                handouts_url: response.data.handouts_url
-            }));
-            showToast('Course handout uploaded successfully');
-        } catch (error) {
-            showToast(`Error uploading handout: ${error.message}`, 'error');
         }
     };
 

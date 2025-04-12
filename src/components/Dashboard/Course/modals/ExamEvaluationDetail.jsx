@@ -2,32 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, ChevronRight, ChevronLeft, Save, 
   X, Check, AlertCircle, Loader, Download, 
-  BookOpen, FileText, MessageSquare, BarChart, 
-  CheckCircle, Eye, Plus, Minus, Star, HelpCircle,
-  ZoomIn, ZoomOut, Maximize, Minimize, ThumbsUp,
-  ThumbsDown, PenTool, Award, Clock, RotateCw,
-  Sparkles, Moon, Sun, Calendar, XCircle
+  FileText, MessageSquare, BarChart, 
+  CheckCircle, Eye, HelpCircle,
+  ZoomIn, ZoomOut, Maximize, Minimize, Clock, RotateCw,
+  Moon, Sun, XCircle
 } from 'lucide-react';
 import { motion, AnimatePresence, useAnimation, useMotionValue, useTransform } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
-
-
-const GradientBackground = ({ isActive }) => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <motion.div 
-      className={`absolute inset-0 bg-gradient-to-tr opacity-20 ${
-        isActive ? 'from-blue-500/30 to-purple-500/30' : 'from-transparent to-transparent'
-      }`}
-      initial={{ opacity: 0 }}
-      animate={{ 
-        opacity: isActive ? 0.1 : 0,
-        scale: isActive ? 1 : 0.95 
-      }}
-      transition={{ duration: 0.5 }}
-    />
-  </div>
-);
-
 
 const AnimatedButton = ({ 
   children, 
@@ -1056,14 +1037,7 @@ const ExamEvaluationDetail = ({
   const maxTotalScore = questions.reduce(
     (sum, question) => sum + (parseFloat(question.max_marks) || 0),
     0
-  );
-  
-  
-  const formatPercentage = (value, max) => {
-    if (max === 0) return '0%';
-    return `${Math.round((value / max) * 100)}%`;
-  };
-  
+  );  
   
   useEffect(() => {
     if (toast.show) {

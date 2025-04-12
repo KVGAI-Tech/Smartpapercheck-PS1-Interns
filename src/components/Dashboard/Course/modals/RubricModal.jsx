@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     X, Plus, Save, Sparkles, AlertCircle,
     Bot, BrainCircuit, Lightbulb, Zap,
-    Trash2, Edit2, Database, Cpu, Check,
+    Trash2, Edit2, Database, Cpu,
     Circle, FileText, Settings, Minimize2, Maximize2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
