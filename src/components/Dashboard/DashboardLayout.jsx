@@ -3,8 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../BaseURL';
 import { 
   Menu, ChevronLeft, ChevronRight, LayoutDashboard, 
-  BookOpen, LineChart, GraduationCap, Users,
-  Settings, LogOut
+  BookOpen, LogOut
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
@@ -222,25 +221,16 @@ const DashboardLayout = ({ children }) => {
                   <Menu className="w-5 h-5 text-gray-500 transform transition-transform hover:scale-110" />
                 </button>
               )}
-              <h2 className="text-xl font-semibold text-gray-800">
-                {menuItems.find(item => isActive(item.to))?.label || 'Dashboard'}
-              </h2>
             </div>
             <div className="flex items-center space-x-4">
-              <Link
-                to="/settings"
-                className="p-2 rounded-lg hover:bg-gray-50 transition-all duration-300 hidden sm:block"
-              >
-                <Settings className="w-5 h-5 text-gray-500 transform transition-transform hover:scale-110" />
-              </Link>
               <div className="h-8 w-px bg-gray-200 hidden sm:block" />
               <div className="flex items-center space-x-3">
                 <div className="relative hidden sm:block">
-                  <img
-                    src="/api/placeholder/32/32"
-                    alt="Profile"
-                    className="w-8 h-8 rounded-full border border-gray-200"
-                  />
+                  <div
+                    className="w-8 h-8 rounded-full border border-gray-200 bg-blue-500 text-white flex items-center justify-center font-medium text-sm"
+                  >
+                    {userData?.name ? userData.name.charAt(0).toUpperCase() : 'G'}
+                  </div>
                   <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 rounded-full border border-white" />
                 </div>
                 <span className="text-sm font-medium text-gray-700 hidden lg:block">

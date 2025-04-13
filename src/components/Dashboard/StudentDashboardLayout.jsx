@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   FileText,
   History,
-  Settings,
   LogOut,
   Bell,
 } from "lucide-react";
@@ -35,12 +34,6 @@ const StudentDashboardLayout = ({ children }) => {
       label: "My Evaluations",
       to: "/student/evaluations",
       description: "View your evaluated assignments",
-    },
-    {
-      icon: Settings,
-      label: "Settings",
-      to: "/student/settings",
-      description: "Edit your profile and preferences",
     },
     {
       icon: History,
