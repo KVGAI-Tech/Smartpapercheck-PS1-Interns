@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../BaseURL";
+import { useAuth } from "./AuthContext";
 import {
   Menu,
   ChevronLeft,
@@ -9,22 +11,94 @@ import {
   History,
   LogOut,
   Bell,
+  AlertCircle
 } from "lucide-react";
 
 const StudentDashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isSidebarOpen]);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const role = localStorage.getItem("userRole");
+
+        if (!token || role !== "student") {
+          throw new Error("Authentication required");
+        }
+
+        const response = await fetch(`${API_BASE_URL}/students/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error("Session expired");
+          }
+          throw new Error(`Request failed: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.code !== 200 || !result.data) {
+          throw new Error("Invalid response format");
+        }
+
+        setUserData(result.data);
+      } catch (err) {
+        setError(err.message);
+        if (
+          err.message.includes("Authentication") ||
+          err.message.includes("expired") ||
+          err.message.includes("401")
+        ) {
+          setTimeout(() => {
+            logout();
+          }, 1500);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [logout]);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userRole');
-    navigate("/auth");
+    try {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userRole");
+      navigate("/auth");
+    } catch (err) {
+      navigate("/auth");
+    }
   };
-  
+
   const menuItems = [
     {
       icon: LayoutDashboard,
@@ -48,6 +122,39 @@ const StudentDashboardLayout = ({ children }) => {
 
   const isActive = (path) => {
     return location.pathname === path;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-red-50 text-red-600 p-6 rounded-xl max-w-md w-full">
+          <div className="flex items-center gap-3 mb-3">
+            <AlertCircle className="w-6 h-6" />
+            <h3 className="text-lg font-semibold">Authentication Error</h3>
+          </div>
+          <p>{error}</p>
+          <button
+            onClick={() => navigate("/auth")}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors w-full"
+          >
+            Return to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const getUserInitial = () => {
+    if (!userData || !userData.user_name) return "S";
+    return userData.user_name.charAt(0).toUpperCase();
   };
 
   return (
@@ -177,8 +284,6 @@ const StudentDashboardLayout = ({ children }) => {
                 </button>
               )}
               <h2 className="text-xl font-semibold text-gray-800">
-                {menuItems.find((item) => isActive(item.to))?.label ||
-                  "Dashboard"}
               </h2>
             </div>
 
@@ -190,10 +295,10 @@ const StudentDashboardLayout = ({ children }) => {
               <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-green-600">S</span>
+                  <span className="text-sm font-medium text-green-600">{getUserInitial()}</span>
                 </div>
                 <span className="text-sm font-medium text-gray-700 hidden lg:block">
-                  Student
+                  {userData?.user_name || "Student"}
                 </span>
               </div>
             </div>
