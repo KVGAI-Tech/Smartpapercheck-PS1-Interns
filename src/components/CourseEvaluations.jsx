@@ -175,7 +175,7 @@ const CourseEvaluations = () => {
     <div className="space-y-6">
       <div>
         <button 
-          onClick={() => navigate('/student/courses')}
+          onClick={() => navigate('/student/evaluations')}
           className="flex items-center text-gray-600 hover:text-green-600 mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />

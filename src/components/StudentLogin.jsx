@@ -75,10 +75,10 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid()) return;
-
+  
     setIsLoading(true);
     setError('');
-
+  
     try {
       const response = await fetch(`${API_BASE_URL}/students/login`, {
         method: 'POST',
@@ -90,14 +90,23 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
           password: formData.password 
         }),
       });
-
+  
+      const errorData = await response.json().catch(() => ({}));
+  
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Request failed with status ${response.status}`);
+        let errorMessage = errorData.message || errorData.detail || `Request failed with status ${response.status}`;
+  
+        if (errorMessage.includes('User role does not match')) {
+          errorMessage = 'You are not authorized to log in as a student. Please check your email or try the correct login portal.';
+        } else if (response.status === 401) {
+          errorMessage = 'Incorrect email or password. Please try again.';
+        }
+  
+        throw new Error(errorMessage);
       }
-
-      const data = await response.json();
-      
+  
+      const data = errorData;
+  
       if (data.code === 200 && data.data && data.data.access_token) {
         const { access_token, refresh_token } = data.data;
         
@@ -106,7 +115,7 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
           localStorage.setItem('refreshToken', refresh_token);
         }
         localStorage.setItem('userRole', 'student');
-        
+  
         onLoginSuccess(access_token, 'student');
       } else {
         throw new Error(data.message || 'Login failed. Please check your credentials.');

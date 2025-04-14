@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Container, Typography, Box } from '@mui/material';
 import Navbar from './LandingPage/Navbar';
 
 const PoliciesPage = () => {

@@ -156,85 +156,100 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
     validateEmail, passwordChecks, termsAccepted
   ]);
 
-  const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    
-    if (activeTab === 'login' && !isLoginFormValid) return;
-    if (activeTab === 'signup' && !isSignupFormValid) return;
+const handleSubmit = useCallback(async (e) => {
+  e.preventDefault();
 
-    setIsLoading(true);
-    setError('');
+  if (activeTab === 'login' && !isLoginFormValid) return;
+  if (activeTab === 'signup' && !isSignupFormValid) return;
 
-    try {
-      if (activeTab === 'login') {
-        
-        const response = await fetch(`${API_BASE_URL}/professors/login`, {
+  setIsLoading(true);
+  setError('');
+
+  const getFriendlyError = (status, detail) => {
+    if (detail?.includes('User role does not match')) {
+      return 'You are not authorized to log in from this portal. Please use the correct login page.';
+    }
+    if (status === 401) return 'Incorrect email or password. Please try again.';
+    if (status === 409) return 'An account with this email already exists.';
+    if (status === 500) return 'Server error. Please try again later.';
+    return detail || 'Something went wrong. Please try again.';
+  };
+
+  try {
+    if (activeTab === 'login') {
+      const response = await fetch(`${API_BASE_URL}/professors/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: formData.email, 
+          password: formData.password 
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const friendlyMessage = getFriendlyError(response.status, data.message || data.detail);
+        throw new Error(friendlyMessage);
+      }
+
+      if (data.code === 200 && data.data?.access_token) {
+        const { access_token } = data.data;
+        onLoginSuccess(access_token, 'professor');
+      } else {
+        throw new Error(data.message || 'Login failed');
+      }
+    } else {
+      const response = await fetch(`${API_BASE_URL}/professors/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const friendlyMessage = getFriendlyError(response.status, data.message || data.detail);
+        throw new Error(friendlyMessage);
+      }
+
+      if (data.code === 201) {
+        const loginResponse = await fetch(`${API_BASE_URL}/professors/login`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             email: formData.email, 
             password: formData.password 
           }),
         });
 
-        const data = await response.json();
-        
-        if (data.code === 200) {
-          const { access_token } = data.data;
+        const loginData = await loginResponse.json().catch(() => ({}));
+
+        if (!loginResponse.ok) {
+          const friendlyMessage = getFriendlyError(loginResponse.status, loginData.message || loginData.detail);
+          throw new Error(friendlyMessage);
+        }
+
+        if (loginData.code === 200 && loginData.data?.access_token) {
+          const { access_token } = loginData.data;
           onLoginSuccess(access_token, 'professor');
         } else {
-          throw new Error(data.message || 'Login failed');
+          throw new Error(loginData.message || 'Login failed after signup');
         }
       } else {
-        
-        const response = await fetch(`${API_BASE_URL}/professors/signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            password: formData.password
-          }),
-        });
-
-        const data = await response.json();
-        
-        if (data.code === 201) {
-          
-          const loginResponse = await fetch(`${API_BASE_URL}/professors/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              email: formData.email, 
-              password: formData.password 
-            }),
-          });
-          
-          const loginData = await loginResponse.json();
-          
-          if (loginData.code === 200) {
-            const { access_token } = loginData.data;
-            onLoginSuccess(access_token, 'professor');
-          } else {
-            throw new Error(loginData.message || 'Login failed after signup');
-          }
-        } else {
-          throw new Error(data.message || 'Signup failed');
-        }
+        throw new Error(data.message || 'Signup failed');
       }
-    } catch (error) {
-      setError(error.message || 'An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
     }
-  }, [activeTab, isLoginFormValid, isSignupFormValid, formData, onLoginSuccess]);
-
+  } catch (error) {
+    setError(error.message || 'An unexpected error occurred');
+  } finally {
+    setIsLoading(false);
+  }
+}, [activeTab, isLoginFormValid, isSignupFormValid, formData, onLoginSuccess]);
   const renderLoginForm = () => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
