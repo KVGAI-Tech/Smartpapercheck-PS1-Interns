@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProfessorLogin from "./ProfessorLogin";
 import StudentLogin from "./StudentLogin";
@@ -311,7 +310,7 @@ const RoleAuth = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [step, setStep] = useState("select-role");
   const [loginComponentReady, setLoginComponentReady] = useState(false);
-  const navigate = useNavigate();
+  const [error, setError] = useState(null);
   const { login } = useAuth();
 
   const pageVariants = {
@@ -321,85 +320,126 @@ const RoleAuth = () => {
   };
 
   useEffect(() => {
-    if (selectedRole && step === "login") {
-      setLoginComponentReady(true);
-    } else {
-      setLoginComponentReady(false);
+    try {
+      if (selectedRole && step === "login") {
+        setLoginComponentReady(true);
+      } else {
+        setLoginComponentReady(false);
+      }
+    } catch (err) {
+      setError("Failed to prepare login screen. Please try again.");
+      setStep("select-role");
     }
   }, [selectedRole, step]);
 
   const handleRoleSelect = (role, confirmed = false) => {
-    setSelectedRole(role);
-    
-    if (confirmed) {
-      setTimeout(() => {
-        setStep("login");
-      }, 100);
+    try {
+      if (!role) {
+        throw new Error("No role selected");
+      }
+      
+      setSelectedRole(role);
+      setError(null);
+      
+      if (confirmed) {
+        setTimeout(() => {
+          setStep("login");
+        }, 100);
+      }
+    } catch (err) {
+      setError("Failed to select role. Please try again.");
     }
   };
 
   const handleBackToRoles = () => {
-    setStep("select-role");
-    setLoginComponentReady(false);
+    try {
+      setStep("select-role");
+      setLoginComponentReady(false);
+      setError(null);
+    } catch (err) {
+      setError("Failed to return to role selection. Please refresh the page.");
+    }
   };
 
   const handleLoginSuccess = (token, role) => {
-    login(token, role);
-
-    switch (role) {
-      case "professor":
-        navigate("/dashboard", { replace: true });
-        break;
-      case "student":
-        navigate("/student-dashboard", { replace: true });
-        break;
-      case "ta":
-        navigate("/ta-dashboard", { replace: true });
-        break;
-      default:
-        navigate("/dashboard", { replace: true });
+    try {
+      if (!token) {
+        throw new Error("Authentication failed: No token received");
+      }
+      
+      if (!role || !["professor", "student", "ta"].includes(role)) {
+        throw new Error(`Invalid role: ${role}`);
+      }
+      
+      login(token, role);
+    } catch (err) {
+      setError(`Authentication error: ${err.message || "Unknown error occurred"}`);
     }
   };
 
   const renderLoginForm = () => {
-    if (!loginComponentReady) return null;
-    
-    switch (selectedRole) {
-      case "professor":
-        return (
-          <ProfessorLogin
-            onBack={handleBackToRoles}
-            onLoginSuccess={handleLoginSuccess}
-          />
-        );
-      case "student":
-        return (
-          <StudentLogin
-            onBack={handleBackToRoles}
-            onLoginSuccess={handleLoginSuccess}
-            isStudent={true}
-          />
-        );
-      case "ta":
-        return (
-          <TALogin
-            onBack={handleBackToRoles}
-            onLoginSuccess={handleLoginSuccess}
-          />
-        );
-      default:
+    try {
+      if (!loginComponentReady) {
         return null;
+      }
+      
+      if (!selectedRole) {
+        throw new Error("No role selected");
+      }
+      
+      switch (selectedRole) {
+        case "professor":
+          return (
+            <ProfessorLogin
+              onBack={handleBackToRoles}
+              onLoginSuccess={handleLoginSuccess}
+            />
+          );
+        case "student":
+          return (
+            <StudentLogin
+              onBack={handleBackToRoles}
+              onLoginSuccess={handleLoginSuccess}
+            />
+          );
+        case "ta":
+          return (
+            <TALogin
+              onBack={handleBackToRoles}
+              onLoginSuccess={handleLoginSuccess}
+            />
+          );
+        default:
+          throw new Error(`Unsupported role: ${selectedRole}`);
+      }
+    } catch (err) {
+      setError(`Failed to load login form: ${err.message}`);
+      return (
+        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md mx-auto">
+          <div className="text-red-500 text-center">
+            <p>Unable to load login form. Please try again.</p>
+            <button 
+              onClick={handleBackToRoles}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Return to Role Selection
+            </button>
+          </div>
+        </div>
+      );
     }
   };
-
-  useEffect(() => {
-    console.log(`Selected role: ${selectedRole}, Step: ${step}, Login Component Ready: ${loginComponentReady}`);
-  }, [selectedRole, step, loginComponentReady]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-10 relative">
       <AnimatedBackground />
       <FloatingShapes />
+      
+      {error && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg max-w-md w-full border border-red-200">
+          <p className="text-sm font-medium">{error}</p>
+        </div>
+      )}
 
       <div className="w-full max-w-4xl relative z-10">
         <div className="text-center mb-10">

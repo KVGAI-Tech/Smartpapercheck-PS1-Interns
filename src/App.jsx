@@ -1,9 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./components/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRoute from "./components/RoleRoute";
 import DashboardLayout from "./components/Dashboard/DashboardLayout";
-import StudentDashboardLayout from "./components/Dashboard/StudentDashboardLayout";
+import StudentDashboardLayout from "./components/StudentDashboardLayout";
 import Dashboard from "./components/Dashboard/DashboardHome";
 import StudentDashboard from "./components/StudentDashboard";
 import TADashboard from "./components/TADashboard";

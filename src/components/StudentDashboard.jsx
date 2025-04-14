@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../BaseURL";
+import { useAuth } from './AuthContext';
 import {
   BookOpen,
   CheckCircle,
@@ -11,11 +14,6 @@ import {
   History,
   Eye,
 } from "lucide-react";
-
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
 
 const StatCard = ({ title, value, icon: Icon, className }) => (
   <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
@@ -30,6 +28,7 @@ const StatCard = ({ title, value, icon: Icon, className }) => (
     </div>
   </div>
 );
+
 const EvaluationCard = ({
   title,
   subject,
@@ -140,6 +139,74 @@ const RecheckItem = ({ title, subject, reason, status, requestDate }) => (
 
 const StudentDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [studentData, setStudentData] = useState(null);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const role = localStorage.getItem("userRole");
+        
+        if (!token || role !== 'student') {
+          throw new Error("Authentication required");
+        }
+
+        const response = await fetch(`${API_BASE_URL}/students/me`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error("Session expired");
+          }
+          throw new Error(`Request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.code !== 200 || !data.data) {
+          throw new Error("Invalid response format");
+        }
+
+        setStudentData(data.data);
+      } catch (error) {
+        setError(error.message);
+        
+        if (error.message.includes("Authentication") || 
+            error.message.includes("expired") || 
+            error.message.includes("401")) {
+          setTimeout(() => {
+            logout();
+          }, 1500);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStudentProfile();
+  }, [navigate, logout]);
+
+  const getGreeting = () => {
+    if (!studentData) return "Welcome";
+    
+    const hour = new Date().getHours();
+    let greeting = "";
+    
+    if (hour < 12) greeting = "Good morning";
+    else if (hour < 18) greeting = "Good afternoon";
+    else greeting = "Good evening";
+    
+    return `${greeting}, ${studentData.user_name || "Student"}!`;
+  };
 
   const stats = [
     {
@@ -227,15 +294,41 @@ const StudentDashboard = () => {
     },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (error && !isLoading) {
+    return (
+      <div className="bg-red-50 text-red-600 p-6 rounded-xl my-6">
+        <div className="flex items-center gap-3 mb-3">
+          <AlertCircle className="w-6 h-6" />
+          <h3 className="text-lg font-semibold">An error occurred</h3>
+        </div>
+        <p>{error}</p>
+        <button 
+          onClick={() => navigate("/auth")}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Return to Login
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Evaluation Dashboard
+          {getGreeting()}
           </h1>
           <p className="text-gray-500">
-            Track your evaluations and recheck requests
+             Track your evaluations and recheck requests
           </p>
         </div>
 

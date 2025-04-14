@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, AlertCircle, BookOpen, ChevronRight } from 'lucide-react';
+import { API_BASE_URL } from '../BaseURL';
 
 const ParticleAnimation = () => {
   const particles = Array.from({ length: 20 }, (_, i) => ({
@@ -71,23 +72,50 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
     return formData.email && formData.password && validateEmail(formData.email);
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid()) return;
 
     setIsLoading(true);
-    
-    
-    setTimeout(() => {
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: formData.email, 
+          password: formData.password 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      const mockToken = "mock-student-token-" + Math.random().toString(36).substring(2);
-      
-      
-      onLoginSuccess(mockToken, 'student');
-      
+      if (data.code === 200 && data.data && data.data.access_token) {
+        const { access_token, refresh_token } = data.data;
+        
+        localStorage.setItem('accessToken', access_token);
+        if (refresh_token) {
+          localStorage.setItem('refreshToken', refresh_token);
+        }
+        localStorage.setItem('userRole', 'student');
+        
+        onLoginSuccess(access_token, 'student');
+      } else {
+        throw new Error(data.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (error) {
+      setError(error.message || 'An unexpected error occurred. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 800); 
+    }
   };
 
   return (
