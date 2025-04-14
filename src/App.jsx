@@ -21,6 +21,8 @@ import CourseEvaluations from "./components/CourseEvaluations";
 import StudentExamDetails from "./components/StudentExamDetails";
 import StudentRecheckRequests from "./components/StudentRecheckRequests";
 import ProfessorRecheckDetail from "./components/Dashboard/Course/ProfessorRecheckDetail";
+import PoliciesPage from "./components/PoliciesPage";
+
 function App() {
   const [loading, setLoading] = useState(false);
 
@@ -47,6 +49,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/policies" element={<PoliciesPage />} />
           <Route path="/auth" element={<RoleAuth />} />
 
           <Route
