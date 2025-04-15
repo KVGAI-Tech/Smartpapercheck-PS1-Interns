@@ -128,12 +128,21 @@ const CourseDetails = () => {
         }
     };
   
-    const handleDeleteExam = async (examId) => {
+    const handleDeleteExam = async (exam) => {
         try {
-            await fetchApi(`/professors/courses/${courseId}/exams/${examId}`, {
+            await fetchApi(`/professors/courses/${courseId}/exams/${exam.id}`, {
                 method: 'DELETE'
             });
+            showToast('Exam deleted successfully');
+            // Refresh exams list after successful deletion
+            const examsResponse = await getCourseExams(courseId);
+            setExams(examsResponse?.data || []);
         } catch (error) {
+            if (error.message.includes('NotFoundError')) {
+                showToast('Exam not found or already deleted', 'error');
+            } else {
+                showToast(`Error deleting exam: ${error.message}`, 'error');
+            }
         }
     };
     
@@ -496,10 +505,7 @@ const CourseDetails = () => {
                             setShowAddModal(true);
                         }}
                         onEdit={(exam) => handleEdit(exam, 'exam')}
-                        onDelete={(exam) => {
-                            setItemToDelete({ type: 'exam', id: exam.id });
-                            setShowDeleteModal(true);
-                        }}
+                        onDelete={handleDeleteExam}
                         onEvaluate={handleEvaluate}
                     />
                 );

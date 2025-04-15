@@ -8,8 +8,6 @@ import Dashboard from "./components/Dashboard/DashboardHome";
 import StudentDashboard from "./components/StudentDashboard";
 import TADashboard from "./components/TADashboard";
 import Courses from "./components/Dashboard/Course";
-import AnalyticsDashboard from "./components/Dashboard/AnalyticsDashboard";
-import GradeManagement from "./components/Dashboard/GradeManagement";
 import StudentManagement from "./components/Dashboard/StudentManagement";
 import TeachingAssistantsPage from "./components/Dashboard/TeachingAssistantsPage";
 import SettingsPage from "./components/Dashboard/SettingsPage";
@@ -79,26 +77,6 @@ function App() {
               <RoleRoute requiredRole="professor">
                 <DashboardLayout>
                   <CourseDetails />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <AnalyticsDashboard />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/grades"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <GradeManagement />
                 </DashboardLayout>
               </RoleRoute>
             }

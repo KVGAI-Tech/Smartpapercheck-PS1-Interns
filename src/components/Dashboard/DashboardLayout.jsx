@@ -82,18 +82,7 @@ const DashboardLayout = ({ children }) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard' },
-    { icon: BookOpen, label: 'Courses', to: '/courses' },
-    { icon: LineChart, label: 'Analytics', to: '/analytics' },
-    { icon: GraduationCap, label: 'Grade Management', to: '/grades' },
-    { 
-      icon: Users, 
-      label: 'Manage', 
-      to: '/manage', 
-      subItems: [
-        { label: 'Students', to: '/manage/students' },
-        { label: 'Teaching assistants', to: '/manage/tas' }
-      ]
-    }
+    { icon: BookOpen, label: 'Courses', to: '/courses' }
   ];
 
   const isActive = (path) => {
