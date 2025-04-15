@@ -1,36 +1,60 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Modal, Box, Button, Typography, TextField } from "@mui/material";
+import axios from "axios";
+import { API_BASE_URL } from "../../BaseURL";
 
 export default function PaymentModal() {
   const [open, setOpen] = useState(false);
+  const [credits, setCredits] = useState(0);
+
+  const amountInputRef = useRef();
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const handlePayment = () => {
-    // TODO: Integrate your PhonePe payment logic here
-    console.log("Payment initiated using PhonePe!");
-    // Example:
-    // fetch('/your-phonepe-endpoint', { ... })
-    //   .then(response => response.json())
-    //   .then(data => console.log(data));
+    const amount = parseFloat(
+      amountInputRef.current.children[1].children[0].value
+    );
+    const conversionFactor = 1;
+
+    axios
+      .post(`${API_BASE_URL}/api/transactions/initiate`, {
+        amount,
+        description: `Payment of ${amount} rupees for ${
+          amount * conversionFactor
+        } credits`,
+        metadata: {},
+        provider: "PhonePe",
+      })
+      .then((res) => {
+        console.log(res.data.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   };
 
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/transactions/balance`)
+      .then((res) => {
+        setCredits(res.data.data.balance);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }, []);
+
   return (
-    <div className="py-4">
-      {/* <Button
-        variant="contained"
-        onClick={handleOpen}
-        className="bg-indigo-600"
-      >
-        Buy Credits
-      </Button> */}
+    <div className="py-4 flex items-center gap-4">
       <button
         onClick={handleOpen}
         className="bg-green-200 hover:bg-green-300 text-green-700 px-4 py-2 rounded-md"
       >
         Buy Credits
       </button>
+      <h1>{credits}</h1>
 
       <Modal
         open={open}
@@ -56,6 +80,7 @@ export default function PaymentModal() {
             variant="outlined"
             fullWidth
             className="mb-4"
+            ref={amountInputRef}
           />
 
           <div className="flex justify-end gap-2 mt-4">
