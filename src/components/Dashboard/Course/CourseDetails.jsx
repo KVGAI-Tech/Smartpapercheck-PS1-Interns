@@ -448,7 +448,7 @@ const CourseDetails = () => {
                     <StudentsTab
                         courseId={courseId}
                         students={getFilteredItems(students, 'student')}          
-                        sections={courseDetails?.sections || ['A1', 'A2', 'B1']}
+                        sections={courseDetails?.tut_sections || ''}
                         searchQuery={searchQuery}
                         selectedSection={selectedSection}
                         onSearchChange={setSearchQuery}

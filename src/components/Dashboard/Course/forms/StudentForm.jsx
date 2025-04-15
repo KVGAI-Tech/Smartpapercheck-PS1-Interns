@@ -14,7 +14,7 @@ const StudentForm = ({
     roll_number: '',
     email: '',
     batch: '',
-    section: sections[0] || 'A1',
+    tut_section: '',
   });
 
   useEffect(() => {
@@ -24,10 +24,10 @@ const StudentForm = ({
         roll_number: initialData.roll_number || '',
         email: initialData.user_email || '',
         batch: initialData.batch || '',
-        section: initialData.section || sections[0] || 'A1',
+        tut_section: initialData.tut_section || '',
       });
     }
-  }, [initialData, sections]);
+  }, [initialData]);
 
   const validateEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,6 +55,10 @@ const StudentForm = ({
       newErrors.batch = 'Batch is required';
     }
 
+    if (!formData.tut_section) {
+      newErrors.tut_section = 'Section is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -72,7 +76,8 @@ const StudentForm = ({
         name: formData.name,
         email: formData.email,
         roll_number: formData.roll_number,
-        batch: formData.batch
+        batch: formData.batch,
+        tut_section: formData.tut_section
       };
       
       await onSubmit(submitData);
@@ -192,22 +197,24 @@ const StudentForm = ({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Section
+          Section *
         </label>
-        <select
-          name="section"
-          value={formData.section}
+        <input
+          type="text"
+          name="tut_section"
+          value={formData.tut_section}
           onChange={handleInputChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          {sections.length > 0 ? (
-            sections.map(section => (
-              <option key={section} value={section}>{section}</option>
-            ))
-          ) : (
-            <option value="A1">A1</option>
-          )}
-        </select>
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 
+            ${errors.tut_section ? 'border-red-300' : 'border-gray-300'}`}
+          required
+          placeholder="Enter section (e.g., T1)"
+        />
+        {errors.tut_section && (
+          <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errors.tut_section}
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
