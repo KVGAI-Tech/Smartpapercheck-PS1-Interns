@@ -10,8 +10,9 @@ import {
   FileText,
   LogOut,
   Bell,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
+import PaymentModal from "./Payments/PaymentModal";
 
 const StudentDashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -276,11 +277,11 @@ const StudentDashboardLayout = ({ children }) => {
                   <Menu className="w-5 h-5 text-gray-500" />
                 </button>
               )}
-              <h2 className="text-xl font-semibold text-gray-800">
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-800"></h2>
             </div>
 
             <div className="flex items-center space-x-4">
+              <PaymentModal />
               <button className="p-2 rounded-full hover:bg-gray-50 relative">
                 <Bell className="w-5 h-5 text-gray-500" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></span>
@@ -288,7 +289,9 @@ const StudentDashboardLayout = ({ children }) => {
               <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-green-600">{getUserInitial()}</span>
+                  <span className="text-sm font-medium text-green-600">
+                    {getUserInitial()}
+                  </span>
                 </div>
                 <span className="text-sm font-medium text-gray-700 hidden lg:block">
                   {userData?.user_name || "Student"}
