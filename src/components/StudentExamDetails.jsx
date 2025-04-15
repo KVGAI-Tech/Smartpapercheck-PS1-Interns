@@ -1755,21 +1755,6 @@ const StudentExamDetails = ({ isHistory = false }) => {
                 >
                   <PenTool className="w-5 h-5" />
                 </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowRecheckModal(true)}
-                  disabled={annotations.length === 0 || hasSubmittedRecheck}
-                  className={`px-4 py-2 rounded-lg flex items-center gap-1 ${
-                    annotations.length === 0 || hasSubmittedRecheck
-                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md transition-all"
-                  }`}
-                >
-                  <History className="w-4 h-4" />
-                  Request Recheck
-                </motion.button>
               </>
             )}
           </div>
@@ -2469,34 +2454,6 @@ const StudentExamDetails = ({ isHistory = false }) => {
                       </motion.div>
                     )}
 
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
-                      className="flex justify-center gap-8 mt-8"
-                    >
-                      <div className="text-center">
-                        <p className="text-sm text-gray-500 mb-2">
-                          Was this evaluation helpful?
-                        </p>
-                        <div className="flex gap-4 justify-center">
-                          <motion.button
-                            whileHover={{ scale: 1.2, color: "#10B981" }}
-                            whileTap={{ scale: 0.9 }}
-                            className="p-2 rounded-full hover:bg-gray-100 text-gray-400"
-                          >
-                            <ThumbsUp size={24} />
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.2, color: "#EF4444" }}
-                            whileTap={{ scale: 0.9 }}
-                            className="p-2 rounded-full hover:bg-gray-100 text-gray-400"
-                          >
-                            <ThumbsDown size={24} />
-                          </motion.button>
-                        </div>
-                      </div>
-                    </motion.div>
                   </motion.div>
                 </motion.div>
               )}
