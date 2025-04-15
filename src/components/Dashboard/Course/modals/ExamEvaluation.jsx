@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
-import { 
-  Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader, 
+import {
+  Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader,
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
   BarChart, RefreshCw, List, BarChart2, Star
 } from 'lucide-react';
@@ -14,8 +14,8 @@ const StudentEvaluationLoader = React.lazy(() => import('./StudentEvaluationLoad
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.4, ease: "easeOut" }
   }
@@ -24,33 +24,33 @@ const fadeInUp = {
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
-    pending: { 
-      bgColor: 'bg-amber-100', 
-      textColor: 'text-amber-800', 
+    pending: {
+      bgColor: 'bg-amber-100',
+      textColor: 'text-amber-800',
       borderColor: 'border-amber-200',
       gradientFrom: 'from-amber-50',
       gradientTo: 'to-amber-100',
       icon: <Clock className="w-3 h-3 mr-1.5" />
     },
-    completed: { 
-      bgColor: 'bg-emerald-100', 
-      textColor: 'text-emerald-800', 
+    completed: {
+      bgColor: 'bg-emerald-100',
+      textColor: 'text-emerald-800',
       borderColor: 'border-emerald-200',
       gradientFrom: 'from-emerald-50',
       gradientTo: 'to-emerald-100',
       icon: <CheckCircle className="w-3 h-3 mr-1.5" />
     },
-    inProgress: { 
-      bgColor: 'bg-blue-100', 
-      textColor: 'text-blue-800', 
+    inProgress: {
+      bgColor: 'bg-blue-100',
+      textColor: 'text-blue-800',
       borderColor: 'border-blue-200',
       gradientFrom: 'from-blue-50',
       gradientTo: 'to-blue-100',
       icon: <Loader className="w-3 h-3 mr-1.5 animate-spin" />
     },
-    failed: { 
-      bgColor: 'bg-rose-100', 
-      textColor: 'text-rose-800', 
+    failed: {
+      bgColor: 'bg-rose-100',
+      textColor: 'text-rose-800',
       borderColor: 'border-rose-200',
       gradientFrom: 'from-rose-50',
       gradientTo: 'to-rose-100',
@@ -83,7 +83,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
   if (!show) return null;
 
   const getToastStyles = () => {
-    switch(type) {
+    switch (type) {
       case 'success':
         return {
           bg: 'bg-gradient-to-r from-emerald-500 to-green-500',
@@ -128,7 +128,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
 
 const AnimatedCounter = ({ value, duration = 1.5 }) => {
   const [displayValue, setDisplayValue] = useState(0);
-  
+
   useEffect(() => {
     let startValue = 0;
     const increment = value / (duration * 60);
@@ -140,17 +140,17 @@ const AnimatedCounter = ({ value, duration = 1.5 }) => {
       }
       setDisplayValue(Math.floor(startValue));
     }, 1000 / 60);
-    
+
     return () => clearInterval(timer);
   }, [value, duration]);
-  
+
   return <span>{displayValue}</span>;
 };
 
 
 const ProgressBar = ({ value, max, color = 'blue' }) => {
   const percentage = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  
+
   const colorStyles = {
     blue: "bg-gradient-to-r from-blue-500 to-indigo-500",
     green: "bg-gradient-to-r from-emerald-500 to-green-500",
@@ -158,7 +158,7 @@ const ProgressBar = ({ value, max, color = 'blue' }) => {
     red: "bg-gradient-to-r from-rose-500 to-red-500",
     purple: "bg-gradient-to-r from-purple-500 to-indigo-500"
   };
-  
+
   return (
     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden shadow-inner">
       <motion.div
@@ -184,7 +184,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [showDetailView, setShowDetailView] = useState(false);
   const [detailEnrollmentId, setDetailEnrollmentId] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); 
+  const [viewMode, setViewMode] = useState('list');
   const [pageLoaded, setPageLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [evaluationError, setEvaluationError] = useState({});
@@ -195,7 +195,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
-  
+
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
   }, []);
@@ -204,20 +204,20 @@ const ExamEvaluation = ({ examId, onClose }) => {
     setToast({ show: false, message: '', type: 'success' });
   }, []);
 
-  
+
   const fetchEnrollments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       if (!examId) {
         throw new Error('Exam ID is missing');
       }
-      
-      
+
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); 
-      
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
         method: 'GET',
         headers: {
@@ -233,13 +233,13 @@ const ExamEvaluation = ({ examId, onClose }) => {
         const errorText = await response.text().catch(() => 'Unknown error');
         throw new Error(`API error (${response.status}): ${errorText}`);
       }
-      
+
       const data = await response.json();
-      
-      
+
+
       if (data && data.code === 200 && data.data && Array.isArray(data.data.enrollments)) {
-        console.log("API Response:", data.data); 
-        
+        console.log("API Response:", data.data);
+
         const formattedStudents = data.data.enrollments.map(student => ({
           enrollment_id: student.id,
           student_id: student.student_id,
@@ -257,15 +257,15 @@ const ExamEvaluation = ({ examId, onClose }) => {
           evaluation_status: student.marks_obtained !== null ? 'completed' : 'pending',
           answer_sheet_url: student.answer_sheet_url || null
         }));
-        
+
         setStudents(formattedStudents);
       } else {
         throw new Error(`Invalid response format from API: ${JSON.stringify(data)}`);
       }
     } catch (error) {
       console.error("Error fetching enrollments:", error);
-      
-      
+
+
       if (error.name === 'AbortError') {
         setError("Request timed out. Please check your network connection and try again.");
       } else if (error.message.includes('NetworkError') || !navigator.onLine) {
@@ -273,7 +273,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
       } else {
         setError(error.message || "Failed to load student enrollments. Please try again later.");
       }
-      
+
       setStudents([]);
     } finally {
       setLoading(false);
@@ -291,60 +291,60 @@ const ExamEvaluation = ({ examId, onClose }) => {
     }));
   };
 
-  
+
   const filteredStudents = useMemo(() => {
     let result = [...students];
-    
-    
+
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(student => 
+      result = result.filter(student =>
         (student.student_name?.toLowerCase().includes(query)) ||
         (student.roll_number?.toLowerCase().includes(query))
       );
     }
-    
-    
+
+
     if (statusFilter !== 'all') {
       const isEvaluated = statusFilter === 'completed';
-      result = result.filter(student => 
+      result = result.filter(student =>
         isEvaluated ? student.marks_obtained !== null : student.marks_obtained === null
       );
     }
-    
-    
+
+
     result.sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
-      
+
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
       }
-      
+
       const comparison = String(aValue).localeCompare(String(bValue));
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
-    
+
     return result;
   }, [searchQuery, statusFilter, students, sortConfig]);
 
-  
+
   const handleEvaluate = async (student) => {
     try {
       setEvaluatingStudent(student);
       setEvaluationError(prev => ({ ...prev, [student.enrollment_id]: null }));
-      
+
       if (!examId) {
         throw new Error('Exam ID is missing');
       }
-      
+
       showToast('Evaluating submission...', 'info');
-      
-      
+
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); 
-      
-      
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
         method: 'GET',
         headers: {
@@ -362,47 +362,47 @@ const ExamEvaluation = ({ examId, onClose }) => {
       }
 
       const data = await response.json();
-      
+
       if (data.code === 200 && data.data) {
-        
+
         if (typeof data.data.total_marks !== 'number') {
           throw new Error('Invalid evaluation data: missing or invalid total marks');
         }
-        
-        
-        const updatedStudents = students.map(s => 
-          s.enrollment_id === student.enrollment_id 
-            ? { 
-                ...s, 
-                marks_obtained: data.data.total_marks || 0, 
-                feedback: Array.isArray(data.data.overall_feedback) 
-                  ? data.data.overall_feedback.join('\n') 
-                  : (data.data.overall_feedback || ''),
-                evaluation_status: 'completed'
-              } 
+
+
+        const updatedStudents = students.map(s =>
+          s.enrollment_id === student.enrollment_id
+            ? {
+              ...s,
+              marks_obtained: data.data.total_marks || 0,
+              feedback: Array.isArray(data.data.overall_feedback)
+                ? data.data.overall_feedback.join('\n')
+                : (data.data.overall_feedback || ''),
+              evaluation_status: 'completed'
+            }
             : s
         );
-        
+
         setStudents(updatedStudents);
-        
-        
+
+
         setDetailEnrollmentId(student.enrollment_id);
         setShowDetailView(true);
-        
+
         showToast('Evaluation completed successfully', 'success');
       } else {
         throw new Error(data.message || 'Evaluation process did not complete successfully');
       }
     } catch (error) {
       console.error("Evaluation error:", error);
-      
-      
-      setEvaluationError(prev => ({ 
-        ...prev, 
+
+
+      setEvaluationError(prev => ({
+        ...prev,
         [student.enrollment_id]: error.message || 'Failed to evaluate submission'
       }));
-      
-      
+
+
       if (error.name === 'AbortError') {
         showToast('Evaluation timed out. The process might be taking longer than expected.', 'error');
       } else if (error.message.includes('NetworkError') || !navigator.onLine) {
@@ -415,31 +415,31 @@ const ExamEvaluation = ({ examId, onClose }) => {
     }
   };
 
-  
+
   const handleEvaluateAll = async () => {
     try {
       const pendingStudents = students.filter(s => s.marks_obtained === null && s.status === 'uploaded');
-      
+
       if (pendingStudents.length === 0) {
         showToast('No pending submissions to evaluate', 'info');
         return;
       }
-      
+
       setBatchEvaluating(true);
       showToast(`Evaluating ${pendingStudents.length} submissions...`, 'info');
-      
+
       let successCount = 0;
       let failCount = 0;
-      
+
       for (let i = 0; i < pendingStudents.length; i++) {
         const student = pendingStudents[i];
-        
+
         try {
-          
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 30000);
-          
-          
+
+
           const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
             method: 'GET',
             headers: {
@@ -450,64 +450,64 @@ const ExamEvaluation = ({ examId, onClose }) => {
             credentials: 'include',
             signal: controller.signal
           }).finally(() => clearTimeout(timeoutId));
-          
+
           if (!response.ok) {
             const errorText = await response.text().catch(() => 'Unknown error');
             throw new Error(`API error (${response.status}): ${errorText}`);
           }
-          
+
           const data = await response.json();
-          
+
           if (data.code === 200 && data.data) {
-            
+
             if (typeof data.data.total_marks !== 'number') {
               throw new Error('Invalid evaluation data');
             }
-            
-            
-            setStudents(prev => prev.map(s => 
-              s.enrollment_id === student.enrollment_id 
-                ? { 
-                    ...s, 
-                    marks_obtained: data.data.total_marks || 0, 
-                    feedback: Array.isArray(data.data.overall_feedback) 
-                      ? data.data.overall_feedback.join('\n') 
-                      : (data.data.overall_feedback || ''),
-                    evaluation_status: 'completed'
-                  } 
+
+
+            setStudents(prev => prev.map(s =>
+              s.enrollment_id === student.enrollment_id
+                ? {
+                  ...s,
+                  marks_obtained: data.data.total_marks || 0,
+                  feedback: Array.isArray(data.data.overall_feedback)
+                    ? data.data.overall_feedback.join('\n')
+                    : (data.data.overall_feedback || ''),
+                  evaluation_status: 'completed'
+                }
                 : s
             ));
-            
+
             successCount++;
           } else {
             throw new Error(data.message || 'Evaluation process failed');
           }
-          
-          
+
+
           if (i < pendingStudents.length - 1) {
             showToast(`Evaluated ${i + 1} of ${pendingStudents.length} submissions (${successCount} successful)`, 'info');
           }
-          
-          
+
+
           await new Promise(resolve => setTimeout(resolve, 500));
-          
+
         } catch (err) {
           console.error(`Error evaluating student ${student.enrollment_id}:`, err);
           failCount++;
-          
-          
-          setEvaluationError(prev => ({ 
-            ...prev, 
+
+
+          setEvaluationError(prev => ({
+            ...prev,
             [student.enrollment_id]: err.message || 'Failed to evaluate'
           }));
         }
       }
-      
-      
+
+
       if (successCount === pendingStudents.length) {
         showToast('All evaluations completed successfully', 'success');
       } else if (successCount > 0) {
-        showToast(`Completed ${successCount} of ${pendingStudents.length} evaluations. ${failCount} failed.`, 
+        showToast(`Completed ${successCount} of ${pendingStudents.length} evaluations. ${failCount} failed.`,
           failCount > successCount ? 'warning' : 'success');
       } else {
         showToast('Failed to complete any evaluations. Please try again later.', 'error');
@@ -524,25 +524,25 @@ const ExamEvaluation = ({ examId, onClose }) => {
     return student.marks_obtained !== null;
   };
 
+
+  const handleViewRecheckRequest = (student) => {
+    // Navigate to the recheck view within the student interface
+    window.location.href = `/student/recheck-view/${examId}/${student.enrollment_id}`;
+    // Or if you're using React Router:
+    // navigate(`/student/recheck-view/${examId}/${student.enrollment_id}`);
+  };
   
+  // Fix the handleViewResults function
   const handleViewResults = (student) => {
     if (!hasEvaluationResults(student)) {
       showToast('No evaluation results available', 'warning');
       return;
     }
     
-    
-    if (student.recheck_requested) {
-      
-      window.location.href = `/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`;
-      return;
-    }
-    
-    
+    // Always show the details view regardless of recheck status
     setDetailEnrollmentId(student.enrollment_id);
     setShowDetailView(true);
   };
-
   
   const stats = useMemo(() => {
     return {
@@ -552,36 +552,36 @@ const ExamEvaluation = ({ examId, onClose }) => {
       uploaded: students.filter(s => s.status === 'uploaded').length,
       notUploaded: students.filter(s => s.status === 'not_uploaded').length,
       recheckRequested: students.filter(s => s.recheck_requested).length,
-      averageScore: students.length > 0 
-        ? Math.round(students.reduce((sum, s) => sum + (s.marks_obtained || 0), 0) / 
-            Math.max(1, students.filter(s => s.marks_obtained !== null).length)) 
+      averageScore: students.length > 0
+        ? Math.round(students.reduce((sum, s) => sum + (s.marks_obtained || 0), 0) /
+          Math.max(1, students.filter(s => s.marks_obtained !== null).length))
         : 0
     };
   }, [students]);
 
-  
+
   const renderSortIndicator = (key) => {
     if (sortConfig.key !== key) return null;
-    
-    return sortConfig.direction === 'asc' 
+
+    return sortConfig.direction === 'asc'
       ? <ArrowUp className="w-4 h-4" />
       : <ArrowDown className="w-4 h-4" />;
   };
 
-  
+
   const handleRetry = useCallback(() => {
     setRetryCount(prev => prev + 1);
     setError(null);
     setLoading(true);
   }, []);
 
-  
+
   const getUploadedBy = (student) => {
     if (student.uploaded_by) {
       if (typeof student.uploaded_by === 'string') {
         return `Uploaded by: ${student.uploaded_by}`;
       }
-      
+
       if (student.uploaded_by.role === 'professor') {
         return 'Uploaded by: Professor';
       } else if (student.uploaded_by.role === 'student') {
@@ -590,15 +590,15 @@ const ExamEvaluation = ({ examId, onClose }) => {
         return `Uploaded by: ${student.uploaded_by.name} (${student.uploaded_by.role})`;
       }
     }
-    
+
     if (student.status === 'uploaded') {
       return 'Uploaded';
     }
-    
+
     return 'Not uploaded';
   };
 
-  
+
   const LoadingView = () => (
     <motion.div
       initial={{ opacity: 0 }}
@@ -606,34 +606,34 @@ const ExamEvaluation = ({ examId, onClose }) => {
       className="flex flex-col items-center justify-center py-16"
     >
       <div className="relative">
-        <motion.div 
+        <motion.div
           className="w-20 h-20 border-4 border-gray-100 border-t-blue-600 border-r-blue-400 rounded-full"
           animate={{ rotate: 360 }}
-          transition={{ 
-            duration: 1.5, 
-            repeat: Infinity, 
-            ease: "linear" 
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: "linear"
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute inset-0 border-4 border-transparent border-t-blue-300 rounded-full"
           animate={{ rotate: -180 }}
-          transition={{ 
-            duration: 2, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
           }}
         />
       </div>
-      <motion.p 
+      <motion.p
         className="mt-6 text-gray-600 font-medium"
-        animate={{ 
+        animate={{
           opacity: [0.5, 1, 0.5],
         }}
-        transition={{ 
-          duration: 1.5, 
+        transition={{
+          duration: 1.5,
           repeat: Infinity,
-          ease: "easeInOut" 
+          ease: "easeInOut"
         }}
       >
         Loading student submissions...
@@ -641,14 +641,14 @@ const ExamEvaluation = ({ examId, onClose }) => {
     </motion.div>
   );
 
-  
+
   const ErrorState = ({ message, onRetry }) => (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-xl shadow-sm p-8 text-center"
     >
-      <motion.div 
+      <motion.div
         className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6"
         whileHover={{ scale: 1.1 }}
       >
@@ -670,14 +670,14 @@ const ExamEvaluation = ({ examId, onClose }) => {
     </motion.div>
   );
 
-  
+
   const EmptyState = () => (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="text-center py-16 bg-white rounded-xl shadow-sm"
     >
-      <motion.div 
+      <motion.div
         className="w-20 h-20 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"
         whileHover={{ scale: 1.1 }}
       >
@@ -690,14 +690,14 @@ const ExamEvaluation = ({ examId, onClose }) => {
     </motion.div>
   );
 
-  
+
   const StudentGridItem = ({ student, index }) => {
     const hasResults = hasEvaluationResults(student);
     const status = hasResults ? 'completed' : 'pending';
-    const delay = 0.05 * (index % 8); 
+    const delay = 0.05 * (index % 8);
     const hasError = evaluationError[student.enrollment_id];
     const canEvaluate = student.status === 'uploaded' && !hasResults;
-    
+
     return (
       <motion.div
         variants={fadeInUp}
@@ -714,28 +714,28 @@ const ExamEvaluation = ({ examId, onClose }) => {
             </div>
             <StatusBadge status={status} />
           </div>
-          
+
           <h3 className="text-lg font-medium text-gray-900 mb-1">{student.student_name}</h3>
           <p className="text-sm text-gray-500 mb-1">{student.roll_number}</p>
           <p className="text-xs text-gray-400 mb-3">{getUploadedBy(student)}</p>
-          
+
           {student.recheck_requested && (
             <div className="mb-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded flex items-center">
               <AlertTriangle className="w-3 h-3 mr-1" />
               Recheck requested
             </div>
           )}
-          
+
           {hasResults ? (
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Score</span>
                 <span className="font-medium text-gray-900">{student.marks_obtained}</span>
               </div>
-              <ProgressBar 
-                value={student.marks_obtained} 
-                max={student.max_marks || 100} 
-                color={student.marks_obtained > 80 ? "green" : student.marks_obtained > 60 ? "blue" : "amber"} 
+              <ProgressBar
+                value={student.marks_obtained}
+                max={student.max_marks || 100}
+                color={student.marks_obtained > 80 ? "green" : student.marks_obtained > 60 ? "blue" : "amber"}
               />
             </div>
           ) : (
@@ -749,7 +749,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
             </div>
           )}
         </div>
-        
+
         <div className="bg-gray-50 p-4 border-t border-gray-100">
           {hasResults ? (
             student.recheck_requested ? (
@@ -785,7 +785,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : !canEvaluate
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : hasError 
+                    : hasError
                       ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-md'
                       : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-md'
                 }`}
@@ -823,30 +823,30 @@ const ExamEvaluation = ({ examId, onClose }) => {
     );
   };
 
-  
+
   const NavButton = ({ icon: Icon, label, onClick, disabled, variant = "primary" }) => {
     const getStyles = () => {
-      switch(variant) {
+      switch (variant) {
         case "primary":
           return {
-            base: `${disabled 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+            base: `${disabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
           };
         case "secondary":
           return {
-            base: `${disabled 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+            base: `${disabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-white border border-gray-200 text-gray-700 hover:text-gray-900 hover:border-gray-300'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
           };
         case "success":
           return {
-            base: `${disabled 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+            base: `${disabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:shadow-lg'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
@@ -859,9 +859,9 @@ const ExamEvaluation = ({ examId, onClose }) => {
           };
       }
     };
-    
+
     const styles = getStyles();
-    
+
     return (
       <motion.button
         whileHover={styles.hover ? { scale: 1.05 } : {}}
@@ -876,7 +876,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
     );
   };
 
-  
+
   const StatCard = ({ icon: Icon, label, value, color, percentage }) => {
     const gradients = {
       blue: "from-blue-50 to-indigo-50 border-blue-100",
@@ -893,7 +893,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
     };
 
     return (
-      <motion.div 
+      <motion.div
         variants={fadeInUp}
         initial="hidden"
         animate="visible"
@@ -925,12 +925,12 @@ const ExamEvaluation = ({ examId, onClose }) => {
       {showDetailView ? (
         <Suspense fallback={
           <div className="flex flex-col items-center justify-center h-screen">
-            <motion.div 
+            <motion.div
               className="w-16 h-16 border-4 border-t-blue-600 border-blue-200 rounded-full"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             />
-            <motion.p 
+            <motion.p
               className="mt-6 text-gray-600 font-medium"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -952,21 +952,21 @@ const ExamEvaluation = ({ examId, onClose }) => {
                 showToast('No feedback data received', 'error');
                 return;
               }
-              
+
               try {
-                setStudents(prev => prev.map(s => 
+                setStudents(prev => prev.map(s =>
                   s.enrollment_id === detailEnrollmentId
                     ? {
-                        ...s,
-                        feedback: typeof data.overall_feedback === 'string' 
-                          ? data.overall_feedback 
-                          : Array.isArray(data.overall_feedback) 
-                            ? data.overall_feedback.join('\n')
-                            : s.feedback || ''
-                      }
+                      ...s,
+                      feedback: typeof data.overall_feedback === 'string'
+                        ? data.overall_feedback
+                        : Array.isArray(data.overall_feedback)
+                          ? data.overall_feedback.join('\n')
+                          : s.feedback || ''
+                    }
                     : s
                 ));
-                
+
                 showToast('Feedback saved successfully', 'success');
               } catch (error) {
                 console.error('Error saving feedback:', error);
@@ -982,7 +982,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
         </Suspense>
       ) : (
         <div className="flex flex-col h-full p-4 md:p-6">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: pageLoaded ? 1 : 0 }}
             transition={{ duration: 0.5 }}
@@ -1000,7 +1000,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
               >
                 <ArrowLeft className="w-5 h-5 text-gray-500" />
               </motion.button>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1009,7 +1009,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
               >
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
                   <span>Exam Evaluations</span>
-                  <motion.span 
+                  <motion.span
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5, type: "spring" }}
@@ -1024,34 +1024,34 @@ const ExamEvaluation = ({ examId, onClose }) => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-4">
-              <StatCard 
-                icon={Users} 
-                label="Total Students" 
-                value={stats.total} 
-                color="blue" 
+              <StatCard
+                icon={Users}
+                label="Total Students"
+                value={stats.total}
+                color="blue"
               />
-              <StatCard 
-                icon={CheckCircle} 
-                label="Evaluated" 
-                value={stats.evaluated} 
-                color="green" 
+              <StatCard
+                icon={CheckCircle}
+                label="Evaluated"
+                value={stats.evaluated}
+                color="green"
                 percentage={stats.total ? `${Math.round((stats.evaluated / stats.total) * 100)}%` : "0%"}
               />
-              <StatCard 
-                icon={Clock} 
-                label="Pending Evaluation" 
-                value={stats.pending} 
-                color="yellow" 
+              <StatCard
+                icon={Clock}
+                label="Pending Evaluation"
+                value={stats.pending}
+                color="yellow"
               />
-              <StatCard 
-                icon={BarChart} 
-                label="Average Score" 
-                value={stats.averageScore} 
-                color="purple" 
+              <StatCard
+                icon={BarChart}
+                label="Average Score"
+                value={stats.averageScore}
+                color="purple"
               />
             </div>
 
-            <motion.div 
+            <motion.div
               variants={fadeInUp}
               initial="hidden"
               animate="visible"
@@ -1069,7 +1069,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
                   />
                 </div>
-                
+
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="relative">
                     <select
@@ -1083,22 +1083,22 @@ const ExamEvaluation = ({ examId, onClose }) => {
                     </select>
                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   </div>
-                  
+
                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                    <button 
+                    <button
                       onClick={() => setViewMode('list')}
                       className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
                       <List className="w-5 h-5" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setViewMode('grid')}
                       className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
                       <BarChart2 className="w-5 h-5" />
                     </button>
                   </div>
-                  
+
                   <NavButton
                     icon={PlayCircle}
                     label={batchEvaluating ? 'Evaluating...' : 'Evaluate All'}
@@ -1114,7 +1114,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
               {loading ? (
                 <LoadingView />
               ) : error ? (
-                <ErrorState 
+                <ErrorState
                   message={error}
                   onRetry={handleRetry}
                 />
@@ -1123,7 +1123,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
               ) : (
                 <>
                   {viewMode === 'list' ? (
-                    <motion.div 
+                    <motion.div
                       variants={fadeInUp}
                       initial="hidden"
                       animate="visible"
@@ -1142,7 +1142,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                 { key: 'evaluation_status', label: 'Status' },
                                 { key: 'actions', label: 'Actions' }
                               ].map((column) => (
-                                <th 
+                                <th
                                   key={column.key}
                                   onClick={() => column.key !== 'actions' && handleSort(column.key)}
                                   className={`px-6 py-3.5 text-left text-xs font-medium uppercase tracking-wider cursor-pointer select-none
@@ -1163,9 +1163,9 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                 const status = hasResults ? 'completed' : 'pending';
                                 const hasError = evaluationError[student.enrollment_id];
                                 const canEvaluate = student.status === 'uploaded' && !hasResults;
-                                
+
                                 return (
-                                  <motion.tr 
+                                  <motion.tr
                                     key={student.enrollment_id || index}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -1209,15 +1209,14 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                       {hasResults ? (
                                         <div className="flex items-center">
                                           <div className="w-24 bg-gray-200 rounded-full h-2 mr-3 overflow-hidden">
-                                            <motion.div 
+                                            <motion.div
                                               initial={{ width: 0 }}
                                               animate={{ width: `${(student.marks_obtained / (student.max_marks || 100)) * 100}%` }}
                                               transition={{ duration: 1, delay: 0.2 + (index * 0.05) }}
-                                              className={`h-2 rounded-full ${
-                                                student.marks_obtained >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
+                                              className={`h-2 rounded-full ${student.marks_obtained >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
                                                 student.marks_obtained >= 60 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
-                                                'bg-gradient-to-r from-amber-500 to-yellow-500'
-                                              }`}
+                                                  'bg-gradient-to-r from-amber-500 to-yellow-500'
+                                                }`}
                                             />
                                           </div>
                                           <span className="text-sm font-medium text-gray-900">{student.marks_obtained}</span>
@@ -1240,28 +1239,28 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                       {hasResults ? (
-                                        student.recheck_requested ? (
-                                          <Link to={`/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`}>
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                          {student.recheck_requested && (
                                             <motion.button
                                               whileHover={{ scale: 1.05 }}
                                               whileTap={{ scale: 0.95 }}
-                                              className="inline-flex items-center px-3 py-1.5 border border-purple-300 text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors shadow-sm hover:shadow-md"
+                                              onClick={() => handleViewRecheckRequest(student)}
+                                              className="inline-flex items-center px-3 py-1.5 border border-purple-300 text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
                                             >
                                               <Eye className="w-4 h-4 mr-1.5" />
                                               View Recheck
                                             </motion.button>
-                                          </Link>
-                                        ) : (
+                                          )}
                                           <motion.button
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => handleViewResults(student)}
-                                            className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors shadow-sm hover:shadow-md"
+                                            className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
                                           >
                                             <Eye className="w-4 h-4 mr-1.5" />
                                             View Results
                                           </motion.button>
-                                        )
+                                        </div>
                                       ) : student.status !== 'not_uploaded' ? (
                                         <motion.button
                                           whileHover={{ scale: 1.05 }}
@@ -1269,7 +1268,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                           onClick={() => handleEvaluate(student)}
                                           disabled={evaluatingStudent?.enrollment_id === student.enrollment_id || !canEvaluate}
                                           className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md
-                                            ${evaluatingStudent?.enrollment_id === student.enrollment_id
+        ${evaluatingStudent?.enrollment_id === student.enrollment_id
                                               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                               : !canEvaluate
                                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -1326,7 +1325,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                       </div>
                     </motion.div>
                   ) : (
-                    <motion.div 
+                    <motion.div
                       variants={fadeInUp}
                       initial="hidden"
                       animate="visible"
@@ -1349,7 +1348,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                         </motion.div>
                       ) : (
                         filteredStudents.map((student, index) => (
-                          <StudentGridItem 
+                          <StudentGridItem
                             key={student.enrollment_id || index}
                             student={student}
                             index={index}
@@ -1364,7 +1363,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
           </motion.div>
         </div>
       )}
-      
+
       <Toast
         show={toast.show}
         message={toast.message}

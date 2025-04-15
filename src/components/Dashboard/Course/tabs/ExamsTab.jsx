@@ -321,10 +321,8 @@ const ExamCard = ({
   onUploadAnswers,
   onGetEnrollments,
   onStartEvaluation,
-  onViewRecheckRequests
 }) => {
   const [activeStep, setActiveStep] = useState(0);
-  const [recheckCount, setRecheckCount] = useState(0);
   
   
   useEffect(() => {
@@ -386,24 +384,6 @@ const ExamCard = ({
             <Users className="w-4 h-4" />
             <span>Enrollments</span>
           </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onViewRecheckRequests(exam.id)}
-            className="px-4 py-2 text-gray-700 bg-yellow-50 hover:bg-yellow-100 
-              rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <History className="w-4 h-4 text-yellow-600" />
-            <span>
-              Rechecks
-              {recheckCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded-full">
-                  {recheckCount}
-                </span>
-              )}
-            </span>
-          </motion.button>
-          
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
