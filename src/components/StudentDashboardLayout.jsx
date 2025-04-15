@@ -8,7 +8,6 @@ import {
   ChevronRight,
   LayoutDashboard,
   FileText,
-  History,
   LogOut,
   Bell,
   AlertCircle
@@ -111,12 +110,6 @@ const StudentDashboardLayout = ({ children }) => {
       label: "My Evaluations",
       to: "/student/evaluations",
       description: "View your evaluated assignments",
-    },
-    {
-      icon: History,
-      label: "Recheck History",
-      to: "/student/recheck-history",
-      description: "Track your recheck requests",
     },
   ];
 

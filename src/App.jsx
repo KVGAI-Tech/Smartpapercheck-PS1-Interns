@@ -18,7 +18,6 @@ import { Toaster } from "react-hot-toast";
 import StudentEvaluations from "./components/StudentEvaluations";
 import CourseEvaluations from "./components/CourseEvaluations";
 import StudentExamDetails from "./components/StudentExamDetails";
-import StudentRecheckRequests from "./components/StudentRecheckRequests";
 import ProfessorRecheckDetail from "./components/Dashboard/Course/ProfessorRecheckDetail";
 import PoliciesPage from "./components/PoliciesPage";
 
@@ -137,18 +136,6 @@ function App() {
               </RoleRoute>
             }
           />
-
-          <Route
-            path="/student/recheck-history"
-            element={
-              <RoleRoute requiredRole="student">
-                <StudentDashboardLayout>
-                  <StudentRecheckRequests />
-                </StudentDashboardLayout>
-              </RoleRoute>
-            }
-          />
-
           <Route
             path="/ta-dashboard"
             element={
