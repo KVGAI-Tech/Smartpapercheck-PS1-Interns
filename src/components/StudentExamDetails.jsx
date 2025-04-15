@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   FileText,
@@ -18,11 +19,16 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
+  List,
+  Bookmark,
+  GripVertical,
+  RefreshCw,
+  Info,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { API_BASE_URL } from "../BaseURL";
 import axios from "axios";
-import { useParams } from "react-router-dom";
+import { API_BASE_URL } from "../BaseURL";
+
 
 const mockDocument = {
   Document: ({ children }) => children,
@@ -48,44 +54,48 @@ const mockDocument = {
 
 const STORAGE_KEY = "exam-viewer-annotations";
 
-// const examData = {
-//   id: 1,
-//   title: "Mid-term Examination",
-//   type: "Mid-term",
-//   date: "Oct 15, 2023",
-//   score: 85,
-//   maxScore: 100,
-//   status: "evaluated",
-//   questions: [
-//     {
-//       question_number: 1,
-//       question_text:
-//         "Explain the principles of fault tolerance and describe a redundancy technique along with an error detection and recovery strategy.",
-//       max_marks: 10,
-//       marks_obtained: 8.5,
-//       feedback:
-//         "Good explanation of fault tolerance principles. The redundancy technique was well described, but the error recovery strategy lacked detail.",
-//     },
-//     {
-//       question_number: 2,
-//       question_text:
-//         "Compare and contrast virtualization and containerization in cloud computing.",
-//       max_marks: 10,
-//       marks_obtained: 9,
-//       feedback:
-//         "Excellent comparison of virtualization and containerization. Very clear understanding of the differences and use cases.",
-//     },
-//     {
-//       question_number: 3,
-//       question_text:
-//         "Design a distributed system for handling microservices with emphasis on scalability and reliability.",
-//       max_marks: 10,
-//       marks_obtained: 7.5,
-//       feedback:
-//         "The architecture design was good but needed more emphasis on the reliability measures. The scalability approach was well thought out.",
-//     },
-//   ],
-// };
+
+const examsApi = {
+  
+  submitRecheckRequest: async (examId, enrollmentId, requestData) => {
+    const token = localStorage.getItem('accessToken');
+    
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    
+    return axios.post(
+      `${API_BASE_URL}/exams/${examId}/enrollments/${enrollmentId}/recheck`,
+      requestData,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  },
+  
+  
+  getRecheckRequests: async (examId, enrollmentId) => {
+    const token = localStorage.getItem('accessToken');
+    
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    
+    return axios.get(
+      `${API_BASE_URL}/exams/${examId}/enrollments/${enrollmentId}/recheck-requests`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  }
+};
+
 
 const Toast = ({ message, type, visible, onClose }) => {
   useEffect(() => {
@@ -121,6 +131,7 @@ const Toast = ({ message, type, visible, onClose }) => {
   );
 };
 
+
 const PDFViewer = ({
   file,
   pageNumber,
@@ -128,15 +139,33 @@ const PDFViewer = ({
   onPageChange,
   zoomLevel,
   onTotalPagesChange,
+  pdfFallbackImage,
+  selectedAnnotations,
 }) => {
-  const [pdfDocument, setPdfDocument] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [useFallbackMode, setUseFallbackMode] = useState(false);
+  const [imageUrl, setImageUrl] = useState(null);
+  const contentRef = useRef(null);
 
   useEffect(() => {
-    setUseFallbackMode(true);
-  }, []);
+    
+    if (pdfFallbackImage) {
+      setImageUrl(pdfFallbackImage);
+      setUseFallbackMode(true);
+      setIsLoading(false);
+      if (totalPages === 1) {
+        onTotalPagesChange(1);
+      }
+    } else if (file) {
+      
+      setUseFallbackMode(true);
+      setIsLoading(false);
+    } else {
+      setError("No PDF or image available");
+      setIsLoading(false);
+    }
+  }, [file, pdfFallbackImage, totalPages, onTotalPagesChange]);
 
   function onDocumentLoadSuccess({ numPages }) {
     setIsLoading(false);
@@ -150,16 +179,45 @@ const PDFViewer = ({
     setUseFallbackMode(true);
   }
 
+  
+  const renderSelectedAnnotations = () => {
+    if (!selectedAnnotations || selectedAnnotations.length === 0) return null;
+
+    return selectedAnnotations.filter(anno => anno.pageNumber === pageNumber).map((anno, index) => (
+      <div
+        key={`selected-anno-${index}`}
+        className="absolute border-2 border-yellow-500 bg-yellow-100/40 z-30 pointer-events-none"
+        style={{
+          left: `${anno.coordinates.startX}%`,
+          top: `${anno.coordinates.startY}%`,
+          width: `${Math.abs(anno.coordinates.endX - anno.coordinates.startX)}%`,
+          height: `${Math.abs(anno.coordinates.endY - anno.coordinates.startY)}%`,
+        }}
+      >
+        <div className="absolute -top-7 left-0 bg-yellow-50 text-xs px-2 py-1 rounded shadow-sm border border-yellow-200 flex items-center gap-1 z-40">
+          <span className="bg-yellow-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
+            {anno.questionNumber}
+          </span>
+          <span className="font-medium text-yellow-700">
+            +{anno.expectedMarks - anno.currentMarks}
+          </span>
+        </div>
+      </div>
+    ));
+  };
+
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden w-full h-full">
       <div className="relative w-full h-full">
         <div
+          ref={contentRef}
           className="w-full h-full flex flex-col items-center justify-center"
           style={{
             transform: `scale(${zoomLevel})`,
             transformOrigin: "center",
             transition: "transform 0.3s ease",
           }}
+          data-zoom-level={zoomLevel} 
         >
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
@@ -179,25 +237,42 @@ const PDFViewer = ({
 
           {useFallbackMode ? (
             <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md w-full max-w-4xl mx-auto">
-              <FileText size={80} className="mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                PDF Content
-              </h3>
-              <p className="text-gray-600 mb-4">
-                PDF viewer is using fallback mode due to security restrictions.
-              </p>
-              <div className="bg-gray-100 rounded-lg p-8 w-full min-h-[600px] flex items-center justify-center">
-                <p className="text-center text-gray-500">
-                  Page {pageNumber} of {totalPages || "?"}
-                </p>
-              </div>
+              {imageUrl ? (
+                <div className="relative w-full pdf-content-container">
+                  <img 
+                    src={imageUrl} 
+                    alt={`Answer sheet page ${pageNumber}`} 
+                    className="w-full h-auto rounded-md shadow-sm object-contain"
+                    style={{ maxHeight: "800px" }}
+                  />
+                  <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-md text-sm">
+                    Page {pageNumber} of {totalPages || 1}
+                  </div>
+                  {renderSelectedAnnotations()}
+                </div>
+              ) : (
+                <>
+                  <FileText size={80} className="mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    PDF Content
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    PDF viewer is using fallback mode due to security restrictions.
+                  </p>
+                  <div className="bg-gray-100 rounded-lg p-8 w-full min-h-[600px] flex items-center justify-center">
+                    <p className="text-center text-gray-500">
+                      Page {pageNumber} of {totalPages || "?"}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           ) : file ? (
-            <Document
+            <mockDocument.Document
               file={file}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
-              className="w-full h-full"
+              className="w-full h-full pdf-content-container"
               options={{
                 cMapUrl:
                   "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.6.172/cmaps/",
@@ -206,14 +281,15 @@ const PDFViewer = ({
                   "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.6.172/standard_fonts/",
               }}
             >
-              <Page
+              <mockDocument.Page
                 pageNumber={pageNumber}
                 width={800}
                 className="shadow-md mx-auto"
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
               />
-            </Document>
+              {renderSelectedAnnotations()}
+            </mockDocument.Document>
           ) : (
             <div className="text-center space-y-6 p-8">
               <FileText size={80} className="mx-auto text-gray-300" />
@@ -222,7 +298,7 @@ const PDFViewer = ({
           )}
         </div>
 
-        {file && (
+        {(file || imageUrl) && (
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-md px-4 py-2 flex items-center gap-3 z-20">
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -238,7 +314,7 @@ const PDFViewer = ({
               <ChevronLeft size={20} />
             </motion.button>
             <span className="text-sm font-medium">
-              Page {pageNumber} of {totalPages}
+              Page {pageNumber} of {totalPages || 1}
             </span>
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -260,7 +336,8 @@ const PDFViewer = ({
   );
 };
 
-const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData }) => {
+
+const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enrollmentId }) => {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -273,7 +350,6 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData }) => {
     setError(null);
 
     const requestData = {
-      examId: examData.id,
       reason,
       annotations: annotations.map((anno) => ({
         questionNumber: anno.metadata.questionNumber,
@@ -290,32 +366,30 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData }) => {
       })),
     };
 
-    const jsonRequest = JSON.stringify(requestData);
-    console.log("Request Payload (JSON):", jsonRequest);
-
-    const mockResponseData = {
-      id: Math.floor(Math.random() * 10000),
-      title: "Recheck Request",
-      body: reason,
-      examId: examData.id,
-      annotations: annotations.length,
-      createdAt: new Date().toISOString(),
-    };
-
-    const jsonResponse = JSON.stringify(mockResponseData);
-
-    console.log("Response (JSON):", jsonResponse);
-
-    const parsedResponse = JSON.parse(jsonResponse);
-
-    setTimeout(() => {
-      onSubmit({
-        requestPayload: jsonRequest,
-        apiResponse: parsedResponse,
-      });
+    try {
+      
+      examsApi.submitRecheckRequest(examData.id, enrollmentId, requestData)
+        .then(response => {
+          if (response.data && (response.data.code === 200 || response.data.code === 201)) {
+            onSubmit({
+              requestPayload: requestData,
+              apiResponse: response.data
+            });
+            onClose();
+          } else {
+            setError(response.data?.message || "Failed to submit recheck request");
+          }
+        })
+        .catch(err => {
+          setError(err.response?.data?.message || err.message || "An error occurred while submitting the request");
+        })
+        .finally(() => {
+          setSubmitting(false);
+        });
+    } catch (error) {
+      setError("Failed to submit request: " + (error.message || "Unknown error"));
       setSubmitting(false);
-      onClose();
-    }, 800);
+    }
   };
 
   return (
@@ -328,7 +402,7 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData }) => {
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.9, y: 50 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ type: "spring", stiffness: 400, damping: 40 }}
@@ -348,6 +422,13 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData }) => {
             >
               <X size={20} />
             </motion.button>
+          </div>
+
+          <div className="mb-5 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+            <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
+            <div className="text-sm text-yellow-700">
+              <strong className="font-bold">Important:</strong> You can submit a recheck request only once per exam. Please ensure all your annotations are accurate before submitting.
+            </div>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -479,7 +560,8 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData }) => {
   );
 };
 
-const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
+
+const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }) => {
   const [annotations, setAnnotations] = useState(() => {
     try {
       const savedAnnotations = localStorage.getItem(STORAGE_KEY);
@@ -499,8 +581,28 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
     expectedMarks: 0,
     actualMarks: 0,
   });
+  const [forceUpdate, setForceUpdate] = useState(false); 
 
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+
+  
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(() => {
+      
+      setForceUpdate(prev => !prev);
+    });
+    
+    resizeObserver.observe(containerRef.current);
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -512,13 +614,15 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
     onAnnotationChange(annotations);
   }, [annotations, onAnnotationChange]);
 
+  
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     setCurrentAnnotation({
       id: Date.now().toString(),
@@ -539,13 +643,15 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
     setIsDrawing(true);
   };
 
+  
   const draw = (e) => {
     if (!isDrawing || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     setCurrentAnnotation((prev) => ({
       ...prev,
@@ -559,8 +665,8 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
 
     if (
       currentAnnotation &&
-      Math.abs(currentAnnotation.endX - currentAnnotation.startX) > 10 &&
-      Math.abs(currentAnnotation.endY - currentAnnotation.startY) > 10
+      Math.abs(currentAnnotation.endX - currentAnnotation.startX) > 1 && 
+      Math.abs(currentAnnotation.endY - currentAnnotation.startY) > 1
     ) {
       setSelectedAnnotation(currentAnnotation);
       setShowForm(true);
@@ -610,8 +716,51 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
     (anno) => anno.pageNumber === currentPage
   );
 
+  
+  useEffect(() => {
+    const pdfContainer = document.querySelector('.pdf-content-container');
+    if (pdfContainer && containerRef.current) {
+      containerRef.current.style.width = pdfContainer.offsetWidth + 'px';
+      containerRef.current.style.height = pdfContainer.offsetHeight + 'px';
+    }
+  }, [forceUpdate]);
+
+  
+  const getAnnotationStyle = (anno) => {
+    if (!canvasRef.current) return {};
+    
+    const rect = canvasRef.current.getBoundingClientRect();
+    
+    
+    const startXPx = (anno.startX * rect.width) / 100;
+    const startYPx = (anno.startY * rect.height) / 100;
+    const endXPx = (anno.endX * rect.width) / 100;
+    const endYPx = (anno.endY * rect.height) / 100;
+    
+    const left = Math.min(startXPx, endXPx);
+    const top = Math.min(startYPx, endYPx);
+    const width = Math.abs(endXPx - startXPx);
+    const height = Math.abs(endYPx - startYPx);
+    
+    return {
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+      
+    };
+  };
+
   return (
-    <div className="relative w-full h-full">
+    <div 
+      ref={containerRef} 
+      className="absolute inset-0 pointer-events-auto"
+      style={{ 
+        transform: `scale(${zoomLevel})`, 
+        transformOrigin: 'center',
+        transition: 'transform 0.3s ease'
+      }}
+    >
       <div
         ref={canvasRef}
         className="absolute inset-0 cursor-crosshair z-10"
@@ -620,76 +769,49 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
       >
-        {currentPageAnnotations.map((anno) => {
-          const left = Math.min(anno.startX, anno.endX);
-          const top = Math.min(anno.startY, anno.endY);
-          const width = Math.abs(anno.endX - anno.startX);
-          const height = Math.abs(anno.endY - anno.startY);
-
-          return (
+        {currentPageAnnotations.map((anno) => (
+          <motion.div
+            key={anno.id}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            className="absolute border-2 border-blue-500 bg-blue-100/30"
+            style={getAnnotationStyle(anno)}
+          >
             <motion.div
-              key={anno.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2 }}
-              className="absolute border-2 border-blue-500 bg-blue-100/30"
-              style={{
-                left: `${left}px`,
-                top: `${top}px`,
-                width: `${width}px`,
-                height: `${height}px`,
-              }}
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="absolute -top-7 left-0 bg-white text-xs px-2 py-1 rounded shadow-sm border border-blue-100 flex items-center gap-1"
             >
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="absolute -top-7 left-0 bg-white text-xs px-2 py-1 rounded shadow-sm border border-blue-100 flex items-center gap-1"
-              >
-                <span className="bg-blue-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
-                  {anno.metadata.questionNumber}
-                </span>
-                <span className="font-medium text-blue-700">
-                  +{anno.metadata.expectedMarks - anno.metadata.actualMarks}
-                </span>
-              </motion.div>
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeAnnotation(anno.id);
-                }}
-                className="absolute -top-6 -right-6 bg-white p-1 rounded-full shadow-sm text-red-500 hover:bg-red-50 border border-red-100 z-20"
-              >
-                <X size={12} />
-              </motion.button>
+              <span className="bg-blue-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
+                {anno.metadata.questionNumber}
+              </span>
+              <span className="font-medium text-blue-700">
+                +{anno.metadata.expectedMarks - anno.metadata.actualMarks}
+              </span>
             </motion.div>
-          );
-        })}
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeAnnotation(anno.id);
+              }}
+              className="absolute -top-6 -right-6 bg-white p-1 rounded-full shadow-sm text-red-500 hover:bg-red-50 border border-red-100 z-20"
+            >
+              <X size={12} />
+            </motion.button>
+          </motion.div>
+        ))}
 
         {isDrawing && currentAnnotation && (
           <div
             className="absolute border-2 border-blue-500 bg-blue-100/30"
-            style={{
-              left: `${Math.min(
-                currentAnnotation.startX,
-                currentAnnotation.endX
-              )}px`,
-              top: `${Math.min(
-                currentAnnotation.startY,
-                currentAnnotation.endY
-              )}px`,
-              width: `${Math.abs(
-                currentAnnotation.endX - currentAnnotation.startX
-              )}px`,
-              height: `${Math.abs(
-                currentAnnotation.endY - currentAnnotation.startY
-              )}px`,
-            }}
+            style={getAnnotationStyle(currentAnnotation)}
           />
         )}
       </div>
@@ -735,11 +857,14 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
                   }
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-blue-50/50"
                 >
-                  {examData.questions.map((q) => (
+                  {examData && examData.questions && examData.questions.map((q) => (
                     <option key={q.question_number} value={q.question_number}>
                       Question {q.question_number}
                     </option>
                   ))}
+                  {(!examData || !examData.questions || examData.questions.length === 0) && (
+                    <option value={1}>Question 1</option>
+                  )}
                 </select>
               </div>
 
@@ -939,8 +1064,151 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData }) => {
   );
 };
 
-const StudentExamViewer = ({ isHistory = false }) => {
-  const { courseId, id } = useParams();
+
+const ErrorDisplay = ({ message, onRetry, onBack }) => {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
+      <div className="text-center">
+        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Exam</h2>
+        <p className="text-gray-600 mb-6">{message}</p>
+        <div className="flex space-x-3 justify-center">
+          {onRetry && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onRetry}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"
+            >
+              <RefreshCw size={16} />
+              Try Again
+            </motion.button>
+          )}
+          {onBack && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onBack}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg"
+            >
+              Back to Exams
+            </motion.button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const LoadingDisplay = ({ message = "Loading exam data..." }) => {
+  return (
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+      <p className="text-gray-600">{message}</p>
+    </div>
+  );
+};
+
+
+const RecheckRequestHistory = ({ requests, loading, error, onViewRequest }) => {
+  if (loading) {
+    return (
+      <div className="p-4 flex justify-center">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        <span className="ml-2 text-gray-600">Loading recheck requests...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-100 text-sm flex items-center gap-2">
+        <AlertTriangle size={16} />
+        <span>Failed to load recheck requests: {error}</span>
+      </div>
+    );
+  }
+
+  if (!requests || requests.length === 0) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        <History className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+        <p>No recheck requests found for this exam.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {requests.map((request, index) => (
+        <motion.div
+          key={request._id || index}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+          onClick={() => onViewRequest(request)}
+        >
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h4 className="font-medium text-gray-800 flex items-center gap-2">
+                Request #{request.request_number || index + 1}
+                <span className="text-xs text-gray-500 font-normal">
+                  (Click to view annotations)
+                </span>
+              </h4>
+              <p className="text-xs text-gray-500 mt-1">
+                Submitted on: {new Date(request.created_at).toLocaleString()}
+              </p>
+            </div>
+            <div className={`px-2 py-1 rounded-full text-xs font-medium 
+              ${request.status === 'approved' ? 'bg-green-100 text-green-700' : 
+               request.status === 'rejected' ? 'bg-red-100 text-red-700' : 
+               'bg-yellow-100 text-yellow-700'}`}>
+              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+            </div>
+          </div>
+          
+          <p className="text-sm text-gray-700 mb-4 bg-gray-50 p-3 rounded-lg">
+            {request.reason}
+          </p>
+          
+          <div>
+            <h5 className="text-xs font-medium text-gray-700 mb-2">Annotations ({request.annotations?.length || 0})</h5>
+            <div className="space-y-2 max-h-48 overflow-auto">
+              {request.annotations && request.annotations.map((anno, idx) => (
+                <div key={idx} className="p-2 border border-blue-100 rounded-md bg-blue-50 text-xs">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-medium">Question {anno.questionNumber}</span>
+                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                      +{anno.expectedMarks - anno.currentMarks} marks
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mb-1">{anno.grievance}</p>
+                  <div className="flex justify-between text-gray-500">
+                    <span>Current: {anno.currentMarks}</span>
+                    <span>Expected: {anno.expectedMarks}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
+
+const StudentExamDetails = ({ isHistory = false }) => {
+  
+  const { courseId, id: examId } = useParams();
+  const [searchParams] = useSearchParams();
+  const enrollmentId = searchParams.get('enrollment_id');
+  const navigate = useNavigate();
+
+  
   const [currentTab, setCurrentTab] = useState("overview");
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -956,86 +1224,303 @@ const StudentExamViewer = ({ isHistory = false }) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pdfFile, setPdfFile] = useState(null);
+  const [pdfImageUrl, setPdfImageUrl] = useState(null);
   const [requestStatus, setRequestStatus] = useState(null);
   const [examData, setExamData] = useState(null);
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [annotationsByQuestion, setAnnotationsByQuestion] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [detailedFeedback, setDetailedFeedback] = useState({});
+  const [splitPosition, setSplitPosition] = useState(50);
+  const [isResizing, setIsResizing] = useState(false);
+  const [recheckRequests, setRecheckRequests] = useState([]);
+  const [loadingRecheckRequests, setLoadingRecheckRequests] = useState(false);
+  const [recheckRequestsError, setRecheckRequestsError] = useState(null);
+  const [selectedRecheckRequest, setSelectedRecheckRequest] = useState(null);
+  const [selectedAnnotations, setSelectedAnnotations] = useState([]);
+  const [hasSubmittedRecheck, setHasSubmittedRecheck] = useState(false);
 
   const mainContentRef = useRef(null);
+  const splitDividerRef = useRef(null);
 
+  
   useEffect(() => {
-    axios
-      .get(`${API_BASE_URL}/api/students/courses/${courseId}/exams`)
-      .then((res) => {
-        setExamData(res.data.data.find((exam) => exam.id === parseInt(id)));
-        setProgressPercentage(
-          (res.data.data.score / res.data.data.maxScore) * 100
-        );
-        setAnnotationsByQuestion(
-          res.data.data.questions.map((question) => {
-            return {
-              questionNumber: question.question_number,
-              count: annotations.filter(
-                (a) => a.metadata.questionNumber === question.question_number
-              ).length,
-            };
-          })
-        );
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-
-    const createMockPDF = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 800;
-      canvas.height = 1100;
-      const ctx = canvas.getContext("2d");
-
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = "#000000";
-      ctx.font = "24px Arial";
-      ctx.fillText("Sample Exam Paper", 50, 50);
-
-      ctx.font = "16px Arial";
-      for (let i = 0; i < 20; i++) {
-        ctx.fillText(
-          `Line ${i + 1}: Sample exam content for demonstration purposes.`,
-          50,
-          100 + i * 30
-        );
-      }
-
-      return new Promise((resolve) => {
-        canvas.toBlob((blob) => {
-          resolve(URL.createObjectURL(blob));
-        });
-      });
+    const handleMouseMove = (e) => {
+      if (!isResizing || !mainContentRef.current) return;
+      
+      const container = mainContentRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const newPosition = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      
+      
+      const limitedPosition = Math.min(Math.max(newPosition, 20), 80);
+      setSplitPosition(limitedPosition);
     };
 
-    createMockPDF().then((url) => {
-      setPdfFile(url);
-    });
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    }
 
     return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  
+  const handleViewRecheckRequest = (request) => {
+    setSelectedRecheckRequest(request);
+    
+    
+    if (request.annotations && request.annotations.length > 0) {
+      
+      if (request.annotations[0].pageNumber) {
+        setPageNumber(request.annotations[0].pageNumber);
+      }
+      
+      setSelectedAnnotations(request.annotations);
+      
+      
+      if (currentTab !== "history") {
+        setCurrentTab("history");
+      }
+    }
+  };
+
+  
+  useEffect(() => {
+    if (currentTab !== "history") {
+      setSelectedAnnotations([]);
+      setSelectedRecheckRequest(null);
+    }
+  }, [currentTab]);
+
+  
+  const fetchRecheckRequests = async () => {
+    if (!examId || !enrollmentId) return;
+    
+    setLoadingRecheckRequests(true);
+    setRecheckRequestsError(null);
+    
+    try {
+      const response = await examsApi.getRecheckRequests(examId, enrollmentId);
+      
+      if (response.data && response.data.code === 200) {
+        const requests = response.data.data || [];
+        setRecheckRequests(requests);
+        
+        
+        if (requests.length > 0) {
+          const latestRequest = requests[0]; 
+          setRequestStatus({
+            id: latestRequest._id,
+            timestamp: new Date(latestRequest.created_at).toLocaleString(),
+            status: latestRequest.status
+          });
+          
+          
+          setHasSubmittedRecheck(true);
+        }
+      } else {
+        throw new Error(response.data?.message || 'Failed to fetch recheck requests');
+      }
+    } catch (err) {
+      console.error('Error fetching recheck requests:', err);
+      setRecheckRequestsError(err.message || 'Failed to load recheck requests');
+    } finally {
+      setLoadingRecheckRequests(false);
+    }
+  };
+
+  
+  useEffect(() => {
+    const fetchExamData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const token = localStorage.getItem('accessToken');
+        
+        if (!token) {
+          throw new Error('Authentication token not found');
+        }
+        
+        
+        const response = await axios.get(
+          `${API_BASE_URL}/exams/${examId}/answer-sheets/${enrollmentId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        
+        if (response && response.data && response.data.code === 200) {
+          
+          const apiData = response.data.data;
+          console.log('API Response:', apiData);
+          
+          
+          const questions = [];
+          const detailedFeedbackData = {};
+          
+          if (apiData.evaluations) {
+            Object.keys(apiData.evaluations).forEach((key) => {
+              const questionData = apiData.evaluations[key];
+              
+              const questionNumber = parseInt(key.replace(/\D/g, ''));
+              
+              if (isNaN(questionNumber)) {
+                console.warn(`Could not parse question number from key: ${key}`);
+                return;
+              }
+              
+              
+              const totalMarks = parseFloat(questionData.total_marks) || 0;
+              
+              
+              questions.push({
+                question_number: questionNumber,
+                question_text: apiData.problem_feedback?.[key] || `Question ${questionNumber}`,
+                max_marks: 10, 
+                marks_obtained: totalMarks,
+                feedback: questionData.overall_feedback || ""
+              });
+              
+              
+              if (questionData.item_grades && questionData.item_grades.length > 0) {
+                detailedFeedbackData[questionNumber] = {
+                  items: questionData.item_grades,
+                  overall: questionData.overall_feedback,
+                  improvement: questionData.improvement_suggestions
+                };
+              }
+            });
+          }
+          
+          
+          questions.sort((a, b) => a.question_number - b.question_number);
+
+          
+          setDetailedFeedback(detailedFeedbackData);
+
+          
+          const transformedData = {
+            id: parseInt(examId),
+            title: apiData.exam_name || "Exam",
+            type: "Exam",
+            date: new Date(apiData.upload_time || new Date()).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            score: questions.reduce((sum, q) => sum + q.marks_obtained, 0),
+            maxScore: questions.length * 10, 
+            status: apiData.evaluation_status || "pending",
+            questions: questions,
+            student: apiData.student || null
+          };
+          
+          setExamData(transformedData);
+          
+          
+          if (transformedData.maxScore > 0) {
+            setProgressPercentage((transformedData.score / transformedData.maxScore) * 100);
+          }
+          
+          
+          if (apiData.answer_sheet_url) {
+            setPdfFile(apiData.answer_sheet_url);
+          }
+          
+          
+          if (apiData.pages && apiData.pages.length > 0) {
+            setTotalPages(apiData.pages.length);
+            
+            setPdfImageUrl(apiData.pages[0].presigned_url);
+          }
+          
+          
+          if (transformedData.questions.length > 0) {
+            setAnnotationsByQuestion(
+              transformedData.questions.map(question => ({
+                questionNumber: question.question_number,
+                count: 0
+              }))
+            );
+          }
+          
+          
+          fetchRecheckRequests();
+          
+        } else {
+          throw new Error(response?.data?.message || 'Failed to load exam data');
+        }
+      } catch (err) {
+        console.error('Error fetching exam data:', err);
+        setError(err.message || "Failed to load exam data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchExamData();
+    
+    return () => {
+      
       if (pdfFile && pdfFile.startsWith("blob:")) {
         URL.revokeObjectURL(pdfFile);
       }
     };
-  }, []);
+  }, [examId, enrollmentId]);
 
-  if (!examData) {
-    console.log(examData);
-    return <h1>Loading exam data...</h1>;
-  }
+  
+  useEffect(() => {
+    if (examData && examData.questions) {
+      const questionCounts = {};
+      
+      
+      annotations.forEach(anno => {
+        const qNum = anno.metadata.questionNumber;
+        questionCounts[qNum] = (questionCounts[qNum] || 0) + 1;
+      });
+      
+      
+      const updatedAnnotationsByQuestion = examData.questions.map(q => ({
+        questionNumber: q.question_number,
+        count: questionCounts[q.question_number] || 0
+      }));
+      
+      setAnnotationsByQuestion(updatedAnnotationsByQuestion);
+    }
+  }, [annotations, examData]);
 
   useEffect(() => {
     if (!totalPages || totalPages === 1) {
-      setTotalPages(5);
+      
+      if (!pdfImageUrl && !pdfFile) {
+        setTotalPages(1);
+      }
     }
-  }, [totalPages]);
+  }, [totalPages, pdfImageUrl, pdfFile]);
 
   useEffect(() => {
     const handleScreenshotAttempt = () => {
@@ -1099,6 +1584,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
       console.error("Error loading annotations from localStorage:", error);
     }
   }, []);
+  
   const handleAnnotationChange = (newAnnotations) => {
     setAnnotations(newAnnotations);
 
@@ -1111,32 +1597,25 @@ const StudentExamViewer = ({ isHistory = false }) => {
 
   const handleRecheckSubmit = (data) => {
     console.log("Recheck data submitted:", data);
-    axios
-      .post(`${API_BASE_URL}/students/exams/${id}/request-recheck`, data)
-      .then((res) => {
-        console.log(res);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-
-    const mockResponse = {
-      id: Math.floor(Math.random() * 10000),
-      createdAt: new Date().toISOString(),
-      status: "pending",
-    };
-
+    
+    
     setRequestStatus({
-      id: mockResponse.id,
+      id: data.apiResponse?.data?._id || Math.floor(Math.random() * 10000),
       timestamp: new Date().toLocaleString(),
-      status: "submitted",
+      status: "pending",
     });
+
+    
+    setHasSubmittedRecheck(true);
 
     setToast({
       visible: true,
       message: "Recheck request submitted successfully",
       type: "success",
     });
+    
+    
+    fetchRecheckRequests();
   };
 
   const handleZoomIn = () => {
@@ -1152,7 +1631,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
   };
 
   const handleGoBack = () => {
-    window.history.back();
+    navigate(`/student/evaluations/${courseId}`);
   };
 
   const handlePageChange = (newPage) => {
@@ -1164,6 +1643,44 @@ const StudentExamViewer = ({ isHistory = false }) => {
   const handleTotalPagesChange = (numPages) => {
     setTotalPages(numPages);
   };
+  
+  const handleRetry = () => {
+    window.location.reload();
+  };
+  
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingDisplay />
+      </div>
+    );
+  }
+
+  
+  if (error && !examData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <ErrorDisplay 
+          message={error}
+          onRetry={handleRetry}
+          onBack={() => navigate(`/student/evaluations/${courseId}`)}
+        />
+      </div>
+    );
+  }
+
+  
+  if (!examData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <ErrorDisplay 
+          message="No exam data available. The requested exam could not be found or has not been evaluated yet."
+          onBack={() => navigate(`/student/evaluations/${courseId}`)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col relative">
@@ -1189,11 +1706,9 @@ const StudentExamViewer = ({ isHistory = false }) => {
 
             <div>
               <h1 className="text-xl font-bold text-gray-900">
-                {examData.title}
+                {examData.student && <span>{examData.student.name} ({examData.student.roll_number})</span>}
               </h1>
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>{examData.type}</span>
-                <span>•</span>
                 <span>{examData.date}</span>
               </div>
             </div>
@@ -1221,7 +1736,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
               )}
             </motion.div>
 
-            {/* {isHistory ? null : (
+            {isHistory ? null : (
               <>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -1245,9 +1760,9 @@ const StudentExamViewer = ({ isHistory = false }) => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowRecheckModal(true)}
-                  disabled={annotations.length === 0}
+                  disabled={annotations.length === 0 || hasSubmittedRecheck}
                   className={`px-4 py-2 rounded-lg flex items-center gap-1 ${
-                    annotations.length === 0
+                    annotations.length === 0 || hasSubmittedRecheck
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                       : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md transition-all"
                   }`}
@@ -1256,7 +1771,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
                   Request Recheck
                 </motion.button>
               </>
-            )} */}
+            )}
           </div>
         </div>
       </header>
@@ -1346,12 +1861,12 @@ const StudentExamViewer = ({ isHistory = false }) => {
 
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-8 overflow-x-auto">
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setCurrentTab("overview")}
-              className={`py-4 relative text-sm font-medium transition-all ${
+              className={`py-4 px-2 relative text-sm font-medium transition-all whitespace-nowrap ${
                 currentTab === "overview"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
@@ -1370,7 +1885,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setCurrentTab("questions")}
-              className={`py-4 relative text-sm font-medium transition-all ${
+              className={`py-4 px-2 relative text-sm font-medium transition-all whitespace-nowrap ${
                 currentTab === "questions"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
@@ -1390,7 +1905,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setCurrentTab("recheck")}
-                className={`py-4 relative text-sm font-medium transition-all ${
+                className={`py-4 px-2 relative text-sm font-medium transition-all whitespace-nowrap ${
                   currentTab === "recheck"
                     ? "text-blue-600"
                     : "text-gray-600 hover:text-gray-900"
@@ -1410,6 +1925,30 @@ const StudentExamViewer = ({ isHistory = false }) => {
                 )}
               </motion.button>
             )}
+            
+            {recheckRequests.length > 0 && (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setCurrentTab("history")}
+                className={`py-4 px-2 relative text-sm font-medium transition-all whitespace-nowrap ${
+                  currentTab === "history"
+                    ? "text-blue-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Recheck History
+                <span className="ml-1.5 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-xs">
+                  {recheckRequests.length}
+                </span>
+                {currentTab === "history" && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"
+                  />
+                )}
+              </motion.button>
+            )}
           </div>
         </div>
       </div>
@@ -1418,7 +1957,13 @@ const StudentExamViewer = ({ isHistory = false }) => {
         ref={mainContentRef}
         className="flex-1 flex flex-col md:flex-row overflow-hidden"
       >
-        <div className="w-full md:w-1/2 h-full min-h-[400px] flex flex-col">
+        <div 
+          className="flex flex-col"
+          style={{ 
+            width: window.innerWidth >= 768 ? `${splitPosition}%` : '100%',
+            height: window.innerWidth >= 768 ? '100%' : '50%' 
+          }}
+        >
           <div className="bg-gray-100 p-3 flex items-center justify-between border-b border-gray-200">
             <span className="font-medium text-gray-700">
               Student Answer Script
@@ -1464,20 +2009,23 @@ const StudentExamViewer = ({ isHistory = false }) => {
             >
               <PDFViewer
                 file={pdfFile}
+                pdfFallbackImage={pdfImageUrl}
                 pageNumber={pageNumber}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
                 zoomLevel={zoomLevel}
                 onTotalPagesChange={handleTotalPagesChange}
+                selectedAnnotations={selectedAnnotations}
               />
             </motion.div>
 
-            {showAnnotation && (
+            {showAnnotation && currentTab !== 'history' && (
               <div className="absolute inset-0 bg-transparent">
                 <AnnotationTool
                   onAnnotationChange={handleAnnotationChange}
                   currentPage={pageNumber}
                   examData={examData}
+                  zoomLevel={zoomLevel}
                 />
               </div>
             )}
@@ -1500,7 +2048,25 @@ const StudentExamViewer = ({ isHistory = false }) => {
           </div>
         </div>
 
-        <div className="w-full md:w-1/2 h-full min-h-[400px] bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+        {window.innerWidth >= 768 && (
+          <div 
+            ref={splitDividerRef}
+            className="relative cursor-ew-resize w-1 bg-gray-300 hover:bg-blue-500 active:bg-blue-600 flex items-center justify-center transition-colors"
+            onMouseDown={handleMouseDown}
+          >
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center">
+              <GripVertical className="w-4 h-4 text-gray-500" />
+            </div>
+          </div>
+        )}
+
+        <div 
+          className="bg-white border-l border-gray-200 flex flex-col overflow-hidden"
+          style={{ 
+            width: window.innerWidth >= 768 ? `${100 - splitPosition}%` : '100%',
+            height: window.innerWidth >= 768 ? '100%' : '50%' 
+          }}
+        >
           <div className="flex-1 overflow-auto p-4 md:p-6">
             <AnimatePresence mode="wait">
               {currentTab === "overview" && (
@@ -1545,7 +2111,11 @@ const StudentExamViewer = ({ isHistory = false }) => {
                               : "bg-amber-100 text-amber-600"
                           }`}
                         >
-                          <CheckCircle size={16} />
+                          {progressPercentage >= 50 ? (
+                            <CheckCircle size={16} />
+                          ) : (
+                            <AlertTriangle size={16} />
+                          )}
                         </div>
                       </div>
                       <div className="flex items-baseline gap-1">
@@ -1594,9 +2164,9 @@ const StudentExamViewer = ({ isHistory = false }) => {
                         </div>
                       </div>
                       <div className="text-2xl font-bold">
-                        {(examData.score / examData.questions.length).toFixed(
-                          1
-                        )}
+                        {examData.questions.length > 0 
+                          ? (examData.score / examData.questions.length).toFixed(1)
+                          : "0.0"}
                       </div>
                     </motion.div>
                   </motion.div>
@@ -1706,7 +2276,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
                 </motion.div>
               )}
 
-              {currentTab === "questions" && (
+              {currentTab === "questions" && examData.questions.length > 0 && (
                 <motion.div
                   key="questions"
                   initial={{ opacity: 0, y: 20 }}
@@ -1765,11 +2335,13 @@ const StudentExamViewer = ({ isHistory = false }) => {
                       className="flex items-center gap-2"
                     >
                       <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
-                        {Math.round(
-                          (examData.questions[currentQuestion].marks_obtained /
-                            examData.questions[currentQuestion].max_marks) *
-                            100
-                        )}
+                        {examData.questions[currentQuestion].max_marks > 0 
+                          ? Math.round(
+                              (examData.questions[currentQuestion].marks_obtained /
+                                examData.questions[currentQuestion].max_marks) *
+                                100
+                            )
+                          : 0}
                         %
                       </div>
                       <div className="text-xl font-bold text-gray-900">
@@ -1820,12 +2392,12 @@ const StudentExamViewer = ({ isHistory = false }) => {
                         )}
                       </p>
 
-                      {annotationsByQuestion[currentQuestion].count > 0 && (
+                      {annotationsByQuestion.find(a => a.questionNumber === examData.questions[currentQuestion].question_number)?.count > 0 && (
                         <div className="mt-3 flex items-center gap-2">
                           <div className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs flex items-center">
                             <PenTool className="w-3 h-3 mr-1" />
-                            {annotationsByQuestion[currentQuestion].count}{" "}
-                            {annotationsByQuestion[currentQuestion].count === 1
+                            {annotationsByQuestion.find(a => a.questionNumber === examData.questions[currentQuestion].question_number).count}{" "}
+                            {annotationsByQuestion.find(a => a.questionNumber === examData.questions[currentQuestion].question_number).count === 1
                               ? "annotation"
                               : "annotations"}{" "}
                             for this question
@@ -1842,17 +2414,65 @@ const StudentExamViewer = ({ isHistory = false }) => {
                     >
                       <h3 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
                         <MessageSquare size={16} className="text-blue-600" />
-                        Feedback
+                        Overall Feedback
                       </h3>
                       <p className="text-gray-700">
-                        {examData.questions[currentQuestion].feedback}
+                        {examData.questions[currentQuestion].feedback || "No feedback provided."}
                       </p>
                     </motion.div>
+
+                    {detailedFeedback[examData.questions[currentQuestion].question_number] && 
+                     detailedFeedback[examData.questions[currentQuestion].question_number].items && 
+                     detailedFeedback[examData.questions[currentQuestion].question_number].items.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm"
+                      >
+                        <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                          <List size={16} className="text-blue-600" />
+                          Detailed Assessment
+                        </h3>
+                        <div className="space-y-3">
+                          {detailedFeedback[examData.questions[currentQuestion].question_number].items.map((item, idx) => (
+                            <div key={idx} className="p-3 bg-gray-50 rounded-md border border-gray-100">
+                              <div className="flex justify-between items-center mb-1">
+                                <h4 className="text-sm font-medium text-gray-700">
+                                  Criteria {item.item_number}
+                                </h4>
+                                <div className="text-sm font-medium text-gray-600">
+                                  Score: {item.marks_awarded}/10
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600">{item.feedback}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {detailedFeedback[examData.questions[currentQuestion].question_number]?.improvement && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="bg-blue-50 rounded-lg p-4 border border-blue-100 shadow-sm"
+                      >
+                        <h3 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                          <Bookmark size={16} className="text-blue-600" />
+                          Improvement Suggestions
+                        </h3>
+                        <p className="text-gray-700">
+                          {detailedFeedback[examData.questions[currentQuestion].question_number].improvement}
+                        </p>
+                      </motion.div>
+                    )}
 
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
+                      transition={{ delay: 0.6 }}
                       className="flex justify-center gap-8 mt-8"
                     >
                       <div className="text-center">
@@ -1905,24 +2525,39 @@ const StudentExamViewer = ({ isHistory = false }) => {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setShowRecheckModal(true)}
                       disabled={
-                        annotations.length === 0 || requestStatus !== null
+                        annotations.length === 0 || hasSubmittedRecheck
                       }
                       className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm ${
-                        annotations.length === 0 || requestStatus !== null
+                        annotations.length === 0 || hasSubmittedRecheck
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                           : "bg-blue-600 text-white hover:bg-blue-700"
                       }`}
                     >
-                      {requestStatus ? "Request Submitted" : "Submit Request"}
+                      {hasSubmittedRecheck ? "Request Submitted" : "Submit Request"}
                     </motion.button>
                   </div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-50 p-4 rounded-lg border border-amber-200 flex items-start gap-3 shadow-sm"
+                  >
+                    <Info size={22} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-bold text-amber-800 text-base mb-1">
+                        Important Notice
+                      </h3>
+                      <p className="text-amber-700">
+                        You can submit a recheck request <span className="font-bold underline">only once</span> per exam. Please ensure all your annotations are accurate before submitting.
+                      </p>
+                    </div>
+                  </motion.div>
 
                   {requestStatus && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-green-50 rounded-lg p-4 border border-green-100 shadow-sm"
-                    >
+                      className="bg-green-50 rounded-lg p-4 border border-green-100 shadow-sm">
                       <h3 className="font-medium text-green-800 mb-2 flex items-center gap-2">
                         <CheckCircle size={16} className="text-green-600" />
                         Request Successfully Submitted
@@ -1952,18 +2587,18 @@ const StudentExamViewer = ({ isHistory = false }) => {
                     <div className="space-y-3 text-sm text-gray-600">
                       <p>
                         1. Use the annotation tool on the left to highlight
-                        areas of your answer that you want rechecked.
+                        areas of your answer that you believe were incorrectly evaluated.
                       </p>
                       <p>
                         2. For each annotation, provide details about what you
-                        believe was incorrectly evaluated.
+                        believe was incorrectly evaluated and the marks you expected.
                       </p>
                       <p>
                         3. Once you've added all annotations, click "Submit
                         Request" and provide an overall reason.
                       </p>
 
-                      {!showAnnotation && !requestStatus && (
+                      {!showAnnotation && !hasSubmittedRecheck && (
                         <div className="mt-4">
                           <motion.button
                             whileHover={{ scale: 1.03 }}
@@ -2084,6 +2719,140 @@ const StudentExamViewer = ({ isHistory = false }) => {
                   </div>
                 </motion.div>
               )}
+
+              {currentTab === "history" && (
+                <motion.div
+                  key="history"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="flex justify-between items-center">
+                    <motion.h2
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-xl font-semibold text-gray-900 flex items-center gap-2"
+                    >
+                      <History className="text-blue-600" size={20} />
+                      Recheck Request History
+                    </motion.h2>
+                    
+                    {selectedRecheckRequest && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setSelectedRecheckRequest(null);
+                          setSelectedAnnotations([]);
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <ArrowLeft size={16} />
+                        Back to all requests
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {selectedRecheckRequest ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="font-medium text-gray-800 flex items-center gap-2">
+                              Request #{selectedRecheckRequest.request_number || ''}
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Submitted on: {new Date(selectedRecheckRequest.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className={`px-2 py-1 rounded-full text-xs font-medium 
+                            ${selectedRecheckRequest.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                            selectedRecheckRequest.status === 'rejected' ? 'bg-red-100 text-red-700' : 
+                            'bg-yellow-100 text-yellow-700'}`}>
+                            {selectedRecheckRequest.status.charAt(0).toUpperCase() + selectedRecheckRequest.status.slice(1)}
+                          </div>
+                        </div>
+                        
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">Reason</h4>
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <p className="text-gray-700">{selectedRecheckRequest.reason}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-sm text-blue-700 flex items-center gap-2 mb-4">
+                          <Info size={16} />
+                          <span>
+                            The annotations from this request are highlighted in yellow on the document. 
+                            Navigate through pages to view all annotations.
+                          </span>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">
+                            Annotations ({selectedRecheckRequest.annotations?.length || 0})
+                          </h4>
+                          <div className="space-y-2 max-h-96 overflow-auto">
+                            {selectedRecheckRequest.annotations && selectedRecheckRequest.annotations.map((anno, idx) => (
+                              <motion.div 
+                                key={idx} 
+                                className="p-3 border border-yellow-200 rounded-md bg-yellow-50 text-sm hover:shadow-md transition-all cursor-pointer"
+                                onClick={() => {
+                                  if (anno.pageNumber) {
+                                    setPageNumber(anno.pageNumber);
+                                  }
+                                }}
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="font-medium flex items-center gap-1">
+                                    <Eye size={14} className="text-yellow-600" />
+                                    Question {anno.questionNumber}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">
+                                      Page {anno.pageNumber}
+                                    </span>
+                                    <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">
+                                      +{anno.expectedMarks - anno.currentMarks} marks
+                                    </span>
+                                  </div>
+                                </div>
+                                <p className="text-gray-700 mb-1">{anno.grievance}</p>
+                                <div className="flex justify-between text-xs text-gray-500">
+                                  <span>Current: {anno.currentMarks}</span>
+                                  <span>Expected: {anno.expectedMarks}</span>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {selectedRecheckRequest.feedback && (
+                        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+                          <h3 className="font-medium text-gray-800 mb-2">Evaluator Feedback</h3>
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <p className="text-gray-700">{selectedRecheckRequest.feedback}</p>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  ) : (
+                    <RecheckRequestHistory 
+                      requests={recheckRequests}
+                      loading={loadingRecheckRequests}
+                      error={recheckRequestsError}
+                      onViewRequest={handleViewRecheckRequest}
+                    />
+                  )}
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </div>
@@ -2097,6 +2866,7 @@ const StudentExamViewer = ({ isHistory = false }) => {
             onSubmit={handleRecheckSubmit}
             annotations={annotations}
             examData={examData}
+            enrollmentId={enrollmentId}
           />
         )}
       </AnimatePresence>
@@ -2115,4 +2885,4 @@ const StudentExamViewer = ({ isHistory = false }) => {
   );
 };
 
-export default StudentExamViewer;
+export default StudentExamDetails;
