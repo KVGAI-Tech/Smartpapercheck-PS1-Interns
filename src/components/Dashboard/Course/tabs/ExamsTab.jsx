@@ -681,17 +681,36 @@ const ExamsTab = ({
       showToast('Error: Exam ID is missing', 'error');
       return;
     }
-    
     setIsLoading(true);
     try {
       let questions = [];
       try {
-        questions = await fetchExamQuestions(examId);
+        const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          }
+        });
+        if (response.status === 404) {
+          console.log('No existing questions found for this exam');
+        } else if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ detail: "Failed to fetch questions" }));
+          throw new Error(errorData.detail || `Failed to fetch questions: ${response.status}`);
+        } else {
+          const data = await response.json();
+          if (data.code === 200) {
+            if (data.data.questions) {
+              questions = data.data.questions || [];
+            } else if (data.data.question_number) {
+              questions = [data.data];
+            }
+          }
+        }
       } catch (error) {
-        console.error('Error loading questions:', error);
-        showToast('Failed to load existing questions. You can still upload a new question paper.', 'error');
+        if (!error.message.includes('Questions not found')) {
+          console.error('Error loading questions:', error);
+          showToast('Failed to load existing questions. You can still upload a new question paper.', 'error');
+        }
       }
-      
       setExistingQuestions(questions);
       setSelectedExamId(examId);
       setShowUploadModal(true);
@@ -699,7 +718,6 @@ const ExamsTab = ({
       setIsLoading(false);
     }
   };
-
   const handleAnswerUpload = async (examId) => {
     if (!examId) {
       showToast('Error: Exam ID is missing', 'error');

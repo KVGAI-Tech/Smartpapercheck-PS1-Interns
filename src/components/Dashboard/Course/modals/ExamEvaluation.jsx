@@ -526,20 +526,13 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
 
   const handleViewRecheckRequest = (student) => {
-    // Navigate to the recheck view within the student interface
-    window.location.href = `/student/recheck-view/${examId}/${student.enrollment_id}`;
-    // Or if you're using React Router:
-    // navigate(`/student/recheck-view/${examId}/${student.enrollment_id}`);
+    window.location.href = `/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`;
   };
-  
-  // Fix the handleViewResults function
   const handleViewResults = (student) => {
     if (!hasEvaluationResults(student)) {
       showToast('No evaluation results available', 'warning');
       return;
     }
-    
-    // Always show the details view regardless of recheck status
     setDetailEnrollmentId(student.enrollment_id);
     setShowDetailView(true);
   };
@@ -730,7 +723,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Score</span>
-                <span className="font-medium text-gray-900">{student.marks_obtained}</span>
+                <span className="font-medium text-gray-900">{student.marks_obtained}/{student.max_marks || 100}</span>
               </div>
               <ProgressBar
                 value={student.marks_obtained}

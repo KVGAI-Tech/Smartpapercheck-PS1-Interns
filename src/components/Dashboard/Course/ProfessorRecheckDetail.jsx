@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -19,13 +19,18 @@ import {
   ChevronUp,
   ChevronDown,
   Layout,
-  MoveHorizontal
+  MoveHorizontal,
+  Link as LinkIcon,
+  Edit,
+  MessageSquare,
+  Trash2,
+  Info
 } from 'lucide-react';
 import { API_BASE_URL } from '../../../BaseURL';
 
 
 const Toast = ({ message, type, visible, onClose }) => {
-  useEffect(() => {
+  useEffect(() => {xq
     if (visible) {
       const timer = setTimeout(() => {
         onClose();
@@ -42,51 +47,62 @@ const Toast = ({ message, type, visible, onClose }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
       transition={{ type: "spring", stiffness: 400, damping: 40 }}
-      className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 
-        ${type === "success" ? "bg-blue-600" : "bg-red-500"} text-white`}
+      className={`fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 
+        ${type === "success" ? "bg-gradient-to-r from-blue-600 to-blue-700" : "bg-gradient-to-r from-red-500 to-red-600"} text-white`}
     >
       {type === "success" ? (
-        <CheckCircle size={20} />
+        <CheckCircle size={22} />
       ) : (
-        <AlertCircle size={20} />
+        <AlertCircle size={22} />
       )}
       <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 text-white/80 hover:text-white">
-        <X size={16} />
-      </button>
+      <motion.button 
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={onClose} 
+        className="ml-2 text-white/80 hover:text-white"
+      >
+        <X size={18} />
+      </motion.button>
     </motion.div>
   );
 };
+
 
 const StatusBadge = ({ status }) => {
   let bgColor, textColor, icon;
 
   switch (status.toLowerCase()) {
     case "approved":
-      bgColor = "bg-green-100";
+      bgColor = "bg-gradient-to-r from-green-100 to-green-50";
       textColor = "text-green-800";
       icon = <CheckCircle className="w-4 h-4" />;
       break;
     case "rejected":
-      bgColor = "bg-red-100";
+      bgColor = "bg-gradient-to-r from-red-100 to-red-50";
       textColor = "text-red-800";
       icon = <XCircle className="w-4 h-4" />;
       break;
     case "pending":
     default:
-      bgColor = "bg-yellow-100";
+      bgColor = "bg-gradient-to-r from-yellow-100 to-yellow-50";
       textColor = "text-yellow-800";
       icon = <AlertCircle className="w-4 h-4" />;
       break;
   }
 
   return (
-    <span className={`flex items-center gap-1 px-3 py-1.5 rounded-full ${bgColor} ${textColor}`}>
+    <motion.span 
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full ${bgColor} ${textColor} shadow-sm border border-white/20`}
+    >
       {icon}
       <span className="font-medium">{status.charAt(0).toUpperCase() + status.slice(1)}</span>
-    </span>
+    </motion.span>
   );
 };
+
 
 const PageViewer = ({
   url,
@@ -120,7 +136,7 @@ const PageViewer = ({
         <AlertCircle className="w-16 h-16 text-red-400 mb-4" />
         <h3 className="text-xl font-semibold mb-2">Unable to load image</h3>
         <p className="text-gray-300 mb-6 max-w-md">
-          The image could not be loaded.
+          The image could not be loaded. Please try refreshing the page.
         </p>
       </div>
     );
@@ -129,17 +145,23 @@ const PageViewer = ({
   return (
     <div className="relative flex items-center justify-center h-full w-full">
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-80 z-10">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-80 z-10"
+        >
           <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mb-4"></div>
-            <p className="text-white">Loading image...</p>
+            <div className="w-14 h-14 border-4 border-t-blue-500 border-blue-300/30 rounded-full animate-spin mb-4"></div>
+            <p className="text-white font-medium">Loading image...</p>
           </div>
-        </div>
+        </motion.div>
       )}
       
-      <div 
-        className="transition-transform duration-300 ease-out"
-        style={{ transform: `scale(${zoomLevel})` }}
+      <motion.div
+        className="transition-all duration-300 ease-out will-change-transform"
+        animate={{ scale: zoomLevel }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         {url ? (
           <img
@@ -162,37 +184,55 @@ const PageViewer = ({
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
       
-      <div className="absolute bottom-6 right-6 flex bg-gray-900 bg-opacity-80 p-2 rounded-full shadow-xl">
-        <button
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="absolute bottom-6 right-6 flex bg-gray-900/90 p-2 rounded-full shadow-xl backdrop-blur-sm"
+      >
+        <motion.button
+          whileHover={{ scale: 1.1, backgroundColor: "rgb(55, 65, 81)" }}
+          whileTap={{ scale: 0.9 }}
           onClick={onZoomOut}
-          className="p-2 text-gray-200 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
+          className="p-2.5 text-gray-200 hover:text-white rounded-full transition-all"
           title="Zoom out"
           disabled={zoomLevel <= 0.5}
         >
           <ZoomOut className="w-5 h-5" />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1, backgroundColor: "rgb(55, 65, 81)" }}
+          whileTap={{ scale: 0.9 }}
           onClick={onZoomReset}
-          className="p-2 text-gray-200 hover:text-white hover:bg-gray-700 rounded-full transition-colors mx-1"
+          className="p-2.5 text-gray-200 hover:text-white rounded-full transition-all mx-1"
           title="Reset zoom"
         >
           <RefreshCw className="w-5 h-5" />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1, backgroundColor: "rgb(55, 65, 81)" }}
+          whileTap={{ scale: 0.9 }}
           onClick={onZoomIn}
-          className="p-2 text-gray-200 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
+          className="p-2.5 text-gray-200 hover:text-white rounded-full transition-all"
           title="Zoom in"
           disabled={zoomLevel >= 3}
         >
           <ZoomIn className="w-5 h-5" />
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
       
       {totalPages > 1 && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 bg-opacity-80 px-4 py-2 rounded-full shadow-xl flex items-center gap-3">
-          <button
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900/90 px-5 py-2.5 rounded-full shadow-xl flex items-center gap-4 backdrop-blur-sm"
+        >
+          <motion.button
+            whileHover={{ scale: 1.1, x: -2 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => onPageChange(pageNumber - 1)}
             disabled={pageNumber <= 1}
             className={`p-1 rounded ${
@@ -201,12 +241,14 @@ const PageViewer = ({
                 : "text-gray-200 hover:text-white"
             }`}
           >
-            <ChevronLeft size={20} />
-          </button>
+            <ChevronLeft size={22} />
+          </motion.button>
           <span className="text-sm font-medium text-white">
             Page {pageNumber} of {totalPages}
           </span>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1, x: 2 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => onPageChange(pageNumber + 1)}
             disabled={pageNumber >= totalPages}
             className={`p-1 rounded ${
@@ -215,13 +257,14 @@ const PageViewer = ({
                 : "text-gray-200 hover:text-white"
             }`}
           >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+            <ChevronRight size={22} />
+          </motion.button>
+        </motion.div>
       )}
     </div>
   );
 };
+
 
 const AnnotationTool = ({ 
   onAnnotationChange, 
@@ -232,18 +275,18 @@ const AnnotationTool = ({
   questionMarks,
   onQuestionMarkUpdate
 }) => {
-  const [annotations, setAnnotations] = useState([
-    ...studentAnnotations
-  ]);
+  const [annotations, setAnnotations] = useState([...studentAnnotations]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentAnnotation, setCurrentAnnotation] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+  const [linkedStudentAnnotation, setLinkedStudentAnnotation] = useState(null);
   const [annotationMetadata, setAnnotationMetadata] = useState({
     questionNumber: 1,
     comment: "",
     newMark: 0,
     previousMark: 0,
+    linkedAnnotationId: null
   });
 
   const canvasRef = useRef(null);
@@ -275,6 +318,7 @@ const AnnotationTool = ({
         comment: "",
         newMark: 0,
         previousMark: 0,
+        linkedAnnotationId: null
       },
     });
 
@@ -307,21 +351,38 @@ const AnnotationTool = ({
       setSelectedAnnotation(currentAnnotation);
       
       
-      const qNum = 1; 
-      if (questionMarks && questionMarks[qNum]) {
+      const studentAnnos = annotations.filter(
+        a => a.createdBy === "student" && a.pageNumber === currentPage
+      );
+      
+      if (studentAnnos.length > 0) {
+        setLinkedStudentAnnotation(studentAnnos[0]);
         setAnnotationMetadata({
-          questionNumber: qNum,
+          questionNumber: studentAnnos[0].metadata.questionNumber,
           comment: "",
-          previousMark: questionMarks[qNum].originalMark,
-          newMark: questionMarks[qNum].newMark,
+          previousMark: studentAnnos[0].metadata.previousMark,
+          newMark: studentAnnos[0].metadata.newMark,
+          linkedAnnotationId: studentAnnos[0].id
         });
       } else {
-        setAnnotationMetadata({
-          questionNumber: qNum,
-          comment: "",
-          previousMark: 0,
-          newMark: 0,
-        });
+        const qNum = 1; 
+        if (questionMarks && questionMarks[qNum]) {
+          setAnnotationMetadata({
+            questionNumber: qNum,
+            comment: "",
+            previousMark: questionMarks[qNum].originalMark,
+            newMark: questionMarks[qNum].newMark,
+            linkedAnnotationId: null
+          });
+        } else {
+          setAnnotationMetadata({
+            questionNumber: qNum,
+            comment: "",
+            previousMark: 0,
+            newMark: 0,
+            linkedAnnotationId: null
+          });
+        }
       }
       
       setShowForm(true);
@@ -359,7 +420,9 @@ const AnnotationTool = ({
       comment: "",
       newMark: 0,
       previousMark: 0,
+      linkedAnnotationId: null
     });
+    setLinkedStudentAnnotation(null);
   };
 
   const removeAnnotation = (id) => {
@@ -401,17 +464,77 @@ const AnnotationTool = ({
   const handleAnnotationClick = (anno) => {
     
     if (anno.pageNumber !== currentPage) {
-      
       onSelectAnnotation(anno);
     }
+  };
+
+  const handleLinkAnnotation = (studentAnno) => {
+    setLinkedStudentAnnotation(studentAnno);
+    setAnnotationMetadata({
+      ...annotationMetadata,
+      questionNumber: studentAnno.metadata.questionNumber,
+      previousMark: studentAnno.metadata.previousMark,
+      newMark: studentAnno.metadata.newMark,
+      linkedAnnotationId: studentAnno.id
+    });
   };
 
   const currentPageAnnotations = annotations.filter(
     (anno) => anno.pageNumber === currentPage
   );
 
+  const getStudentAnnotations = () => {
+    return annotations.filter(anno => 
+      anno.createdBy === "student" && anno.pageNumber === currentPage
+    );
+  };
+
+  
+  const renderConnectionLines = () => {
+    const professorAnnos = currentPageAnnotations.filter(a => 
+      a.createdBy === "professor" && a.metadata.linkedAnnotationId
+    );
+    
+    return professorAnnos.map(profAnno => {
+      const studentAnno = annotations.find(a => a.id === profAnno.metadata.linkedAnnotationId);
+      if (!studentAnno || studentAnno.pageNumber !== currentPage) return null;
+      
+      const profCenter = {
+        x: (Math.min(profAnno.startX, profAnno.endX) + Math.max(profAnno.startX, profAnno.endX)) / 2,
+        y: (Math.min(profAnno.startY, profAnno.endY) + Math.max(profAnno.startY, profAnno.endY)) / 2
+      };
+      
+      const studentCenter = {
+        x: (Math.min(studentAnno.startX, studentAnno.endX) + Math.max(studentAnno.startX, studentAnno.endX)) / 2,
+        y: (Math.min(studentAnno.startY, studentAnno.endY) + Math.max(studentAnno.startY, studentAnno.endY)) / 2
+      };
+      
+      return (
+        <svg 
+          key={`connection-${profAnno.id}-${studentAnno.id}`}
+          className="absolute top-0 left-0 w-full h-full pointer-events-none"
+          style={{ zIndex: 5 }}
+        >
+          <line
+            x1={profCenter.x}
+            y1={profCenter.y}
+            x2={studentCenter.x}
+            y2={studentCenter.y}
+            stroke="rgba(220, 38, 38, 0.4)"
+            strokeWidth="2"
+            strokeDasharray="5,5"
+          />
+          <circle cx={profCenter.x} cy={profCenter.y} r="3" fill="rgb(220, 38, 38)" />
+          <circle cx={studentCenter.x} cy={studentCenter.y} r="3" fill="rgb(59, 130, 246)" />
+        </svg>
+      );
+    });
+  };
+
   return (
     <div className="relative w-full h-full">
+      {renderConnectionLines()}
+      
       <div
         ref={canvasRef}
         className="absolute inset-0 cursor-crosshair z-10"
@@ -425,14 +548,17 @@ const AnnotationTool = ({
           const top = Math.min(anno.startY, anno.endY);
           const width = Math.abs(anno.endX - anno.startX);
           const height = Math.abs(anno.endY - anno.startY);
+          
+          const isLinked = anno.createdBy === "professor" && 
+                          anno.metadata.linkedAnnotationId !== null;
 
           return (
             <motion.div
               key={anno.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2 }}
-              className="absolute border-2"
+              transition={{ duration: 0.3, type: "spring" }}
+              className={`absolute border-2 ${isLinked ? 'ring-2 ring-red-300/50' : ''}`}
               style={{
                 left: `${left}px`,
                 top: `${top}px`,
@@ -447,7 +573,7 @@ const AnnotationTool = ({
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className={`absolute -top-7 left-0 bg-white text-xs px-2 py-1 rounded shadow-sm border flex items-center gap-1 ${
+                className={`absolute -top-7 left-0 bg-white text-xs px-2 py-1.5 rounded-md shadow-md border flex items-center gap-1.5 ${
                   anno.createdBy === "professor" 
                     ? "border-red-100" 
                     : "border-blue-100"
@@ -457,7 +583,7 @@ const AnnotationTool = ({
                   anno.createdBy === "professor" 
                     ? "bg-red-500" 
                     : "bg-blue-500"
-                } text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold`}>
+                } text-white rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-bold`}>
                   {anno.metadata.questionNumber}
                 </span>
                 <span className={`font-medium ${
@@ -467,6 +593,10 @@ const AnnotationTool = ({
                 }`}>
                   {anno.createdBy === "professor" ? "Prof" : "Student"}
                 </span>
+                
+                {isLinked && (
+                  <LinkIcon size={12} className="text-red-500" />
+                )}
               </motion.div>
               
               {anno.createdBy === "professor" && (
@@ -480,7 +610,7 @@ const AnnotationTool = ({
                     e.stopPropagation();
                     removeAnnotation(anno.id);
                   }}
-                  className="absolute -top-6 -right-6 bg-white p-1 rounded-full shadow-sm text-red-500 hover:bg-red-50 border border-red-100 z-20"
+                  className="absolute -top-6 -right-6 bg-white p-1.5 rounded-full shadow-md text-red-500 hover:bg-red-50 border border-red-100 z-20"
                 >
                   <X size={12} />
                 </motion.button>
@@ -491,10 +621,8 @@ const AnnotationTool = ({
 
         {isDrawing && currentAnnotation && (
           <div
-            className="absolute border-2"
+            className="absolute border-2 bg-red-500/20 border-red-500"
             style={{
-              borderColor: currentAnnotation.borderColor,
-              backgroundColor: currentAnnotation.color,
               left: `${Math.min(
                 currentAnnotation.startX,
                 currentAnnotation.endX
@@ -521,11 +649,11 @@ const AnnotationTool = ({
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ type: "spring", damping: 20 }}
-            className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-20 w-80 border border-red-100"
+            className="absolute top-4 right-4 bg-white rounded-xl shadow-2xl p-5 z-20 w-96 border border-red-100"
           >
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                <div className="h-5 w-5 rounded-full flex items-center justify-center text-white text-xs font-bold bg-red-500">
+                <div className="h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold bg-red-500">
                   {annotations.filter(a => a.createdBy === "professor").length + 1}
                 </div>
                 <span>New Professor Annotation</span>
@@ -540,9 +668,48 @@ const AnnotationTool = ({
               </motion.button>
             </div>
 
+            {}
+            {getStudentAnnotations().length > 0 && (
+              <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-100">
+                <h4 className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-1.5">
+                  <LinkIcon size={14} />
+                  Link to Student Annotation
+                </h4>
+                
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {getStudentAnnotations().map(studentAnno => (
+                    <div 
+                      key={studentAnno.id}
+                      onClick={() => handleLinkAnnotation(studentAnno)}
+                      className={`p-2 rounded-md cursor-pointer text-xs flex items-start gap-2 
+                        ${linkedStudentAnnotation?.id === studentAnno.id 
+                          ? 'bg-blue-100 border border-blue-200' 
+                          : 'bg-white border border-blue-100 hover:bg-blue-50'}`}
+                    >
+                      <div className="h-5 w-5 flex-shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                        {studentAnno.metadata.questionNumber}
+                      </div>
+                      <div className="flex-1">
+                        <p className="line-clamp-1 font-medium text-gray-700">
+                          {studentAnno.metadata.comment}
+                        </p>
+                        <div className="flex justify-between mt-1 text-gray-500">
+                          <span>Current: {studentAnno.metadata.previousMark}</span>
+                          <span className="text-blue-600">Expected: {studentAnno.metadata.newMark}</span>
+                        </div>
+                      </div>
+                      {linkedStudentAnnotation?.id === studentAnno.id && (
+                        <CheckCircle size={14} className="text-blue-600 flex-shrink-0 mt-1" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Question Number
                 </label>
                 <select
@@ -556,7 +723,7 @@ const AnnotationTool = ({
                       newMark: questionMarks[qNum]?.newMark || 0
                     });
                   }}
-                  className="w-full p-2.5 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
+                  className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
                 >
                   {Object.keys(maxMarks).filter(k => k !== 'total').map((num) => (
                     <option key={num} value={num}>
@@ -567,7 +734,7 @@ const AnnotationTool = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Professor Comments
                 </label>
                 <textarea
@@ -578,16 +745,16 @@ const AnnotationTool = ({
                       comment: e.target.value,
                     })
                   }
-                  className="w-full p-2.5 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
+                  className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
                   rows={3}
                   placeholder="Add your assessment comments..."
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Original Mark
                   </label>
                   <input
@@ -599,7 +766,7 @@ const AnnotationTool = ({
                         previousMark: parseFloat(e.target.value) || 0,
                       })
                     }
-                    className="w-full p-2.5 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
+                    className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
                     min="0"
                     max={maxMarks[annotationMetadata.questionNumber]}
                     step="0.5"
@@ -608,7 +775,7 @@ const AnnotationTool = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     New Mark
                   </label>
                   <input
@@ -620,7 +787,7 @@ const AnnotationTool = ({
                         newMark: parseFloat(e.target.value) || 0,
                       })
                     }
-                    className="w-full p-2.5 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
+                    className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
                     min="0"
                     max={maxMarks[annotationMetadata.questionNumber]}
                     step="0.5"
@@ -629,9 +796,9 @@ const AnnotationTool = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-red-50">
+              <div className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-red-50">
                 <div className="text-xs text-gray-600">Page {currentPage}</div>
-                <div className="text-xs text-red-700">
+                <div className="text-xs text-red-700 font-medium">
                   Professor Annotation
                 </div>
               </div>
@@ -639,14 +806,14 @@ const AnnotationTool = ({
               <div className="flex justify-end pt-2">
                 <motion.button
                   whileHover={{
-                    scale: 1.05,
+                    scale: 1.03,
                     boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
                   }}
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.97 }}
                   type="submit"
-                  className="px-4 py-2 text-white rounded-lg flex items-center gap-2 shadow-sm bg-red-600 hover:bg-red-700"
+                  className="px-5 py-2.5 text-white rounded-lg flex items-center gap-2 shadow-sm bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
                 >
-                  <Save size={16} />
+                  <Save size={18} />
                   Save Annotation
                 </motion.button>
               </div>
@@ -679,55 +846,88 @@ const QuestionMarksEditor = ({
     onQuestionMarkChange(questionNum, field, value);
   };
 
+  
+  const improvementPercentage = totalOriginalMarks > 0 
+    ? ((totalNewMarks - totalOriginalMarks) / totalOriginalMarks) * 100 
+    : 0;
+
   return (
     <div className="space-y-4">
-      <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="p-4 bg-gradient-to-r from-blue-50 to-blue-100/70 rounded-xl border border-blue-200 shadow-sm"
+      >
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-gray-700">Total Assessment</span>
-          <div className="px-2 py-1 bg-white rounded border border-blue-200 text-sm">
-            <span className="font-medium text-gray-600">{totalNewMarks}</span>
-            <span className="text-gray-400 mx-1">/</span>
+          <div className="px-3 py-1.5 bg-white rounded-lg border border-blue-200 text-sm font-medium">
+            <span className="text-blue-700">{totalNewMarks}</span>
+            <span className="text-gray-400 mx-1.5">/</span>
             <span className="text-gray-500">{maxMarks.total}</span>
           </div>
         </div>
-        <div className="flex justify-between mt-2">
-          <span className="text-xs text-gray-500">Original Total</span>
-          <span className="text-xs font-medium">{totalOriginalMarks}</span>
+        
+        <div className="mt-3 pt-3 border-t border-blue-200/50">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium text-gray-600">Original Total</span>
+            <span className="text-xs font-medium">{totalOriginalMarks}</span>
+          </div>
+          
+          <div className="flex justify-between items-center mt-1.5">
+            <span className="text-xs font-medium text-gray-600">Adjustment</span>
+            <span className={`text-xs font-medium ${
+              totalNewMarks > totalOriginalMarks 
+                ? 'text-green-600' 
+                : totalNewMarks < totalOriginalMarks 
+                  ? 'text-red-600' 
+                  : 'text-gray-600'
+            }`}>
+              {totalNewMarks > totalOriginalMarks ? '+' : ''}
+              {(totalNewMarks - totalOriginalMarks).toFixed(1)}
+              {totalOriginalMarks > 0 && (
+                <span className="ml-1 text-gray-500">
+                  ({improvementPercentage > 0 ? '+' : ''}{improvementPercentage.toFixed(1)}%)
+                </span>
+              )}
+            </span>
+          </div>
+          
+          {}
+          <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-blue-500 rounded-full"
+              style={{ width: `${(totalNewMarks / maxMarks.total) * 100}%` }}
+            ></div>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span className="text-xs text-gray-500">Adjustment</span>
-          <span className={`text-xs font-medium ${
-            totalNewMarks > totalOriginalMarks 
-              ? 'text-green-600' 
-              : totalNewMarks < totalOriginalMarks 
-                ? 'text-red-600' 
-                : 'text-gray-600'
-          }`}>
-            {totalNewMarks > totalOriginalMarks ? '+' : ''}
-            {(totalNewMarks - totalOriginalMarks).toFixed(1)}
-          </span>
-        </div>
-      </div>
+      </motion.div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {Object.keys(maxMarks)
           .filter(key => key !== 'total')
           .map(questionNum => {
             const isExpanded = expandedQuestions[questionNum] || false;
             const qMarks = questionMarks[questionNum] || { originalMark: 0, newMark: 0 };
             const qMaxMarks = maxMarks[questionNum];
+            const percentChange = qMarks.originalMark > 0 
+              ? ((qMarks.newMark - qMarks.originalMark) / qMarks.originalMark) * 100 
+              : 0;
             
             return (
-              <div 
-                key={questionNum} 
-                className="border rounded-lg overflow-hidden bg-white"
+              <motion.div 
+                key={questionNum}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: parseInt(questionNum) * 0.05 }}
+                className="border rounded-lg overflow-hidden bg-white shadow-sm"
               >
                 <div 
-                  className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-50"
+                  className="flex justify-between items-center p-3.5 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => toggleQuestion(questionNum)}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full flex items-center justify-center bg-gray-100 text-gray-700 text-xs font-bold">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-700 text-xs font-bold">
                       {questionNum}
                     </div>
                     <span className="font-medium text-gray-800">Question {questionNum}</span>
@@ -735,7 +935,7 @@ const QuestionMarksEditor = ({
                   
                   <div className="flex items-center gap-3">
                     <div className="flex items-center">
-                      <span className={`text-sm ${
+                      <span className={`text-sm font-medium ${
                         qMarks.newMark > qMarks.originalMark 
                           ? 'text-green-600' 
                           : qMarks.newMark < qMarks.originalMark 
@@ -747,66 +947,103 @@ const QuestionMarksEditor = ({
                       <span className="text-gray-400 mx-1">/</span>
                       <span className="text-gray-500 text-sm">{qMaxMarks}</span>
                     </div>
-                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    <motion.div
+                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDown size={18} className="text-gray-500" />
+                    </motion.div>
                   </div>
                 </div>
                 
-                {isExpanded && (
-                  <div className="p-3 border-t border-gray-100 bg-gray-50">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Original Mark
-                        </label>
-                        <input
-                          type="number"
-                          value={qMarks.originalMark}
-                          onChange={(e) => handleMarkChange(questionNum, 'originalMark', parseFloat(e.target.value) || 0)}
-                          className="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          min="0"
-                          max={qMaxMarks}
-                          step="0.5"
-                        />
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 border-t border-gray-100 bg-gray-50">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                              Original Mark
+                            </label>
+                            <input
+                              type="number"
+                              value={qMarks.originalMark}
+                              onChange={(e) => handleMarkChange(questionNum, 'originalMark', parseFloat(e.target.value) || 0)}
+                              className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              min="0"
+                              max={qMaxMarks}
+                              step="0.5"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                              New Mark
+                            </label>
+                            <input
+                              type="number"
+                              value={qMarks.newMark}
+                              onChange={(e) => handleMarkChange(questionNum, 'newMark', parseFloat(e.target.value) || 0)}
+                              className={`w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                qMarks.newMark > qMarks.originalMark 
+                                  ? 'bg-green-50 border-green-200' 
+                                  : qMarks.newMark < qMarks.originalMark 
+                                    ? 'bg-red-50 border-red-200' 
+                                    : ''
+                              }`}
+                              min="0"
+                              max={qMaxMarks}
+                              step="0.5"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 pt-3 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-600">Adjustment</span>
+                            <span className={`text-xs font-medium ${
+                              qMarks.newMark > qMarks.originalMark 
+                                ? 'text-green-600' 
+                                : qMarks.newMark < qMarks.originalMark 
+                                  ? 'text-red-600' 
+                                  : 'text-gray-600'
+                            }`}>
+                              {qMarks.newMark > qMarks.originalMark ? '+' : ''}
+                              {(qMarks.newMark - qMarks.originalMark).toFixed(1)}
+                              
+                              {qMarks.originalMark > 0 && qMarks.newMark !== qMarks.originalMark && (
+                                <span className="ml-1 text-gray-500">
+                                  ({percentChange > 0 ? '+' : ''}{percentChange.toFixed(1)}%)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          
+                          {}
+                          <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${
+                                qMarks.newMark > qMarks.originalMark 
+                                  ? 'bg-green-500' 
+                                  : qMarks.newMark < qMarks.originalMark 
+                                    ? 'bg-red-500' 
+                                    : 'bg-blue-500'
+                              }`}
+                              style={{ width: `${(qMarks.newMark / qMaxMarks) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
                       </div>
-                      
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          New Mark
-                        </label>
-                        <input
-                          type="number"
-                          value={qMarks.newMark}
-                          onChange={(e) => handleMarkChange(questionNum, 'newMark', parseFloat(e.target.value) || 0)}
-                          className={`w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            qMarks.newMark > qMarks.originalMark 
-                              ? 'bg-green-50 border-green-200' 
-                              : qMarks.newMark < qMarks.originalMark 
-                                ? 'bg-red-50 border-red-200' 
-                                : ''
-                          }`}
-                          min="0"
-                          max={qMaxMarks}
-                          step="0.5"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between mt-3">
-                      <span className="text-xs text-gray-500">Adjustment</span>
-                      <span className={`text-xs font-medium ${
-                        qMarks.newMark > qMarks.originalMark 
-                          ? 'text-green-600' 
-                          : qMarks.newMark < qMarks.originalMark 
-                            ? 'text-red-600' 
-                            : 'text-gray-600'
-                      }`}>
-                        {qMarks.newMark > qMarks.originalMark ? '+' : ''}
-                        {(qMarks.newMark - qMarks.originalMark).toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             );
           })}
       </div>
@@ -819,15 +1056,15 @@ const SidebarTabs = ({ activeTab, setActiveTab }) => {
   return (
     <div className="flex border-b border-gray-200">
       <button
-        className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+        className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
           activeTab === 'annotations' 
             ? 'text-blue-600' 
             : 'text-gray-500 hover:text-gray-700'
         }`}
         onClick={() => setActiveTab('annotations')}
       >
-        <span className="flex items-center justify-center gap-1.5">
-          <ClipboardList size={16} />
+        <span className="flex items-center justify-center gap-2">
+          <ClipboardList size={18} />
           <span>Annotations</span>
         </span>
         {activeTab === 'annotations' && (
@@ -839,15 +1076,15 @@ const SidebarTabs = ({ activeTab, setActiveTab }) => {
       </button>
 
       <button
-        className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+        className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
           activeTab === 'assessment' 
             ? 'text-blue-600' 
             : 'text-gray-500 hover:text-gray-700'
         }`}
         onClick={() => setActiveTab('assessment')}
       >
-        <span className="flex items-center justify-center gap-1.5">
-          <BarChart size={16} />
+        <span className="flex items-center justify-center gap-2">
+          <BarChart size={18} />
           <span>Assessment</span>
         </span>
         {activeTab === 'assessment' && (
@@ -876,15 +1113,17 @@ const ProfessorRecheckDetail = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestComplete, setRequestComplete] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState(null);
-  const [sidebarWidth, setSidebarWidth] = useState(320); 
+  const [sidebarWidth, setSidebarWidth] = useState(window.innerWidth * 0.5); 
   const [resizing, setResizing] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('annotations');
   const [questionMarks, setQuestionMarks] = useState({});
   const [maxMarks, setMaxMarks] = useState({ total: 10 });
   const [totalOriginalMarks, setTotalOriginalMarks] = useState(0);
   const [totalNewMarks, setTotalNewMarks] = useState(0);
+  const [professorFeedback, setProfessorFeedback] = useState('');
   const resizeStartX = useRef(0);
   const startWidth = useRef(0);
+  const containerRef = useRef(null);
   const [toast, setToast] = useState({
     visible: false,
     message: "",
@@ -893,10 +1132,22 @@ const ProfessorRecheckDetail = () => {
 
   
   useEffect(() => {
+    const handleResize = () => {
+      
+      if (!resizing) {
+        setSidebarWidth(Math.min(window.innerWidth * 0.5, 600));
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [resizing]);
+  
+  
+  useEffect(() => {
     const fetchRequestData = async () => {
       setLoading(true);
       try {
-        
         
         const mockData = {
           id: requestId || "req1",
@@ -1007,10 +1258,14 @@ const ProfessorRecheckDetail = () => {
     const handleMouseMove = (e) => {
       if (!resizing) return;
       
+      const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
       const newWidth = startWidth.current + (e.clientX - resizeStartX.current);
       
       
-      if (newWidth >= 280 && newWidth <= 600) {
+      const minWidth = Math.max(320, containerWidth * 0.2);
+      const maxWidth = containerWidth * 0.8;
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
         setSidebarWidth(newWidth);
       }
     };
@@ -1142,14 +1397,31 @@ const ProfessorRecheckDetail = () => {
   };
 
   const handleGoBack = () => {
-    navigate(`/courses/${courseId}`);
+    navigate(`/courses`);
   };
 
   const handleSubmitResponse = async () => {
+    if (!decision) {
+      showToast("Please select a decision (Approve or Reject)", "error");
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
       
+      const payload = {
+        requestId,
+        courseId,
+        decision,
+        feedback: professorFeedback,
+        questionMarks,
+        annotations: annotations.filter(a => a.createdBy === "professor"),
+        totalMarks: totalNewMarks,
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log("Submitting professor recheck response:", payload);
       
       
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -1183,16 +1455,33 @@ const ProfessorRecheckDetail = () => {
     
     setPageNumber(annotation.pageNumber);
     setSelectedAnnotationId(annotation.id);
+
+    
+    setTimeout(() => {
+      setSelectedAnnotationId(null);
+    }, 1500);
   };
+
+  
+  const resetSidebarWidth = useCallback(() => {
+    const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
+    setSidebarWidth(containerWidth * 0.5);
+  }, []);
 
   if (loading) {
     return (
       <div className="fixed inset-0 bg-gray-50 z-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin mb-4"></div>
-          <h3 className="text-xl font-medium text-gray-900 mb-2">Loading request</h3>
-          <p className="text-gray-500">Please wait while we fetch the recheck request...</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+<div className="flex flex-col items-center justify-center">
+  <div className="w-20 h-20 border-4 border-t-blue-500 border-blue-200/30 rounded-full animate-spin mb-6"></div>
+  <h3 className="text-2xl font-medium text-gray-900 mb-6">Loading request</h3>
+  <p className="text-gray-500">Please wait while we fetch the recheck request...</p>
+</div>
+        </motion.div>
       </div>
     );
   }
@@ -1201,32 +1490,102 @@ const ProfessorRecheckDetail = () => {
     return (
       <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
         <div className="text-center max-w-md px-6">
-          <div className="inline-block bg-red-100 p-6 rounded-full mb-6">
-            <AlertCircle className="w-12 h-12 text-red-500" />
-          </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-3">Error Loading Request</h2>
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring" }}
+            className="inline-block bg-red-100 p-8 rounded-full mb-8"
+          >
+            <AlertCircle className="w-16 h-16 text-red-500" />
+          </motion.div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Error Loading Request</h2>
           <p className="text-gray-600 mb-8">{error}</p>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleGoBack}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700"
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all"
           >
             Go Back
-          </button>
+          </motion.button>
+        </div>
+      </div>
+    );
+  }
+
+  
+  if (requestComplete) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <header className="bg-white shadow-sm p-4 border-b">
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleGoBack}
+                className="p-2 rounded-full hover:bg-gray-100"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </motion.button>
+              <h1 className="text-xl font-bold text-gray-900">
+                Recheck Request Complete
+              </h1>
+            </div>
+            <StatusBadge status={decision === "approved" || decision === "partial" ? "approved" : "rejected"} />
+          </div>
+        </header>
+        
+        <div className="flex-1 flex items-center justify-center p-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-md bg-white rounded-2xl shadow-xl p-8 text-center"
+          >
+            <div className="inline-block p-6 rounded-full bg-blue-50 mb-6">
+              {decision === "approved" || decision === "partial" ? (
+                <CheckCircle className="w-16 h-16 text-green-500" />
+              ) : (
+                <XCircle className="w-16 h-16 text-red-500" />
+              )}
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+              Request {decision === "approved" || decision === "partial" ? "Approved" : "Rejected"}
+            </h2>
+            
+            <p className="text-gray-600 mb-6">
+              You have {decision === "approved" || decision === "partial" ? "approved" : "rejected"} the recheck request for {requestData?.studentName}. 
+              {decision === "approved" || decision === "partial" 
+                ? ` The student's mark has been updated from ${totalOriginalMarks} to ${totalNewMarks}.`
+                : " No changes have been made to the student's marks."}
+            </p>
+            
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleGoBack}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all w-full"
+            >
+              Return to Course
+            </motion.button>
+          </motion.div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm p-4 border-b">
-        <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <div className="min-h-screen bg-gray-50 flex flex-col" ref={containerRef}>
+      <header className="bg-white shadow-md p-4 border-b sticky top-0 z-40">
+        <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleGoBack}
               className="p-2 rounded-full hover:bg-gray-100"
+              aria-label="Go back"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </motion.button>
@@ -1245,11 +1604,14 @@ const ProfessorRecheckDetail = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium shadow-sm"
+              >
                 {requestData?.studentName.charAt(0)}
-              </div>
+              </motion.div>
               <div className="text-sm">
                 <div className="font-medium text-gray-900">{requestData?.studentName}</div>
                 <div className="text-gray-500">{requestData?.studentId}</div>
@@ -1262,7 +1624,7 @@ const ProfessorRecheckDetail = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700"
+              className="px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-200 shadow-sm"
             >
               Professor Mode
             </motion.div>
@@ -1270,32 +1632,52 @@ const ProfessorRecheckDetail = () => {
         </div>
       </header>
 
-      <div className="flex-1 flex">
-        <div 
-          className="bg-white border-r border-gray-200 overflow-hidden flex flex-col"
-          style={{ width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px` }}
+      <div className="flex-1 flex overflow-hidden">
+        <motion.div 
+          layout
+          className="bg-white border-r border-gray-200 overflow-hidden flex flex-col shadow-md z-30"
+          style={{ 
+            width: `${sidebarWidth}px`,
+            minWidth: `${sidebarWidth}px`,
+            transition: resizing ? 'none' : 'width 0.3s ease-in-out'
+          }}
+          animate={{ width: sidebarWidth }}
         >
           <SidebarTabs activeTab={sidebarTab} setActiveTab={setSidebarTab} />
 
-          <div className="overflow-auto flex-1 p-4">
+          <div className="overflow-auto flex-1 p-5">
             {sidebarTab === 'annotations' && (
-              <div className="space-y-4">
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Request Overview</h2>
+              <div className="space-y-5">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="mb-4"
+                >
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">Request Overview</h2>
                   <div className="space-y-3">
                     <div>
-                      <h3 className="text-sm text-gray-500 mb-1">Reason</h3>
-                      <div className="bg-gray-50 rounded-lg p-3 text-gray-700 border border-gray-100 text-sm">
+                      <h3 className="text-sm text-gray-500 mb-1.5">Student's Reason</h3>
+                      <div className="bg-gray-50 rounded-lg p-4 text-gray-700 border border-gray-100 text-sm shadow-sm">
                         {requestData?.reason}
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
 
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-3">Student Annotations</h2>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-semibold text-gray-900">Student Annotations</h2>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      {annotations.filter(a => a.createdBy === "student").length}
+                    </span>
+                  </div>
                   
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2.5 max-h-48 overflow-y-auto pr-2">
                     {annotations.filter(a => a.createdBy === "student").length > 0 ? (
                       annotations
                         .filter(a => a.createdBy === "student")
@@ -1304,7 +1686,7 @@ const ProfessorRecheckDetail = () => {
                             key={anno.id}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className={`p-3 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
+                            className={`p-3.5 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
                               selectedAnnotationId === anno.id 
                                 ? "border-blue-400 ring-2 ring-blue-200" 
                                 : "border-blue-200 hover:border-blue-300"
@@ -1320,14 +1702,14 @@ const ProfessorRecheckDetail = () => {
                                   Student
                                 </div>
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
                                 Page {anno.pageNumber}
                               </div>
                             </div>
-                            <p className="text-xs text-gray-600 mt-1.5 line-clamp-2">
+                            <p className="text-xs text-gray-600 mt-2 line-clamp-2">
                               {anno.metadata.comment}
                             </p>
-                            <div className="flex justify-between text-xs mt-1.5 text-gray-500">
+                            <div className="flex justify-between text-xs mt-2 text-gray-500">
                               <span>Current: {anno.metadata.previousMark}</span>
                               <span className="text-green-600 font-medium">
                                 Expected: {anno.metadata.newMark}
@@ -1336,101 +1718,145 @@ const ProfessorRecheckDetail = () => {
                           </motion.div>
                         ))
                     ) : (
-                      <div className="text-center p-4 bg-gray-50 rounded-lg text-gray-500 text-sm">
+                      <div className="text-center p-6 bg-gray-50 rounded-lg text-gray-500 text-sm border border-gray-100">
+                        <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
                         No student annotations found
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
 
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-3">Professor Annotations</h2>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-semibold text-gray-900">Professor Annotations</h2>
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                      {annotations.filter(a => a.createdBy === "professor").length}
+                    </span>
+                  </div>
                   
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-2">
                     {annotations.filter(a => a.createdBy === "professor").length > 0 ? (
                       annotations
                         .filter(a => a.createdBy === "professor")
-                        .map((anno) => (
-                          <motion.div
-                            key={anno.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`p-3 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
-                              selectedAnnotationId === anno.id 
-                                ? "border-red-400 ring-2 ring-red-200" 
-                                : "border-red-200 hover:border-red-300"
-                            }`}
-                            onClick={() => handleSelectAnnotation(anno)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-1.5">
-                                <div className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold bg-red-100 text-red-600">
-                                  {anno.metadata.questionNumber}
+                        .map((anno) => {
+                          const linkedAnnotation = anno.metadata.linkedAnnotationId 
+                            ? annotations.find(a => a.id === anno.metadata.linkedAnnotationId)
+                            : null;
+                          
+                          return (
+                            <motion.div
+                              key={anno.id}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className={`p-3.5 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
+                                selectedAnnotationId === anno.id 
+                                  ? "border-red-400 ring-2 ring-red-200" 
+                                  : "border-red-200 hover:border-red-300"
+                              }`}
+                              onClick={() => handleSelectAnnotation(anno)}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold bg-red-100 text-red-600">
+                                    {anno.metadata.questionNumber}
+                                  </div>
+                                  <div className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-red-50 text-red-700">
+                                    Professor
+                                  </div>
                                 </div>
-                                <div className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-red-50 text-red-700">
-                                  Professor
+                                <div className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                                  Page {anno.pageNumber}
                                 </div>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                Page {anno.pageNumber}
+                              <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                                {anno.metadata.comment}
+                              </p>
+                              
+                              {linkedAnnotation && (
+                                <div className="mt-2 p-2 bg-blue-50/50 rounded-md border border-blue-100 text-xs flex items-start gap-1.5">
+                                  <LinkIcon size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <span className="font-medium text-blue-700">Linked to student annotation:</span>
+                                    <p className="text-gray-600 mt-0.5 line-clamp-1">
+                                      {linkedAnnotation.metadata.comment}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between text-xs mt-2 text-gray-500">
+                                <span>Original: {anno.metadata.previousMark}</span>
+                                <span className={`font-medium ${
+                                  anno.metadata.newMark > anno.metadata.previousMark 
+                                    ? "text-green-600" 
+                                    : "text-red-600"
+                                }`}>
+                                  New: {anno.metadata.newMark}
+                                </span>
                               </div>
-                            </div>
-                            <p className="text-xs text-gray-600 mt-1.5 line-clamp-2">
-                              {anno.metadata.comment}
-                            </p>
-                            <div className="flex justify-between text-xs mt-1.5 text-gray-500">
-                              <span>Original: {anno.metadata.previousMark}</span>
-                              <span className={`font-medium ${
-                                anno.metadata.newMark > anno.metadata.previousMark 
-                                  ? "text-green-600" 
-                                  : "text-red-600"
-                              }`}>
-                                New: {anno.metadata.newMark}
-                              </span>
-                            </div>
-                          </motion.div>
-                        ))
+                            </motion.div>
+                          );
+                        })
                     ) : (
-                      <div className="text-center p-4 bg-gray-50 rounded-lg text-gray-500 text-sm">
+                      <div className="text-center p-6 bg-gray-50 rounded-lg text-gray-500 text-sm border border-gray-100">
+                        <Edit className="w-10 h-10 mx-auto mb-2 text-gray-300" />
                         No professor annotations yet
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               </div>
             )}
 
             {sidebarTab === 'assessment' && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Mark Assessment</h2>
+              <div className="space-y-5">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <BarChart size={18} className="text-blue-500" />
+                    Mark Assessment
+                  </h2>
+                  
+                  <QuestionMarksEditor
+                    questionMarks={questionMarks}
+                    maxMarks={maxMarks}
+                    onQuestionMarkChange={handleQuestionMarkChange}
+                    totalOriginalMarks={totalOriginalMarks}
+                    totalNewMarks={totalNewMarks}
+                  />
+                </motion.div>
                 
-                <QuestionMarksEditor
-                  questionMarks={questionMarks}
-                  maxMarks={maxMarks}
-                  onQuestionMarkChange={handleQuestionMarkChange}
-                  totalOriginalMarks={totalOriginalMarks}
-                  totalNewMarks={totalNewMarks}
-                />
-                
-                <div className="space-y-3 pt-4 border-t border-gray-200 mt-4">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-4 pt-5 border-t border-gray-200 mt-5"
+                >
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                      <MessageSquare size={16} className="text-gray-500" />
                       Decision
                     </label>
-                    <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         type="button"
                         onClick={() => setDecision("approved")}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border ${
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border shadow-sm ${
                           decision === "approved"
-                            ? "bg-green-50 border-green-300 text-green-700"
+                            ? "bg-gradient-to-r from-green-50 to-green-100 border-green-300 text-green-700"
                             : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                         }`}
                       >
-                        <CheckCircle size={16} />
-                        <span>Approve</span>
+                        <CheckCircle size={18} />
+                        <span className="font-medium">Approve</span>
                       </motion.button>
                       
                       <motion.button
@@ -1438,85 +1864,88 @@ const ProfessorRecheckDetail = () => {
                         whileTap={{ scale: 0.98 }}
                         type="button"
                         onClick={() => setDecision("rejected")}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border ${
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border shadow-sm ${
                           decision === "rejected"
-                            ? "bg-red-50 border-red-300 text-red-700"
+                            ? "bg-gradient-to-r from-red-50 to-red-100 border-red-300 text-red-700"
                             : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                         }`}
                       >
-                        <XCircle size={16} />
-                        <span>Reject</span>
+                        <XCircle size={18} />
+                        <span className="font-medium">Reject</span>
                       </motion.button>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                      <MessageSquare size={16} className="text-gray-500" />
                       Response to Student
                     </label>
                     <textarea
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      rows={3}
+                      value={professorFeedback}
+                      onChange={(e) => setProfessorFeedback(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
                       placeholder="Provide feedback on the recheck request..."
                     ></textarea>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-3">
                     <motion.button
-                      whileHover={{ scale: 1.03, boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)" }}
-                      whileTap={{ scale: 0.97 }}
+                      whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)" }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={handleSubmitResponse}
                       disabled={!decision || isSubmitting}
-                      className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
-                        disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                      className="w-full px-4 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 
+                        disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md"
                     >
                       {isSubmitting ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                           <span>Submitting...</span>
                         </>
                       ) : (
                         <>
                           <Save size={18} />
-                          <span>Submit Response</span>
+                          <span className="font-medium">Submit Response</span>
                         </>
                       )}
                     </motion.button>
                   </div>
-                </div>
+                </motion.div>
               </div>
             )}
           </div>
           
-          <div className="p-3 border-t border-gray-200 bg-gray-50">
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-between items-center">
-              <button 
-                className="text-xs text-gray-500 flex items-center gap-1 hover:text-blue-600 transition-colors"
-                onClick={() => {
-                  
-                  setSidebarWidth(320);
-                }}
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="text-xs text-gray-500 flex items-center gap-1.5 hover:text-blue-600 transition-colors px-3 py-1.5 bg-white rounded-md border border-gray-200 shadow-sm"
+                onClick={resetSidebarWidth}
               >
                 <Layout size={14} />
-                Reset size
-              </button>
+                Reset layout
+              </motion.button>
               
-              <span className="text-xs text-gray-500">{sidebarWidth}px</span>
+              <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
+                {Math.round(sidebarWidth)}px
+              </span>
             </div>
           </div>
-        </div>
+        </motion.div>
         
-        <div 
-          className="w-1 bg-gray-200 hover:bg-blue-400 cursor-ew-resize flex items-center justify-center transition-colors"
+        <motion.div 
+          className="w-2 bg-gray-200 hover:bg-blue-400 cursor-ew-resize flex items-center justify-center transition-colors relative z-30"
           onMouseDown={startResize}
         >
-          <div className="h-16 flex items-center justify-center">
-            <MoveHorizontal size={12} className="text-gray-400" />
+          <div className="h-20 flex items-center justify-center">
+            <MoveHorizontal size={16} className="text-gray-400" />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="flex-1 h-[calc(100vh-80px)] relative bg-gray-100">
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 flex items-center justify-between">
+        <motion.div layout className="flex-1 h-[calc(100vh-73px)] relative bg-gray-100">
+          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-4 flex items-center justify-between sticky top-0 z-20 shadow-md">
             <h2 className="text-sm font-medium flex items-center">
               <FileText className="w-4 h-4 mr-2" />
               Student Answer Sheet
@@ -1527,19 +1956,20 @@ const ProfessorRecheckDetail = () => {
               )}
             </h2>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 }}
-                className="text-xs px-2 py-1 rounded-full bg-red-700 text-white"
+                transition={{ delay: 0.2 }}
+                className="text-xs px-3 py-1.5 rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white flex items-center gap-1.5 shadow-md"
               >
-                Draw to Annotate
+                <Edit size={12} />
+                <span>Draw to Annotate</span>
               </motion.div>
             </div>
           </div>
           
-          <div className="relative h-full bg-gray-800">
+          <div className="relative h-[calc(100%-56px)] bg-gray-800">
             <PageViewer
               url="/api/placeholder/800/1200"
               zoomLevel={zoomLevel}
@@ -1563,7 +1993,7 @@ const ProfessorRecheckDetail = () => {
               />
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <AnimatePresence>
