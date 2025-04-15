@@ -10,7 +10,6 @@ import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
 import { API_BASE_URL } from '../../../../BaseURL';
 const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
-import ProfessorRecheckRequests from '../ProfessorRecheckRequests';
 const Toast = ({ message, type, show, onClose }) => {
   useEffect(() => {
     if (show) {
@@ -323,15 +322,7 @@ const ExamCard = ({
   onStartEvaluation,
 }) => {
   const [activeStep, setActiveStep] = useState(0);
-  
-  
-  useEffect(() => {
     
-    
-    const randomCount = Math.floor(Math.random() * 5); 
-    setRecheckCount(randomCount);
-  }, [exam.id]);
-  
   const steps = [
     { 
       label: 'Upload Q&A', 
