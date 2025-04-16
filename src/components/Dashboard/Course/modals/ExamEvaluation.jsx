@@ -1,76 +1,56 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { 
-  Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader, 
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import {
+  Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader,
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
-  BarChart, ChevronRight, PieChart, RefreshCw, List, BarChart2,
-  BookOpen, Calendar, User, Sparkles, Star, Download, Share
+  BarChart, RefreshCw, List, BarChart2, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
+import { Link } from 'react-router-dom';
 
 
-const StudentEvaluationLoader = lazy(() => import('./StudentEvaluationLoader'));
+const StudentEvaluationLoader = React.lazy(() => import('./StudentEvaluationLoader'));
 
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.4, ease: "easeOut" }
-  }
-};
-
-const pulse = {
-  initial: { scale: 1 },
-  animate: { 
-    scale: [1, 1.03, 1],
-    transition: { duration: 2, repeat: Infinity }
-  }
-};
-
-const shimmer = {
-  initial: { backgroundPosition: "-500px 0" },
-  animate: { 
-    backgroundPosition: ["500px 0", "-500px 0"],
-    transition: { 
-      repeat: Infinity, 
-      duration: 1.5, 
-      ease: "linear"
-    }
   }
 };
 
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
-    pending: { 
-      bgColor: 'bg-amber-100', 
-      textColor: 'text-amber-800', 
+    pending: {
+      bgColor: 'bg-amber-100',
+      textColor: 'text-amber-800',
       borderColor: 'border-amber-200',
       gradientFrom: 'from-amber-50',
       gradientTo: 'to-amber-100',
       icon: <Clock className="w-3 h-3 mr-1.5" />
     },
-    completed: { 
-      bgColor: 'bg-emerald-100', 
-      textColor: 'text-emerald-800', 
+    completed: {
+      bgColor: 'bg-emerald-100',
+      textColor: 'text-emerald-800',
       borderColor: 'border-emerald-200',
       gradientFrom: 'from-emerald-50',
       gradientTo: 'to-emerald-100',
       icon: <CheckCircle className="w-3 h-3 mr-1.5" />
     },
-    inProgress: { 
-      bgColor: 'bg-blue-100', 
-      textColor: 'text-blue-800', 
+    inProgress: {
+      bgColor: 'bg-blue-100',
+      textColor: 'text-blue-800',
       borderColor: 'border-blue-200',
       gradientFrom: 'from-blue-50',
       gradientTo: 'to-blue-100',
       icon: <Loader className="w-3 h-3 mr-1.5 animate-spin" />
     },
-    failed: { 
-      bgColor: 'bg-rose-100', 
-      textColor: 'text-rose-800', 
+    failed: {
+      bgColor: 'bg-rose-100',
+      textColor: 'text-rose-800',
       borderColor: 'border-rose-200',
       gradientFrom: 'from-rose-50',
       gradientTo: 'to-rose-100',
@@ -103,7 +83,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
   if (!show) return null;
 
   const getToastStyles = () => {
-    switch(type) {
+    switch (type) {
       case 'success':
         return {
           bg: 'bg-gradient-to-r from-emerald-500 to-green-500',
@@ -148,7 +128,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
 
 const AnimatedCounter = ({ value, duration = 1.5 }) => {
   const [displayValue, setDisplayValue] = useState(0);
-  
+
   useEffect(() => {
     let startValue = 0;
     const increment = value / (duration * 60);
@@ -160,17 +140,17 @@ const AnimatedCounter = ({ value, duration = 1.5 }) => {
       }
       setDisplayValue(Math.floor(startValue));
     }, 1000 / 60);
-    
+
     return () => clearInterval(timer);
   }, [value, duration]);
-  
+
   return <span>{displayValue}</span>;
 };
 
 
 const ProgressBar = ({ value, max, color = 'blue' }) => {
   const percentage = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  
+
   const colorStyles = {
     blue: "bg-gradient-to-r from-blue-500 to-indigo-500",
     green: "bg-gradient-to-r from-emerald-500 to-green-500",
@@ -178,7 +158,7 @@ const ProgressBar = ({ value, max, color = 'blue' }) => {
     red: "bg-gradient-to-r from-rose-500 to-red-500",
     purple: "bg-gradient-to-r from-purple-500 to-indigo-500"
   };
-  
+
   return (
     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden shadow-inner">
       <motion.div
@@ -192,7 +172,7 @@ const ProgressBar = ({ value, max, color = 'blue' }) => {
 };
 
 
-const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => {
+const ExamEvaluation = ({ examId, onClose }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -204,17 +184,18 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [showDetailView, setShowDetailView] = useState(false);
   const [detailEnrollmentId, setDetailEnrollmentId] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); 
+  const [viewMode, setViewMode] = useState('list');
   const [pageLoaded, setPageLoaded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [evaluationError, setEvaluationError] = useState({});
 
   useEffect(() => {
-    
     const timer = setTimeout(() => {
       setPageLoaded(true);
     }, 100);
     return () => clearTimeout(timer);
   }, []);
-  
+
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
   }, []);
@@ -223,16 +204,20 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
     setToast({ show: false, message: '', type: 'success' });
   }, []);
 
+
   const fetchEnrollments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       if (!examId) {
         throw new Error('Exam ID is missing');
       }
-      
-      
+
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
         method: 'GET',
         headers: {
@@ -240,66 +225,60 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
           'Content-Type': 'application/json'
         },
         mode: 'cors',
-        credentials: 'include'
-      });
+        credentials: 'include',
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`API error (${response.status}): ${errorText}`);
       }
-      
+
       const data = await response.json();
-      
-      if (data && data.code === 200 && Array.isArray(data.data)) {
-        setStudents(data.data);
+
+
+      if (data && data.code === 200 && data.data && Array.isArray(data.data.enrollments)) {
+        console.log("API Response:", data.data);
+
+        const formattedStudents = data.data.enrollments.map(student => ({
+          enrollment_id: student.id,
+          student_id: student.student_id,
+          exam_id: student.exam_id,
+          student_name: student.student_name,
+          roll_number: student.roll_number,
+          marks_obtained: student.marks_obtained,
+          max_marks: student.max_marks || 100,
+          feedback: student.feedback,
+          status: student.status || 'not_uploaded',
+          uploaded_by: student.uploaded_by || null,
+          upload_time: student.uploaded_by?.upload_time || null,
+          recheck_requested: student.recheck_requested || false,
+          recheck_count: student.recheck_count || 0,
+          evaluation_status: student.marks_obtained !== null ? 'completed' : 'pending',
+          answer_sheet_url: student.answer_sheet_url || null
+        }));
+
+        setStudents(formattedStudents);
       } else {
-        throw new Error('Invalid response format from API');
+        throw new Error(`Invalid response format from API: ${JSON.stringify(data)}`);
       }
     } catch (error) {
       console.error("Error fetching enrollments:", error);
-      setError(error.message || "Failed to load student enrollments");
-      
-      setStudents([
-        {
-          enrollment_id: "1",
-          student_name: "John Smith",
-          roll_number: "B0001",
-          email: "john@example.com",
-          marks_obtained: 85,
-          feedback: "Good work on problem 1 and 2. Could improve on problem 3.",
-          evaluation_status: "completed"
-        },
-        {
-          enrollment_id: "2",
-          student_name: "Alice Johnson",
-          roll_number: "B0002",
-          email: "alice@example.com",
-          marks_obtained: null,
-          feedback: null,
-          evaluation_status: "pending"
-        },
-        {
-          enrollment_id: "3",
-          student_name: "Bob Williams",
-          roll_number: "B0003",
-          email: "bob@example.com",
-          marks_obtained: 72,
-          feedback: "Needs improvement on problem 2. Good effort overall.",
-          evaluation_status: "completed"
-        },
-        {
-          enrollment_id: "4",
-          student_name: "Maria Garcia",
-          roll_number: "B0004",
-          email: "maria@example.com",
-          marks_obtained: null,
-          feedback: null,
-          evaluation_status: "pending"
-        }
-      ]);
+
+
+      if (error.name === 'AbortError') {
+        setError("Request timed out. Please check your network connection and try again.");
+      } else if (error.message.includes('NetworkError') || !navigator.onLine) {
+        setError("Network error. Please check your internet connection and try again.");
+      } else {
+        setError(error.message || "Failed to load student enrollments. Please try again later.");
+      }
+
+      setStudents([]);
     } finally {
       setLoading(false);
     }
-  }, [examId]);
+  }, [examId, retryCount]);
 
   useEffect(() => {
     fetchEnrollments();
@@ -312,55 +291,60 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
     }));
   };
 
+
   const filteredStudents = useMemo(() => {
     let result = [...students];
-    
-    
+
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(student => 
+      result = result.filter(student =>
         (student.student_name?.toLowerCase().includes(query)) ||
         (student.roll_number?.toLowerCase().includes(query))
       );
     }
-    
-    
+
+
     if (statusFilter !== 'all') {
       const isEvaluated = statusFilter === 'completed';
-      result = result.filter(student => 
+      result = result.filter(student =>
         isEvaluated ? student.marks_obtained !== null : student.marks_obtained === null
       );
     }
-    
-    
+
+
     result.sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
-      
-      
+
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
       }
-      
-      
+
       const comparison = String(aValue).localeCompare(String(bValue));
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
-    
+
     return result;
   }, [searchQuery, statusFilter, students, sortConfig]);
+
 
   const handleEvaluate = async (student) => {
     try {
       setEvaluatingStudent(student);
-      
+      setEvaluationError(prev => ({ ...prev, [student.enrollment_id]: null }));
+
       if (!examId) {
         throw new Error('Exam ID is missing');
       }
-      
+
       showToast('Evaluating submission...', 'info');
-      
-      
+
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
         method: 'GET',
         headers: {
@@ -368,78 +352,94 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
           'Content-Type': 'application/json'
         },
         mode: 'cors',
-        credentials: 'include'
-      });
+        credentials: 'include',
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
-        throw new Error(`Evaluation failed: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Evaluation failed. Please try again.`);
       }
 
       const data = await response.json();
-      
-      if (data.code === 200) {
-        
-        const updatedStudents = students.map(s => 
-          s.enrollment_id === student.enrollment_id 
-            ? { 
-                ...s, 
-                marks_obtained: data.data.total_marks || 0, 
-                feedback: data.data.overall_feedback?.join('\n') || '',
-                evaluation_status: 'completed'
-              } 
+
+      if (data.code === 200 && data.data) {
+
+        if (typeof data.data.total_marks !== 'number') {
+          throw new Error('Invalid evaluation data: missing or invalid total marks');
+        }
+
+
+        const updatedStudents = students.map(s =>
+          s.enrollment_id === student.enrollment_id
+            ? {
+              ...s,
+              marks_obtained: data.data.total_marks || 0,
+              feedback: Array.isArray(data.data.overall_feedback)
+                ? data.data.overall_feedback.join('\n')
+                : (data.data.overall_feedback || ''),
+              evaluation_status: 'completed'
+            }
             : s
         );
-        
+
         setStudents(updatedStudents);
-        
-        
+
+
         setDetailEnrollmentId(student.enrollment_id);
         setShowDetailView(true);
-        
+
         showToast('Evaluation completed successfully', 'success');
       } else {
         throw new Error(data.message || 'Evaluation process did not complete successfully');
       }
     } catch (error) {
       console.error("Evaluation error:", error);
-      showToast(error.message || 'Failed to evaluate submission', 'error');
-      
-      
-      const updatedStudents = students.map(s => 
-        s.enrollment_id === student.enrollment_id 
-          ? { 
-              ...s, 
-              marks_obtained: 75, 
-              feedback: 'Generated feedback for this submission.',
-              evaluation_status: 'completed'
-            } 
-          : s
-      );
-      
-      setStudents(updatedStudents);
+
+
+      setEvaluationError(prev => ({
+        ...prev,
+        [student.enrollment_id]: error.message || 'Failed to evaluate submission'
+      }));
+
+
+      if (error.name === 'AbortError') {
+        showToast('Evaluation timed out. The process might be taking longer than expected.', 'error');
+      } else if (error.message.includes('NetworkError') || !navigator.onLine) {
+        showToast('Network error during evaluation. Please check your connection.', 'error');
+      } else {
+        showToast(error.message || 'Failed to evaluate submission', 'error');
+      }
     } finally {
       setEvaluatingStudent(null);
     }
   };
 
+
   const handleEvaluateAll = async () => {
     try {
-      const pendingStudents = students.filter(s => s.marks_obtained === null);
-      
+      const pendingStudents = students.filter(s => s.marks_obtained === null && s.status === 'uploaded');
+
       if (pendingStudents.length === 0) {
         showToast('No pending submissions to evaluate', 'info');
         return;
       }
-      
+
       setBatchEvaluating(true);
       showToast(`Evaluating ${pendingStudents.length} submissions...`, 'info');
-      
-      
+
+      let successCount = 0;
+      let failCount = 0;
+
       for (let i = 0; i < pendingStudents.length; i++) {
         const student = pendingStudents[i];
-        
+
         try {
-          
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+
           const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
             method: 'GET',
             headers: {
@@ -447,46 +447,74 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
               'Content-Type': 'application/json'
             },
             mode: 'cors',
-            credentials: 'include'
-          });
-          
+            credentials: 'include',
+            signal: controller.signal
+          }).finally(() => clearTimeout(timeoutId));
+
           if (!response.ok) {
-            console.warn(`Failed to evaluate student ${student.enrollment_id}: ${response.status}`);
-            continue; 
+            const errorText = await response.text().catch(() => 'Unknown error');
+            throw new Error(`API error (${response.status}): ${errorText}`);
           }
-          
+
           const data = await response.json();
-          
-          if (data.code === 200) {
-            
-            setStudents(prev => prev.map(s => 
-              s.enrollment_id === student.enrollment_id 
-                ? { 
-                    ...s, 
-                    marks_obtained: data.data.total_marks || 0, 
-                    feedback: data.data.overall_feedback?.join('\n') || '',
-                    evaluation_status: 'completed'
-                  } 
+
+          if (data.code === 200 && data.data) {
+
+            if (typeof data.data.total_marks !== 'number') {
+              throw new Error('Invalid evaluation data');
+            }
+
+
+            setStudents(prev => prev.map(s =>
+              s.enrollment_id === student.enrollment_id
+                ? {
+                  ...s,
+                  marks_obtained: data.data.total_marks || 0,
+                  feedback: Array.isArray(data.data.overall_feedback)
+                    ? data.data.overall_feedback.join('\n')
+                    : (data.data.overall_feedback || ''),
+                  evaluation_status: 'completed'
+                }
                 : s
             ));
+
+            successCount++;
+          } else {
+            throw new Error(data.message || 'Evaluation process failed');
           }
-          
-          
-          showToast(`Evaluated ${i + 1} of ${pendingStudents.length} submissions`, 'info');
-          
-          
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
+
+
+          if (i < pendingStudents.length - 1) {
+            showToast(`Evaluated ${i + 1} of ${pendingStudents.length} submissions (${successCount} successful)`, 'info');
+          }
+
+
+          await new Promise(resolve => setTimeout(resolve, 500));
+
         } catch (err) {
           console.error(`Error evaluating student ${student.enrollment_id}:`, err);
-          
+          failCount++;
+
+
+          setEvaluationError(prev => ({
+            ...prev,
+            [student.enrollment_id]: err.message || 'Failed to evaluate'
+          }));
         }
       }
-      
-      showToast('Batch evaluation completed', 'success');
+
+
+      if (successCount === pendingStudents.length) {
+        showToast('All evaluations completed successfully', 'success');
+      } else if (successCount > 0) {
+        showToast(`Completed ${successCount} of ${pendingStudents.length} evaluations. ${failCount} failed.`,
+          failCount > successCount ? 'warning' : 'success');
+      } else {
+        showToast('Failed to complete any evaluations. Please try again later.', 'error');
+      }
     } catch (error) {
       console.error("Batch evaluation error:", error);
-      showToast('Error during batch evaluation', 'error');
+      showToast('Error during batch evaluation: ' + error.message, 'error');
     } finally {
       setBatchEvaluating(false);
     }
@@ -496,58 +524,74 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
     return student.marks_obtained !== null;
   };
 
+
+  const handleViewRecheckRequest = (student) => {
+    window.location.href = `/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`;
+  };
   const handleViewResults = (student) => {
     if (!hasEvaluationResults(student)) {
       showToast('No evaluation results available', 'warning');
       return;
     }
-    
-    
     setDetailEnrollmentId(student.enrollment_id);
     setShowDetailView(true);
   };
-
+  
   const stats = useMemo(() => {
     return {
       total: students.length,
       evaluated: students.filter(s => s.marks_obtained !== null).length,
-      pending: students.filter(s => s.marks_obtained === null).length,
-      averageScore: students.length > 0 
-        ? Math.round(students.reduce((sum, s) => sum + (s.marks_obtained || 0), 0) / 
-            Math.max(1, students.filter(s => s.marks_obtained !== null).length)) 
+      pending: students.filter(s => s.marks_obtained === null && s.status === 'uploaded').length,
+      uploaded: students.filter(s => s.status === 'uploaded').length,
+      notUploaded: students.filter(s => s.status === 'not_uploaded').length,
+      recheckRequested: students.filter(s => s.recheck_requested).length,
+      averageScore: students.length > 0
+        ? Math.round(students.reduce((sum, s) => sum + (s.marks_obtained || 0), 0) /
+          Math.max(1, students.filter(s => s.marks_obtained !== null).length))
         : 0
     };
   }, [students]);
 
+
   const renderSortIndicator = (key) => {
     if (sortConfig.key !== key) return null;
-    
-    return sortConfig.direction === 'asc' 
+
+    return sortConfig.direction === 'asc'
       ? <ArrowUp className="w-4 h-4" />
       : <ArrowDown className="w-4 h-4" />;
   };
 
-  const handleDetailViewComplete = useCallback((evaluationData) => {
-    
-    if (evaluationData && detailEnrollmentId) {
-      setStudents(prev => prev.map(s => 
-        s.enrollment_id === detailEnrollmentId
-          ? {
-              ...s,
-              marks_obtained: evaluationData.total_marks || s.marks_obtained || 0,
-              feedback: evaluationData.overall_feedback?.join('\n') || s.feedback || '',
-              evaluation_status: 'completed'
-            }
-          : s
-      ));
-    }
-    
-    
-    setShowDetailView(false);
-    setDetailEnrollmentId(null);
-  }, [detailEnrollmentId]);
 
-  
+  const handleRetry = useCallback(() => {
+    setRetryCount(prev => prev + 1);
+    setError(null);
+    setLoading(true);
+  }, []);
+
+
+  const getUploadedBy = (student) => {
+    if (student.uploaded_by) {
+      if (typeof student.uploaded_by === 'string') {
+        return `Uploaded by: ${student.uploaded_by}`;
+      }
+
+      if (student.uploaded_by.role === 'professor') {
+        return 'Uploaded by: Professor';
+      } else if (student.uploaded_by.role === 'student') {
+        return `Uploaded by: Student (${student.uploaded_by.name})`;
+      } else {
+        return `Uploaded by: ${student.uploaded_by.name} (${student.uploaded_by.role})`;
+      }
+    }
+
+    if (student.status === 'uploaded') {
+      return 'Uploaded';
+    }
+
+    return 'Not uploaded';
+  };
+
+
   const LoadingView = () => (
     <motion.div
       initial={{ opacity: 0 }}
@@ -555,34 +599,34 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
       className="flex flex-col items-center justify-center py-16"
     >
       <div className="relative">
-        <motion.div 
+        <motion.div
           className="w-20 h-20 border-4 border-gray-100 border-t-blue-600 border-r-blue-400 rounded-full"
           animate={{ rotate: 360 }}
-          transition={{ 
-            duration: 1.5, 
-            repeat: Infinity, 
-            ease: "linear" 
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: "linear"
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute inset-0 border-4 border-transparent border-t-blue-300 rounded-full"
           animate={{ rotate: -180 }}
-          transition={{ 
-            duration: 2, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
           }}
         />
       </div>
-      <motion.p 
+      <motion.p
         className="mt-6 text-gray-600 font-medium"
-        animate={{ 
+        animate={{
           opacity: [0.5, 1, 0.5],
         }}
-        transition={{ 
-          duration: 1.5, 
+        transition={{
+          duration: 1.5,
           repeat: Infinity,
-          ease: "easeInOut" 
+          ease: "easeInOut"
         }}
       >
         Loading student submissions...
@@ -590,14 +634,14 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
     </motion.div>
   );
 
-  
+
   const ErrorState = ({ message, onRetry }) => (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-xl shadow-sm p-8 text-center"
     >
-      <motion.div 
+      <motion.div
         className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6"
         whileHover={{ scale: 1.1 }}
       >
@@ -619,14 +663,14 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
     </motion.div>
   );
 
-  
+
   const EmptyState = () => (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="text-center py-16 bg-white rounded-xl shadow-sm"
     >
-      <motion.div 
+      <motion.div
         className="w-20 h-20 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"
         whileHover={{ scale: 1.1 }}
       >
@@ -639,12 +683,14 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
     </motion.div>
   );
 
-  
+
   const StudentGridItem = ({ student, index }) => {
     const hasResults = hasEvaluationResults(student);
     const status = hasResults ? 'completed' : 'pending';
-    const delay = 0.05 * (index % 8); 
-    
+    const delay = 0.05 * (index % 8);
+    const hasError = evaluationError[student.enrollment_id];
+    const canEvaluate = student.status === 'uploaded' && !hasResults;
+
     return (
       <motion.div
         variants={fadeInUp}
@@ -661,50 +707,96 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
             </div>
             <StatusBadge status={status} />
           </div>
-          
+
           <h3 className="text-lg font-medium text-gray-900 mb-1">{student.student_name}</h3>
-          <p className="text-sm text-gray-500 mb-3">{student.roll_number}</p>
-          
+          <p className="text-sm text-gray-500 mb-1">{student.roll_number}</p>
+          <p className="text-xs text-gray-400 mb-3">{getUploadedBy(student)}</p>
+
+          {student.recheck_requested && (
+            <div className="mb-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded flex items-center">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              Recheck requested
+            </div>
+          )}
+
           {hasResults ? (
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Score</span>
-                <span className="font-medium text-gray-900">{student.marks_obtained}</span>
+                <span className="font-medium text-gray-900">{student.marks_obtained}/{student.max_marks || 100}</span>
               </div>
-              <ProgressBar value={student.marks_obtained} max={100} color={student.marks_obtained > 80 ? "green" : student.marks_obtained > 60 ? "blue" : "amber"} />
+              <ProgressBar
+                value={student.marks_obtained}
+                max={student.max_marks || 100}
+                color={student.marks_obtained > 80 ? "green" : student.marks_obtained > 60 ? "blue" : "amber"}
+              />
             </div>
           ) : (
-            <div className="h-7 mb-4"></div>
+            <div className="h-7 mb-4">
+              {hasError && (
+                <p className="text-xs text-rose-600 italic">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  {hasError.length > 50 ? hasError.substring(0, 50) + '...' : hasError}
+                </p>
+              )}
+            </div>
           )}
         </div>
-        
+
         <div className="bg-gray-50 p-4 border-t border-gray-100">
           {hasResults ? (
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handleViewResults(student)}
-              className="w-full py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
-            >
-              <Eye className="w-4 h-4" />
-              <span className="font-medium">View Results</span>
-            </motion.button>
-          ) : (
+            student.recheck_requested ? (
+              <Link to={`/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`}>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="font-medium">View Recheck</span>
+                </motion.button>
+              </Link>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => handleViewResults(student)}
+                className="w-full py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+              >
+                <Eye className="w-4 h-4" />
+                <span className="font-medium">View Results</span>
+              </motion.button>
+            )
+          ) : student.status !== 'not_uploaded' ? (
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleEvaluate(student)}
-              disabled={evaluatingStudent?.enrollment_id === student.enrollment_id}
+              disabled={evaluatingStudent?.enrollment_id === student.enrollment_id || !canEvaluate}
               className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all 
                 ${evaluatingStudent?.enrollment_id === student.enrollment_id
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-md'
+                  : !canEvaluate
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : hasError
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-md'
+                      : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-md'
                 }`}
             >
               {evaluatingStudent?.enrollment_id === student.enrollment_id ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin" />
                   <span className="font-medium">Evaluating...</span>
+                </>
+              ) : !canEvaluate ? (
+                <>
+                  <XCircle className="w-4 h-4" />
+                  <span className="font-medium">Cannot Evaluate</span>
+                </>
+              ) : hasError ? (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span className="font-medium">Retry</span>
                 </>
               ) : (
                 <>
@@ -713,36 +805,41 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
                 </>
               )}
             </motion.button>
+          ) : (
+            <div className="w-full py-2 bg-gray-200 text-gray-500 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
+              <XCircle className="w-4 h-4" />
+              <span className="font-medium">Not Uploaded</span>
+            </div>
           )}
         </div>
       </motion.div>
     );
   };
 
-  
+
   const NavButton = ({ icon: Icon, label, onClick, disabled, variant = "primary" }) => {
     const getStyles = () => {
-      switch(variant) {
+      switch (variant) {
         case "primary":
           return {
-            base: `${disabled 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+            base: `${disabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
           };
         case "secondary":
           return {
-            base: `${disabled 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+            base: `${disabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-white border border-gray-200 text-gray-700 hover:text-gray-900 hover:border-gray-300'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
           };
         case "success":
           return {
-            base: `${disabled 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+            base: `${disabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:shadow-lg'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
@@ -755,9 +852,9 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
           };
       }
     };
-    
+
     const styles = getStyles();
-    
+
     return (
       <motion.button
         whileHover={styles.hover ? { scale: 1.05 } : {}}
@@ -771,6 +868,7 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
       </motion.button>
     );
   };
+
 
   const StatCard = ({ icon: Icon, label, value, color, percentage }) => {
     const gradients = {
@@ -788,7 +886,7 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
     };
 
     return (
-      <motion.div 
+      <motion.div
         variants={fadeInUp}
         initial="hidden"
         animate="visible"
@@ -816,16 +914,16 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {showDetailView ? (
         <Suspense fallback={
           <div className="flex flex-col items-center justify-center h-screen">
-            <motion.div 
+            <motion.div
               className="w-16 h-16 border-4 border-t-blue-600 border-blue-200 rounded-full"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             />
-            <motion.p 
+            <motion.p
               className="mt-6 text-gray-600 font-medium"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -843,351 +941,422 @@ const ExamEvaluation = ({ examId, courseId, onClose, onEvaluateSubmission }) => 
               setDetailEnrollmentId(null);
             }}
             onSaveFeedback={(data) => {
-              
-              console.log('Feedback updated:', data);
-              
-              
-              setStudents(prev => prev.map(s => 
-                s.enrollment_id === detailEnrollmentId
-                  ? {
+              if (!data) {
+                showToast('No feedback data received', 'error');
+                return;
+              }
+
+              try {
+                setStudents(prev => prev.map(s =>
+                  s.enrollment_id === detailEnrollmentId
+                    ? {
                       ...s,
-                      feedback: data.overall_feedback
+                      feedback: typeof data.overall_feedback === 'string'
+                        ? data.overall_feedback
+                        : Array.isArray(data.overall_feedback)
+                          ? data.overall_feedback.join('\n')
+                          : s.feedback || ''
                     }
-                  : s
-              ));
-              
-              showToast('Feedback saved successfully', 'success');
+                    : s
+                ));
+
+                showToast('Feedback saved successfully', 'success');
+              } catch (error) {
+                console.error('Error saving feedback:', error);
+                showToast('Failed to save feedback: ' + error.message, 'error');
+              }
+            }}
+            onError={(errorMessage) => {
+              showToast(errorMessage || 'Failed to load evaluation details', 'error');
+              setShowDetailView(false);
+              setDetailEnrollmentId(null);
             }}
           />
         </Suspense>
       ) : (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: pageLoaded ? 1 : 0 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-7xl mx-auto space-y-6"
-        >
-          <div className="flex flex-col gap-2">
-            <motion.button
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="p-2 -ml-2 hover:bg-white/50 rounded-lg transition-colors w-10 h-10 flex items-center justify-center"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-500" />
-            </motion.button>
-            
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mb-2"
-            >
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <span>Exam Evaluations</span>
-                <motion.span 
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5, type: "spring" }}
-                  className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
-                >
-                  <Star className="w-3 h-3 mr-1" />
-                  <span>AI Powered</span>
-                </motion.span>
-              </h1>
-              <p className="text-gray-500 mt-1">Review and evaluate student submissions with intelligent scoring</p>
-            </motion.div>
-          </div>
-
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            <StatCard 
-              icon={Users} 
-              label="Total Students" 
-              value={stats.total} 
-              color="blue" 
-            />
-            <StatCard 
-              icon={CheckCircle} 
-              label="Evaluated" 
-              value={stats.evaluated} 
-              color="green" 
-              percentage={stats.total ? `${Math.round((stats.evaluated / stats.total) * 100)}%` : "0%"}
-            />
-            <StatCard 
-              icon={Clock} 
-              label="Pending" 
-              value={stats.pending} 
-              color="yellow" 
-            />
-            <StatCard 
-              icon={BarChart} 
-              label="Average Score" 
-              value={stats.averageScore} 
-              color="purple" 
-            />
-          </div>
-
-          <motion.div 
-            variants={fadeInUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-xl shadow-sm p-4 md:p-6"
+        <div className="flex flex-col h-full p-4 md:p-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: pageLoaded ? 1 : 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-7xl mx-auto w-full flex flex-col h-full"
           >
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by name or student ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
-                />
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Evaluated</option>
-                  </select>
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                </div>
-                
-                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <button 
-                    onClick={() => setViewMode('list')}
-                    className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                  >
-                    <List className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                  >
-                    <BarChart2 className="w-5 h-5" />
-                  </button>
-                </div>
-                
-                <NavButton
-                  icon={PlayCircle}
-                  label={batchEvaluating ? 'Evaluating...' : 'Evaluate All'}
-                  onClick={handleEvaluateAll}
-                  disabled={batchEvaluating || stats.pending === 0}
-                  variant="success"
-                />
-              </div>
-            </div>
-          </motion.div>
+            <div className="flex flex-col gap-2">
+              <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-2 -ml-2 hover:bg-white/50 rounded-lg transition-colors w-10 h-10 flex items-center justify-center"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-500" />
+              </motion.button>
 
-          
-          {loading ? (
-            <LoadingView />
-          ) : error ? (
-            <ErrorState 
-              message={error}
-              onRetry={fetchEnrollments}
-            />
-          ) : students.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <>
-              {viewMode === 'list' ? (
-                <motion.div 
-                  variants={fadeInUp}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: 0.5 }}
-                  className="bg-white rounded-xl shadow-sm overflow-hidden"
-                >
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          {[
-                            { key: 'student_name', label: 'Student' },
-                            { key: 'roll_number', label: 'Roll Number' },
-                            { key: 'marks_obtained', label: 'Score' },
-                            { key: 'evaluation_status', label: 'Status' },
-                            { key: 'actions', label: 'Actions' }
-                          ].map((column) => (
-                            <th 
-                              key={column.key}
-                              onClick={() => column.key !== 'actions' && handleSort(column.key)}
-                              className={`px-6 py-3.5 text-left text-xs font-medium uppercase tracking-wider cursor-pointer select-none
-                                ${column.key === sortConfig.key ? 'text-blue-600' : 'text-gray-500'}`}
-                            >
-                              <div className="flex items-center space-x-1">
-                                <span>{column.label}</span>
-                                {renderSortIndicator(column.key)}
-                              </div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        <AnimatePresence>
-                          {filteredStudents.map((student, index) => {
-                            const hasResults = hasEvaluationResults(student);
-                            const status = hasResults ? 'completed' : 'pending';
-                            
-                            return (
-                              <motion.tr 
-                                key={student.enrollment_id || index}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ delay: 0.1 + (index * 0.03) }}
-                                className="hover:bg-gray-50 group"
-                                whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.8)" }}
-                              >
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-medium shadow-sm group-hover:shadow-md transition-shadow mr-3">
-                                      {student.student_name?.charAt(0) || '?'}
-                                    </div>
-                                    <div>
-                                      <div className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                                        {student.student_name}
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mb-2"
+              >
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <span>Exam Evaluations</span>
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5, type: "spring" }}
+                    className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                  >
+                    <Star className="w-3 h-3 mr-1" />
+                    <span>AI Powered</span>
+                  </motion.span>
+                </h1>
+                <p className="text-gray-500 mt-1">Review and evaluate student submissions with intelligent scoring</p>
+              </motion.div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-4">
+              <StatCard
+                icon={Users}
+                label="Total Students"
+                value={stats.total}
+                color="blue"
+              />
+              <StatCard
+                icon={CheckCircle}
+                label="Evaluated"
+                value={stats.evaluated}
+                color="green"
+                percentage={stats.total ? `${Math.round((stats.evaluated / stats.total) * 100)}%` : "0%"}
+              />
+              <StatCard
+                icon={Clock}
+                label="Pending Evaluation"
+                value={stats.pending}
+                color="yellow"
+              />
+              <StatCard
+                icon={BarChart}
+                label="Average Score"
+                value={stats.averageScore}
+                color="purple"
+              />
+            </div>
+
+            <motion.div
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.4 }}
+              className="bg-white rounded-xl shadow-sm p-4 md:p-6 mt-6"
+            >
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or student ID..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Evaluated</option>
+                    </select>
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+
+                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                      <List className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                      <BarChart2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <NavButton
+                    icon={PlayCircle}
+                    label={batchEvaluating ? 'Evaluating...' : 'Evaluate All'}
+                    onClick={handleEvaluateAll}
+                    disabled={batchEvaluating || stats.pending === 0}
+                    variant="success"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            <div className="flex-1 overflow-auto mt-6 pb-6">
+              {loading ? (
+                <LoadingView />
+              ) : error ? (
+                <ErrorState
+                  message={error}
+                  onRetry={handleRetry}
+                />
+              ) : students.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <>
+                  {viewMode === 'list' ? (
+                    <motion.div
+                      variants={fadeInUp}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ delay: 0.5 }}
+                      className="bg-white rounded-xl shadow-sm overflow-hidden"
+                    >
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                              {[
+                                { key: 'student_name', label: 'Student' },
+                                { key: 'roll_number', label: 'Roll Number' },
+                                { key: 'status', label: 'Upload Status' },
+                                { key: 'marks_obtained', label: 'Score' },
+                                { key: 'evaluation_status', label: 'Status' },
+                                { key: 'actions', label: 'Actions' }
+                              ].map((column) => (
+                                <th
+                                  key={column.key}
+                                  onClick={() => column.key !== 'actions' && handleSort(column.key)}
+                                  className={`px-6 py-3.5 text-left text-xs font-medium uppercase tracking-wider cursor-pointer select-none
+                                    ${column.key === sortConfig.key ? 'text-blue-600' : 'text-gray-500'}`}
+                                >
+                                  <div className="flex items-center space-x-1">
+                                    <span>{column.label}</span>
+                                    {renderSortIndicator(column.key)}
+                                  </div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            <AnimatePresence>
+                              {filteredStudents.map((student, index) => {
+                                const hasResults = hasEvaluationResults(student);
+                                const status = hasResults ? 'completed' : 'pending';
+                                const hasError = evaluationError[student.enrollment_id];
+                                const canEvaluate = student.status === 'uploaded' && !hasResults;
+
+                                return (
+                                  <motion.tr
+                                    key={student.enrollment_id || index}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    transition={{ delay: 0.1 + (index * 0.03) }}
+                                    className="hover:bg-gray-50 group"
+                                    whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.8)" }}
+                                  >
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-medium shadow-sm group-hover:shadow-md transition-shadow mr-3">
+                                          {student.student_name?.charAt(0) || '?'}
+                                        </div>
+                                        <div>
+                                          <div className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                                            {student.student_name}
+                                          </div>
+                                          {student.email && (
+                                            <div className="text-xs text-gray-500">{student.email}</div>
+                                          )}
+                                          {student.recheck_requested && (
+                                            <div className="text-xs text-purple-600 font-medium flex items-center mt-1">
+                                              <AlertTriangle className="w-3 h-3 mr-1" />
+                                              Recheck requested
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
-                                      {student.email && (
-                                        <div className="text-xs text-gray-500">{student.email}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                      <span className="font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded-md">
+                                        {student.roll_number}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                      <span className="text-xs">
+                                        {getUploadedBy(student)}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      {hasResults ? (
+                                        <div className="flex items-center">
+                                          <div className="w-24 bg-gray-200 rounded-full h-2 mr-3 overflow-hidden">
+                                            <motion.div
+                                              initial={{ width: 0 }}
+                                              animate={{ width: `${(student.marks_obtained / (student.max_marks || 100)) * 100}%` }}
+                                              transition={{ duration: 1, delay: 0.2 + (index * 0.05) }}
+                                              className={`h-2 rounded-full ${student.marks_obtained >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
+                                                student.marks_obtained >= 60 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
+                                                  'bg-gradient-to-r from-amber-500 to-yellow-500'
+                                                }`}
+                                            />
+                                          </div>
+                                          <span className="text-sm font-medium text-gray-900">{student.marks_obtained}</span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-sm text-gray-500 italic">
+                                          {hasError ? (
+                                            <span className="text-rose-600 flex items-center">
+                                              <AlertTriangle className="w-3 h-3 mr-1" />
+                                              Error
+                                            </span>
+                                          ) : (
+                                            "Not evaluated"
+                                          )}
+                                        </span>
                                       )}
-                                    </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <StatusBadge status={status} />
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                      {hasResults ? (
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                          {student.recheck_requested && (
+                                            <motion.button
+                                              whileHover={{ scale: 1.05 }}
+                                              whileTap={{ scale: 0.95 }}
+                                              onClick={() => handleViewRecheckRequest(student)}
+                                              className="inline-flex items-center px-3 py-1.5 border border-purple-300 text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                            >
+                                              <Eye className="w-4 h-4 mr-1.5" />
+                                              View Recheck
+                                            </motion.button>
+                                          )}
+                                          <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleViewResults(student)}
+                                            className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                          >
+                                            <Eye className="w-4 h-4 mr-1.5" />
+                                            View Results
+                                          </motion.button>
+                                        </div>
+                                      ) : student.status !== 'not_uploaded' ? (
+                                        <motion.button
+                                          whileHover={{ scale: 1.05 }}
+                                          whileTap={{ scale: 0.95 }}
+                                          onClick={() => handleEvaluate(student)}
+                                          disabled={evaluatingStudent?.enrollment_id === student.enrollment_id || !canEvaluate}
+                                          className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md
+        ${evaluatingStudent?.enrollment_id === student.enrollment_id
+                                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                              : !canEvaluate
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : hasError
+                                                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
+                                                  : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                                            }`}
+                                        >
+                                          {evaluatingStudent?.enrollment_id === student.enrollment_id ? (
+                                            <>
+                                              <Loader className="w-4 h-4 mr-1.5 animate-spin" />
+                                              Evaluating...
+                                            </>
+                                          ) : !canEvaluate ? (
+                                            <>
+                                              <XCircle className="w-4 h-4 mr-1.5" />
+                                              Cannot Evaluate
+                                            </>
+                                          ) : hasError ? (
+                                            <>
+                                              <RefreshCw className="w-4 h-4 mr-1.5" />
+                                              Retry
+                                            </>
+                                          ) : (
+                                            <>
+                                              <PlayCircle className="w-4 h-4 mr-1.5" />
+                                              Evaluate
+                                            </>
+                                          )}
+                                        </motion.button>
+                                      ) : (
+                                        <span className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
+                                          <XCircle className="w-4 h-4 mr-1.5" />
+                                          Not Uploaded
+                                        </span>
+                                      )}
+                                    </td>
+                                  </motion.tr>
+                                );
+                              })}
+                            </AnimatePresence>
+                            {filteredStudents.length === 0 && (
+                              <tr>
+                                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                                  <div className="flex flex-col items-center">
+                                    <Search className="w-10 h-10 text-gray-300 mb-3" />
+                                    <p>No students match your search criteria</p>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <span className="font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded-md">
-                                    {student.roll_number}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  {hasResults ? (
-                                    <div className="flex items-center">
-                                      <div className="w-24 bg-gray-200 rounded-full h-2 mr-3 overflow-hidden">
-                                        <motion.div 
-                                          initial={{ width: 0 }}
-                                          animate={{ width: `${(student.marks_obtained / 100) * 100}%` }}
-                                          transition={{ duration: 1, delay: 0.2 + (index * 0.05) }}
-                                          className={`h-2 rounded-full ${
-                                            student.marks_obtained >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
-                                            student.marks_obtained >= 60 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
-                                            'bg-gradient-to-r from-amber-500 to-yellow-500'
-                                          }`}
-                                        />
-                                      </div>
-                                      <span className="text-sm font-medium text-gray-900">{student.marks_obtained}</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-sm text-gray-500 italic">Not evaluated</span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <StatusBadge status={status} />
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                  {hasResults ? (
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={() => handleViewResults(student)}
-                                      className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors shadow-sm hover:shadow-md"
-                                    >
-                                      <Eye className="w-4 h-4 mr-1.5" />
-                                      View Results
-                                    </motion.button>
-                                  ) : (
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={() => handleEvaluate(student)}
-                                      disabled={evaluatingStudent?.enrollment_id === student.enrollment_id}
-                                      className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md
-                                        ${evaluatingStudent?.enrollment_id === student.enrollment_id
-                                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                          : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
-                                        }`}
-                                    >
-                                      {evaluatingStudent?.enrollment_id === student.enrollment_id ? (
-                                        <>
-                                          <Loader className="w-4 h-4 mr-1.5 animate-spin" />
-                                          Evaluating...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <PlayCircle className="w-4 h-4 mr-1.5" />
-                                          Evaluate
-                                        </>
-                                      )}
-                                    </motion.button>
-                                  )}
-                                </td>
-                              </motion.tr>
-                            );
-                          })}
-                        </AnimatePresence>
-                        {filteredStudents.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                              <div className="flex flex-col items-center">
-                                <Search className="w-10 h-10 text-gray-300 mb-3" />
-                                <p>No students match your search criteria</p>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  variants={fadeInUp}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: 0.5 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                >
-                  {filteredStudents.length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="col-span-full text-center py-12 bg-white rounded-xl shadow-sm"
-                    >
-                      <div className="flex flex-col items-center">
-                        <Search className="w-12 h-12 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Found</h3>
-                        <p className="text-gray-500 max-w-md mx-auto">
-                          No students match your search criteria. Try adjusting your filters.
-                        </p>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </motion.div>
                   ) : (
-                    filteredStudents.map((student, index) => (
-                      <StudentGridItem 
-                        key={student.enrollment_id || index}
-                        student={student}
-                        index={index}
-                      />
-                    ))
+                    <motion.div
+                      variants={fadeInUp}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ delay: 0.5 }}
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    >
+                      {filteredStudents.length === 0 ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="col-span-full text-center py-12 bg-white rounded-xl shadow-sm"
+                        >
+                          <div className="flex flex-col items-center">
+                            <Search className="w-12 h-12 text-gray-300 mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Found</h3>
+                            <p className="text-gray-500 max-w-md mx-auto">
+                              No students match your search criteria. Try adjusting your filters.
+                            </p>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        filteredStudents.map((student, index) => (
+                          <StudentGridItem
+                            key={student.enrollment_id || index}
+                            student={student}
+                            index={index}
+                          />
+                        ))
+                      )}
+                    </motion.div>
                   )}
-                </motion.div>
+                </>
               )}
-            </>
-          )}
-        </motion.div>
+            </div>
+          </motion.div>
+        </div>
       )}
-      
+
       <Toast
         show={toast.show}
         message={toast.message}

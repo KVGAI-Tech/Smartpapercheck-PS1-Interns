@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, ChevronRight, ChevronLeft, Download, Share,
-  FileText, MessageSquare, BarChart, CheckCircle, Bookmark,
-  AlertCircle, Loader, User, Mail, Hash, Award, ThumbsUp, ThumbsDown,
-  ZoomIn, ZoomOut, RefreshCw, ExternalLink, Eye, EyeOff, Search, Filter
+  FileText, MessageSquare, BarChart, CheckCircle,
+  AlertCircle, User, Mail, Hash, Award, ThumbsUp, ThumbsDown,
+  ZoomIn, ZoomOut, RefreshCw, ExternalLink, Eye, EyeOff, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
+import ExamEvaluationDetail from './ExamEvaluationDetail';
+import ImageZoomModal from './ImageZoomModal';
 
 const getSafeImageUrl = (url) => {
   if (!url) return null;
@@ -19,18 +21,17 @@ const getSafeImageUrl = (url) => {
   
   if (url.toLowerCase().endsWith('.pdf')) {
     return "/api/placeholder/800/1200";
-    
   }
   
   return url;
 };
 
-const PDFViewer = ({ url, onZoomIn, onZoomOut, onZoomReset, zoomLevel }) => {
+const PageViewer = ({ url, onZoomIn, onZoomOut, onZoomReset, zoomLevel }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   
   const handleError = () => {
-    console.error("Failed to load PDF:", url);
+    console.error("Failed to load image:", url);
     setError(true);
     setLoading(false);
   };
@@ -44,9 +45,9 @@ const PDFViewer = ({ url, onZoomIn, onZoomOut, onZoomReset, zoomLevel }) => {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-gray-800 text-white p-6 text-center">
         <AlertCircle className="w-16 h-16 text-red-400 mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Unable to load document</h3>
+        <h3 className="text-xl font-semibold mb-2">Unable to load image</h3>
         <p className="text-gray-300 mb-6 max-w-md">
-          The document could not be loaded due to access restrictions or CORS policy.
+          The image could not be loaded due to access restrictions or CORS policy.
         </p>
         <a 
           href={url} 
@@ -67,7 +68,7 @@ const PDFViewer = ({ url, onZoomIn, onZoomOut, onZoomReset, zoomLevel }) => {
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-80 z-10">
           <div className="flex flex-col items-center">
             <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mb-4"></div>
-            <p className="text-white">Loading document...</p>
+            <p className="text-white">Loading image...</p>
           </div>
         </div>
       )}
@@ -112,78 +113,20 @@ const PDFViewer = ({ url, onZoomIn, onZoomOut, onZoomReset, zoomLevel }) => {
     </div>
   );
 };
-
-const ProgressBar = ({ value, max }) => {
-  const percentage = max > 0 ? (value / max) * 100 : 0;
-  
-  const getColor = () => {
-    if (percentage >= 80) return 'bg-emerald-500';
-    if (percentage >= 60) return 'bg-blue-500';
-    if (percentage >= 40) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-  
-  return (
-    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${percentage}%` }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className={`h-full rounded-full ${getColor()}`}
-      />
-    </div>
-  );
-};
-
-const AnimatedCounter = ({ value, duration = 1.5 }) => {
-  const [displayValue, setDisplayValue] = useState(0);
-  
-  useEffect(() => {
-    let startValue = 0;
-    const increment = value / (duration * 60);
-    const timer = setInterval(() => {
-      startValue += increment;
-      if (startValue >= value) {
-        startValue = value;
-        clearInterval(timer);
-      }
-      setDisplayValue(Math.floor(startValue));
-    }, 1000 / 60);
-    
-    return () => clearInterval(timer);
-  }, [value, duration]);
-  
-  return <span>{displayValue}</span>;
-};
-
-const FeedbackBadge = ({ type, count }) => {
-  return (
-    <div className={`
-      inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
-      ${type === 'positive' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
-    `}>
-      {type === 'positive' ? (
-        <ThumbsUp className="w-3 h-3 mr-1" />
-      ) : (
-        <ThumbsDown className="w-3 h-3 mr-1" />
-      )}
-      <span>{count}</span>
-    </div>
-  );
-};
-
 const StudentEvaluationLoader = ({ 
   examId, 
   enrollmentId, 
   onClose,
-  onSaveFeedback = () => {}
+  onSaveFeedback = () => {},
+  onError = () => {}
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [studentData, setStudentData] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answerSheetUrl, setAnswerSheetUrl] = useState(null);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [answerScriptPages, setAnswerScriptPages] = useState([]);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [annotations, setAnnotations] = useState([]);
   const [activeTab, setActiveTab] = useState('question'); 
@@ -194,6 +137,11 @@ const StudentEvaluationLoader = ({
   const [showToast, setShowToast] = useState({ visible: false, message: '', type: 'success' });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showPDFControls, setShowPDFControls] = useState(false);
+  const [useExamDetail, setUseExamDetail] = useState(false);
+  
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+  const [zoomImageUrl, setZoomImageUrl] = useState(null);
+  const [zoomImageTitle, setZoomImageTitle] = useState('');
 
   const pageTransition = {
     hidden: { opacity: 0, y: 20 },
@@ -223,7 +171,16 @@ const StudentEvaluationLoader = ({
         
         if (data.code === 200) {
           setStudentData(data.data);
-          setAnswerSheetUrl(data.data.answer_sheet_url);
+          
+          
+          if (data.data.pages && Array.isArray(data.data.pages)) {
+            const processedPages = data.data.pages.map(page => ({
+              pageNumber: page.page_number,
+              totalPages: page.total_pages,
+              imageUrl: page.presigned_url
+            }));
+            setAnswerScriptPages(processedPages);
+          }
           
           const initialFeedback = {};
           Object.entries(data.data.evaluations || {}).forEach(([qKey, qEval]) => {
@@ -245,7 +202,7 @@ const StudentEvaluationLoader = ({
       } catch (error) {
         console.error("Error fetching student evaluation:", error);
         setError(error.message || "Failed to load student evaluation");
-        createMockData();
+        onError(error.message || "Failed to load student evaluation");
       } finally {
         setLoading(false);
       }
@@ -269,84 +226,25 @@ const StudentEvaluationLoader = ({
         
         const data = await response.json();
         
-        if (data.code === 200) {
-          setQuestions(data.data || []);
+        if (data.code === 200 && data.data && Array.isArray(data.data.questions)) {
+          setQuestions(data.data.questions);
         } else {
           throw new Error(data.message || 'Failed to load questions');
         }
       } catch (error) {
         console.error("Error fetching questions:", error);
+        onError(error.message || "Failed to load questions");
       }
     };
     
-    const createMockData = () => {
-      const mockStudent = {
-        student: {
-          name: "Bhanu G",
-          roll_number: "2022CHX1111",
-          email: "f20221683@pilani.bits-pilani.ac.in"
-        },
-        marks_obtained: 4.2,
-        answer_sheet_url: "/api/placeholder/800/1200", 
-        evaluations: {
-          "question_1": {
-            item_grades: [
-              {
-                item_number: 1,
-                marks_awarded: 1.5,
-                feedback: "The student correctly identified the circuit components and set up the problem properly. However, the explanation of the initial conditions and problem setup could have been clearer."
-              },
-              {
-                item_number: 2,
-                marks_awarded: 1.5,
-                feedback: "The mathematical approach is mostly correct, but there are some calculation errors that affect the final result. The determinant method used is valid, but the execution could be cleaner."
-              },
-              {
-                item_number: 3,
-                marks_awarded: 1.2,
-                feedback: "The explanation is somewhat structured, but lacks clarity in some steps. More detailed justifications and step-by-step reasoning would improve readability and understanding."
-              }
-            ],
-            total_marks: 4.2,
-            overall_feedback: "The student demonstrated a good understanding of the problem and applied the correct methodology. However, some calculations contained errors, and the explanation could have been clearer.",
-            improvement_suggestions: "The student should carefully verify calculations to avoid errors and present the solution in a more structured manner. Adding more explanations between steps would enhance clarity."
-          }
-        },
-        evaluation_status: "completed"
-      };
-      
-      setStudentData(mockStudent);
-      setAnswerSheetUrl("/api/placeholder/800/1200");
-      
-      const mockQuestions = [
-        {
-          question_number: 1,
-          question_text: "Find current i(t) and voltage v(t) in the circuit shown below. Given i(0) = 5 A.",
-          max_marks: 6.0,
-          domain: "Electrical",
-          question_file_url: "/api/placeholder/400/300",
-          answer_file_url: "/api/placeholder/400/300"
-        }
-      ];
-      
-      setQuestions(mockQuestions);
-      
-      const initialFeedback = {};
-      Object.entries(mockStudent.evaluations || {}).forEach(([qKey, qEval]) => {
-        initialFeedback[qKey] = {
-          overall: qEval.overall_feedback || '',
-          items: qEval.item_grades?.map(grade => ({
-            ...grade,
-            editedFeedback: grade.feedback
-          })) || []
-        };
-      });
-      
-      setFeedbackEdits(initialFeedback);
-    };
-    
-    fetchStudentEvaluation();
-  }, [examId, enrollmentId]);
+    if (examId && enrollmentId) {
+      fetchStudentEvaluation();
+    } else {
+      setError("Missing required exam ID or enrollment ID");
+      setLoading(false);
+      onError("Missing required exam ID or enrollment ID");
+    }
+  }, [examId, enrollmentId, onError]);
   
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
@@ -363,6 +261,18 @@ const StudentEvaluationLoader = ({
       setCurrentQuestionIndex(prev => prev + 1);
     }
   };
+
+  const handlePrevPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(prev => prev - 1);
+    }
+  };
+  
+  const handleNextPage = () => {
+    if (currentPageIndex < (answerScriptPages.length - 1)) {
+      setCurrentPageIndex(prev => prev + 1);
+    }
+  };
   
   const getCurrentQuestion = () => {
     if (!questions.length) return null;
@@ -377,131 +287,22 @@ const StudentEvaluationLoader = ({
     return studentData.evaluations[`question_${currentQuestion.question_number}`] || null;
   };
   
-  const handleFeedbackChange = (questionKey, value) => {
-    setFeedbackEdits(prev => ({
-      ...prev,
-      [questionKey]: {
-        ...prev[questionKey],
-        overall: value
-      }
-    }));
-  };
   
-  const handleItemFeedbackChange = (questionKey, itemIndex, value) => {
-    setFeedbackEdits(prev => {
-      const newItems = [...(prev[questionKey]?.items || [])];
-      if (newItems[itemIndex]) {
-        newItems[itemIndex] = {
-          ...newItems[itemIndex],
-          editedFeedback: value
-        };
-      }
-      
-      return {
-        ...prev,
-        [questionKey]: {
-          ...prev[questionKey],
-          items: newItems
-        }
-      };
-    });
-  };
-  
-  const saveFeedback = async () => {
-    setIsSaving(true);
-    try {
-      const currentQuestion = getCurrentQuestion();
-      if (!currentQuestion) {
-        throw new Error('No question selected');
-      }
-      
-      const questionKey = `question_${currentQuestion.question_number}`;
-      const edits = feedbackEdits[questionKey];
-      
-      if (!edits) {
-        throw new Error('No edits to save');
-      }
-      
-      const payload = {
-        exam_id: examId,
-        enrollment_id: enrollmentId,
-        question_number: currentQuestion.question_number,
-        overall_feedback: edits.overall,
-        item_grades: edits.items.map((item) => ({
-          item_number: item.item_number,
-          feedback: item.editedFeedback,
-          marks_awarded: item.marks_awarded
-        }))
-      };
-      
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/update-feedback/${enrollmentId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload),
-        mode: 'cors',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to save feedback: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.code !== 200) {
-        throw new Error(data.message || 'Failed to save feedback');
-      }
-      
-      setStudentData(prev => {
-        if (!prev) return prev;
-        
-        const updatedEvaluations = { ...prev.evaluations };
-        if (updatedEvaluations[questionKey]) {
-          updatedEvaluations[questionKey] = {
-            ...updatedEvaluations[questionKey],
-            overall_feedback: edits.overall,
-            item_grades: edits.items.map((item) => ({
-              ...item,
-              feedback: item.editedFeedback
-            }))
-          };
-        }
-        
-        return {
-          ...prev,
-          evaluations: updatedEvaluations
-        };
-      });
-      
-      onSaveFeedback(payload);
-      setShowToast({
-        visible: true,
-        message: 'Feedback saved successfully',
-        type: 'success'
-      });
-      
-      setTimeout(() => {
-        setShowToast({ visible: false, message: '', type: 'success' });
-      }, 3000);
-    } catch (error) {
-      console.error("Error saving feedback:", error);
-      setShowToast({
-        visible: true,
-        message: error.message || 'Failed to save feedback',
-        type: 'error'
-      });
-      
-      setTimeout(() => {
-        setShowToast({ visible: false, message: '', type: 'success' });
-      }, 3000);
-    } finally {
-      setIsSaving(false);
+  const handleOpenQuestionImage = () => {
+    if (currentQuestion?.question_file_url) {
+      setZoomImageUrl(getSafeImageUrl(currentQuestion.question_file_url));
+      setZoomImageTitle(`Question ${questionNumber}`);
+      setZoomModalOpen(true);
     }
   };
-  
+
+  const handleOpenAnswerImage = () => {
+    if (currentQuestion?.answer_file_url) {
+      setZoomImageUrl(getSafeImageUrl(currentQuestion.answer_file_url));
+      setZoomImageTitle(`Answer for Question ${questionNumber}`);
+      setZoomModalOpen(true);
+    }
+  };      
   const handleScroll = () => {
     if (answerSheetRef.current) {
       setScrollPosition(answerSheetRef.current.scrollTop);
@@ -515,6 +316,21 @@ const StudentEvaluationLoader = ({
   
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
+  };
+
+  
+  const handleDetailComplete = (data) => {
+    onSaveFeedback(data);
+    
+    setShowToast({
+      visible: true,
+      message: 'Evaluation completed successfully',
+      type: 'success'
+    });
+    
+    setTimeout(() => {
+      setShowToast({ visible: false, message: '', type: 'success' });
+    }, 3000);
   };
 
   if (loading) {
@@ -567,10 +383,32 @@ const StudentEvaluationLoader = ({
       </motion.div>
     );
   }
+
+  
+  if (useExamDetail) {
+    return (
+      <ExamEvaluationDetail
+        examId={examId}
+        enrollmentId={enrollmentId}
+        studentInfo={studentData?.student ? {
+          student_name: studentData.student.name,
+          roll_number: studentData.student.roll_number,
+          email: studentData.student.email
+        } : null}
+        questions={questions}
+        answerScriptPages={answerScriptPages}
+        existingEvaluations={studentData?.evaluations || {}}
+        evaluationStatus={studentData?.evaluation_status || "pending"}
+        onClose={onClose}
+        onComplete={handleDetailComplete}
+      />
+    );
+  }
   
   const currentQuestion = getCurrentQuestion();
   const currentEvaluation = getCurrentEvaluation();
   const questionNumber = currentQuestion?.question_number || 1;
+  const currentPage = answerScriptPages[currentPageIndex] || null;
   
   return (
     <div className={`fixed inset-0 bg-gray-50 z-50 flex flex-col overflow-hidden ${isFullscreen ? 'fullscreen-mode' : ''}`}>
@@ -627,7 +465,7 @@ const StudentEvaluationLoader = ({
           >
             <Award className="w-4 h-4" />
             <span className="font-medium">
-              <AnimatedCounter value={studentData?.marks_obtained || 0} />
+              {studentData?.marks_obtained || 0}
             </span>
             <span className="text-blue-500">/</span>
             <span>{getCurrentQuestion()?.max_marks || 10}</span>
@@ -670,6 +508,11 @@ const StudentEvaluationLoader = ({
             <h2 className="text-sm font-medium flex items-center">
               <FileText className="w-4 h-4 mr-2" />
               Student Answer Sheet
+              {answerScriptPages.length > 1 && (
+                <span className="ml-2 text-gray-400 text-xs">
+                  Page {currentPageIndex + 1} of {answerScriptPages.length}
+                </span>
+              )}
             </h2>
             
             <motion.div 
@@ -677,6 +520,26 @@ const StudentEvaluationLoader = ({
               animate={{ opacity: showPDFControls ? 1 : 0 }}
               className="flex items-center gap-2"
             >
+              {answerScriptPages.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPageIndex === 0}
+                    className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPageIndex >= answerScriptPages.length - 1}
+                    className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
               <button
                 onClick={toggleFullscreen}
                 className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors"
@@ -692,9 +555,9 @@ const StudentEvaluationLoader = ({
             className="flex-1 overflow-auto bg-gradient-to-b from-gray-800 to-gray-900"
             onScroll={handleScroll}
           >
-            {answerSheetUrl ? (
-              <PDFViewer
-                url={answerSheetUrl}
+            {currentPage && currentPage.imageUrl ? (
+              <PageViewer
+                url={currentPage.imageUrl}
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
                 onZoomReset={handleZoomReset}
@@ -805,15 +668,28 @@ const StudentEvaluationLoader = ({
                         </div>
                         <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden p-2">
                           {currentQuestion?.question_file_url ? (
-                            <img
-                              src={getSafeImageUrl(currentQuestion.question_file_url)}
-                              alt={`Question ${questionNumber}`}
-                              className="max-h-full object-contain rounded shadow-sm"
-                              onError={(e) => {
-                                e.target.src = "/api/placeholder/400/300";
-                                e.target.onerror = null;
-                              }}
-                            />
+                            <motion.div 
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="cursor-pointer relative w-full h-full flex items-center justify-center"
+                              onClick={handleOpenQuestionImage}
+                            >
+                              <img
+                                src={getSafeImageUrl(currentQuestion.question_file_url)}
+                                alt={`Question ${questionNumber}`}
+                                className="max-h-full object-contain rounded shadow-sm"
+                                onError={(e) => {
+                                  e.target.src = "/api/placeholder/400/300";
+                                  e.target.onerror = null;
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 flex items-center justify-center opacity-0 hover:opacity-100 transition-all rounded">
+                                <div className="bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center">
+                                  <ZoomIn className="w-3.5 h-3.5 mr-1" />
+                                  Zoom
+                                </div>
+                              </div>
+                            </motion.div>
                           ) : (
                             <div className="flex flex-col items-center text-gray-400">
                               <FileText className="w-10 h-10 mb-2" />
@@ -834,15 +710,28 @@ const StudentEvaluationLoader = ({
                         </div>
                         <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden p-2">
                           {currentQuestion?.answer_file_url ? (
-                            <img
-                              src={getSafeImageUrl(currentQuestion.answer_file_url)}
-                              alt={`Answer for Question ${questionNumber}`}
-                              className="max-h-full object-contain rounded shadow-sm"
-                              onError={(e) => {
-                                e.target.src = "/api/placeholder/400/300";
-                                e.target.onerror = null;
-                              }}
-                            />
+                            <motion.div 
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="cursor-pointer relative w-full h-full flex items-center justify-center"
+                              onClick={handleOpenAnswerImage}
+                            >
+                              <img
+                                src={getSafeImageUrl(currentQuestion.answer_file_url)}
+                                alt={`Answer for Question ${questionNumber}`}
+                                className="max-h-full object-contain rounded shadow-sm"
+                                onError={(e) => {
+                                  e.target.src = "/api/placeholder/400/300";
+                                  e.target.onerror = null;
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 flex items-center justify-center opacity-0 hover:opacity-100 transition-all rounded">
+                                <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center">
+                                  <ZoomIn className="w-3.5 h-3.5 mr-1" />
+                                  Zoom
+                                </div>
+                              </div>
+                            </motion.div>
                           ) : (
                             <div className="flex flex-col items-center text-gray-400">
                               <FileText className="w-10 h-10 mb-2" />
@@ -904,25 +793,6 @@ const StudentEvaluationLoader = ({
                           <h3 className="text-lg font-medium text-gray-900">
                             Feedback & Assessment
                           </h3>
-                          <motion.button
-                            whileHover={{ scale: 1.05, boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)" }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={saveFeedback}
-                            disabled={isSaving}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg transition-all disabled:opacity-50 shadow-sm"
-                          >
-                            {isSaving ? (
-                              <>
-                                <Loader className="w-4 h-4 animate-spin" />
-                                <span>Saving...</span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4" />
-                                <span>Save Feedback</span>
-                              </>
-                            )}
-                          </motion.button>
                         </motion.div>
                         
                         <div className="space-y-5">
@@ -935,13 +805,11 @@ const StudentEvaluationLoader = ({
                             <label className="block text-sm font-medium text-gray-700">
                               Overall Feedback
                             </label>
-                            <textarea
-                              value={feedbackEdits[`question_${questionNumber}`]?.overall || ''}
-                              onChange={(e) => handleFeedbackChange(`question_${questionNumber}`, e.target.value)}
-                              placeholder="Enter overall feedback for this question..."
-                              className="w-full px-4 py-3 border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                              rows={4}
-                            />
+                            <div 
+  className="w-full px-4 py-3 border border-gray-200 rounded-lg shadow-sm"
+>
+  {feedbackEdits[`question_${questionNumber}`]?.overall || ''}
+</div>
                           </motion.div>
                           
                           <motion.div 
@@ -972,30 +840,14 @@ const StudentEvaluationLoader = ({
                                       Criterion {item.item_number}
                                     </h5>
                                   </div>
-                                  
-                                  <div className="flex items-center">
-                                    <span className="text-sm font-medium text-blue-600 mr-2">
-                                      {item.marks_awarded} points
-                                    </span>
-                                    <div className="w-16 bg-gray-100 h-2 rounded-full overflow-hidden">
-                                      <div 
-                                        className="h-full bg-blue-500 rounded-full"
-                                        style={{ width: `${(item.marks_awarded / 10) * 100}%` }}
-                                      ></div>
                                     </div>
-                                  </div>
-                                </div>
                                 
                                 <div>
-                                  <textarea
-                                    value={feedbackEdits[`question_${questionNumber}`]?.items[index]?.editedFeedback || ''}
-                                    onChange={(e) => handleItemFeedbackChange(`question_${questionNumber}`, index, e.target.value)}
-                                    placeholder="Enter feedback for this criterion..."
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg 
-                                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                    rows={2}
-                                  />
-                                </div>
+                                <div 
+  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+>
+  {feedbackEdits[`question_${questionNumber}`]?.items[index]?.editedFeedback || ''}
+</div>                                </div>
                               </motion.div>
                             ))}
                             
@@ -1119,7 +971,7 @@ const StudentEvaluationLoader = ({
                               <div className="text-sm text-gray-500">{stat.label}</div>
                               <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-700 to-gray-900 mt-1">
                                 {typeof stat.value === 'number' ? 
-                                  <AnimatedCounter value={stat.value} /> : 
+                                  stat.value : 
                                   stat.value
                                 }
                               </div>
@@ -1132,172 +984,22 @@ const StudentEvaluationLoader = ({
                           ))}
                         </motion.div>
                         
-                        <motion.div 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 }}
-                          className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm"
-                        >
-                          <h4 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-                            <BarChart className="w-4 h-4 text-blue-500" />
-                            <span>Score Breakdown</span>
-                          </h4>
-                          
-                          {currentEvaluation.item_grades?.map((item, index) => {
-                            const maxItemMarks = 10; 
-                            const percentage = (item.marks_awarded / maxItemMarks) * 100;
-                            
-                            const getBarColor = () => {
-                              if (percentage >= 80) return 'bg-green-500';
-                              if (percentage >= 60) return 'bg-blue-500';
-                              if (percentage >= 40) return 'bg-yellow-500';
-                              return 'bg-red-500';
-                            };
-                            
-                            return (
-                              <motion.div 
-                                key={index} 
-                                className="mb-4 last:mb-0"
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 * (index + 4) }}
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="text-sm text-gray-700 flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-700">
-                                      {item.item_number}
-                                    </div>
-                                    <span>Criterion {item.item_number}</span>
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {item.marks_awarded} / {maxItemMarks}
-                                  </div>
-                                </div>
-                                
-                                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                                  <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${percentage}%` }}
-                                    transition={{ duration: 1, ease: "easeOut" }}
-                                    className={`h-full rounded-full ${getBarColor()}`}
-                                  />
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-                          
-                          {(!currentEvaluation.item_grades || currentEvaluation.item_grades.length === 0) && (
-                            <div className="text-center py-6">
-                              <p className="text-sm text-gray-500">No assessment criteria available</p>
-                            </div>
-                          )}
-                        </motion.div>
                         
-                        <motion.div 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.4 }}
-                          className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm"
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                              <Search className="w-4 h-4 text-blue-500" />
-                              <span>Strengths & Weaknesses</span>
-                            </h4>
-                            
-                            <div className="flex gap-2">
-                              <FeedbackBadge type="positive" count={3} />
-                              <FeedbackBadge type="negative" count={3} />
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-4">
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.5 }}
-                              className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-lg shadow-sm"
-                            >
-                              <h5 className="text-sm font-medium text-green-800 mb-2 flex items-center gap-2">
-                                <ThumbsUp className="w-4 h-4" />
-                                <span>Strengths</span>
-                              </h5>
-                              <ul className="text-sm text-green-700 space-y-1 pl-6 list-disc">
-                                <motion.li 
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.6 }}
-                                >
-                                  Strong problem-solving approach
-                                </motion.li>
-                                <motion.li 
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.7 }}
-                                >
-                                  Good mathematical foundation
-                                </motion.li>
-                                <motion.li 
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.8 }}
-                                >
-                                  Clear presentation of work
-                                </motion.li>
-                              </ul>
-                            </motion.div>
-                            
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.6 }}
-                              className="p-4 bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-lg shadow-sm"
-                            >
-                              <h5 className="text-sm font-medium text-red-800 mb-2 flex items-center gap-2">
-                                <ThumbsDown className="w-4 h-4" />
-                                <span>Areas for Improvement</span>
-                              </h5>
-                              <ul className="text-sm text-red-700 space-y-1 pl-6 list-disc">
-                                <motion.li 
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.7 }}
-                                >
-                                  Some calculation errors
-                                </motion.li>
-                                <motion.li 
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.8 }}
-                                >
-                                  Needs more step-by-step explanations
-                                </motion.li>
-                                <motion.li 
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.9 }}
-                                >
-                                  Could improve organization of solutions
-                                </motion.li>
-                              </ul>
-                            </motion.div>
-                          </div>
-                        </motion.div>
                       </div>
                     ) : (
                       <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="text-center py-10"
-                      >
-                        <div className="w-20 h-20 mx-auto bg-gradient-to-r from-gray-100 to-gray-50 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                          <BarChart className="w-10 h-10 text-gray-400" />
-                        </div>
-                        <h3 className="text-xl font-medium text-gray-900 mb-2">No Statistics Available</h3>
-                        <p className="text-gray-500 max-w-md mx-auto px-4">
-                          Statistics will be available after evaluation is complete.
-                        </p>
-                      </motion.div>
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center py-10"
+                    >
+                      <div className="w-20 h-20 mx-auto bg-gradient-to-r from-gray-100 to-gray-50 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                        <BarChart className="w-10 h-10 text-gray-400" />
+                      </div>
+                      <h3 className="text-xl font-medium text-gray-900 mb-2">No Statistics Available</h3>
+                      <p className="text-gray-500 max-w-md mx-auto px-4">
+                        Statistics will be available after evaluation is complete.
+                      </p>
+                    </motion.div>
                     )}
                   </motion.div>
                 )}
@@ -1326,6 +1028,13 @@ const StudentEvaluationLoader = ({
           </motion.div>
         )}
       </AnimatePresence>
+      
+      <ImageZoomModal
+        isOpen={zoomModalOpen}
+        onClose={() => setZoomModalOpen(false)}
+        imageUrl={zoomImageUrl}
+        title={zoomImageTitle}
+      />
     </div>
   );
 };

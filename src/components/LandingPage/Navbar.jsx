@@ -13,6 +13,7 @@ const MobileMenu = () => {
     { name: "Pricing", link: "#pricing" },
     { name: "FAQ", link: "#faq" },
     { name: "Contact", link: "#contact" },
+    { name: "Docs", link: "https://docs.smart-qna.com/" }
   ];
 
   return (
@@ -63,13 +64,13 @@ const MobileMenu = () => {
           
           <div className="mt-8 space-y-4">
             <a 
-              href="https://www.blog.smart-qna.com/"
+              href="https://blog.smart-qna.com/"
               className="w-full py-3 px-6 border border-blue-500 text-blue-600 rounded-md text-lg font-medium hover:bg-blue-50 transition-colors duration-200 block text-center"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setIsOpen(false)}
             >
-              Our Blog
+             Blogs
             </a>
 
             <button 
@@ -111,6 +112,7 @@ const Navbar = () => {
     { name: "Pricing", link: "#pricing" },
     { name: "FAQ", link: "#faq" },
     { name: "Contact", link: "#contact" },
+    { name: "Docs", link: "https://docs.smart-qna.com/" },
   ];
 
   return (
@@ -154,14 +156,14 @@ const Navbar = () => {
 
         <div className="hidden lg:flex items-center space-x-4">
           <motion.a 
-            href="https://www.blog.smart-qna.com/"
+            href="https://blog.smart-qna.com/"
             className="py-2 px-6 border border-blue-500 text-blue-600 rounded-md font-medium hover:bg-blue-50 transition-colors duration-200"
             target="_blank"
             rel="noopener noreferrer"
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            Our Blog
+            Blogs
           </motion.a>
 
           <motion.button 

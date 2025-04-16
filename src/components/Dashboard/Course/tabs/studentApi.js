@@ -1,4 +1,5 @@
 import { fetchApi } from '../api';
+
 const handleApiError = (error) => {
   if (error instanceof Error) {
     return error;
@@ -11,16 +12,24 @@ const handleApiError = (error) => {
   }
   return new Error('An unexpected error occurred');
 };
+
 export const studentApi = {
   getStudents: async (courseId) => {
     try {
       if (!courseId) throw new Error('Course ID is required');
       const response = await fetchApi(`/professors/courses/${courseId}/students`);
+      
+      if (response.code === 200 && response.data) {
+        console.log("API response:", response);
+        return response.data;
+      }
+      
       return response.data || [];
     } catch (error) {
       throw handleApiError(error);
     }
   },
+  
   addStudent: async (data) => {
     try {
       if (!data.name || !data.email || !data.roll_number || !data.batch) {
@@ -43,6 +52,7 @@ export const studentApi = {
       throw handleApiError(error);
     }
   },
+  
   removeStudent: async (courseId, studentId) => {
     try {
       if (!courseId || !studentId) {
@@ -59,6 +69,7 @@ export const studentApi = {
       throw handleApiError(error);
     }
   },
+  
   uploadStudents: async (courseId, file) => {
     try {
       if (!courseId || !file) {
@@ -79,6 +90,7 @@ export const studentApi = {
       throw handleApiError(error);
     }
   },
+  
   checkUploadStatus: async (uploadId) => {
     try {
       if (!uploadId) {
@@ -93,6 +105,7 @@ export const studentApi = {
       throw handleApiError(error);
     }
   },
+  
   pollUploadStatus: (uploadId, onProgress, onComplete, onError) => {
     if (!uploadId) {
       throw new Error('Upload ID is required');
@@ -132,4 +145,5 @@ export const studentApi = {
     return () => clearInterval(pollInterval);
   }
 };
+
 export default studentApi;

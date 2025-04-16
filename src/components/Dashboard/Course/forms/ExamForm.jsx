@@ -10,12 +10,14 @@ const ExamForm = ({
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     exam_name: initialData?.exam_name || '',
-    full_marks: initialData?.full_marks || ''
+    full_marks: initialData?.full_marks || '',
+    allow_recheck: true,
+    max_recheck_attempts: 1
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.exam_name || !formData.full_marks) {
+    if (!formData.exam_name || !formData.full_marks  === '') {
       setError('Please fill in all required fields');
       return;
     }
@@ -61,12 +63,14 @@ const ExamForm = ({
           <input
             type="number"
             value={formData.full_marks}
-            onChange={(e) => setFormData(prev => ({ ...prev, full_marks: parseInt(e.target.value) }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, full_marks: parseFloat(e.target.value) }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             min="1"
+            step="0.1"
             required
           />
         </div>
+
       </div>
 
       <div className="flex justify-end gap-3 pt-4">

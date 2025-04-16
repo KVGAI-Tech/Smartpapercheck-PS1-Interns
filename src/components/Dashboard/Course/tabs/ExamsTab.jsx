@@ -3,15 +3,13 @@ import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
   Users, PlayCircle, X, AlertCircle, CheckCircle,
-  Check, Clock, FilePlus
+  Check, History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
 import { API_BASE_URL } from '../../../../BaseURL';
-
 const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
-
 const Toast = ({ message, type, show, onClose }) => {
   useEffect(() => {
     if (show) {
@@ -321,10 +319,10 @@ const ExamCard = ({
   onGenerateRubrics,
   onUploadAnswers,
   onGetEnrollments,
-  onStartEvaluation
+  onStartEvaluation,
 }) => {
   const [activeStep, setActiveStep] = useState(0);
-  
+    
   const steps = [
     { 
       label: 'Upload Q&A', 
@@ -377,7 +375,6 @@ const ExamCard = ({
             <Users className="w-4 h-4" />
             <span>Enrollments</span>
           </motion.button>
-          
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -413,6 +410,7 @@ const ExamCard = ({
       </div>
 
       <div className="px-6 sm:px-10 py-10 bg-gradient-to-b from-white to-gray-50">
+        
         <div className="flex flex-col items-center">
           <div className="flex items-center justify-center w-full max-w-3xl mx-auto mb-8">
             {steps.map((step, index) => (
@@ -514,9 +512,6 @@ const ExamsTab = ({
   onAdd = () => { },
   onEdit = () => { },
   onDelete = () => { },
-  onUploadQnA = () => { },
-  onGenerateRubrics = () => { },
-  onUploadAnswers = () => { }
 }) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
@@ -529,6 +524,8 @@ const ExamsTab = ({
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [selectedExamForEvaluation, setSelectedExamForEvaluation] = useState(null);
   const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
+  const [showRecheckRequests, setShowRecheckRequests] = useState(false);
+  const [selectedExamForRecheck, setSelectedExamForRecheck] = useState(null);
 
   useEffect(() => {
     if (!courseId) {
@@ -554,11 +551,23 @@ const ExamsTab = ({
         throw new Error('Exam ID is missing');
       }
       
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/questions`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
       });
+  
+      if (response.status === 404) {
+        const errorData = await response.json();
+        if (errorData.message && errorData.message.includes('No questions found')) {
+          setQuestionsHaveRubrics(prev => ({
+            ...prev,
+            [examId]: false
+          }));
+          return [];
+        }
+        throw new Error(`Failed to fetch questions: ${response.status}`);
+      }
   
       if (!response.ok) {
         throw new Error(`Failed to fetch questions: ${response.status}`);
@@ -592,10 +601,17 @@ const ExamsTab = ({
       }
     } catch (error) {
       console.error('Error fetching questions:', error);
+      
+      if (error.message && error.message.includes('NotFoundError: No questions found')) {
+        showToast('No questions have been uploaded for this exam yet.', 'info');
+        return [];
+      }
+      
+      showToast(`Error loading exam questions: ${error.message}`, 'error');
       throw error;
     }
-  }, []);
-
+  }, [showToast]);
+  
   const handleRubricSave = async (data) => {
     try {
       showToast('Rubric saved successfully', 'success');
@@ -635,7 +651,7 @@ const ExamsTab = ({
       
       showToast('Fetching enrollments...', 'success');
       
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
@@ -665,17 +681,36 @@ const ExamsTab = ({
       showToast('Error: Exam ID is missing', 'error');
       return;
     }
-    
     setIsLoading(true);
     try {
       let questions = [];
       try {
-        questions = await fetchExamQuestions(examId);
+        const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          }
+        });
+        if (response.status === 404) {
+          console.log('No existing questions found for this exam');
+        } else if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ detail: "Failed to fetch questions" }));
+          throw new Error(errorData.detail || `Failed to fetch questions: ${response.status}`);
+        } else {
+          const data = await response.json();
+          if (data.code === 200) {
+            if (data.data.questions) {
+              questions = data.data.questions || [];
+            } else if (data.data.question_number) {
+              questions = [data.data];
+            }
+          }
+        }
       } catch (error) {
-        console.error('Error loading questions:', error);
-        showToast('Failed to load existing questions. You can still upload a new question paper.', 'error');
+        if (!error.message.includes('Questions not found')) {
+          console.error('Error loading questions:', error);
+          showToast('Failed to load existing questions. You can still upload a new question paper.', 'error');
+        }
       }
-      
       setExistingQuestions(questions);
       setSelectedExamId(examId);
       setShowUploadModal(true);
@@ -683,7 +718,6 @@ const ExamsTab = ({
       setIsLoading(false);
     }
   };
-
   const handleAnswerUpload = async (examId) => {
     if (!examId) {
       showToast('Error: Exam ID is missing', 'error');
@@ -800,6 +834,12 @@ const ExamsTab = ({
     }
   };
 
+  
+  const handleViewRecheckRequests = (examId) => {
+    setSelectedExamForRecheck(examId);
+    setShowRecheckRequests(true);
+    showToast('Loading recheck requests...', 'success');
+  };
   return (
     <>
       <motion.div
@@ -839,17 +879,19 @@ const ExamsTab = ({
             />
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onAdd}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white
-              rounded-xl hover:bg-blue-700 transition-all duration-300
-              shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create Exam
-          </motion.button>
+          <div className="flex items-center gap-3">                                    
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onAdd}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white
+                rounded-xl hover:bg-blue-700 transition-all duration-300
+                shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Exam
+            </motion.button>
+          </div>
         </div>
 
         <motion.div
@@ -874,6 +916,7 @@ const ExamsTab = ({
                   onUploadAnswers={handleAnswerUpload}
                   onGetEnrollments={handleGetEnrollments}
                   onStartEvaluation={handleStartEvaluation}
+                  onViewRecheckRequests={handleViewRecheckRequests}
                 />
               </motion.div>
             ))}
@@ -967,7 +1010,6 @@ const ExamsTab = ({
               if (!response.ok) {
                 throw new Error(`Upload failed: ${response.status}`);
               }
-
               const data = await response.json();
               if (data.code === 200) {
                 showToast('Question paper uploaded successfully', 'success');
@@ -982,7 +1024,6 @@ const ExamsTab = ({
             }
           }}
         />
-
         <RubricModal
           isOpen={showRubricModal}
           onClose={() => {
@@ -1063,6 +1104,28 @@ const ExamsTab = ({
                       message: error.message || 'Failed to evaluate submission'
                     };
                   }
+                }}
+              />
+            </React.Suspense>
+          </div>
+        </div>
+      )}
+      {showRecheckRequests && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <div className="min-h-screen p-6">
+            <React.Suspense
+              fallback={
+                <div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              }
+            >
+              <ProfessorRecheckRequests
+                examId={selectedExamForRecheck}
+                courseId={courseId}
+                onClose={() => {
+                  setShowRecheckRequests(false);
+                  setSelectedExamForRecheck(null);
                 }}
               />
             </React.Suspense>

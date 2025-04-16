@@ -8,6 +8,14 @@ export default defineConfig({
     host: '0.0.0.0', 
     port: 5173,
     allowedHosts: ['dev.smart-qna.com', 'localhost'],
+    proxy: {
+      '/api': {
+        target: 'https://dev.smart-qna.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      }
+    },
     cors: {
       origin: '*',
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

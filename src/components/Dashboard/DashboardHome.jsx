@@ -3,19 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../BaseURL';
 
 import { 
-  BookOpen, 
-  GraduationCap,
   Users,
   CheckCircle,
   Clock,
   FileCheck,
   Search,
-  Bell,
-  Plus,
   MoreVertical,
   Filter,
-  Download,
-  Upload
 } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, trend, trendValue, className }) => (

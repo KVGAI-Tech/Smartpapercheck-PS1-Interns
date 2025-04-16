@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { 
-  X, Upload, Download, FileUp, File,
+  X, Upload, FileUp, File,
   CheckCircle, AlertCircle, ChevronDown,
   FileText, Loader
 } from 'lucide-react';

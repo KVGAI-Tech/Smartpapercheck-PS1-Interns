@@ -1,16 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./components/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRoute from "./components/RoleRoute";
 import DashboardLayout from "./components/Dashboard/DashboardLayout";
-import StudentDashboardLayout from "./components/Dashboard/StudentDashboardLayout";
+import StudentDashboardLayout from "./components/StudentDashboardLayout";
 import Dashboard from "./components/Dashboard/DashboardHome";
 import StudentDashboard from "./components/StudentDashboard";
 import TADashboard from "./components/TADashboard";
 import Courses from "./components/Dashboard/Course";
-import StudentManagement from "./components/Dashboard/StudentManagement";
-import TeachingAssistantsPage from "./components/Dashboard/TeachingAssistantsPage";
-import SettingsPage from "./components/Dashboard/SettingsPage";
 import CourseDetails from "./components/Dashboard/Course/CourseDetails";
 import RoleAuth from "./components/RoleAuth";
 import LandingPage from "./components/LandingPage";
@@ -19,9 +15,11 @@ import AboutUsPage from "./components/AboutUsPage";
 import LoadingIndicator from "./components/Loader";
 import { useEffect, useState } from "react";
 import { Toaster } from "react-hot-toast";
-import StudentEvaluations from './components/StudentEvaluations';
-import CourseEvaluations from './components/CourseEvaluations';
-import StudentExamDetails from './components/StudentExamDetails';
+import StudentEvaluations from "./components/StudentEvaluations";
+import CourseEvaluations from "./components/CourseEvaluations";
+import StudentExamDetails from "./components/StudentExamDetails";
+import ProfessorRecheckDetail from "./components/Dashboard/Course/ProfessorRecheckDetail";
+import PoliciesPage from "./components/PoliciesPage";
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -49,6 +47,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/policies" element={<PoliciesPage />} />
           <Route path="/auth" element={<RoleAuth />} />
 
           <Route
@@ -81,27 +80,6 @@ function App() {
               </RoleRoute>
             }
           />
-          <Route
-            path="/manage/students"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <StudentManagement />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/manage/tas"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <TeachingAssistantsPage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          
           <Route
             path="/student-dashboard"
             element={
@@ -150,7 +128,14 @@ function App() {
               </RoleRoute>
             }
           />
-          
+          <Route
+            path="/student/history/:courseId/exam/:id"
+            element={
+              <RoleRoute requiredRole="student">
+                <StudentExamDetails isHistory />
+              </RoleRoute>
+            }
+          />
           <Route
             path="/ta-dashboard"
             element={
@@ -161,15 +146,10 @@ function App() {
               </RoleRoute>
             }
           />
-          
           <Route
-            path="/settings"
+            path="/professor/recheck-requests"
             element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <SettingsPage />
-                </DashboardLayout>
-              </ProtectedRoute>
+              <ProfessorRecheckDetail />
             }
           />
 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { HiOutlineCheck, HiOutlineArrowRight } from "react-icons/hi";
 
+
 // PricingCard Component
 const PricingCard = ({ plan, isPopular, features, price, type, description, index }) => {
   return (

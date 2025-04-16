@@ -3,7 +3,8 @@ import {
   X, Plus, Upload, Trash2, 
   FileText, ArrowUp, ArrowDown,
   CheckCircle, Maximize, Minimize,
-  File, FilePlus, Upload as UploadIcon
+  File, FilePlus, Upload as UploadIcon,
+  AlertCircle
 } from 'lucide-react';
 import { API_BASE_URL } from '../../../../BaseURL';
 
@@ -42,7 +43,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   }, [isOpen]);
 
   useEffect(() => {
-    if (existingQuestions.length > 0) {
+    if (Array.isArray(existingQuestions) && existingQuestions.length > 0) {
       const formattedQuestions = existingQuestions.map((q, index) => ({
         id: index + 1,
         question: null,
@@ -57,6 +58,20 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         domain: q.domain || ''
       }));
       setQuestions(formattedQuestions);
+    } else {
+      setQuestions([{
+        id: 1,
+        question: null,
+        questionPreview: '',
+        questionUrl: '',
+        answer: null,
+        answerPreview: '',
+        answerUrl: '',
+        marks: '',
+        questionText: '',
+        answerText: 'answer',
+        domain: ''
+      }]);
     }
   }, [existingQuestions]);
 
@@ -218,6 +233,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   const handleSubmit = async () => {
     if (!validateQuestions()) return;
     setIsSubmitting(true);
+    setError('');
     
     try {
       if (uploadMode === 'golden-pdf') {
@@ -226,16 +242,18 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
           questionFormData.append('question_pdf', questionPdfFile);
           
           try {
-            await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/question-pdf`, {
+            const response = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/question-pdf`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
               },
               body: questionFormData
-            }).then(resp => {
-              if (!resp.ok) throw new Error('Failed to upload question PDF');
-              return resp.json();
             });
+            
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ detail: "Failed to upload question PDF" }));
+              throw new Error(errorData.detail || "Failed to upload question PDF");
+            }
           } catch (error) {
             setError(`Error uploading question PDF: ${error.message}`);
             setIsSubmitting(false);
@@ -248,16 +266,18 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
           goldenFormData.append('golden_pdf', goldenPdfFile);
           
           try {
-            await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/golden-pdf`, {
+            const response = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/golden-pdf`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
               },
               body: goldenFormData
-            }).then(resp => {
-              if (!resp.ok) throw new Error('Failed to upload golden answer PDF');
-              return resp.json();
             });
+            
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ detail: "Failed to upload golden answer PDF" }));
+              throw new Error(errorData.detail || "Failed to upload golden answer PDF");
+            }
           } catch (error) {
             setError(`Error uploading golden answer PDF: ${error.message}`);
             setIsSubmitting(false);
@@ -278,6 +298,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
               questionFormData.append('max_marks', q.marks);
               questionFormData.append('question_text', q.questionText);
               questionFormData.append('domain', q.domain);
+              
               await onSubmit(examId, questionFormData);
             }
             
@@ -290,10 +311,12 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
               answerFormData.append('max_marks', q.marks);
               answerFormData.append('question_text', q.questionText);
               answerFormData.append('domain', q.domain);
+              
               await onSubmit(examId, answerFormData);
             }
           } catch (error) {
-            setError(`Error uploading question ${i + 1}: ${error.message}`);
+            const errorMessage = error.message || 'Error uploading question';
+            setError(`Error uploading question ${i + 1}: ${errorMessage}`);
             setIsSubmitting(false);
             return;
           }
@@ -560,9 +583,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         {error && (
           <div className="px-6 pt-3 pb-0 animate-slideDown">
             <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-md flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+              <AlertCircle className="h-5 w-5 text-red-500" />
               <p>{error}</p>
             </div>
           </div>
@@ -809,6 +830,5 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     </div>
   );
 };
-
 
 export default UploadQnAModal;

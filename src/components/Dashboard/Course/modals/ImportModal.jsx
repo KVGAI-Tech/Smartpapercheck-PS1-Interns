@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { 
-  Upload, X, AlertCircle, FileText, 
-  CheckCircle, Download, ArrowRight,
+  Upload, X, AlertCircle, 
+  CheckCircle, Download,
   Loader
 } from 'lucide-react';
 import Papa from 'papaparse';

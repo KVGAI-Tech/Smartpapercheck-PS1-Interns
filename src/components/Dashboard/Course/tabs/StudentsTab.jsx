@@ -3,7 +3,7 @@ import {
   Search, Upload, Plus, Edit2, Trash2,
   Users, AlertCircle, Loader 
 } from 'lucide-react';
-import { studentApi } from './studentApi';
+import { studentApi } from './studentApi'; 
 import { StudentImportModal } from '../modals/ImportModal';
 
 const StudentsTab = ({
@@ -17,7 +17,6 @@ const StudentsTab = ({
   onAdd = () => {},
   onEdit = () => {},
   onDelete = () => {},
-  onImport = () => {}
 }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +41,18 @@ const StudentsTab = ({
       try {
         setLoading(true);
         const fetchedStudents = await studentApi.getStudents(courseId);
-        setStudents(fetchedStudents);
-        console.log(fetchedStudents);
-        setError(null);
+        console.log("Fetched students:", fetchedStudents);
+        
+        if (Array.isArray(fetchedStudents)) {
+          setStudents(fetchedStudents);
+          setError(null);
+        } else {
+          console.error("Unexpected students data format:", fetchedStudents);
+          setError('Received invalid data format from server');
+          setStudents([]);
+        }
       } catch (err) {
+        console.error("Error fetching students:", err);
         setError(err.message || 'Failed to load students');
         setStudents([]);
       } finally {
@@ -101,14 +108,16 @@ const StudentsTab = ({
     }
   };
 
+  
   const filteredStudents = students.filter(student => {
     const matchesSearch = !searchQuery || 
       [student.user_name, student.roll_number, student.user_email]
-        .some(field => 
-          field?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        .filter(field => typeof field === 'string') 
+        .some(field => field.toLowerCase().includes(searchQuery.toLowerCase()));
+    
     const matchesSection = selectedSection === 'All sections' || 
       student.section === selectedSection;
+    
     return matchesSearch && matchesSection;
   });
 
@@ -137,6 +146,10 @@ const StudentsTab = ({
         </div>
       );
     }
+
+    
+    console.log("Filtered students:", filteredStudents);
+    console.log("Total students count:", students.length);
 
     if (!students.length) {
       return (

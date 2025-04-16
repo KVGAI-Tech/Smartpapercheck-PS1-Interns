@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [authError, setAuthError] = useState(null);
   const navigate = useNavigate();
 
   
@@ -22,13 +23,24 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
           setUserRole(role);
         } else {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('refreshToken');
           setIsAuthenticated(false);
           setUserRole(null);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('Authentication initialization error:', error);
+        setAuthError('Failed to initialize authentication state');
         setIsAuthenticated(false);
         setUserRole(null);
+        try {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('refreshToken');
+        } catch (clearError) {
+          console.error('Failed to clear authentication data:', clearError);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -38,36 +50,76 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (token, role) => {
-    
-    if (role === 'student') {
-      navigate('/student-dashboard', { replace: true });
+    if (!token || !role) {
+      setAuthError('Login failed: Missing authentication token or role');
       return;
     }
-
     
-    localStorage.setItem('accessToken', token);
-    localStorage.setItem('userRole', role);
-    setIsAuthenticated(true);
-    setUserRole(role);
-
-    switch (role) {
-      case 'professor':
-        navigate('/dashboard', { replace: true });
-        break;
-      case 'ta':
-        navigate('/ta-dashboard', { replace: true });
-        break;
-      default:
-        navigate('/dashboard', { replace: true });
+    try {
+      localStorage.setItem('accessToken', token);
+      localStorage.setItem('userRole', role);
+      setIsAuthenticated(true);
+      setUserRole(role);
+      setAuthError(null);
+      switch (role) {
+        case 'student':
+          navigate('/student-dashboard', { replace: true });
+          break;
+        case 'professor':
+          navigate('/dashboard', { replace: true });
+          break;
+        case 'ta':
+          navigate('/ta-dashboard', { replace: true });
+          break;
+        default:
+          throw new Error(`Invalid role type: ${role}`);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setAuthError(`Login failed: ${error.message || 'Unknown error occurred'}`);
+      try {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('refreshToken');
+      } catch (clearError) {
+        console.error('Failed to clear authentication data after login error:', clearError);
+      }
+      
+      setIsAuthenticated(false);
+      setUserRole(null);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('userRole');
-    setIsAuthenticated(false);
-    setUserRole(null);
-    navigate('/auth', { replace: true });
+    try {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('refreshToken');
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setAuthError(null);
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      setAuthError('Logout encountered an error, but you have been signed out');
+      setIsAuthenticated(false);
+      setUserRole(null);
+      navigate('/auth', { replace: true });
+    }
+  };
+  const validateToken = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      return true;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      setAuthError('Your session has expired');
+      logout();
+      return false;
+    }
   };
 
   const value = {
@@ -76,8 +128,10 @@ export const AuthProvider = ({ children }) => {
     isLoading,
     userRole,
     setUserRole,
+    authError,
     login,
-    logout
+    logout,
+    validateToken
   };
 
   return (
