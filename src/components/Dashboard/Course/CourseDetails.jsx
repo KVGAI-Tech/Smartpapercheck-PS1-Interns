@@ -13,6 +13,7 @@ import { Modal } from './shared/Modal';
 import Toast from './shared/Toast';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
 import { StudentImportModal, InstructorImportModal } from './modals/ImportModal';
+import GradingTab from './tabs/GradingTab';
 import {
     fetchApi,
     getCourseDetails,
@@ -29,6 +30,7 @@ import {
     uploadCourseHandout,
     pollUploadStatus
 } from './api';
+
 
 const addInstructor = async (courseId, data) => {
     try {
@@ -452,6 +454,9 @@ const CourseDetails = () => {
                     />
                 );
 
+            case 'grading':
+                return <GradingTab maxMarks={100} />;
+
             default:
                 return null;
         }
@@ -480,7 +485,8 @@ const CourseDetails = () => {
                             { id: 'students', label: 'Students' },
                             { id: 'instructors', label: 'Instructors' },
                             { id: 'tas', label: 'Teaching Assistants' },
-                            { id: 'exams', label: 'Exams' }
+                            { id: 'exams', label: 'Exams' },
+                            { id: 'grading', label: 'Grading' }
                         ].map((tab) => (
                             <button
                                 key={tab.id}

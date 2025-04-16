@@ -1,3 +1,12 @@
+/* 
+  When i click on enrollments a popup should open with the list of enrollments in the course (students enrolled in the course) and professor should be able to deselect any student from the list
+  and then click on submit button to save the changes.
+  There should be a checkbox near a student name to select the student and a button to deselect the student.
+  There should be a submit button to save the changes.
+  There should be a cancel button to close the popup.
+  There should be a search bar to search for a student.
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Plus, Edit2, Trash2,
@@ -504,6 +513,264 @@ const ExamCard = ({
   );
 };
 
+const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChange }) => {
+  const [students, setStudents] = useState([]);
+  const [enrolledStudents, setEnrolledStudents] = useState(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen && examId && courseId) {
+      fetchData();
+    }
+  }, [isOpen, examId, courseId]);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      // Fetch course students
+      const studentsResponse = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/students`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        }
+      });
+
+      if (!studentsResponse.ok) {
+        throw new Error('Failed to fetch students');
+      }
+
+      const studentsData = await studentsResponse.json();
+      if (studentsData.code !== 200) {
+        throw new Error(studentsData.message || 'Failed to fetch students');
+      }
+
+      // Filter out invalid students and transform data
+      const validStudents = (studentsData.data || [])
+        .filter(student => student && student.student_id && student.student_name)
+        .map(student => ({
+          id: student.student_id,
+          name: student.student_name
+        }));
+
+      setStudents(validStudents);
+
+      // Fetch exam enrollments
+      const enrollmentsResponse = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        }
+      });
+
+      if (!enrollmentsResponse.ok) {
+        throw new Error('Failed to fetch enrollments');
+      }
+
+      const enrollmentsData = await enrollmentsResponse.json();
+      if (enrollmentsData.code !== 200) {
+        throw new Error(enrollmentsData.message || 'Failed to fetch enrollments');
+      }
+
+      // Create set of enrolled student IDs
+      const enrolledIds = new Set(
+        (enrollmentsData.data || [])
+          .filter(enrollment => enrollment && enrollment.student_id)
+          .map(enrollment => enrollment.student_id)
+      );
+
+      setEnrolledStudents(enrolledIds);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleStudent = async (studentId) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const isEnrolled = enrolledStudents.has(studentId);
+      await onEnrollmentChange(studentId, !isEnrolled);
+      
+      // Update local state
+      setEnrolledStudents(prev => {
+        const newSet = new Set(prev);
+        if (isEnrolled) {
+          newSet.delete(studentId);
+        } else {
+          newSet.add(studentId);
+        }
+        return newSet;
+      });
+    } catch (error) {
+      console.error('Error toggling student enrollment:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeselectAll = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      // Remove all students from exam
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove all enrollments');
+      }
+
+      const data = await response.json();
+      if (data.code !== 200) {
+        throw new Error(data.message || 'Failed to remove all enrollments');
+      }
+
+      setEnrolledStudents(new Set());
+      
+      // Notify parent component
+      if (onEnrollmentChange) {
+        onEnrollmentChange(null, false);
+      }
+    } catch (error) {
+      console.error('Error removing all enrollments:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredStudents = students.filter(student => {
+    const query = searchQuery.toLowerCase();
+    return student.name.toLowerCase().includes(query) || 
+           student.id.toLowerCase().includes(query);
+  });
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Manage Enrollments</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+            disabled={isLoading}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {isLoading && (
+          <div className="flex justify-center items-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {!isLoading && students.length === 0 && (
+          <div className="text-center py-4 text-gray-500">
+            No students found in this course.
+          </div>
+        )}
+
+        {!isLoading && students.length > 0 && (
+          <>
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search students..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-gray-600">
+                  {filteredStudents.length} students found
+                </span>
+                <button
+                  onClick={handleDeselectAll}
+                  className="text-sm text-red-600 hover:text-red-700"
+                  disabled={isLoading || enrolledStudents.size === 0}
+                >
+                  Deselect All
+                </button>
+              </div>
+              <div className="space-y-2">
+                {filteredStudents.map(student => (
+                  <div
+                    key={student.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={enrolledStudents.has(student.id)}
+                        onChange={() => handleToggleStudent(student.id)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        disabled={isLoading}
+                      />
+                      <div>
+                        <p className="font-medium">{student.name}</p>
+                        <p className="text-sm text-gray-500">{student.id}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleStudent(student.id)}
+                      className="text-sm text-red-600 hover:text-red-700"
+                      disabled={isLoading}
+                    >
+                      {enrolledStudents.has(student.id) ? 'Deselect' : 'Select'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300"
+            disabled={isLoading}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ExamsTab = ({
   exams = [],
   courseId, 
@@ -526,6 +793,8 @@ const ExamsTab = ({
   const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
   const [showRecheckRequests, setShowRecheckRequests] = useState(false);
   const [selectedExamForRecheck, setSelectedExamForRecheck] = useState(null);
+  const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
+  const [selectedExamForEnrollments, setSelectedExamForEnrollments] = useState(null);
 
   useEffect(() => {
     if (!courseId) {
@@ -644,35 +913,39 @@ const ExamsTab = ({
   };
 
   const handleGetEnrollments = async (examId) => {
+    setSelectedExamForEnrollments(examId);
+    setShowEnrollmentsModal(true);
+  };
+
+  const handleEnrollmentChange = async (studentId, isEnrolled) => {
     try {
-      if (!examId) {
-        throw new Error('Exam ID is missing');
+      if (!selectedExamForEnrollments) {
+        throw new Error('No exam selected');
       }
-      
-      showToast('Fetching enrollments...', 'success');
-      
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
+
+      const endpoint = `${API_BASE_URL}/exams/${selectedExamForEnrollments}/enrollments`;
+      const response = await fetch(endpoint, {
+        method: isEnrolled ? 'POST' : 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ student_id: studentId })
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch enrollments: ${response.status}`);
+        throw new Error(`Failed to ${isEnrolled ? 'add' : 'remove'} student`);
       }
 
       const data = await response.json();
-      if (data.code === 200) {
-        showToast(`Retrieved ${data.data.length} enrollments`, 'success');
-        return data.data;
-      } else {
-        throw new Error(data.message || 'Failed to fetch enrollments');
+      if (data.code !== 200) {
+        throw new Error(data.message || `Failed to ${isEnrolled ? 'add' : 'remove'} student`);
       }
+
+      showToast(`Student ${isEnrolled ? 'added to' : 'removed from'} exam successfully`, 'success');
     } catch (error) {
-      console.error('Error fetching enrollments:', error);
-      showToast(error.message || 'Failed to fetch enrollments', 'error');
-      
-      return [];
+      console.error('Error updating enrollment:', error);
+      showToast(error.message || 'Failed to update enrollment', 'error');
     }
   };
 
@@ -1048,6 +1321,17 @@ const ExamsTab = ({
             showToast('Answer sheets uploaded successfully', 'success');
             return data;
           }}
+        />
+
+        <EnrollmentsModal
+          isOpen={showEnrollmentsModal}
+          onClose={() => {
+            setShowEnrollmentsModal(false);
+            setSelectedExamForEnrollments(null);
+          }}
+          examId={selectedExamForEnrollments}
+          courseId={courseId}
+          onEnrollmentChange={handleEnrollmentChange}
         />
       </motion.div>
 
