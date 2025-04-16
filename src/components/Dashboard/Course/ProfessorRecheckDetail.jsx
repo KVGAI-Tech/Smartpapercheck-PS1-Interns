@@ -16,21 +16,19 @@ import {
   X, 
   ClipboardList,
   BarChart,
-  ChevronUp,
   ChevronDown,
   Layout,
   MoveHorizontal,
-  Link as LinkIcon,
-  Edit,
   MessageSquare,
-  Trash2,
-  Info
+  Info,
+  Link as LinkIcon,
+  AlertTriangle
 } from 'lucide-react';
 import { API_BASE_URL } from '../../../BaseURL';
 
 
 const Toast = ({ message, type, visible, onClose }) => {
-  useEffect(() => {xq
+  useEffect(() => {
     if (visible) {
       const timer = setTimeout(() => {
         onClose();
@@ -266,562 +264,270 @@ const PageViewer = ({
 };
 
 
-const AnnotationTool = ({ 
-  onAnnotationChange, 
-  currentPage, 
-  studentAnnotations = [], 
-  maxMarks,
+const AnnotationViewer = ({ 
+  annotations = [], 
+  currentPage,
   onSelectAnnotation,
-  questionMarks,
-  onQuestionMarkUpdate
+  selectedAnnotationId,
+  respondedAnnotationIds = []
 }) => {
-  const [annotations, setAnnotations] = useState([...studentAnnotations]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentAnnotation, setCurrentAnnotation] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [selectedAnnotation, setSelectedAnnotation] = useState(null);
-  const [linkedStudentAnnotation, setLinkedStudentAnnotation] = useState(null);
-  const [annotationMetadata, setAnnotationMetadata] = useState({
-    questionNumber: 1,
+  
+  const studentAnnotations = annotations.filter(
+    anno => anno.createdBy === "student" && anno.pageNumber === currentPage
+  );
+
+  return (
+    <div className="relative w-full h-full">
+      {studentAnnotations.map((anno) => {
+        const left = Math.min(anno.startX, anno.endX);
+        const top = Math.min(anno.startY, anno.endY);
+        const width = Math.abs(anno.endX - anno.startX);
+        const height = Math.abs(anno.endY - anno.startY);
+        
+        
+        const isSelected = anno.id === selectedAnnotationId;
+        const isResponded = respondedAnnotationIds.includes(anno.id);
+
+        return (
+          <motion.div
+            key={anno.id}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1,
+              boxShadow: isSelected ? '0 0 0 2px rgba(59, 130, 246, 0.8)' : isResponded ? '0 0 0 2px rgba(34, 197, 94, 0.6)' : 'none'
+            }}
+            transition={{ duration: 0.3, type: "spring" }}
+            className={`absolute border-2 ${isSelected ? 'ring-2 ring-blue-500' : isResponded ? 'ring-2 ring-green-500' : ''}`}
+            style={{
+              left: `${left}px`,
+              top: `${top}px`,
+              width: `${width}px`,
+              height: `${height}px`,
+              borderColor: isResponded ? 'rgb(34, 197, 94)' : anno.borderColor,
+              backgroundColor: isResponded ? 'rgba(34, 197, 94, 0.2)' : anno.color,
+              cursor: 'pointer'
+            }}
+            onClick={() => onSelectAnnotation(anno)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className={`absolute -top-7 left-0 bg-white text-xs px-2 py-1.5 rounded-md shadow-md border ${
+                isResponded ? "border-green-100" : "border-blue-100"
+              }`}
+            >
+              <span className={`${
+                isResponded ? "bg-green-500" : "bg-blue-500"
+              } text-white rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-bold`}>
+                {anno.metadata.questionNumber}
+              </span>
+              {isResponded && (
+                <span className="ml-1 text-xs text-green-600 font-medium">✓</span>
+              )}
+            </motion.div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
+
+
+const AnnotationResponseForm = ({ 
+  selectedAnnotation, 
+  onClose, 
+  onSubmit, 
+  maxMarks,
+  existingResponses = [],
+  questionResponses = []
+}) => {
+  const [responseData, setResponseData] = useState({
     comment: "",
-    newMark: 0,
-    previousMark: 0,
-    linkedAnnotationId: null
+    newMark: selectedAnnotation?.metadata?.newMark || 0,
   });
 
-  const canvasRef = useRef(null);
+  
+  const questionNumber = selectedAnnotation?.metadata?.questionNumber;
+  const hasExistingResponses = questionResponses.length > 0;
 
   useEffect(() => {
-    onAnnotationChange(annotations);
-  }, [annotations, onAnnotationChange]);
-
-  const startDrawing = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setCurrentAnnotation({
-      id: Date.now().toString(),
-      startX: x,
-      startY: y,
-      endX: x,
-      endY: y,
-      pageNumber: currentPage,
-      color: "rgba(239, 68, 68, 0.3)", 
-      borderColor: "rgb(239, 68, 68)",
-      createdBy: "professor",
-      metadata: {
-        questionNumber: 1,
-        comment: "",
-        newMark: 0,
-        previousMark: 0,
-        linkedAnnotationId: null
-      },
-    });
-
-    setIsDrawing(true);
-  };
-
-  const draw = (e) => {
-    if (!isDrawing || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setCurrentAnnotation((prev) => ({
-      ...prev,
-      endX: x,
-      endY: y,
-    }));
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawing) return;
-
-    if (
-      currentAnnotation &&
-      Math.abs(currentAnnotation.endX - currentAnnotation.startX) > 10 &&
-      Math.abs(currentAnnotation.endY - currentAnnotation.startY) > 10
-    ) {
-      setSelectedAnnotation(currentAnnotation);
+    
+    if (hasExistingResponses && questionResponses.length > 0) {
       
+      const latestResponse = questionResponses[questionResponses.length - 1];
+      setResponseData(prev => ({
+        ...prev,
+        newMark: latestResponse.newMark
+      }));
+    } else {
       
-      const studentAnnos = annotations.filter(
-        a => a.createdBy === "student" && a.pageNumber === currentPage
-      );
-      
-      if (studentAnnos.length > 0) {
-        setLinkedStudentAnnotation(studentAnnos[0]);
-        setAnnotationMetadata({
-          questionNumber: studentAnnos[0].metadata.questionNumber,
-          comment: "",
-          previousMark: studentAnnos[0].metadata.previousMark,
-          newMark: studentAnnos[0].metadata.newMark,
-          linkedAnnotationId: studentAnnos[0].id
-        });
-      } else {
-        const qNum = 1; 
-        if (questionMarks && questionMarks[qNum]) {
-          setAnnotationMetadata({
-            questionNumber: qNum,
-            comment: "",
-            previousMark: questionMarks[qNum].originalMark,
-            newMark: questionMarks[qNum].newMark,
-            linkedAnnotationId: null
-          });
-        } else {
-          setAnnotationMetadata({
-            questionNumber: qNum,
-            comment: "",
-            previousMark: 0,
-            newMark: 0,
-            linkedAnnotationId: null
-          });
-        }
-      }
-      
-      setShowForm(true);
+      setResponseData(prev => ({
+        ...prev,
+        newMark: selectedAnnotation?.metadata?.newMark || 0
+      }));
     }
-
-    setIsDrawing(false);
-  };
+  }, [selectedAnnotation, hasExistingResponses, questionResponses]);
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-
     
-    const qMaxMarks = maxMarks[annotationMetadata.questionNumber] || maxMarks.total;
-    if (annotationMetadata.newMark > qMaxMarks) {
-      alert(`New mark for Question ${annotationMetadata.questionNumber} cannot exceed the maximum marks (${qMaxMarks})`);
+    
+    const qMaxMarks = maxMarks[questionNumber] || maxMarks.total;
+    if (responseData.newMark > qMaxMarks) {
+      alert(`New mark for Question ${questionNumber} cannot exceed the maximum marks (${qMaxMarks})`);
       return;
     }
 
-    const updatedAnnotation = {
-      ...selectedAnnotation,
-      metadata: annotationMetadata,
-    };
-
-    
-    setAnnotations((prev) => [...prev, updatedAnnotation]);
-    
-    
-    const qNum = annotationMetadata.questionNumber;
-    onQuestionMarkUpdate(qNum, annotationMetadata.previousMark, annotationMetadata.newMark);
-    
-    
-    setShowForm(false);
-    setAnnotationMetadata({
-      questionNumber: 1,
-      comment: "",
-      newMark: 0,
-      previousMark: 0,
-      linkedAnnotationId: null
-    });
-    setLinkedStudentAnnotation(null);
-  };
-
-  const removeAnnotation = (id) => {
-    
-    const annoToRemove = annotations.find(anno => anno.id === id);
-    
-    setAnnotations((prevAnnotations) =>
-      prevAnnotations.filter((anno) => anno.id !== id)
-    );
-    
-    
-    if (annoToRemove && annoToRemove.createdBy === "professor") {
-      const qNum = annoToRemove.metadata.questionNumber;
-      
-      onQuestionMarkUpdate(qNum, annoToRemove.metadata.newMark, annoToRemove.metadata.previousMark);
-    }
-  };
-
-  const clearAllProfessorAnnotations = () => {
-    const confirmClear = window.confirm(
-      "Are you sure you want to clear all your annotations?"
-    );
-    if (confirmClear) {
-      
-      const profAnnotations = annotations.filter(anno => anno.createdBy === "professor");
-      
-      
-      setAnnotations(annotations.filter(anno => anno.createdBy !== "professor"));
-      
-      
-      profAnnotations.forEach(anno => {
-        const qNum = anno.metadata.questionNumber;
-        
-        onQuestionMarkUpdate(qNum, anno.metadata.newMark, anno.metadata.previousMark, true);
-      });
-    }
-  };
-
-  const handleAnnotationClick = (anno) => {
-    
-    if (anno.pageNumber !== currentPage) {
-      onSelectAnnotation(anno);
-    }
-  };
-
-  const handleLinkAnnotation = (studentAnno) => {
-    setLinkedStudentAnnotation(studentAnno);
-    setAnnotationMetadata({
-      ...annotationMetadata,
-      questionNumber: studentAnno.metadata.questionNumber,
-      previousMark: studentAnno.metadata.previousMark,
-      newMark: studentAnno.metadata.newMark,
-      linkedAnnotationId: studentAnno.id
-    });
-  };
-
-  const currentPageAnnotations = annotations.filter(
-    (anno) => anno.pageNumber === currentPage
-  );
-
-  const getStudentAnnotations = () => {
-    return annotations.filter(anno => 
-      anno.createdBy === "student" && anno.pageNumber === currentPage
-    );
-  };
-
-  
-  const renderConnectionLines = () => {
-    const professorAnnos = currentPageAnnotations.filter(a => 
-      a.createdBy === "professor" && a.metadata.linkedAnnotationId
-    );
-    
-    return professorAnnos.map(profAnno => {
-      const studentAnno = annotations.find(a => a.id === profAnno.metadata.linkedAnnotationId);
-      if (!studentAnno || studentAnno.pageNumber !== currentPage) return null;
-      
-      const profCenter = {
-        x: (Math.min(profAnno.startX, profAnno.endX) + Math.max(profAnno.startX, profAnno.endX)) / 2,
-        y: (Math.min(profAnno.startY, profAnno.endY) + Math.max(profAnno.startY, profAnno.endY)) / 2
-      };
-      
-      const studentCenter = {
-        x: (Math.min(studentAnno.startX, studentAnno.endX) + Math.max(studentAnno.startX, studentAnno.endX)) / 2,
-        y: (Math.min(studentAnno.startY, studentAnno.endY) + Math.max(studentAnno.startY, studentAnno.endY)) / 2
-      };
-      
-      return (
-        <svg 
-          key={`connection-${profAnno.id}-${studentAnno.id}`}
-          className="absolute top-0 left-0 w-full h-full pointer-events-none"
-          style={{ zIndex: 5 }}
-        >
-          <line
-            x1={profCenter.x}
-            y1={profCenter.y}
-            x2={studentCenter.x}
-            y2={studentCenter.y}
-            stroke="rgba(220, 38, 38, 0.4)"
-            strokeWidth="2"
-            strokeDasharray="5,5"
-          />
-          <circle cx={profCenter.x} cy={profCenter.y} r="3" fill="rgb(220, 38, 38)" />
-          <circle cx={studentCenter.x} cy={studentCenter.y} r="3" fill="rgb(59, 130, 246)" />
-        </svg>
-      );
+    onSubmit({
+      questionNumber: questionNumber,
+      comment: responseData.comment,
+      newMark: parseFloat(responseData.newMark),
+      annotationId: selectedAnnotation.id
     });
   };
 
   return (
-    <div className="relative w-full h-full">
-      {renderConnectionLines()}
-      
-      <div
-        ref={canvasRef}
-        className="absolute inset-0 cursor-crosshair z-10"
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-      >
-        {currentPageAnnotations.map((anno) => {
-          const left = Math.min(anno.startX, anno.endX);
-          const top = Math.min(anno.startY, anno.endY);
-          const width = Math.abs(anno.endX - anno.startX);
-          const height = Math.abs(anno.endY - anno.startY);
-          
-          const isLinked = anno.createdBy === "professor" && 
-                          anno.metadata.linkedAnnotationId !== null;
-
-          return (
-            <motion.div
-              key={anno.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, type: "spring" }}
-              className={`absolute border-2 ${isLinked ? 'ring-2 ring-red-300/50' : ''}`}
-              style={{
-                left: `${left}px`,
-                top: `${top}px`,
-                width: `${width}px`,
-                height: `${height}px`,
-                borderColor: anno.borderColor,
-                backgroundColor: anno.color,
-              }}
-              onClick={() => handleAnnotationClick(anno)}
-            >
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className={`absolute -top-7 left-0 bg-white text-xs px-2 py-1.5 rounded-md shadow-md border flex items-center gap-1.5 ${
-                  anno.createdBy === "professor" 
-                    ? "border-red-100" 
-                    : "border-blue-100"
-                }`}
-              >
-                <span className={`${
-                  anno.createdBy === "professor" 
-                    ? "bg-red-500" 
-                    : "bg-blue-500"
-                } text-white rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-bold`}>
-                  {anno.metadata.questionNumber}
-                </span>
-                <span className={`font-medium ${
-                  anno.createdBy === "professor" 
-                    ? "text-red-700" 
-                    : "text-blue-700"
-                }`}>
-                  {anno.createdBy === "professor" ? "Prof" : "Student"}
-                </span>
-                
-                {isLinked && (
-                  <LinkIcon size={12} className="text-red-500" />
-                )}
-              </motion.div>
-              
-              {anno.createdBy === "professor" && (
-                <motion.button
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeAnnotation(anno.id);
-                  }}
-                  className="absolute -top-6 -right-6 bg-white p-1.5 rounded-full shadow-md text-red-500 hover:bg-red-50 border border-red-100 z-20"
-                >
-                  <X size={12} />
-                </motion.button>
-              )}
-            </motion.div>
-          );
-        })}
-
-        {isDrawing && currentAnnotation && (
-          <div
-            className="absolute border-2 bg-red-500/20 border-red-500"
-            style={{
-              left: `${Math.min(
-                currentAnnotation.startX,
-                currentAnnotation.endX
-              )}px`,
-              top: `${Math.min(
-                currentAnnotation.startY,
-                currentAnnotation.endY
-              )}px`,
-              width: `${Math.abs(
-                currentAnnotation.endX - currentAnnotation.startX
-              )}px`,
-              height: `${Math.abs(
-                currentAnnotation.endY - currentAnnotation.startY
-              )}px`,
-            }}
-          />
-        )}
+    <motion.div
+      initial={{ opacity: 0, y: 10, x: -10 }}
+      animate={{ opacity: 1, y: 0, x: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      transition={{ type: "spring", damping: 20 }}
+      className="absolute top-4 right-4 bg-white rounded-xl shadow-2xl p-5 z-20 w-96 border border-blue-100"
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-medium text-gray-900 flex items-center gap-2">
+          <div className="h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold bg-blue-500">
+            {questionNumber}
+          </div>
+          <span>Address Student Annotation</span>
+        </h3>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <X size={18} />
+        </motion.button>
       </div>
 
-      <AnimatePresence>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, x: -10 }}
-            animate={{ opacity: 1, y: 0, x: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ type: "spring", damping: 20 }}
-            className="absolute top-4 right-4 bg-white rounded-xl shadow-2xl p-5 z-20 w-96 border border-red-100"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                <div className="h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold bg-red-500">
-                  {annotations.filter(a => a.createdBy === "professor").length + 1}
-                </div>
-                <span>New Professor Annotation</span>
-              </h3>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setShowForm(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={18} />
-              </motion.button>
-            </div>
-
-            {}
-            {getStudentAnnotations().length > 0 && (
-              <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                <h4 className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-1.5">
-                  <LinkIcon size={14} />
-                  Link to Student Annotation
-                </h4>
-                
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {getStudentAnnotations().map(studentAnno => (
-                    <div 
-                      key={studentAnno.id}
-                      onClick={() => handleLinkAnnotation(studentAnno)}
-                      className={`p-2 rounded-md cursor-pointer text-xs flex items-start gap-2 
-                        ${linkedStudentAnnotation?.id === studentAnno.id 
-                          ? 'bg-blue-100 border border-blue-200' 
-                          : 'bg-white border border-blue-100 hover:bg-blue-50'}`}
-                    >
-                      <div className="h-5 w-5 flex-shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                        {studentAnno.metadata.questionNumber}
-                      </div>
-                      <div className="flex-1">
-                        <p className="line-clamp-1 font-medium text-gray-700">
-                          {studentAnno.metadata.comment}
-                        </p>
-                        <div className="flex justify-between mt-1 text-gray-500">
-                          <span>Current: {studentAnno.metadata.previousMark}</span>
-                          <span className="text-blue-600">Expected: {studentAnno.metadata.newMark}</span>
-                        </div>
-                      </div>
-                      {linkedStudentAnnotation?.id === studentAnno.id && (
-                        <CheckCircle size={14} className="text-blue-600 flex-shrink-0 mt-1" />
-                      )}
+      {hasExistingResponses && (
+        <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+          <h4 className="text-sm font-medium text-amber-700 mb-2 flex items-center gap-1.5">
+            <AlertTriangle size={14} />
+            Question Already Addressed
+          </h4>
+          <p className="text-xs text-amber-700 mb-2">
+            This question has been addressed in {questionResponses.length} previous annotation{questionResponses.length > 1 ? 's' : ''}.
+            The latest mark assigned was <span className="font-medium">{questionResponses[questionResponses.length - 1].newMark}</span>.
+          </p>
+          
+          {questionResponses.length > 0 && (
+            <div className="mt-1 text-xs text-amber-700">
+              <span className="font-medium">Previous responses:</span>
+              <ul className="mt-1 space-y-1 pl-4">
+                {questionResponses.map((resp, index) => (
+                  <li key={index} className="flex items-start gap-1">
+                    <span>•</span>
+                    <div>
+                      <span className="font-medium">{resp.newMark} marks</span>: 
+                      <span className="ml-1 italic">{resp.comment.length > 40 ? resp.comment.substring(0, 40) + '...' : resp.comment}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-100">
+        <h4 className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-1.5">
+          <Info size={14} />
+          Student Comment
+        </h4>
+        <p className="text-sm text-gray-700">{selectedAnnotation.metadata.comment}</p>
+      </div>
+
+      <form onSubmit={handleFormSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Professor Remarks
+          </label>
+          <textarea
+            value={responseData.comment}
+            onChange={(e) => setResponseData({...responseData, comment: e.target.value})}
+            className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-blue-500 focus:border-blue-500 bg-blue-50/50"
+            rows={3}
+            placeholder="Add your assessment comments..."
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Original Mark
+            </label>
+            <input
+              type="number"
+              value={selectedAnnotation.metadata.previousMark}
+              className="w-full p-3 border rounded-lg border-gray-300 bg-gray-100 text-gray-700"
+              disabled
+            />
+            <p className="text-xs text-gray-500 mt-1">Original mark (non-editable)</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              New Mark
+            </label>
+            <input
+              type="number"
+              value={responseData.newMark}
+              onChange={(e) => setResponseData({
+                ...responseData, 
+                newMark: parseFloat(e.target.value) || 0
+              })}
+              className={`w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-blue-500 focus:border-blue-500 ${
+                hasExistingResponses ? 'bg-amber-50/50' : 'bg-blue-50/50'
+              }`}
+              min="0"
+              max={maxMarks[questionNumber]}
+              step="0.5"
+              required
+            />
+            {hasExistingResponses && (
+              <p className="text-xs text-amber-600 mt-1">This will update the mark for all annotations of question {questionNumber}</p>
             )}
+          </div>
+        </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Question Number
-                </label>
-                <select
-                  value={annotationMetadata.questionNumber}
-                  onChange={(e) => {
-                    const qNum = parseInt(e.target.value);
-                    setAnnotationMetadata({
-                      ...annotationMetadata,
-                      questionNumber: qNum,
-                      previousMark: questionMarks[qNum]?.originalMark || 0,
-                      newMark: questionMarks[qNum]?.newMark || 0
-                    });
-                  }}
-                  className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
-                >
-                  {Object.keys(maxMarks).filter(k => k !== 'total').map((num) => (
-                    <option key={num} value={num}>
-                      Question {num} (Max: {maxMarks[num]})
-                    </option>
-                  ))}
-                </select>
-              </div>
+        <div className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-blue-50">
+          <div className="text-xs text-gray-600">Page {selectedAnnotation.pageNumber}</div>
+          <div className="text-xs text-blue-700 font-medium">
+            Question {questionNumber}
+          </div>
+        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Professor Comments
-                </label>
-                <textarea
-                  value={annotationMetadata.comment}
-                  onChange={(e) =>
-                    setAnnotationMetadata({
-                      ...annotationMetadata,
-                      comment: e.target.value,
-                    })
-                  }
-                  className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
-                  rows={3}
-                  placeholder="Add your assessment comments..."
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Original Mark
-                  </label>
-                  <input
-                    type="number"
-                    value={annotationMetadata.previousMark}
-                    onChange={(e) =>
-                      setAnnotationMetadata({
-                        ...annotationMetadata,
-                        previousMark: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
-                    min="0"
-                    max={maxMarks[annotationMetadata.questionNumber]}
-                    step="0.5"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    New Mark
-                  </label>
-                  <input
-                    type="number"
-                    value={annotationMetadata.newMark}
-                    onChange={(e) =>
-                      setAnnotationMetadata({
-                        ...annotationMetadata,
-                        newMark: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-red-500 focus:border-red-500 bg-red-50/50"
-                    min="0"
-                    max={maxMarks[annotationMetadata.questionNumber]}
-                    step="0.5"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-red-50">
-                <div className="text-xs text-gray-600">Page {currentPage}</div>
-                <div className="text-xs text-red-700 font-medium">
-                  Professor Annotation
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <motion.button
-                  whileHover={{
-                    scale: 1.03,
-                    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
-                  }}
-                  whileTap={{ scale: 0.97 }}
-                  type="submit"
-                  className="px-5 py-2.5 text-white rounded-lg flex items-center gap-2 shadow-sm bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
-                >
-                  <Save size={18} />
-                  Save Annotation
-                </motion.button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        <div className="flex justify-end pt-2">
+          <motion.button
+            whileHover={{
+              scale: 1.03,
+              boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)",
+            }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            className="px-5 py-2.5 text-white rounded-lg flex items-center gap-2 shadow-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+          >
+            <Save size={18} />
+            Submit Response
+          </motion.button>
+        </div>
+      </form>
+    </motion.div>
   );
 };
 
@@ -831,7 +537,9 @@ const QuestionMarksEditor = ({
   maxMarks,
   onQuestionMarkChange,
   totalOriginalMarks,
-  totalNewMarks
+  totalNewMarks,
+  addressedQuestions,
+  questionResponses
 }) => {
   const [expandedQuestions, setExpandedQuestions] = useState({});
 
@@ -845,7 +553,6 @@ const QuestionMarksEditor = ({
   const handleMarkChange = (questionNum, field, value) => {
     onQuestionMarkChange(questionNum, field, value);
   };
-
   
   const improvementPercentage = totalOriginalMarks > 0 
     ? ((totalNewMarks - totalOriginalMarks) / totalOriginalMarks) * 100 
@@ -893,7 +600,6 @@ const QuestionMarksEditor = ({
             </span>
           </div>
           
-          {}
           <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div 
               className="h-full bg-blue-500 rounded-full"
@@ -914,23 +620,48 @@ const QuestionMarksEditor = ({
               ? ((qMarks.newMark - qMarks.originalMark) / qMarks.originalMark) * 100 
               : 0;
             
+            
+            const isAddressed = addressedQuestions && addressedQuestions[questionNum];
+            
+            
+            const responsesForQuestion = questionResponses[questionNum] || [];
+            const responseCount = responsesForQuestion.length;
+            
             return (
               <motion.div 
                 key={questionNum}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: parseInt(questionNum) * 0.05 }}
-                className="border rounded-lg overflow-hidden bg-white shadow-sm"
+                className={`border rounded-lg overflow-hidden bg-white shadow-sm ${
+                  isAddressed ? "border-green-200" : "border-gray-200"
+                }`}
               >
                 <div 
-                  className="flex justify-between items-center p-3.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className={`flex justify-between items-center p-3.5 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    isAddressed ? "bg-green-50/50" : ""
+                  }`}
                   onClick={() => toggleQuestion(questionNum)}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="h-7 w-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-700 text-xs font-bold">
+                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                      isAddressed ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                    }`}>
                       {questionNum}
                     </div>
                     <span className="font-medium text-gray-800">Question {questionNum}</span>
+                    {isAddressed && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="ml-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                          Addressed
+                        </span>
+                        {responseCount > 1 && (
+                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                            {responseCount} responses
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-3">
@@ -979,6 +710,7 @@ const QuestionMarksEditor = ({
                               min="0"
                               max={qMaxMarks}
                               step="0.5"
+                              disabled={isAddressed} 
                             />
                           </div>
                           
@@ -1000,9 +732,34 @@ const QuestionMarksEditor = ({
                               min="0"
                               max={qMaxMarks}
                               step="0.5"
+                              disabled={isAddressed} 
                             />
                           </div>
                         </div>
+                        
+                        {responseCount > 0 && (
+                          <div className="mt-4 bg-white p-3 rounded-lg border border-gray-200">
+                            <h4 className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                              <MessageSquare size={14} className="text-blue-500" />
+                              Professor Responses ({responseCount})
+                            </h4>
+                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                              {responsesForQuestion.map((response, index) => (
+                                <div key={index} className="text-xs bg-gray-50 p-2 rounded-md border border-gray-200">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-medium text-blue-600">Response {index + 1}</span>
+                                      <LinkIcon size={10} className="text-gray-400" />
+                                      <span className="text-gray-500">Annotation {response.annotationId.split('-')[1]}</span>
+                                    </div>
+                                    <span className="text-green-600 font-medium">Mark: {response.newMark}</span>
+                                  </div>
+                                  <p className="text-gray-600 line-clamp-2">{response.comment}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         
                         <div className="mt-4 pt-3 border-t border-gray-200">
                           <div className="flex justify-between items-center">
@@ -1025,7 +782,6 @@ const QuestionMarksEditor = ({
                             </span>
                           </div>
                           
-                          {}
                           <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                             <div 
                               className={`h-full rounded-full ${
@@ -1099,6 +855,128 @@ const SidebarTabs = ({ activeTab, setActiveTab }) => {
 };
 
 
+const StudentAnnotationsList = ({ 
+  annotations, 
+  respondedIds, 
+  onSelectAnnotation, 
+  selectedAnnotationId,
+  questionResponses
+}) => {
+  
+  const groupedAnnotations = annotations.reduce((acc, anno) => {
+    if (anno.createdBy === "student") {
+      const qNum = anno.metadata.questionNumber;
+      if (!acc[qNum]) {
+        acc[qNum] = [];
+      }
+      acc[qNum].push(anno);
+    }
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-4">
+      {Object.keys(groupedAnnotations).length > 0 ? (
+        Object.entries(groupedAnnotations).map(([questionNum, annotations]) => {
+          const responseCount = (questionResponses[questionNum] || []).length;
+          const isFullyResponded = annotations.every(anno => respondedIds.includes(anno.id));
+          
+          return (
+            <motion.div
+              key={questionNum}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: parseInt(questionNum) * 0.05 }}
+              className={`border rounded-lg overflow-hidden bg-white shadow-sm ${
+                isFullyResponded ? "border-green-200" : "border-blue-200"
+              }`}
+            >
+              <div className={`px-3 py-2 ${isFullyResponded ? "bg-green-50" : "bg-blue-50"} border-b border-gray-100`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                      isFullyResponded ? "bg-green-500" : "bg-blue-500"
+                    }`}>
+                      {questionNum}
+                    </div>
+                    <span className="text-sm font-medium">Question {questionNum}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white border border-gray-200">
+                      {annotations.length} annotation{annotations.length !== 1 ? 's' : ''}
+                    </span>
+                    {responseCount > 0 && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        isFullyResponded ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                      }`}>
+                        {responseCount} response{responseCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2 p-2">
+                {annotations.map((anno) => {
+                  const hasResponse = respondedIds.includes(anno.id);
+                  
+                  return (
+                    <motion.div
+                      key={anno.id}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      className={`p-3 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
+                        selectedAnnotationId === anno.id 
+                          ? "border-blue-400 ring-2 ring-blue-200" 
+                          : hasResponse
+                            ? "border-green-300 bg-green-50/50"
+                            : "border-blue-200 hover:border-blue-300"
+                      }`}
+                      onClick={() => onSelectAnnotation(anno)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-1.5">
+                          <div className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-blue-50 text-blue-700">
+                            Student
+                          </div>
+                          {hasResponse && (
+                            <div className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-green-50 text-green-700">
+                              Addressed
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                          Page {anno.pageNumber}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                        {anno.metadata.comment}
+                      </p>
+                      <div className="flex justify-between text-xs mt-2 text-gray-500">
+                        <span>Current: {anno.metadata.previousMark}</span>
+                        <span className="text-green-600 font-medium">
+                          Expected: {anno.metadata.newMark}
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          );
+        })
+      ) : (
+        <div className="text-center p-6 bg-gray-50 rounded-lg text-gray-500 text-sm border border-gray-100">
+          <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+          No student annotations found
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 const ProfessorRecheckDetail = () => {
   const { courseId, requestId } = useParams();
   const navigate = useNavigate();
@@ -1113,7 +991,9 @@ const ProfessorRecheckDetail = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestComplete, setRequestComplete] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState(null);
-  const [sidebarWidth, setSidebarWidth] = useState(window.innerWidth * 0.5); 
+  const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+  const [showResponseForm, setShowResponseForm] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(500); 
   const [resizing, setResizing] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('annotations');
   const [questionMarks, setQuestionMarks] = useState({});
@@ -1121,6 +1001,9 @@ const ProfessorRecheckDetail = () => {
   const [totalOriginalMarks, setTotalOriginalMarks] = useState(0);
   const [totalNewMarks, setTotalNewMarks] = useState(0);
   const [professorFeedback, setProfessorFeedback] = useState('');
+  const [addressedQuestions, setAddressedQuestions] = useState({});
+  const [professorResponses, setProfessorResponses] = useState([]);
+  const [questionResponses, setQuestionResponses] = useState({}); 
   const resizeStartX = useRef(0);
   const startWidth = useRef(0);
   const containerRef = useRef(null);
@@ -1131,11 +1014,13 @@ const ProfessorRecheckDetail = () => {
   });
 
   
+  const respondedAnnotationIds = professorResponses.map(response => response.annotationId);
+
+  
   useEffect(() => {
     const handleResize = () => {
-      
       if (!resizing) {
-        setSidebarWidth(Math.min(window.innerWidth * 0.5, 600));
+        setSidebarWidth(Math.min(window.innerWidth * 0.4, 500));
       }
     };
 
@@ -1143,6 +1028,40 @@ const ProfessorRecheckDetail = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [resizing]);
   
+  
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!resizing) return;
+      
+      const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
+      const newWidth = startWidth.current + (e.clientX - resizeStartX.current);
+      
+      
+      const minWidth = Math.max(320, containerWidth * 0.2);
+      const maxWidth = containerWidth * 0.6;
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setSidebarWidth(newWidth);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setResizing(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+    
+    if (resizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizing]);
+
   
   useEffect(() => {
     const fetchRequestData = async () => {
@@ -1174,7 +1093,7 @@ const ProfessorRecheckDetail = () => {
             4: { originalMark: 0, newMark: 0 },
             5: { originalMark: 1, newMark: 1 }
           },
-          annotations: 2,
+          annotations: 3, 
           pages: [
             { 
               pageNumber: 1, 
@@ -1219,6 +1138,24 @@ const ProfessorRecheckDetail = () => {
                 previousMark: 1,
                 newMark: 4,
               }
+            },
+            
+            {
+              id: "anno3",
+              startX: 250,
+              startY: 200,
+              endX: 450,
+              endY: 300,
+              pageNumber: 1,
+              color: "rgba(59, 130, 246, 0.3)",
+              borderColor: "rgb(59, 130, 246)",
+              createdBy: "student",
+              metadata: {
+                questionNumber: 3,
+                comment: "Another explanation point for question 3, showing the time complexity analysis.",
+                previousMark: 1,
+                newMark: 4,
+              }
             }
           ]
         };
@@ -1255,37 +1192,17 @@ const ProfessorRecheckDetail = () => {
 
   
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!resizing) return;
-      
-      const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
-      const newWidth = startWidth.current + (e.clientX - resizeStartX.current);
-      
-      
-      const minWidth = Math.max(320, containerWidth * 0.2);
-      const maxWidth = containerWidth * 0.8;
-      
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        setSidebarWidth(newWidth);
+    const byQuestion = professorResponses.reduce((acc, response) => {
+      const qNum = response.questionNumber;
+      if (!acc[qNum]) {
+        acc[qNum] = [];
       }
-    };
+      acc[qNum].push(response);
+      return acc;
+    }, {});
     
-    const handleMouseUp = () => {
-      setResizing(false);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
-    };
-    
-    if (resizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [resizing]);
+    setQuestionResponses(byQuestion);
+  }, [professorResponses]);
 
   const startResize = (e) => {
     e.preventDefault();
@@ -1296,27 +1213,15 @@ const ProfessorRecheckDetail = () => {
     document.body.style.userSelect = 'none';
   };
 
-  const handleAnnotationChange = (newAnnotations) => {
-    setAnnotations(newAnnotations);
-  };
-
-  const handleQuestionMarkUpdate = (questionNum, oldMark, newMark, reset = false) => {
+  const handleQuestionMarkUpdate = (questionNum, oldMark, newMark) => {
     setQuestionMarks(prev => {
       const updated = { ...prev };
       
-      if (reset) {
-        
-        updated[questionNum] = {
-          originalMark: oldMark,
-          newMark: oldMark 
-        };
-      } else {
-        
-        updated[questionNum] = {
-          originalMark: oldMark,
-          newMark: newMark
-        };
-      }
+      
+      updated[questionNum] = {
+        originalMark: oldMark,
+        newMark: newMark
+      };
       
       
       let originalTotal = 0;
@@ -1337,9 +1242,21 @@ const ProfessorRecheckDetail = () => {
       
       return updated;
     });
+    
+    
+    setAddressedQuestions(prev => ({
+      ...prev,
+      [questionNum]: true
+    }));
   };
 
   const handleQuestionMarkChange = (questionNum, field, value) => {
+    if (addressedQuestions[questionNum]) {
+      
+      showToast("This question has already been addressed via annotation response", "error");
+      return;
+    }
+    
     setQuestionMarks(prev => {
       const updated = { ...prev };
       
@@ -1393,11 +1310,68 @@ const ProfessorRecheckDetail = () => {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setPageNumber(newPage);
+      
+      
+      setShowResponseForm(false);
+      setSelectedAnnotation(null);
+      setSelectedAnnotationId(null);
     }
   };
 
   const handleGoBack = () => {
     navigate(`/courses`);
+  };
+
+  const handleSelectAnnotation = (annotation) => {
+    
+    if (annotation.createdBy === "student") {
+      
+      const questionNumber = annotation.metadata.questionNumber;
+      const responsesForThisQuestion = questionResponses[questionNumber] || [];
+      
+      setSelectedAnnotation(annotation);
+      setSelectedAnnotationId(annotation.id);
+      setShowResponseForm(true);
+      
+      
+      if (annotation.pageNumber !== pageNumber) {
+        setPageNumber(annotation.pageNumber);
+      }
+    }
+  };
+
+  const handleAnnotationResponse = (responseData) => {
+    
+    const studentAnnotation = annotations.find(a => a.id === responseData.annotationId);
+    
+    
+    const newResponse = {
+      id: `prof-${Date.now()}`,
+      questionNumber: responseData.questionNumber,
+      comment: responseData.comment,
+      newMark: responseData.newMark,
+      annotationId: responseData.annotationId,
+      studentComment: studentAnnotation?.metadata?.comment || ""
+    };
+    
+    setProfessorResponses(prev => [...prev, newResponse]);
+    
+    
+    if (studentAnnotation) {
+      handleQuestionMarkUpdate(
+        responseData.questionNumber,
+        studentAnnotation.metadata.previousMark,
+        responseData.newMark
+      );
+    }
+    
+    
+    setShowResponseForm(false);
+    setSelectedAnnotation(null);
+    setSelectedAnnotationId(null);
+    
+    
+    showToast("Response submitted successfully", "success");
   };
 
   const handleSubmitResponse = async () => {
@@ -1413,15 +1387,26 @@ const ProfessorRecheckDetail = () => {
       const payload = {
         requestId,
         courseId,
-        decision,
+        decision, 
         feedback: professorFeedback,
-        questionMarks,
-        annotations: annotations.filter(a => a.createdBy === "professor"),
         totalMarks: totalNewMarks,
-        updatedAt: new Date().toISOString()
+        modifiedQuestions: Object.entries(questionMarks)
+          .filter(([qNum, marks]) => marks.newMark !== marks.originalMark)
+          .map(([qNum, marks]) => ({
+            questionNumber: parseInt(qNum),
+            newMark: marks.newMark
+          })),
+        responses: professorResponses.map(resp => ({
+          questionNumber: resp.questionNumber,
+          comment: resp.comment,
+          newMark: resp.newMark,
+          studentAnnotationId: resp.annotationId 
+        }))
       };
       
-      console.log("Submitting professor recheck response:", payload);
+      
+      console.log("Submitting professor recheck response:");
+      console.log(JSON.stringify(payload, null, 2));
       
       
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -1450,22 +1435,10 @@ const ProfessorRecheckDetail = () => {
       type,
     });
   };
-
-  const handleSelectAnnotation = (annotation) => {
-    
-    setPageNumber(annotation.pageNumber);
-    setSelectedAnnotationId(annotation.id);
-
-    
-    setTimeout(() => {
-      setSelectedAnnotationId(null);
-    }, 1500);
-  };
-
   
   const resetSidebarWidth = useCallback(() => {
     const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
-    setSidebarWidth(containerWidth * 0.5);
+    setSidebarWidth(Math.min(containerWidth * 0.4, 500));
   }, []);
 
   if (loading) {
@@ -1476,11 +1449,11 @@ const ProfessorRecheckDetail = () => {
           animate={{ opacity: 1 }}
           className="text-center"
         >
-<div className="flex flex-col items-center justify-center">
-  <div className="w-20 h-20 border-4 border-t-blue-500 border-blue-200/30 rounded-full animate-spin mb-6"></div>
-  <h3 className="text-2xl font-medium text-gray-900 mb-6">Loading request</h3>
-  <p className="text-gray-500">Please wait while we fetch the recheck request...</p>
-</div>
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-20 h-20 border-4 border-t-blue-500 border-blue-200/30 rounded-full animate-spin mb-6"></div>
+            <h3 className="text-2xl font-medium text-gray-900 mb-6">Loading request</h3>
+            <p className="text-gray-500">Please wait while we fetch the recheck request...</p>
+          </div>
         </motion.div>
       </div>
     );
@@ -1633,19 +1606,18 @@ const ProfessorRecheckDetail = () => {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <motion.div 
-          layout
+        <div 
           className="bg-white border-r border-gray-200 overflow-hidden flex flex-col shadow-md z-30"
           style={{ 
             width: `${sidebarWidth}px`,
             minWidth: `${sidebarWidth}px`,
+            maxHeight: 'calc(100vh - 73px)',
             transition: resizing ? 'none' : 'width 0.3s ease-in-out'
           }}
-          animate={{ width: sidebarWidth }}
         >
           <SidebarTabs activeTab={sidebarTab} setActiveTab={setSidebarTab} />
 
-          <div className="overflow-auto flex-1 p-5">
+          <div className="overflow-y-auto flex-1 p-5">
             {sidebarTab === 'annotations' && (
               <div className="space-y-5">
                 <motion.div 
@@ -1677,53 +1649,13 @@ const ProfessorRecheckDetail = () => {
                     </span>
                   </div>
                   
-                  <div className="space-y-2.5 max-h-48 overflow-y-auto pr-2">
-                    {annotations.filter(a => a.createdBy === "student").length > 0 ? (
-                      annotations
-                        .filter(a => a.createdBy === "student")
-                        .map((anno) => (
-                          <motion.div
-                            key={anno.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`p-3.5 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
-                              selectedAnnotationId === anno.id 
-                                ? "border-blue-400 ring-2 ring-blue-200" 
-                                : "border-blue-200 hover:border-blue-300"
-                            }`}
-                            onClick={() => handleSelectAnnotation(anno)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-1.5">
-                                <div className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold bg-blue-100 text-blue-600">
-                                  {anno.metadata.questionNumber}
-                                </div>
-                                <div className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-blue-50 text-blue-700">
-                                  Student
-                                </div>
-                              </div>
-                              <div className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
-                                Page {anno.pageNumber}
-                              </div>
-                            </div>
-                            <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                              {anno.metadata.comment}
-                            </p>
-                            <div className="flex justify-between text-xs mt-2 text-gray-500">
-                              <span>Current: {anno.metadata.previousMark}</span>
-                              <span className="text-green-600 font-medium">
-                                Expected: {anno.metadata.newMark}
-                              </span>
-                            </div>
-                          </motion.div>
-                        ))
-                    ) : (
-                      <div className="text-center p-6 bg-gray-50 rounded-lg text-gray-500 text-sm border border-gray-100">
-                        <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                        No student annotations found
-                      </div>
-                    )}
-                  </div>
+                  <StudentAnnotationsList 
+                    annotations={annotations}
+                    respondedIds={respondedAnnotationIds}
+                    onSelectAnnotation={handleSelectAnnotation}
+                    selectedAnnotationId={selectedAnnotationId}
+                    questionResponses={questionResponses}
+                  />
                 </motion.div>
 
                 <motion.div
@@ -1732,79 +1664,77 @@ const ProfessorRecheckDetail = () => {
                   transition={{ delay: 0.3 }}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-semibold text-gray-900">Professor Annotations</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">Professor Responses</h2>
                     <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-                      {annotations.filter(a => a.createdBy === "professor").length}
+                      {professorResponses.length}
                     </span>
                   </div>
                   
                   <div className="space-y-2.5 max-h-60 overflow-y-auto pr-2">
-                    {annotations.filter(a => a.createdBy === "professor").length > 0 ? (
-                      annotations
-                        .filter(a => a.createdBy === "professor")
-                        .map((anno) => {
-                          const linkedAnnotation = anno.metadata.linkedAnnotationId 
-                            ? annotations.find(a => a.id === anno.metadata.linkedAnnotationId)
-                            : null;
-                          
-                          return (
-                            <motion.div
-                              key={anno.id}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              className={`p-3.5 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
-                                selectedAnnotationId === anno.id 
-                                  ? "border-red-400 ring-2 ring-red-200" 
-                                  : "border-red-200 hover:border-red-300"
-                              }`}
-                              onClick={() => handleSelectAnnotation(anno)}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-1.5">
-                                  <div className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold bg-red-100 text-red-600">
-                                    {anno.metadata.questionNumber}
-                                  </div>
-                                  <div className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-red-50 text-red-700">
-                                    Professor
-                                  </div>
+                    {professorResponses.length > 0 ? (
+                      professorResponses.map((response) => {
+                        const linkedAnnotation = annotations.find(a => a.id === response.annotationId);
+                        
+                        return (
+                          <motion.div
+                            key={response.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="p-3.5 bg-white rounded-lg border shadow-sm transition-all border-red-200 hover:border-red-300"
+                            onClick={() => {
+                              
+                              if (linkedAnnotation) {
+                                setPageNumber(linkedAnnotation.pageNumber);
+                              }
+                            }}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold bg-red-100 text-red-600">
+                                  {response.questionNumber}
                                 </div>
-                                <div className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
-                                  Page {anno.pageNumber}
+                                <div className="text-xs px-1.5 py-0.5 rounded-md font-medium bg-red-50 text-red-700">
+                                  Professor
                                 </div>
                               </div>
-                              <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                                {anno.metadata.comment}
-                              </p>
-                              
                               {linkedAnnotation && (
-                                <div className="mt-2 p-2 bg-blue-50/50 rounded-md border border-blue-100 text-xs flex items-start gap-1.5">
-                                  <LinkIcon size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                                  <div>
-                                    <span className="font-medium text-blue-700">Linked to student annotation:</span>
-                                    <p className="text-gray-600 mt-0.5 line-clamp-1">
-                                      {linkedAnnotation.metadata.comment}
-                                    </p>
-                                  </div>
+                                <div className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                                  Page {linkedAnnotation.pageNumber}
                                 </div>
                               )}
-                              
-                              <div className="flex justify-between text-xs mt-2 text-gray-500">
-                                <span>Original: {anno.metadata.previousMark}</span>
-                                <span className={`font-medium ${
-                                  anno.metadata.newMark > anno.metadata.previousMark 
-                                    ? "text-green-600" 
-                                    : "text-red-600"
-                                }`}>
-                                  New: {anno.metadata.newMark}
-                                </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                              {response.comment}
+                            </p>
+                            
+                            {linkedAnnotation && (
+                              <div className="mt-2 p-2 bg-blue-50/50 rounded-md border border-blue-100 text-xs flex items-start gap-1.5">
+                                <LinkIcon size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <span className="font-medium text-blue-700">In response to:</span>
+                                  <p className="text-gray-600 mt-0.5 line-clamp-1">
+                                    {linkedAnnotation.metadata.comment}
+                                  </p>
+                                </div>
                               </div>
-                            </motion.div>
-                          );
-                        })
+                            )}
+                            
+                            <div className="flex justify-end text-xs mt-2">
+                              <span className={`font-medium ${
+                                linkedAnnotation && response.newMark > linkedAnnotation.metadata.previousMark 
+                                  ? "text-green-600" 
+                                  : "text-red-600"
+                              }`}>
+                                New Mark: {response.newMark}
+                              </span>
+                            </div>
+                          </motion.div>
+                        );
+                      })
                     ) : (
                       <div className="text-center p-6 bg-gray-50 rounded-lg text-gray-500 text-sm border border-gray-100">
-                        <Edit className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                        No professor annotations yet
+                        <MessageSquare className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                        No professor responses yet
                       </div>
                     )}
                   </div>
@@ -1820,7 +1750,7 @@ const ProfessorRecheckDetail = () => {
                 >
                   <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <BarChart size={18} className="text-blue-500" />
-                    Mark Assessment
+                    Mark Assessment Summary
                   </h2>
                   
                   <QuestionMarksEditor
@@ -1829,6 +1759,8 @@ const ProfessorRecheckDetail = () => {
                     onQuestionMarkChange={handleQuestionMarkChange}
                     totalOriginalMarks={totalOriginalMarks}
                     totalNewMarks={totalNewMarks}
+                    addressedQuestions={addressedQuestions}
+                    questionResponses={questionResponses}
                   />
                 </motion.div>
                 
@@ -1933,18 +1865,18 @@ const ProfessorRecheckDetail = () => {
               </span>
             </div>
           </div>
-        </motion.div>
+        </div>
         
-        <motion.div 
+        <div 
           className="w-2 bg-gray-200 hover:bg-blue-400 cursor-ew-resize flex items-center justify-center transition-colors relative z-30"
           onMouseDown={startResize}
         >
           <div className="h-20 flex items-center justify-center">
             <MoveHorizontal size={16} className="text-gray-400" />
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div layout className="flex-1 h-[calc(100vh-73px)] relative bg-gray-100">
+        <div className="flex-1 h-[calc(100vh-73px)] relative bg-gray-100 overflow-hidden flex flex-col">
           <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-4 flex items-center justify-between sticky top-0 z-20 shadow-md">
             <h2 className="text-sm font-medium flex items-center">
               <FileText className="w-4 h-4 mr-2" />
@@ -1961,15 +1893,15 @@ const ProfessorRecheckDetail = () => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2 }}
-                className="text-xs px-3 py-1.5 rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white flex items-center gap-1.5 shadow-md"
+                className="text-xs px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center gap-1.5 shadow-md"
               >
-                <Edit size={12} />
-                <span>Draw to Annotate</span>
+                <Info size={12} />
+                <span>Click on student annotations to respond</span>
               </motion.div>
             </div>
           </div>
           
-          <div className="relative h-[calc(100%-56px)] bg-gray-800">
+          <div className="relative flex-1 bg-gray-800 overflow-auto">
             <PageViewer
               url="/api/placeholder/800/1200"
               zoomLevel={zoomLevel}
@@ -1982,18 +1914,33 @@ const ProfessorRecheckDetail = () => {
             />
             
             <div className="absolute inset-0 bg-transparent">
-              <AnnotationTool
-                onAnnotationChange={handleAnnotationChange}
+              <AnnotationViewer
+                annotations={annotations}
                 currentPage={pageNumber}
-                studentAnnotations={annotations}
-                maxMarks={maxMarks}
                 onSelectAnnotation={handleSelectAnnotation}
-                questionMarks={questionMarks}
-                onQuestionMarkUpdate={handleQuestionMarkUpdate}
+                selectedAnnotationId={selectedAnnotationId}
+                respondedAnnotationIds={respondedAnnotationIds}
               />
             </div>
+            
+            <AnimatePresence>
+              {showResponseForm && selectedAnnotation && (
+                <AnnotationResponseForm
+                  selectedAnnotation={selectedAnnotation}
+                  onClose={() => {
+                    setShowResponseForm(false);
+                    setSelectedAnnotation(null);
+                    setSelectedAnnotationId(null);
+                  }}
+                  onSubmit={handleAnnotationResponse}
+                  maxMarks={maxMarks}
+                  existingResponses={professorResponses}
+                  questionResponses={questionResponses[selectedAnnotation.metadata.questionNumber] || []}
+                />
+              )}
+            </AnimatePresence>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <AnimatePresence>
