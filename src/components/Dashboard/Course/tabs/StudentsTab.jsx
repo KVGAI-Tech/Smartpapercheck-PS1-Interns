@@ -27,6 +27,7 @@ const StudentsTab = ({
   useEffect(() => {
     if (externalStudents) {
       setStudents(externalStudents);
+      console.log(externalStudents)
       setLoading(false);
       return;
     }
@@ -220,7 +221,7 @@ const StudentsTab = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                    {student.section || 'Unassigned'}
+                    {student.tut_section || 'Unassigned'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

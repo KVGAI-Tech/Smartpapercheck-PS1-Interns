@@ -100,6 +100,44 @@ const CourseDetails = () => {
     const [teachingAssistants, setTeachingAssistants] = useState([]);
     const [exams, setExams] = useState([]);
     const [uploadStatus, setUploadStatus] = useState(null);
+
+    const handleCreateExam = async (formData) => {
+        try {
+            const response = await fetchApi(`/professors/courses/${courseId}/exams/`, {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+        } catch (error) {
+        }
+    };
+  
+    const handleUpdateExam = async (examId, formData) => {
+        try {
+            const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}/`, {
+                method: 'PUT',
+                body: JSON.stringify(formData)
+            });
+        } catch (error) {
+        }
+    };
+  
+    const handleDeleteExam = async (exam) => {
+        try {
+            await fetchApi(`/professors/courses/${courseId}/exams/${exam.id}`, {
+                method: 'DELETE'
+            });
+            showToast('Exam deleted successfully');
+            // Refresh exams list after successful deletion
+            const examsResponse = await getCourseExams(courseId);
+            setExams(examsResponse?.data || []);
+        } catch (error) {
+            if (error.message.includes('NotFoundError')) {
+                showToast('Exam not found or already deleted', 'error');
+            } else {
+                showToast(`Error deleting exam: ${error.message}`, 'error');
+            }
+        }
+    };
     
     useEffect(() => {
         const loadCourseData = async () => {
@@ -352,7 +390,7 @@ const CourseDetails = () => {
                     <StudentsTab
                         courseId={courseId}
                         students={getFilteredItems(students, 'student')}          
-                        sections={courseDetails?.sections || ['A1', 'A2', 'B1']}
+                        sections={courseDetails?.tut_sections || ''}
                         searchQuery={searchQuery}
                         selectedSection={selectedSection}
                         onSearchChange={setSearchQuery}
@@ -409,10 +447,7 @@ const CourseDetails = () => {
                             setShowAddModal(true);
                         }}
                         onEdit={(exam) => handleEdit(exam, 'exam')}
-                        onDelete={(exam) => {
-                            setItemToDelete({ type: 'exam', id: exam.id });
-                            setShowDeleteModal(true);
-                        }}
+                        onDelete={handleDeleteExam}
                         onEvaluate={handleEvaluate}
                     />
                 );

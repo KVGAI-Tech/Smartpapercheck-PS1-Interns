@@ -65,7 +65,7 @@ export const getCourseStudents = async (courseId) => {
     if (!data || !data.name || !data.email) {
       throw new Error('Invalid student data');
     }
-    const { courseId, name, email, roll_number, batch } = data;
+    const { courseId, name, email, roll_number, batch, tut_section } = data;
     if (!courseId) {
       throw new Error('Course ID is required');
     }
@@ -75,7 +75,8 @@ export const getCourseStudents = async (courseId) => {
         name,
         email,
         roll_number: roll_number || '',
-        batch: batch || ''
+        batch: batch || '',
+        tut_section: tut_section || ''
       })
     });
   };
