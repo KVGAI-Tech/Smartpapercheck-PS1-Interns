@@ -65,32 +65,32 @@ const Testimonials = () => {
     {
       quote:
         "SmartQnA saves us hours every exam season. The consistency and accuracy in grading has been truly remarkable.",
-      name: "Dr. Sharma",
-      designation: "Professor, Computer Science",
-      institute: "Indian Institute of Technology, Delhi",
+      name: "Prof. Saurabh Gandh",
+      designation: "Asst. Prof. Computer Science ",
+      institute: "IIT Jodhpur, Jodhpur, India",
       avatar: "/images/testimonials/sharma.jpeg",
     },
     {
       quote:
         "The AI rubric generator brings unprecedented consistency in marking across our department.",
-      name: "Dr. Patel",
-      designation: "Department Head, Engineering",
-      institute: "BITS Pilani, Hyderabad Campus",
+      name: "Prof. Vinay Chamola",
+      designation: "Associate Prof, Electronics",
+      institute: "BITS Pilani",
       avatar: "/images/testimonials/patel.jpeg",
     },
     {
       quote:
         "We've reduced our grading time by 80% and improved feedback quality with SmartQnA's automated evaluation system.",
-      name: "Prof. Gupta",
-      designation: "Associate Professor, Mathematics",
-      institute: "Delhi University",
+      name: "Dr. Vikas Hassija",
+      designation: "Associate Prof, CSIT",
+      institute: "KIIT",
       avatar: "/images/testimonials/gupta.jpeg",
     },
     {
       quote:
         "The detailed analytics for each student has revolutionized how we approach curriculum improvements.",
-      name: "Dr. Singh",
-      designation: "Dean of Academics",
+      name: "Dr. Saharsh Agarwal",
+      designation: "Assistant Professor",
       institute: "Indian School of Business",
       avatar: "/images/testimonials/singh.jpeg",
     },
