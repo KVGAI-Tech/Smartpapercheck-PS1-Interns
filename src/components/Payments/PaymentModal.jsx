@@ -13,20 +13,31 @@ export default function PaymentModal() {
   const handleClose = () => setOpen(false);
 
   const handlePayment = () => {
+    const token = localStorage.getItem("accessToken");
+
     const amount = parseFloat(
       amountInputRef.current.children[1].children[0].value
     );
     const conversionFactor = 1;
 
     axios
-      .post(`${API_BASE_URL}/api/transactions/initiate`, {
-        amount,
-        description: `Payment of ${amount} rupees for ${
-          amount * conversionFactor
-        } credits`,
-        metadata: {},
-        provider: "PhonePe",
-      })
+      .post(
+        `${API_BASE_URL}/api/transactions/initiate`,
+        {
+          amount,
+          description: `Payment of ${amount} rupees for ${
+            amount * conversionFactor
+          } credits`,
+          metadata: {},
+          provider: "PhonePe",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      )
       .then((res) => {
         console.log(res.data.data);
       })
