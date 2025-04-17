@@ -467,7 +467,7 @@ const RubricModal = ({
             setTimeout(() => {
                 setIsMaximized(!isMaximized);
                 setIsAnimating(false);
-            }, 300);
+            }, 3000);
         }
     };
 
@@ -491,7 +491,7 @@ const RubricModal = ({
                 }
             );
 
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
             if (!response.ok) {
                 toast.error('Using fallback rubric generator', { id: loadingToast });

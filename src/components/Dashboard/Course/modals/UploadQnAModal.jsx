@@ -11,12 +11,18 @@ import { API_BASE_URL } from '../../../../BaseURL';
 const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions = [] }) => {
   const [questions, setQuestions] = useState([{
     id: 1,
-    question: null,
-    questionPreview: '',
-    questionUrl: '',
-    answer: null,
-    answerPreview: '',
-    answerUrl: '',
+    questions: [{
+      id: 1,
+      file: null,
+      preview: '',
+      url: ''
+    }],
+    answers: [{
+      id: 1,
+      file: null,
+      preview: '',
+      url: ''
+    }],
     marks: '',
     questionText: '',
     answerText: 'answer',
@@ -46,12 +52,18 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     if (Array.isArray(existingQuestions) && existingQuestions.length > 0) {
       const formattedQuestions = existingQuestions.map((q, index) => ({
         id: index + 1,
-        question: null,
-        questionPreview: '',
-        questionUrl: q.question_file_url || '',
-        answer: "Answer",
-        answerPreview: '',
-        answerUrl: q.answer_file_url || '',
+        questions: q.questions.map((img, imgIndex) => ({
+          id: imgIndex + 1,
+          file: img.file,
+          preview: img.preview,
+          url: img.url
+        })),
+        answers: q.answers.map((img, imgIndex) => ({
+          id: imgIndex + 1,
+          file: img.file,
+          preview: img.preview,
+          url: img.url
+        })),
         marks: q.max_marks || '',
         questionText: q.question_text || '',
         answerText: q.answer?.answer_text || 'answer',
@@ -61,12 +73,18 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     } else {
       setQuestions([{
         id: 1,
-        question: null,
-        questionPreview: '',
-        questionUrl: '',
-        answer: null,
-        answerPreview: '',
-        answerUrl: '',
+        questions: [{
+          id: 1,
+          file: null,
+          preview: '',
+          url: ''
+        }],
+        answers: [{
+          id: 1,
+          file: null,
+          preview: '',
+          url: ''
+        }],
         marks: '',
         questionText: '',
         answerText: 'answer',
@@ -100,7 +118,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     };
   }, [isOpen]);
 
-  const handleFileChange = (questionId, type, file) => {
+  const handleFileChange = (questionId, type, file, imageId) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -109,9 +127,16 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
             q.id === questionId 
               ? {
                   ...q,
-                  [type]: file,
-                  [`${type}Preview`]: reader.result,
-                  [`${type}Url`]: '' 
+                  [type]: q[type].map(img => 
+                    img.id === imageId
+                      ? {
+                          ...img,
+                          file: file,
+                          preview: reader.result,
+                          url: ''
+                        }
+                      : img
+                  )
                 }
               : q
           )
@@ -124,14 +149,33 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
           q.id === questionId 
             ? {
                 ...q,
-                [type]: null,
-                [`${type}Preview`]: '',
-                [`${type}Url`]: ''
+                [type]: q[type].filter(img => img.id !== imageId)
               }
             : q
         )
       );
     }
+  };
+
+  const addImage = (questionId, type) => {
+    setQuestions(prevQuestions => 
+      prevQuestions.map(q => 
+        q.id === questionId 
+          ? {
+              ...q,
+              [type]: [
+                ...q[type],
+                {
+                  id: q[type].length + 1,
+                  file: null,
+                  preview: '',
+                  url: ''
+                }
+              ]
+            }
+          : q
+      )
+    );
   };
 
   const addQuestion = () => {
@@ -140,12 +184,18 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       ...prev,
       {
         id: newId,
-        question: null,
-        questionPreview: '',
-        questionUrl: '',
-        answer: null,
-        answerPreview: '',
-        answerUrl: '',
+        questions: [{
+          id: 1,
+          file: null,
+          preview: '',
+          url: ''
+        }],
+        answers: [{
+          id: 1,
+          file: null,
+          preview: '',
+          url: ''
+        }],
         marks: '',
         questionText: '',
         answerText: 'answer',
@@ -213,8 +263,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     }
 
     const invalidQuestions = questions.filter(q => {
-      const hasQuestionFile = q.question || q.questionUrl;
-      const hasAnswerFile = q.answer || q.answerUrl;
+      const hasQuestionFile = q.questions.length > 0;
+      const hasAnswerFile = q.answers.length > 0;
       return !hasQuestionFile || !hasAnswerFile || !q.marks || !q.questionText || !q.domain;
     });
     
@@ -289,30 +339,40 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
           const q = questions[i];
           
           try {
-            if (q.question) {
-              const questionFormData = new FormData();
-              questionFormData.append('question_number', (i + 1).toString());
-              questionFormData.append('file_type', 'question');
-              questionFormData.append('file', q.question);
-              questionFormData.append('answer_text', q.answerText || 'answer');
-              questionFormData.append('max_marks', q.marks);
-              questionFormData.append('question_text', q.questionText);
-              questionFormData.append('domain', q.domain);
-              
-              await onSubmit(examId, questionFormData);
+            // Upload all question images
+            for (let j = 0; j < q.questions.length; j++) {
+              const questionImage = q.questions[j];
+              if (questionImage.file) {
+                const questionFormData = new FormData();
+                questionFormData.append('question_number', (i + 1).toString());
+                questionFormData.append('file_type', 'question');
+                questionFormData.append('file', questionImage.file);
+                questionFormData.append('answer_text', q.answerText || 'answer');
+                questionFormData.append('max_marks', q.marks);
+                questionFormData.append('question_text', q.questionText);
+                questionFormData.append('domain', q.domain);
+                questionFormData.append('image_index', j.toString());
+                
+                await onSubmit(examId, questionFormData);
+              }
             }
             
-            if (q.answer) {
-              const answerFormData = new FormData();
-              answerFormData.append('question_number', (i + 1).toString());
-              answerFormData.append('file_type', 'answer');
-              answerFormData.append('file', q.answer);
-              answerFormData.append('answer_text', q.answerText || 'answer');
-              answerFormData.append('max_marks', q.marks);
-              answerFormData.append('question_text', q.questionText);
-              answerFormData.append('domain', q.domain);
-              
-              await onSubmit(examId, answerFormData);
+            // Upload all answer images
+            for (let j = 0; j < q.answers.length; j++) {
+              const answerImage = q.answers[j];
+              if (answerImage.file) {
+                const answerFormData = new FormData();
+                answerFormData.append('question_number', (i + 1).toString());
+                answerFormData.append('file_type', 'answer');
+                answerFormData.append('file', answerImage.file);
+                answerFormData.append('answer_text', q.answerText || 'answer');
+                answerFormData.append('max_marks', q.marks);
+                answerFormData.append('question_text', q.questionText);
+                answerFormData.append('domain', q.domain);
+                answerFormData.append('image_index', j.toString());
+                
+                await onSubmit(examId, answerFormData);
+              }
             }
           } catch (error) {
             const errorMessage = error.message || 'Error uploading question';
@@ -332,79 +392,91 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   };
 
   const QuestionDisplay = ({ type, data, onFileChange, questionId }) => {
-    const preview = data[`${type}Preview`];
-    const url = data[`${type}Url`];
-    const title = type === 'question' ? 'Question' : 'Answer';
+    const images = data[type];
+    const title = type === 'questions' ? 'Question' : 'Answer';
 
-    if (url) {
-      return (
-        <div className="relative group h-full min-h-[200px] border border-gray-200 rounded-lg overflow-hidden bg-white transition-all duration-200 hover:shadow-sm">
-          <img
-            src={url}
-            alt={`${title} from server`}
-            className="w-full h-full object-contain"
-          />
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onFileChange(questionId, type, null);
-              }}
-              className="p-2 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-red-600 hover:scale-110 transition-all"
-              aria-label={`Remove ${title} image`}
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
+    return (
+      <div className="space-y-4">
+        {images.map((image, index) => (
+          <div key={image.id} className="relative group">
+            {image.url ? (
+              <div className="relative group h-full min-h-[200px] border border-gray-200 rounded-lg overflow-hidden bg-white transition-all duration-200 hover:shadow-sm">
+                <img
+                  src={image.url}
+                  alt={`${title} ${index + 1} from server`}
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onFileChange(questionId, type, null, image.id);
+                    }}
+                    className="p-2 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-red-600 hover:scale-110 transition-all"
+                    aria-label={`Remove ${title} image ${index + 1}`}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ) : image.preview ? (
+              <div className="relative group h-full min-h-[200px] border border-gray-200 rounded-lg overflow-hidden bg-white transition-all duration-200 hover:shadow-sm">
+                <img
+                  src={image.preview}
+                  alt={`${title} ${index + 1} preview`}
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onFileChange(questionId, type, null, image.id);
+                    }}
+                    className="p-2 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-red-600 hover:scale-110 transition-all"
+                    aria-label={`Remove ${title} image ${index + 1}`}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="w-full min-h-[200px] border border-dashed border-gray-300 rounded-lg bg-gray-50 
+                hover:border-blue-500 hover:bg-blue-50/10 cursor-pointer transition-all duration-300 
+                flex flex-col items-center justify-center">
+                <Upload className="w-8 h-8 text-gray-400 mb-2 animate-pulse group-hover:animate-none" />
+                <span className="text-sm text-gray-500 text-center">
+                  Click to upload {title.toLowerCase()} image {index + 1}
+                </span>
+                <span className="text-xs text-gray-400 mt-2">
+                  JPG, PNG or GIF recommended
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files[0]) {
+                      onFileChange(questionId, type, e.target.files[0], image.id);
+                    }
+                  }}
+                  aria-label={`Upload ${title} image ${index + 1}`}
+                />
+              </label>
+            )}
           </div>
-        </div>
-      );
-    }
-
-    return preview ? (
-      <div className="relative group h-full min-h-[200px] border border-gray-200 rounded-lg overflow-hidden bg-white transition-all duration-200 hover:shadow-sm">
-        <img
-          src={preview}
-          alt={`${title} preview`}
-          className="w-full h-full object-contain"
-        />
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onFileChange(questionId, type, null);
-            }}
-            className="p-2 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-red-600 hover:scale-110 transition-all"
-            aria-label={`Remove ${title} image`}
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </div>
+        ))}
+        <button
+          onClick={() => addImage(questionId, type)}
+          className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg 
+            hover:border-blue-500 hover:bg-blue-50/10 transition-colors duration-300 
+            flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4 text-blue-600" />
+          <span className="text-blue-600 font-medium">Add Another {title} Image</span>
+        </button>
       </div>
-    ) : (
-      <label className="w-full min-h-[200px] border border-dashed border-gray-300 rounded-lg bg-gray-50 
-        hover:border-blue-500 hover:bg-blue-50/10 cursor-pointer transition-all duration-300 
-        flex flex-col items-center justify-center">
-        <Upload className="w-8 h-8 text-gray-400 mb-2 animate-pulse group-hover:animate-none" />
-        <span className="text-sm text-gray-500 text-center">
-          Click to upload {title.toLowerCase()} image
-        </span>
-        <span className="text-xs text-gray-400 mt-2">
-          JPG, PNG or GIF recommended
-        </span>
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files[0]) {
-              onFileChange(questionId, type, e.target.files[0]);
-            }
-          }}
-          aria-label={`Upload ${title} image`}
-        />
-      </label>
     );
   };
 
@@ -656,10 +728,10 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-600">
-                        Question Image <span className="text-red-500">*</span>
+                        Question Images
                       </label>
                       <QuestionDisplay 
-                        type="question"
+                        type="questions"
                         data={question}
                         onFileChange={handleFileChange}
                         questionId={question.id}
@@ -668,10 +740,10 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-600">
-                        Answer Image <span className="text-red-500">*</span>
+                        Answer Images
                       </label>
                       <QuestionDisplay 
-                        type="answer"
+                        type="answers"
                         data={question}
                         onFileChange={handleFileChange}
                         questionId={question.id}
