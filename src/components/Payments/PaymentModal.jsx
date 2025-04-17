@@ -46,10 +46,10 @@ export default function PaymentModal() {
             amount * conversionFactor
           } credits`,
           metadata: {
-            redirectUrl: window.location.origin + "/payment/success",
-            callbackUrl: window.location.origin + "/payment/callback",
+            user_id: 123,
+            reference_id: "order_123",
           },
-          provider: "PhonePe",
+          provider: "phonepe",
         },
         {
           headers: {
@@ -65,7 +65,7 @@ export default function PaymentModal() {
         } else {
           // Handle in-app redirect for PhonePe
           window.open(res.data.data.redirect_url, "_blank");
-          checkPaymentStatus(res.data.data.transaction_id);
+          //   checkPaymentStatus(res.data.data.transaction_id);
         }
       })
       .catch((err) => {
@@ -80,42 +80,42 @@ export default function PaymentModal() {
       });
   };
 
-  const checkPaymentStatus = (transactionId) => {
-    const token = localStorage.getItem("accessToken");
-    // Poll for payment status every 5 seconds
-    const interval = setInterval(() => {
-      axios
-        .get(`${API_BASE_URL}/api/transactions/${transactionId}/status`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .then((res) => {
-          const status = res.data.data.status;
-          if (status === "SUCCESS") {
-            clearInterval(interval);
-            fetchBalance();
-            handleClose();
-            // Show success notification
-            alert("Payment successful! Credits added to your account.");
-          } else if (status === "FAILED" || status === "CANCELLED") {
-            clearInterval(interval);
-            setError("Payment was not successful. Please try again.");
-          }
-          // Continue polling for PENDING status
-        })
-        .catch((err) => {
-          console.error("Error checking payment status:", err);
-          clearInterval(interval);
-          setError("Failed to verify payment status. Please contact support.");
-        });
-    }, 5000);
+  //   const checkPaymentStatus = (transactionId) => {
+  //     const token = localStorage.getItem("accessToken");
+  //     // Poll for payment status every 5 seconds
+  //     const interval = setInterval(() => {
+  //       axios
+  //         .get(`${API_BASE_URL}/api/transactions/${transactionId}/verify`, {
+  //           headers: {
+  //             Authorization: `Bearer ${token}`,
+  //           },
+  //         })
+  //         .then((res) => {
+  //           const status = res.data.data.status;
+  //           if (status === "SUCCESS") {
+  //             clearInterval(interval);
+  //             fetchBalance();
+  //             handleClose();
+  //             // Show success notification
+  //             alert("Payment successful! Credits added to your account.");
+  //           } else if (status === "FAILED" || status === "CANCELLED") {
+  //             clearInterval(interval);
+  //             setError("Payment was not successful. Please try again.");
+  //           }
+  //           // Continue polling for PENDING status
+  //         })
+  //         .catch((err) => {
+  //           console.error("Error checking payment status:", err);
+  //           clearInterval(interval);
+  //           setError("Failed to verify payment status. Please contact support.");
+  //         });
+  //     }, 5000);
 
-    // Clear interval after 2 minutes (assuming timeout)
-    setTimeout(() => {
-      clearInterval(interval);
-    }, 120000);
-  };
+  //     // Clear interval after 2 minutes (assuming timeout)
+  //     setTimeout(() => {
+  //       clearInterval(interval);
+  //     }, 120000);
+  //   };
 
   const handlePhonePeRedirect = () => {
     if (paymentUrl) {
@@ -126,7 +126,7 @@ export default function PaymentModal() {
         "transactionId"
       );
       if (transactionId) {
-        checkPaymentStatus(transactionId);
+        // checkPaymentStatus(transactionId);
       }
     }
   };
