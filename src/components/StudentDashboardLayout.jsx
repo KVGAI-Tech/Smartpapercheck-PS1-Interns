@@ -12,7 +12,6 @@ import {
   Bell,
   AlertCircle,
 } from "lucide-react";
-import PaymentModal from "./Payments/PaymentModal";
 
 const StudentDashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -281,7 +280,7 @@ const StudentDashboardLayout = ({ children }) => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <PaymentModal />
+              {/* <PaymentModal /> */}
               <button className="p-2 rounded-full hover:bg-gray-50 relative">
                 <Bell className="w-5 h-5 text-gray-500" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></span>
