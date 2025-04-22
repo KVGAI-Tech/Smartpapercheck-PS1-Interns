@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, 
@@ -70,7 +70,7 @@ const Toast = ({ message, type, visible, onClose }) => {
 const StatusBadge = ({ status }) => {
   let bgColor, textColor, icon;
 
-  switch (status.toLowerCase()) {
+  switch (status?.toLowerCase()) {
     case "approved":
       bgColor = "bg-gradient-to-r from-green-100 to-green-50";
       textColor = "text-green-800";
@@ -96,14 +96,14 @@ const StatusBadge = ({ status }) => {
       className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full ${bgColor} ${textColor} shadow-sm border border-white/20`}
     >
       {icon}
-      <span className="font-medium">{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+      <span className="font-medium">{status ? status.charAt(0).toUpperCase() + status.slice(1) : "Pending"}</span>
     </motion.span>
   );
 };
 
 
 const PageViewer = ({
-  url,
+  presigned_url,
   onZoomIn,
   onZoomOut,
   onZoomReset,
@@ -114,14 +114,20 @@ const PageViewer = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const imageRef = useRef(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
+    setIsLoading(true);
+    setError(null);
     
-    return () => clearTimeout(timer);
-  }, [url]);
+    if (presigned_url) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 800);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [presigned_url]);
 
   const handleError = () => {
     setError("Failed to load image");
@@ -161,9 +167,10 @@ const PageViewer = ({
         animate={{ scale: zoomLevel }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {url ? (
+        {presigned_url ? (
           <img
-            src={url}
+            ref={imageRef}
+            src={presigned_url}
             alt="Student Answer Sheet"
             className="max-w-full object-contain shadow-2xl rounded-lg"
             onError={handleError}
@@ -273,40 +280,58 @@ const AnnotationViewer = ({
 }) => {
   
   const studentAnnotations = annotations.filter(
-    anno => anno.createdBy === "student" && anno.pageNumber === currentPage
+    anno => anno.pageNumber === currentPage
   );
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full pointer-events-none">
       {studentAnnotations.map((anno) => {
-        const left = Math.min(anno.startX, anno.endX);
-        const top = Math.min(anno.startY, anno.endY);
-        const width = Math.abs(anno.endX - anno.startX);
-        const height = Math.abs(anno.endY - anno.startY);
+        // Extract coordinates with fallbacks
+        const startX = anno.coordinates?.startX || anno.startX || 0;
+        const startY = anno.coordinates?.startY || anno.startY || 0;
+        const endX = anno.coordinates?.endX || anno.endX || 0;
+        const endY = anno.coordinates?.endY || anno.endY || 0;
         
+        // Calculate position and dimensions
+        const left = Math.min(startX, endX);
+        const top = Math.min(startY, endY);
+        const width = Math.abs(endX - startX);
+        const height = Math.abs(endY - startY);
         
-        const isSelected = anno.id === selectedAnnotationId;
-        const isResponded = respondedAnnotationIds.includes(anno.id);
+        // Make sure dimensions are at least 20px for visibility
+        const visibleWidth = Math.max(width, 20);
+        const visibleHeight = Math.max(height, 20);
+        
+        // Check status
+        const annotationId = anno.id || anno.annotation_id;
+        const isSelected = annotationId === selectedAnnotationId;
+        const isResponded = respondedAnnotationIds.includes(annotationId) || 
+                           anno.status === 'accepted' || 
+                           anno.status === 'rejected';
 
         return (
           <motion.div
-            key={anno.id}
+            key={annotationId}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ 
               opacity: 1, 
               scale: 1,
-              boxShadow: isSelected ? '0 0 0 2px rgba(59, 130, 246, 0.8)' : isResponded ? '0 0 0 2px rgba(34, 197, 94, 0.6)' : 'none'
+              boxShadow: isSelected ? '0 0 0 4px rgba(59, 130, 246, 0.8)' : isResponded ? '0 0 0 4px rgba(34, 197, 94, 0.6)' : 'none'
             }}
             transition={{ duration: 0.3, type: "spring" }}
-            className={`absolute border-2 ${isSelected ? 'ring-2 ring-blue-500' : isResponded ? 'ring-2 ring-green-500' : ''}`}
+            className={`absolute border-4 ${
+              isSelected ? 'ring-4 ring-blue-500' : 
+              isResponded ? 'ring-4 ring-green-500' : ''
+            } pointer-events-auto`}
             style={{
               left: `${left}px`,
               top: `${top}px`,
-              width: `${width}px`,
-              height: `${height}px`,
-              borderColor: isResponded ? 'rgb(34, 197, 94)' : anno.borderColor,
-              backgroundColor: isResponded ? 'rgba(34, 197, 94, 0.2)' : anno.color,
-              cursor: 'pointer'
+              width: `${visibleWidth}px`,
+              height: `${visibleHeight}px`,
+              borderColor: isResponded ? 'rgb(34, 197, 94)' : 'rgb(59, 130, 246)',
+              backgroundColor: isResponded ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.3)',
+              cursor: 'pointer',
+              zIndex: isSelected ? 30 : 20
             }}
             onClick={() => onSelectAnnotation(anno)}
           >
@@ -314,14 +339,14 @@ const AnnotationViewer = ({
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className={`absolute -top-7 left-0 bg-white text-xs px-2 py-1.5 rounded-md shadow-md border ${
-                isResponded ? "border-green-100" : "border-blue-100"
-              }`}
+              className={`absolute -top-10 left-0 bg-white text-xs px-2 py-1.5 rounded-md shadow-md border ${
+                isResponded ? "border-green-200" : "border-blue-200"
+              } z-40`}
             >
               <span className={`${
                 isResponded ? "bg-green-500" : "bg-blue-500"
-              } text-white rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-bold`}>
-                {anno.metadata.questionNumber}
+              } text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold`}>
+                {anno.questionNumber}
               </span>
               {isResponded && (
                 <span className="ml-1 text-xs text-green-600 font-medium">✓</span>
@@ -345,11 +370,11 @@ const AnnotationResponseForm = ({
 }) => {
   const [responseData, setResponseData] = useState({
     comment: "",
-    newMark: selectedAnnotation?.metadata?.newMark || 0,
+    newMark: selectedAnnotation?.expectedMarks || selectedAnnotation?.metadata?.newMark || 0,
   });
 
   
-  const questionNumber = selectedAnnotation?.metadata?.questionNumber;
+  const questionNumber = selectedAnnotation?.questionNumber || selectedAnnotation?.metadata?.questionNumber;
   const hasExistingResponses = questionResponses.length > 0;
 
   useEffect(() => {
@@ -365,7 +390,7 @@ const AnnotationResponseForm = ({
       
       setResponseData(prev => ({
         ...prev,
-        newMark: selectedAnnotation?.metadata?.newMark || 0
+        newMark: selectedAnnotation?.expectedMarks || selectedAnnotation?.metadata?.newMark || selectedAnnotation?.currentMarks || 0
       }));
     }
   }, [selectedAnnotation, hasExistingResponses, questionResponses]);
@@ -384,7 +409,7 @@ const AnnotationResponseForm = ({
       questionNumber: questionNumber,
       comment: responseData.comment,
       newMark: parseFloat(responseData.newMark),
-      annotationId: selectedAnnotation.id
+      annotationId: selectedAnnotation.id || selectedAnnotation.annotation_id
     });
   };
 
@@ -394,7 +419,7 @@ const AnnotationResponseForm = ({
       animate={{ opacity: 1, y: 0, x: 0 }}
       exit={{ opacity: 0, y: 10 }}
       transition={{ type: "spring", damping: 20 }}
-      className="absolute top-4 right-4 bg-white rounded-xl shadow-2xl p-5 z-20 w-96 border border-blue-100"
+      className="absolute top-4 right-4 bg-white rounded-xl shadow-2xl p-5 z-40 w-96 border border-blue-100"
     >
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-medium text-gray-900 flex items-center gap-2">
@@ -448,7 +473,7 @@ const AnnotationResponseForm = ({
           <Info size={14} />
           Student Comment
         </h4>
-        <p className="text-sm text-gray-700">{selectedAnnotation.metadata.comment}</p>
+        <p className="text-sm text-gray-700">{selectedAnnotation.grievance || selectedAnnotation.metadata?.comment}</p>
       </div>
 
       <form onSubmit={handleFormSubmit} className="space-y-4">
@@ -473,7 +498,7 @@ const AnnotationResponseForm = ({
             </label>
             <input
               type="number"
-              value={selectedAnnotation.metadata.previousMark}
+              value={selectedAnnotation.currentMarks || selectedAnnotation.metadata?.previousMark}
               className="w-full p-3 border rounded-lg border-gray-300 bg-gray-100 text-gray-700"
               disabled
             />
@@ -750,7 +775,11 @@ const QuestionMarksEditor = ({
                                     <div className="flex items-center gap-1.5">
                                       <span className="font-medium text-blue-600">Response {index + 1}</span>
                                       <LinkIcon size={10} className="text-gray-400" />
-                                      <span className="text-gray-500">Annotation {response.annotationId.split('-')[1]}</span>
+                                      <span className="text-gray-500">Annotation {
+                                        typeof response.annotationId === 'string' && response.annotationId.includes('-') 
+                                          ? response.annotationId.split('-')[1] 
+                                          : response.annotationId
+                                      }</span>
                                     </div>
                                     <span className="text-green-600 font-medium">Mark: {response.newMark}</span>
                                   </div>
@@ -864,8 +893,8 @@ const StudentAnnotationsList = ({
 }) => {
   
   const groupedAnnotations = annotations.reduce((acc, anno) => {
-    if (anno.createdBy === "student") {
-      const qNum = anno.metadata.questionNumber;
+    const qNum = anno.questionNumber || anno.metadata?.questionNumber;
+    if (qNum) {
       if (!acc[qNum]) {
         acc[qNum] = [];
       }
@@ -879,7 +908,12 @@ const StudentAnnotationsList = ({
       {Object.keys(groupedAnnotations).length > 0 ? (
         Object.entries(groupedAnnotations).map(([questionNum, annotations]) => {
           const responseCount = (questionResponses[questionNum] || []).length;
-          const isFullyResponded = annotations.every(anno => respondedIds.includes(anno.id));
+          const isFullyResponded = annotations.every(anno => 
+            respondedIds.includes(anno.id) || 
+            respondedIds.includes(anno.annotation_id) || 
+            anno.status === 'accepted' || 
+            anno.status === 'rejected'
+          );
           
           return (
             <motion.div
@@ -919,15 +953,18 @@ const StudentAnnotationsList = ({
               
               <div className="space-y-2 p-2">
                 {annotations.map((anno) => {
-                  const hasResponse = respondedIds.includes(anno.id);
+                  const annotationId = anno.id || anno.annotation_id;
+                  const hasResponse = respondedIds.includes(annotationId) || 
+                                      anno.status === 'accepted' || 
+                                      anno.status === 'rejected';
                   
                   return (
                     <motion.div
-                      key={anno.id}
+                      key={annotationId}
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       className={`p-3 bg-white rounded-lg border shadow-sm cursor-pointer transition-all ${
-                        selectedAnnotationId === anno.id 
+                        selectedAnnotationId === annotationId 
                           ? "border-blue-400 ring-2 ring-blue-200" 
                           : hasResponse
                             ? "border-green-300 bg-green-50/50"
@@ -951,12 +988,12 @@ const StudentAnnotationsList = ({
                         </div>
                       </div>
                       <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                        {anno.metadata.comment}
+                        {anno.grievance || anno.metadata?.comment}
                       </p>
                       <div className="flex justify-between text-xs mt-2 text-gray-500">
-                        <span>Current: {anno.metadata.previousMark}</span>
+                        <span>Current: {anno.currentMarks || anno.metadata?.previousMark}</span>
                         <span className="text-green-600 font-medium">
-                          Expected: {anno.metadata.newMark}
+                          Expected: {anno.expectedMarks || anno.metadata?.newMark}
                         </span>
                       </div>
                     </motion.div>
@@ -978,11 +1015,19 @@ const StudentAnnotationsList = ({
 
 
 const ProfessorRecheckDetail = () => {
+  // Get both route params and query params
   const { courseId, requestId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Extract query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const examId = queryParams.get('examId') || courseId;
+  const enrollmentId = queryParams.get('enrollmentId') || requestId;
+  
   const [zoomLevel, setZoomLevel] = useState(1);
   const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
   const [annotations, setAnnotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1004,6 +1049,7 @@ const ProfessorRecheckDetail = () => {
   const [addressedQuestions, setAddressedQuestions] = useState({});
   const [professorResponses, setProfessorResponses] = useState([]);
   const [questionResponses, setQuestionResponses] = useState({}); 
+  const [pageUrls, setPageUrls] = useState([]);
   const resizeStartX = useRef(0);
   const startWidth = useRef(0);
   const containerRef = useRef(null);
@@ -1012,6 +1058,7 @@ const ProfessorRecheckDetail = () => {
     message: "",
     type: "success",
   });
+  const [mongoId, setMongoId] = useState(null);
 
   
   const respondedAnnotationIds = professorResponses.map(response => response.annotationId);
@@ -1067,115 +1114,152 @@ const ProfessorRecheckDetail = () => {
     const fetchRequestData = async () => {
       setLoading(true);
       try {
+        console.log("Fetching data with examId:", examId, "and enrollmentId:", enrollmentId);
         
-        const mockData = {
-          id: requestId || "req1",
-          studentName: "Alice Johnson",
-          studentId: "2023001",
-          examTitle: "Mid-term Examination",
-          examType: "Mid-term",
-          reason: "Question 3 requires partial credit review. I believe my implementation logic was correct but I lost marks due to a minor syntax error. The core algorithm is correct and should be awarded at least 3 more marks according to the rubric.",
-          status: "pending",
-          submittedDate: "Oct 15, 2023",
-          currentMarks: 7,
-          maxMarks: {
-            1: 5,
-            2: 5,
-            3: 10,
-            4: 5,
-            5: 5,
-            total: 30
-          },
-          questionMarks: {
-            1: { originalMark: 3, newMark: 3 },
-            2: { originalMark: 2, newMark: 2 },
-            3: { originalMark: 1, newMark: 1 },
-            4: { originalMark: 0, newMark: 0 },
-            5: { originalMark: 1, newMark: 1 }
-          },
-          annotations: 3, 
-          pages: [
-            { 
-              pageNumber: 1, 
-              imageUrl: "/api/placeholder/800/1200" 
+        // Step 1: Fetch recheck requests - using examId and enrollmentId from query params
+        const recheckResponse = await fetch(
+          `${API_BASE_URL}/exams/${examId}/enrollments/${enrollmentId}/recheck-requests`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
-            { 
-              pageNumber: 2, 
-              imageUrl: "/api/placeholder/800/1200" 
-            }
-          ],
-          annotationData: [
-            {
-              id: "anno1",
-              startX: 100,
-              startY: 150,
-              endX: 300,
-              endY: 250,
-              pageNumber: 1,
-              color: "rgba(59, 130, 246, 0.3)",
-              borderColor: "rgb(59, 130, 246)",
-              createdBy: "student",
-              metadata: {
-                questionNumber: 3,
-                comment: "My algorithm implementation is correct here, the logic follows the required approach.",
-                previousMark: 1,
-                newMark: 4,
-              }
+          }
+        );
+
+        if (!recheckResponse.ok) {
+          throw new Error('Failed to fetch recheck request');
+        }
+
+        const recheckData = await recheckResponse.json();
+        
+        if (!recheckData.data || recheckData.data.length === 0) {
+          throw new Error('No recheck requests found');
+        }
+
+        const request = recheckData.data[0];
+        setMongoId(request._id);
+        
+        // Step 2: Fetch answer sheet pages
+        const answerSheetResponse = await fetch(
+          `${API_BASE_URL}/exams/${request.exam_id || examId}/answer-sheets/${request.enrollment_id || enrollmentId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
-            {
-              id: "anno2",
-              startX: 150,
-              startY: 300,
-              endX: 400,
-              endY: 380,
-              pageNumber: 2,
-              color: "rgba(59, 130, 246, 0.3)",
-              borderColor: "rgb(59, 130, 246)",
-              createdBy: "student",
-              metadata: {
-                questionNumber: 3,
-                comment: "This part correctly implements the required optimization technique.",
-                previousMark: 1,
-                newMark: 4,
-              }
-            },
+          }
+        );
+
+        if (!answerSheetResponse.ok) {
+          throw new Error('Failed to fetch answer sheets');
+        }
+
+        const answerSheetData = await answerSheetResponse.json();
+        
+        // Extract data from responses
+        const pages = answerSheetData.data.pages || [];
+        const pageUrls = pages.map(page => page.presigned_url || page.url);
+        const studentData = answerSheetData.data.student || {};
+        const annotationsData = request.annotations || [];
+        
+        // Transform annotations to match component format
+        const transformedAnnotations = annotationsData.map(anno => ({
+          id: anno.annotation_id || `anno-${anno.questionNumber}-${anno.pageNumber}`,
+          annotation_id: anno.annotation_id || `anno-${anno.questionNumber}-${anno.pageNumber}`,
+          pageNumber: anno.pageNumber,
+          questionNumber: anno.questionNumber,
+          grievance: anno.grievance,
+          coordinates: anno.coordinates,
+          currentMarks: anno.currentMarks,
+          expectedMarks: anno.expectedMarks,
+          status: anno.status || 'pending',
+          professorFeedback: anno.professorFeedback || '',
+          marksAwarded: anno.marksAwarded || 0
+        }));
+        
+        // Create question marks data
+        const qMarks = {};
+        const maxMarksByQuestion = { total: 0 };
+        let origTotal = 0;
+        let newTotal = 0;
+        
+        // Group annotations by question number
+        const questionMap = {};
+        transformedAnnotations.forEach(anno => {
+          const qNum = anno.questionNumber;
+          if (!questionMap[qNum]) {
+            questionMap[qNum] = [];
+            // Estimate max marks per question (adjust as needed)
+            maxMarksByQuestion[qNum] = 10; // Default value, adjust based on your needs
+          }
+          questionMap[qNum].push(anno);
+          
+          // Track which questions have been already addressed
+          if (anno.status === 'accepted' || anno.status === 'rejected') {
+            const profResponse = {
+              id: `prof-${Date.now()}-${anno.id}`,
+              questionNumber: anno.questionNumber,
+              comment: anno.professorFeedback || "Review completed",
+              newMark: anno.marksAwarded || anno.currentMarks,
+              annotationId: anno.id || anno.annotation_id
+            };
             
-            {
-              id: "anno3",
-              startX: 250,
-              startY: 200,
-              endX: 450,
-              endY: 300,
-              pageNumber: 1,
-              color: "rgba(59, 130, 246, 0.3)",
-              borderColor: "rgb(59, 130, 246)",
-              createdBy: "student",
-              metadata: {
-                questionNumber: 3,
-                comment: "Another explanation point for question 3, showing the time complexity analysis.",
-                previousMark: 1,
-                newMark: 4,
+            setProfessorResponses(prev => {
+              if (!prev.some(r => r.annotationId === profResponse.annotationId)) {
+                return [...prev, profResponse];
               }
-            }
-          ]
+              return prev;
+            });
+            
+            setAddressedQuestions(prev => ({
+              ...prev,
+              [anno.questionNumber]: true
+            }));
+          }
+        });
+        
+        // Set question marks based on annotations
+        Object.keys(questionMap).forEach(qNum => {
+          const annotations = questionMap[qNum];
+          // Use the first annotation's values for now
+          const firstAnno = annotations[0];
+          qMarks[qNum] = {
+            originalMark: firstAnno.currentMarks,
+            newMark: firstAnno.status === 'accepted' ? firstAnno.marksAwarded : firstAnno.currentMarks
+          };
+          
+          origTotal += firstAnno.currentMarks;
+          newTotal += qMarks[qNum].newMark;
+          maxMarksByQuestion.total += maxMarksByQuestion[qNum];
+        });
+        
+        // Prepare request data for component
+        const formattedRequestData = {
+          id: request._id,
+          studentName: studentData.name || "Student",
+          studentId: studentData.roll_number || studentData.student_id || "ID",
+          examTitle: `Exam ${request.exam_id || examId}`,
+          examType: "Examination",
+          reason: request.reason,
+          status: request.status,
+          submittedDate: new Date(request.created_at).toLocaleDateString(),
+          currentMarks: origTotal,
+          maxMarks: maxMarksByQuestion,
+          questionMarks: qMarks,
+          annotations: transformedAnnotations.length,
+          pages: pages.map((page, idx) => ({ 
+            pageNumber: page.page_number || (idx + 1), 
+            imageUrl: page.presigned_url || page.url 
+          }))
         };
         
-        setRequestData(mockData);
-        setAnnotations(mockData.annotationData || []);
-        setTotalPages(mockData.pages?.length || 5);
-        setMaxMarks(mockData.maxMarks);
-        setQuestionMarks(mockData.questionMarks);
-        
-        
-        let originalTotal = 0;
-        let newTotal = 0;
-        Object.values(mockData.questionMarks).forEach(q => {
-          originalTotal += q.originalMark;
-          newTotal += q.newMark;
-        });
-        setTotalOriginalMarks(originalTotal);
+        setRequestData(formattedRequestData);
+        setAnnotations(transformedAnnotations);
+        setTotalPages(pages.length);
+        setMaxMarks(maxMarksByQuestion);
+        setQuestionMarks(qMarks);
+        setTotalOriginalMarks(origTotal);
         setTotalNewMarks(newTotal);
-        
+        setPageUrls(pageUrls);
         
         setTimeout(() => {
           setLoading(false);
@@ -1187,8 +1271,13 @@ const ProfessorRecheckDetail = () => {
       }
     };
     
-    fetchRequestData();
-  }, [requestId]);
+    if (examId && enrollmentId) {
+      fetchRequestData();
+    } else {
+      setError("Missing required parameters: examId and enrollmentId");
+      setLoading(false);
+    }
+  }, [examId, enrollmentId]);
 
   
   useEffect(() => {
@@ -1323,55 +1412,89 @@ const ProfessorRecheckDetail = () => {
   };
 
   const handleSelectAnnotation = (annotation) => {
+    const annotationId = annotation.id || annotation.annotation_id;
     
-    if (annotation.createdBy === "student") {
-      
-      const questionNumber = annotation.metadata.questionNumber;
-      const responsesForThisQuestion = questionResponses[questionNumber] || [];
-      
-      setSelectedAnnotation(annotation);
-      setSelectedAnnotationId(annotation.id);
-      setShowResponseForm(true);
-      
-      
-      if (annotation.pageNumber !== pageNumber) {
-        setPageNumber(annotation.pageNumber);
-      }
+    setSelectedAnnotation(annotation);
+    setSelectedAnnotationId(annotationId);
+    setShowResponseForm(true);
+    
+    
+    if (annotation.pageNumber !== pageNumber) {
+      setPageNumber(annotation.pageNumber);
     }
   };
 
-  const handleAnnotationResponse = (responseData) => {
+  const handleAnnotationResponse = async (responseData) => {
+    setIsSubmitting(true);
     
-    const studentAnnotation = annotations.find(a => a.id === responseData.annotationId);
-    
-    
-    const newResponse = {
-      id: `prof-${Date.now()}`,
-      questionNumber: responseData.questionNumber,
-      comment: responseData.comment,
-      newMark: responseData.newMark,
-      annotationId: responseData.annotationId,
-      studentComment: studentAnnotation?.metadata?.comment || ""
-    };
-    
-    setProfessorResponses(prev => [...prev, newResponse]);
-    
-    
-    if (studentAnnotation) {
+    try {
+      // Call the API to update the annotation
+      const formData = new FormData();
+      formData.append('status', 'accepted');
+      formData.append('feedback', responseData.comment);
+      formData.append('marks_awarded', responseData.newMark);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/exams/recheck/${mongoId}/annotations/${responseData.annotationId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: formData
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to update annotation');
+      }
+      
+      const result = await response.json();
+      
+      // Create a new professor response object
+      const newResponse = {
+        id: `prof-${Date.now()}`,
+        questionNumber: responseData.questionNumber,
+        comment: responseData.comment,
+        newMark: responseData.newMark,
+        annotationId: responseData.annotationId,
+        studentComment: selectedAnnotation?.grievance || selectedAnnotation?.metadata?.comment || ""
+      };
+      
+      setProfessorResponses(prev => [...prev, newResponse]);
+      
+      // Update the annotation in the local state
+      setAnnotations(prev => prev.map(anno => {
+        if ((anno.id === responseData.annotationId) || (anno.annotation_id === responseData.annotationId)) {
+          return {
+            ...anno,
+            status: 'accepted',
+            professorFeedback: responseData.comment,
+            marksAwarded: responseData.newMark
+          };
+        }
+        return anno;
+      }));
+      
+      // Update question marks
       handleQuestionMarkUpdate(
         responseData.questionNumber,
-        studentAnnotation.metadata.previousMark,
+        selectedAnnotation.currentMarks || selectedAnnotation.metadata?.previousMark,
         responseData.newMark
       );
+      
+      // Reset UI state
+      setShowResponseForm(false);
+      setSelectedAnnotation(null);
+      setSelectedAnnotationId(null);
+      
+      showToast("Response submitted successfully", "success");
+    } catch (error) {
+      console.error("Error submitting annotation response:", error);
+      showToast("Failed to submit response", "error");
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    
-    setShowResponseForm(false);
-    setSelectedAnnotation(null);
-    setSelectedAnnotationId(null);
-    
-    
-    showToast("Response submitted successfully", "success");
   };
 
   const handleSubmitResponse = async () => {
@@ -1383,40 +1506,57 @@ const ProfessorRecheckDetail = () => {
     setIsSubmitting(true);
     
     try {
+      // Process any remaining unanswered annotations
+      const unansweredAnnotations = annotations.filter(anno => 
+        !respondedAnnotationIds.includes(anno.id) && 
+        !respondedAnnotationIds.includes(anno.annotation_id) &&
+        anno.status !== 'accepted' &&
+        anno.status !== 'rejected'
+      );
       
-      const payload = {
-        requestId,
-        courseId,
-        decision, 
-        feedback: professorFeedback,
-        totalMarks: totalNewMarks,
-        modifiedQuestions: Object.entries(questionMarks)
-          .filter(([qNum, marks]) => marks.newMark !== marks.originalMark)
-          .map(([qNum, marks]) => ({
-            questionNumber: parseInt(qNum),
-            newMark: marks.newMark
-          })),
-        responses: professorResponses.map(resp => ({
-          questionNumber: resp.questionNumber,
-          comment: resp.comment,
-          newMark: resp.newMark,
-          studentAnnotationId: resp.annotationId 
-        }))
+      // If rejecting, mark all unanswered annotations as rejected
+      if (decision === "rejected") {
+        await Promise.all(unansweredAnnotations.map(async (anno) => {
+          const formData = new FormData();
+          formData.append('status', 'rejected');
+          formData.append('feedback', professorFeedback || "Annotation rejected");
+          formData.append('marks_awarded', anno.currentMarks);
+          
+          const annoId = anno.id || anno.annotation_id;
+          
+          const response = await fetch(
+            `${API_BASE_URL}/exams/recheck/${mongoId}/annotations/${annoId}`,
+            {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              },
+              body: formData
+            }
+          );
+          
+          if (!response.ok) {
+            throw new Error(`Failed to reject annotation ${annoId}`);
+          }
+          
+          return response.json();
+        }));
+      }
+      
+      // After handling all annotations, update the recheck request status
+      const updateRecheckStatus = async () => {
+        // Implement the API call to update recheck status when it's available
+        // For now, we'll just simulate success
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        setRequestData(prev => ({
+          ...prev,
+          status: decision === "partial" ? "approved" : decision,
+          currentMarks: totalNewMarks
+        }));
       };
       
-      
-      console.log("Submitting professor recheck response:");
-      console.log(JSON.stringify(payload, null, 2));
-      
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      
-      setRequestData(prev => ({
-        ...prev,
-        status: decision === "partial" ? "approved" : decision,
-        currentMarks: totalNewMarks
-      }));
+      await updateRecheckStatus();
       
       setRequestComplete(true);
       showToast(`Request ${decision === "approved" || decision === "partial" ? "approved" : "rejected"} successfully`, "success");
@@ -1583,7 +1723,7 @@ const ProfessorRecheckDetail = () => {
                 whileHover={{ scale: 1.05 }}
                 className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium shadow-sm"
               >
-                {requestData?.studentName.charAt(0)}
+                {requestData?.studentName?.charAt(0) || "S"}
               </motion.div>
               <div className="text-sm">
                 <div className="font-medium text-gray-900">{requestData?.studentName}</div>
@@ -1645,7 +1785,7 @@ const ProfessorRecheckDetail = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-lg font-semibold text-gray-900">Student Annotations</h2>
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      {annotations.filter(a => a.createdBy === "student").length}
+                      {annotations.length}
                     </span>
                   </div>
                   
@@ -1673,7 +1813,9 @@ const ProfessorRecheckDetail = () => {
                   <div className="space-y-2.5 max-h-60 overflow-y-auto pr-2">
                     {professorResponses.length > 0 ? (
                       professorResponses.map((response) => {
-                        const linkedAnnotation = annotations.find(a => a.id === response.annotationId);
+                        const linkedAnnotation = annotations.find(a => 
+                          a.id === response.annotationId || a.annotation_id === response.annotationId
+                        );
                         
                         return (
                           <motion.div
@@ -1713,7 +1855,7 @@ const ProfessorRecheckDetail = () => {
                                 <div>
                                   <span className="font-medium text-blue-700">In response to:</span>
                                   <p className="text-gray-600 mt-0.5 line-clamp-1">
-                                    {linkedAnnotation.metadata.comment}
+                                    {linkedAnnotation.grievance || linkedAnnotation.metadata?.comment}
                                   </p>
                                 </div>
                               </div>
@@ -1721,7 +1863,7 @@ const ProfessorRecheckDetail = () => {
                             
                             <div className="flex justify-end text-xs mt-2">
                               <span className={`font-medium ${
-                                linkedAnnotation && response.newMark > linkedAnnotation.metadata.previousMark 
+                                linkedAnnotation && response.newMark > (linkedAnnotation.currentMarks || linkedAnnotation.metadata?.previousMark)
                                   ? "text-green-600" 
                                   : "text-red-600"
                               }`}>
@@ -1903,7 +2045,7 @@ const ProfessorRecheckDetail = () => {
           
           <div className="relative flex-1 bg-gray-800 overflow-auto">
             <PageViewer
-              url="/api/placeholder/800/1200"
+              presigned_url={pageUrls[pageNumber - 1]}
               zoomLevel={zoomLevel}
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
@@ -1935,7 +2077,7 @@ const ProfessorRecheckDetail = () => {
                   onSubmit={handleAnnotationResponse}
                   maxMarks={maxMarks}
                   existingResponses={professorResponses}
-                  questionResponses={questionResponses[selectedAnnotation.metadata.questionNumber] || []}
+                  questionResponses={questionResponses[selectedAnnotation.questionNumber || selectedAnnotation.metadata?.questionNumber] || []}
                 />
               )}
             </AnimatePresence>
