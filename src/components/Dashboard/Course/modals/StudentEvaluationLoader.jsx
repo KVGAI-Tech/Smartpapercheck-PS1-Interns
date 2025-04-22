@@ -159,8 +159,7 @@ const StudentEvaluationLoader = ({
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json'
           },
-          mode: 'cors',
-          credentials: 'include'
+          mode: 'cors'
         });
 
         if (!response.ok) {
@@ -216,8 +215,7 @@ const StudentEvaluationLoader = ({
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json'
           },
-          mode: 'cors',
-          credentials: 'include'
+          mode: 'cors'
         });
         
         if (!response.ok) {

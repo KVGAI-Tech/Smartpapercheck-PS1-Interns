@@ -216,7 +216,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
 
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
         method: 'GET',
@@ -225,7 +225,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
           'Content-Type': 'application/json'
         },
         mode: 'cors',
-        credentials: 'include',
         signal: controller.signal
       }).finally(() => clearTimeout(timeoutId));
 
@@ -342,7 +341,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
 
 
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
@@ -352,7 +351,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
           'Content-Type': 'application/json'
         },
         mode: 'cors',
-        credentials: 'include',
         signal: controller.signal
       }).finally(() => clearTimeout(timeoutId));
 
@@ -437,7 +435,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
         try {
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          const timeoutId = setTimeout(() => controller.abort(), 90000);
 
 
           const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
@@ -447,7 +445,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
               'Content-Type': 'application/json'
             },
             mode: 'cors',
-            credentials: 'include',
             signal: controller.signal
           }).finally(() => clearTimeout(timeoutId));
 

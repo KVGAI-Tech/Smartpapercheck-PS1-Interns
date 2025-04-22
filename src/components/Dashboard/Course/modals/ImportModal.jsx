@@ -433,9 +433,10 @@ export const StudentImportModal = ({
         { name: "name", description: "Full name of the student" },
         { name: "email", description: "Student's email address" },
         { name: "roll_number", description: "Unique student ID" },
-        { name: "batch", description: "Year of enrollment (e.g., 2024)" }
+        { name: "batch", description: "Year of enrollment (e.g., 2024)" },
+        { name: "tut_section", description: "Tutorial section (e.g., T01)" }
       ]}
-      templateFields={["name", "email", "roll_number", "batch"]}
+      templateFields={["name", "email", "roll_number", "batch", "tut_section"]}
       uploadStatus={uploadStatus}
     />
   );

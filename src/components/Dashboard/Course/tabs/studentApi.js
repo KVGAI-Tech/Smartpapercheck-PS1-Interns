@@ -41,13 +41,43 @@ export const studentApi = {
           name: data.name,
           email: data.email,
           roll_number: data.roll_number,
-          batch: data.batch
+          batch: data.batch,
+          tut_section: data.tut_section
         })
       });
       if (response.code === 201 || response.code === 200) {
         return response.data;
       }
       throw new Error(response.message || 'Failed to add student');
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  
+  updateStudent: async (data) => {
+    try {
+      if (!data.id) {
+        throw new Error('Student ID is required for updating');
+      }
+      if (!data.name || !data.email || !data.roll_number || !data.batch) {
+        throw new Error('Please fill in all required fields');
+      } 
+      
+      const response = await fetchApi(`/professors/students/${data.id}`, {
+        method: 'PATCH', 
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          roll_number: data.roll_number,
+          batch: data.batch,
+          tut_section: data.tut_section
+        })
+      });
+      
+      if (response.code === 200) {
+        return response.data;
+      }
+      throw new Error(response.message || 'Failed to update student');
     } catch (error) {
       throw handleApiError(error);
     }

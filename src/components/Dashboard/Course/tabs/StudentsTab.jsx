@@ -6,6 +6,29 @@ import {
 import { studentApi } from './studentApi'; 
 import { StudentImportModal } from '../modals/ImportModal';
 
+// Create a local storage service for students
+const studentsStorageService = {
+  saveStudents: (courseId, students) => {
+    if (!courseId || !students || !Array.isArray(students)) return;
+    try {
+      localStorage.setItem(`course_${courseId}_students`, JSON.stringify(students));
+    } catch (error) {
+      console.error('Failed to save students to localStorage:', error);
+    }
+  },
+  
+  getStudents: (courseId) => {
+    if (!courseId) return [];
+    try {
+      const saved = localStorage.getItem(`course_${courseId}_students`);
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Failed to get students from localStorage:', error);
+      return [];
+    }
+  }
+};
+
 const StudentsTab = ({
   courseId, 
   students: externalStudents = null,
@@ -24,10 +47,15 @@ const StudentsTab = ({
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
 
+  // Function to update students list and also save to storage
+  const updateAndSaveStudents = (newStudents) => {
+    setStudents(newStudents);
+    studentsStorageService.saveStudents(courseId, newStudents);
+  };
+
   useEffect(() => {
     if (externalStudents) {
-      setStudents(externalStudents);
-      console.log(externalStudents)
+      updateAndSaveStudents(externalStudents);
       setLoading(false);
       return;
     }
@@ -38,23 +66,34 @@ const StudentsTab = ({
         setLoading(false);
         return;
       }
+      
+      // First try to get cached students to show immediately
+      const cachedStudents = studentsStorageService.getStudents(courseId);
+      if (cachedStudents.length > 0) {
+        setStudents(cachedStudents);
+      }
+      
       try {
         setLoading(true);
         const fetchedStudents = await studentApi.getStudents(courseId);
         console.log("Fetched students:", fetchedStudents);
         
         if (Array.isArray(fetchedStudents)) {
-          setStudents(fetchedStudents);
+          updateAndSaveStudents(fetchedStudents);
           setError(null);
         } else {
           console.error("Unexpected students data format:", fetchedStudents);
           setError('Received invalid data format from server');
-          setStudents([]);
+          if (!cachedStudents.length) {
+            setStudents([]);
+          }
         }
       } catch (err) {
         console.error("Error fetching students:", err);
         setError(err.message || 'Failed to load students');
-        setStudents([]);
+        if (!cachedStudents.length) {
+          setStudents([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -66,7 +105,8 @@ const StudentsTab = ({
   const handleRemoveStudent = async (student) => {
     try {
       await studentApi.removeStudent(courseId, student.id);
-      setStudents(prev => prev.filter(s => s.id !== student.id));
+      const updatedStudents = students.filter(s => s.id !== student.id);
+      updateAndSaveStudents(updatedStudents);
       onDelete && onDelete(student);
     } catch (err) {
       console.error('Failed to remove student:', err.message);
@@ -88,7 +128,7 @@ const StudentsTab = ({
           setUploadStatus('completed');
           try {
             const updatedStudents = await studentApi.getStudents(courseId);
-            setStudents(updatedStudents);
+            updateAndSaveStudents(updatedStudents);
             setTimeout(() => {
               setShowImportModal(false);
               setUploadStatus(null);
@@ -108,6 +148,46 @@ const StudentsTab = ({
     }
   };
 
+  // Add a new function to handle adding a student
+  const handleAddStudent = async (studentData) => {
+    try {
+      const newStudent = await studentApi.addStudent({
+        ...studentData,
+        courseId
+      });
+      const updatedStudents = [...students, newStudent];
+      updateAndSaveStudents(updatedStudents);
+      return newStudent;
+    } catch (err) {
+      console.error('Failed to add student:', err.message);
+      throw err;
+    }
+  };
+
+  // Add a new function to handle updating a student
+  const handleUpdateStudent = async (studentData) => {
+    try {
+      const updatedStudent = await studentApi.updateStudent(studentData);
+      const updatedStudents = students.map(s => 
+        s.id === updatedStudent.id ? updatedStudent : s
+      );
+      updateAndSaveStudents(updatedStudents);
+      return updatedStudent;
+    } catch (err) {
+      console.error('Failed to update student:', err.message);
+      throw err;
+    }
+  };
+
+  // Override the onAdd prop to use our handler that updates the stored list
+  const handleOnAdd = () => {
+    onAdd((studentData) => handleAddStudent(studentData));
+  };
+
+  // Override the onEdit prop to use our handler that updates the stored list
+  const handleOnEdit = (student) => {
+    onEdit(student, (studentData) => handleUpdateStudent(studentData));
+  };
   
   const filteredStudents = students.filter(student => {
     const matchesSearch = !searchQuery || 
@@ -163,7 +243,7 @@ const StudentsTab = ({
               Get started by adding students to this course
             </p>
             <button
-              onClick={onAdd}
+              onClick={handleOnAdd}
               className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               <Plus size={20} />
@@ -230,7 +310,7 @@ const StudentsTab = ({
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end space-x-2">
                     <button
-                      onClick={() => onEdit(student)}
+                      onClick={() => handleOnEdit(student)}
                       className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Edit student"
                     >
@@ -290,7 +370,7 @@ const StudentsTab = ({
             Import
           </button>
           <button
-            onClick={onAdd}
+            onClick={handleOnAdd}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg 
               hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">

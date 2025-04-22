@@ -218,3 +218,24 @@ export const pollUploadStatus = (uploadId, onComplete, onError) => {
 
   return () => clearInterval(pollInterval);
 };
+
+export const updateStudent = async (data) => {
+  if (!data || !data.id) {
+    throw new Error('Student ID is required for update');
+  }
+  if (!data.name || !data.email) {
+    throw new Error('Invalid student data');
+  }
+  const { id, courseId, name, email, roll_number, batch, tut_section } = data;
+  
+  return fetchApi(`/professors/students/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name,
+      email,
+      roll_number: roll_number || '',
+      batch: batch || '',
+      tut_section: tut_section || ''
+    })
+  });
+};

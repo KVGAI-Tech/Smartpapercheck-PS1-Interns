@@ -22,21 +22,19 @@ const GradingTab = ({ maxMarks = 100 }) => {
   const [sliderPositions, setSliderPositions] = useState({});
   const markToPixelMapping = useRef({});
 
-  // Generate sample histogram data
   useEffect(() => {
     const generateSampleData = () => {
       const data = [];
       for (let i = 0; i <= maxMarks; i++) {
-        // Create more realistic distribution with some peaks and valleys
         let count;
         if (i < 20) {
-          count = Math.floor(Math.random() * 4); // Few students with very low marks
+          count = Math.floor(Math.random() * 4); 
         } else if (i > 80) {
-          count = Math.floor(Math.random() * 4); // Few students with very high marks
+          count = Math.floor(Math.random() * 4); 
         } else if (i > 40 && i < 60) {
-          count = Math.floor(Math.random() * 10); // More students in the middle range
+          count = Math.floor(Math.random() * 10); 
         } else {
-          count = Math.floor(Math.random() * 7); // Average number elsewhere
+          count = Math.floor(Math.random() * 7);
         }
         
         data.push({
@@ -49,7 +47,6 @@ const GradingTab = ({ maxMarks = 100 }) => {
     generateSampleData();
   }, [maxMarks]);
 
-  // Calculate statistics from histogram data
   const statistics = useMemo(() => {
     if (histogramData.length === 0) return { highest: 0, lowest: 0, average: 0, totalStudents: 0 };
     
@@ -76,7 +73,6 @@ const GradingTab = ({ maxMarks = 100 }) => {
     };
   }, [histogramData, maxMarks]);
 
-  // Setup chart with position calculation plugin
   useEffect(() => {
     if (chartRef.current && histogramData.length > 0) {
       if (chart) {
@@ -84,45 +80,35 @@ const GradingTab = ({ maxMarks = 100 }) => {
       }
 
       const updateSliderPositions = (chart) => {
-        // Create a mapping of mark values to pixel positions
         const mapping = {};
-        
-        // Check if chart and its scales are properly initialized
         if (!chart || !chart.scales || !chart.scales.x || !chart.chartArea) {
-          return; // Exit early if chart isn't fully initialized
+          return; 
         }
         
         const xScale = chart.scales.x;
         
-        // Get chart dimensions with safety checks
         const chartArea = {
           left: chart.chartArea?.left || 0,
           right: chart.chartArea?.right || 0,
           width: (chart.chartArea?.right || 0) - (chart.chartArea?.left || 0)
         };
         
-        // Only proceed if we have valid chart dimensions
         if (chartArea.width <= 0) {
           return;
         }
         
-        // Map each mark to its pixel position
         for (let i = 0; i <= maxMarks; i++) {
           try {
-            // Get the pixel position for this mark value with error handling
             mapping[i] = xScale.getPixelForValue(i);
           } catch (e) {
             console.log('Error getting pixel for value', i, e);
           }
         }
-        
-        // Store the mapping for later use
         markToPixelMapping.current = {
           mapping,
           chartArea
         };
         
-        // Update slider positions
         const positions = {};
         Object.entries(gradeBoundaries).forEach(([grade, boundary]) => {
           if (mapping[boundary] !== undefined) {

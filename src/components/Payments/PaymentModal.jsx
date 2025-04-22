@@ -39,7 +39,7 @@ export default function PaymentModal() {
 
     axios
       .post(
-        `${API_BASE_URL}/api/transactions/initiate`,
+        `${API_BASE_URL}/transactions/initiate`,
         {
           amount,
           description: `Payment of ${amount} rupees for ${
@@ -134,7 +134,7 @@ export default function PaymentModal() {
   const fetchBalance = () => {
     const token = localStorage.getItem("accessToken");
     axios
-      .get(`${API_BASE_URL}/api/transactions/balance`, {
+      .get(`${API_BASE_URL}/transactions/balance`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -52,22 +52,32 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     if (Array.isArray(existingQuestions) && existingQuestions.length > 0) {
       const formattedQuestions = existingQuestions.map((q, index) => ({
         id: index + 1,
-        questions: q.questions.map((img, imgIndex) => ({
+        questions: Array.isArray(q.questions) ? q.questions.map((img, imgIndex) => ({
           id: imgIndex + 1,
-          file: img.file,
-          preview: img.preview,
-          url: img.url
-        })),
-        answers: q.answers.map((img, imgIndex) => ({
+          file: img?.file || null,
+          preview: img?.preview || '',
+          url: img?.url || ''
+        })) : [{
+          id: 1,
+          file: null,
+          preview: '',
+          url: ''
+        }],
+        answers: Array.isArray(q.answers) ? q.answers.map((img, imgIndex) => ({
           id: imgIndex + 1,
-          file: img.file,
-          preview: img.preview,
-          url: img.url
-        })),
-        marks: q.max_marks || '',
-        questionText: q.question_text || '',
-        answerText: q.answer?.answer_text || 'answer',
-        domain: q.domain || ''
+          file: img?.file || null,
+          preview: img?.preview || '',
+          url: img?.url || ''
+        })) : [{
+          id: 1,
+          file: null,
+          preview: '',
+          url: ''
+        }],
+        marks: q?.max_marks || '',
+        questionText: q?.question_text || '',
+        answerText: q?.answer?.answer_text || 'answer',
+        domain: q?.domain || ''
       }));
       setQuestions(formattedQuestions);
     } else {

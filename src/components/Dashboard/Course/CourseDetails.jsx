@@ -23,6 +23,7 @@ import {
     uploadTAs,
     getCourseStudents,
     addStudent,
+    updateStudent,
     removeStudent,
     uploadStudents,
     getCourseExams,
@@ -213,28 +214,37 @@ const CourseDetails = () => {
             let response;
             switch (type) {
                 case 'student':
-                    response = await addStudent({ ...data, courseId });
-                    setStudents(prev => [...prev, response.data]);
+                    if (data.id) {
+                        response = await updateStudent(data);
+                        setStudents(prev => prev.map(s => s.id === data.id ? response.data : s));
+                        showToast(`Student updated successfully`);
+                    } else {
+                        response = await addStudent({ ...data, courseId });
+                        setStudents(prev => [...prev, response.data]);
+                        showToast(`Student added successfully`);
+                    }
                     break;
                 case 'instructor':
                     response = await addInstructor(courseId, data);
                     setInstructors(prev => [...prev, response.data]);
+                    showToast(`Instructor added successfully`);
                     break;
                 case 'ta':
                     response = await addTA(courseId, data);
                     setTeachingAssistants(prev => [...prev, response.data]);
+                    showToast(`Teaching Assistant added successfully`);
                     break;
                 case 'exam':
                     response = await createExam(courseId, data);
                     setExams(prev => [...prev, response.data]);
+                    showToast(`Exam added successfully`);
                     break;
                 default:
                     throw new Error(`Invalid type: ${type}`);
             }
             setShowAddModal(false);
-            showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} added successfully`);
         } catch (error) {
-            showToast(`Error adding ${type}: ${error.message}`, 'error');
+            showToast(`Error ${data.id ? 'updating' : 'adding'} ${type}: ${error.message}`, 'error');
         }
     };
 

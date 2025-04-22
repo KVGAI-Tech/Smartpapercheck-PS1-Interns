@@ -5,9 +5,10 @@
   There should be a submit button to save the changes.
   There should be a cancel button to close the popup.
   There should be a search bar to search for a student.
+  The list of students should come from students tab
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
@@ -382,7 +383,7 @@ const ExamCard = ({
               rounded-lg flex items-center gap-2 transition-colors"
           >
             <Users className="w-4 h-4" />
-            <span>Enrollments</span>
+            <span>Manage Enrollments</span>
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -392,7 +393,7 @@ const ExamCard = ({
               rounded-lg flex items-center gap-2 transition-colors shadow-sm"
           >
             <PlayCircle className="w-4 h-4" />
-            <span>Start Evaluation</span>
+            <span>Evaluate</span>
           </motion.button>
 
           <div className="flex items-center gap-2 ml-2">
@@ -513,54 +514,92 @@ const ExamCard = ({
   );
 };
 
-const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChange }) => {
-  const [students, setStudents] = useState([]);
+const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChange, students = [] }) => {
   const [enrolledStudents, setEnrolledStudents] = useState(new Set());
+  const [tempEnrolledStudents, setTempEnrolledStudents] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [enrollmentDetails, setEnrollmentDetails] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({});
+  const [localStudents, setLocalStudents] = useState([]);
+
+  // Load students from local storage
+  useEffect(() => {
+    if (courseId) {
+      try {
+        const storedStudents = localStorage.getItem(`course_${courseId}_students`);
+        if (storedStudents) {
+          setLocalStudents(JSON.parse(storedStudents));
+        }
+      } catch (error) {
+        console.error("Error loading students from localStorage:", error);
+      }
+    }
+  }, [courseId]);
+
+  // Compute the combined student list - use enrollments, passed students, and local storage
+  const combinedStudents = useMemo(() => {
+    // Start with students passed via props
+    if (students && students.length > 0) {
+      return students;
+    }
+    
+    // If no students were passed, try local storage
+    if (localStudents && localStudents.length > 0) {
+      return localStudents.map(student => ({
+        id: student.id,
+        name: student.user_name || `Student ${student.id}`,
+        email: student.user_email,
+        roll_number: student.roll_number
+      }));
+    }
+    
+    // As a fallback, create student list from enrollment details
+    const studentsFromEnrollments = enrollmentDetails
+      .filter(enrollment => enrollment && (enrollment.student_name || enrollment.student_id))
+      .map(enrollment => ({
+        id: enrollment.student_id || enrollment.id,
+        name: enrollment.student_name || `Student ${enrollment.student_id || enrollment.id}`
+      }));
+      
+    return studentsFromEnrollments;
+  }, [students, localStudents, enrollmentDetails]);
+  
+  // Filter the combined students list based on search
+  const filteredStudents = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return combinedStudents.filter(student => 
+      (student.name && student.name.toLowerCase().includes(query)) || 
+      (student.email && student.email.toLowerCase().includes(query)) ||
+      (student.roll_number && student.roll_number.toLowerCase().includes(query)) ||
+      String(student.id).toLowerCase().includes(query)
+    );
+  }, [combinedStudents, searchQuery]);
 
   useEffect(() => {
-    if (isOpen && examId && courseId) {
-      fetchData();
+    if (isOpen && examId) {
+      fetchEnrollments();
     }
-  }, [isOpen, examId, courseId]);
+  }, [isOpen, examId]);
 
-  const fetchData = async () => {
+  // Reset temporary selections when the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTempEnrolledStudents(new Set(enrolledStudents));
+    }
+  }, [isOpen, enrolledStudents]);
+
+  const fetchEnrollments = async () => {
     setIsLoading(true);
     setError('');
     try {
-      // Fetch course students
-      const studentsResponse = await fetch(`${API_BASE_URL}/professors/courses/${courseId}/students`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        }
-      });
-
-      if (!studentsResponse.ok) {
-        throw new Error('Failed to fetch students');
-      }
-
-      const studentsData = await studentsResponse.json();
-      if (studentsData.code !== 200) {
-        throw new Error(studentsData.message || 'Failed to fetch students');
-      }
-
-      // Filter out invalid students and transform data
-      const validStudents = (studentsData.data || [])
-        .filter(student => student && student.student_id && student.student_name)
-        .map(student => ({
-          id: student.student_id,
-          name: student.student_name
-        }));
-
-      setStudents(validStudents);
-
       // Fetch exam enrollments
-      const enrollmentsResponse = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
+      const enrollmentsResponse = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        }
+        },
+        credentials: 'omit'
       });
 
       if (!enrollmentsResponse.ok) {
@@ -568,91 +607,141 @@ const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChang
       }
 
       const enrollmentsData = await enrollmentsResponse.json();
+      console.log("Raw enrollment data:", enrollmentsData);
+      
       if (enrollmentsData.code !== 200) {
         throw new Error(enrollmentsData.message || 'Failed to fetch enrollments');
       }
 
-      // Create set of enrolled student IDs
+      // More flexible data extraction
+      let allEnrollments = [];
+      let counts = {};
+      
+      if (Array.isArray(enrollmentsData.data)) {
+        // Case 1: data is an array of objects with enrollments property
+        enrollmentsData.data.forEach(item => {
+          if (item && Array.isArray(item.enrollments)) {
+            allEnrollments = [...allEnrollments, ...item.enrollments];
+            if (item.status_counts) {
+              counts = item.status_counts;
+            }
+          } 
+          // Case 2: data is directly an array of enrollment objects
+          else if (item && item.student_id) {
+            allEnrollments.push(item);
+          }
+        });
+      } 
+      // Case 3: data is a single object with enrollments property
+      else if (enrollmentsData.data && Array.isArray(enrollmentsData.data.enrollments)) {
+        allEnrollments = enrollmentsData.data.enrollments;
+        if (enrollmentsData.data.status_counts) {
+          counts = enrollmentsData.data.status_counts;
+        }
+      }
+      // Case 4: data is directly an enrollment object
+      else if (enrollmentsData.data && enrollmentsData.data.student_id) {
+        allEnrollments = [enrollmentsData.data];
+      }
+      
+      console.log('Processed enrollment details:', allEnrollments);
+      console.log('Status counts:', counts);
+      
+      // Ensure we have something to work with
+      if (allEnrollments.length === 0) {
+        console.warn("No enrollments extracted from data. Using raw data as fallback.");
+        // Last resort: try to use the data directly
+        if (Array.isArray(enrollmentsData.data)) {
+          allEnrollments = enrollmentsData.data;
+        } else if (enrollmentsData.data) {
+          allEnrollments = [enrollmentsData.data];
+        }
+      }
+      
+      setEnrollmentDetails(allEnrollments);
+      setStatusCounts(counts || {});
+
+      // Extract student_id values with more fallbacks
       const enrolledIds = new Set(
-        (enrollmentsData.data || [])
-          .filter(enrollment => enrollment && enrollment.student_id)
-          .map(enrollment => enrollment.student_id)
+        allEnrollments
+          .filter(enrollment => enrollment && (enrollment.student_id || enrollment.id))
+          .map(enrollment => enrollment.student_id || enrollment.id)
       );
 
       setEnrolledStudents(enrolledIds);
+      setTempEnrolledStudents(new Set(enrolledIds));
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching enrollments:', error);
       setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleToggleStudent = async (studentId) => {
+  const handleToggleStudent = (studentId) => {
+    setTempEnrolledStudents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId);
+      } else {
+        newSet.add(studentId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeselectAll = () => {
+    setTempEnrolledStudents(new Set());
+  };
+
+  const handleSelectAll = () => {
+    const allStudentIds = filteredStudents.map(student => student.id);
+    setTempEnrolledStudents(new Set(allStudentIds));
+  };
+
+  const handleSubmit = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const isEnrolled = enrolledStudents.has(studentId);
-      await onEnrollmentChange(studentId, !isEnrolled);
+      // Find students to add (in temp but not in original)
+      const studentsToAdd = Array.from(tempEnrolledStudents).filter(id => !enrolledStudents.has(id));
       
-      // Update local state
-      setEnrolledStudents(prev => {
-        const newSet = new Set(prev);
-        if (isEnrolled) {
-          newSet.delete(studentId);
-        } else {
-          newSet.add(studentId);
-        }
-        return newSet;
-      });
+      // Find students to remove (in original but not in temp)
+      const studentsToRemove = Array.from(enrolledStudents).filter(id => !tempEnrolledStudents.has(id));
+      
+      // Process additions
+      for (const studentId of studentsToAdd) {
+        await onEnrollmentChange(studentId, true);
+      }
+      
+      // Process removals
+      for (const studentId of studentsToRemove) {
+        await onEnrollmentChange(studentId, false);
+      }
+      
+      // Update our local state to match the server state
+      setEnrolledStudents(new Set(tempEnrolledStudents));
+      
+      onClose();
     } catch (error) {
-      console.error('Error toggling student enrollment:', error);
-      setError(error.message);
+      console.error('Error updating enrollments:', error);
+      setError(error.message || 'Failed to update enrollments');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeselectAll = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      // Remove all students from exam
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove all enrollments');
-      }
-
-      const data = await response.json();
-      if (data.code !== 200) {
-        throw new Error(data.message || 'Failed to remove all enrollments');
-      }
-
-      setEnrolledStudents(new Set());
-      
-      // Notify parent component
-      if (onEnrollmentChange) {
-        onEnrollmentChange(null, false);
-      }
-    } catch (error) {
-      console.error('Error removing all enrollments:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
+  // Find students in enrollment details with info
+  const getStudentDetails = (studentId) => {
+    const details = enrollmentDetails.find(e => String(e.student_id) === String(studentId)) || {};
+    
+    // For enrolled students without a status, assume 'not_uploaded'
+    if (tempEnrolledStudents.has(studentId) && !details.status) {
+      return { ...details, status: 'not_uploaded' };
     }
+    
+    return details;
   };
-
-  const filteredStudents = students.filter(student => {
-    const query = searchQuery.toLowerCase();
-    return student.name.toLowerCase().includes(query) || 
-           student.id.toLowerCase().includes(query);
-  });
 
   if (!isOpen) return null;
 
@@ -682,13 +771,35 @@ const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChang
           </div>
         )}
 
-        {!isLoading && students.length === 0 && (
+        {!isLoading && Object.keys(statusCounts).length > 0 && (
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            <div className="bg-blue-50 p-3 rounded-lg text-center">
+              <div className="text-lg font-semibold text-blue-700">{statusCounts.not_uploaded || 0}</div>
+              <div className="text-xs text-gray-500">Not Uploaded</div>
+            </div>
+            <div className="bg-amber-50 p-3 rounded-lg text-center">
+              <div className="text-lg font-semibold text-amber-700">{statusCounts.uploaded || 0}</div>
+              <div className="text-xs text-gray-500">Uploaded</div>
+            </div>
+            <div className="bg-green-50 p-3 rounded-lg text-center">
+              <div className="text-lg font-semibold text-green-700">{statusCounts.evaluated || 0}</div>
+              <div className="text-xs text-gray-500">Evaluated</div>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-lg text-center">
+              <div className="text-lg font-semibold text-purple-700">{statusCounts.recheck_requested || 0}</div>
+              <div className="text-xs text-gray-500">Recheck Requested</div>
+            </div>
+          </div>
+        )}
+        
+
+        {!isLoading && combinedStudents.length === 0 && (
           <div className="text-center py-4 text-gray-500">
             No students found in this course.
           </div>
         )}
 
-        {!isLoading && students.length > 0 && (
+        {!isLoading && combinedStudents.length > 0 && (
           <>
             <div className="mb-4">
               <div className="relative">
@@ -705,65 +816,76 @@ const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChang
             </div>
 
             <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-medium text-gray-600">
                   {filteredStudents.length} students found
                 </span>
-                <button
-                  onClick={handleDeselectAll}
-                  className="text-sm text-red-600 hover:text-red-700"
-                  disabled={isLoading || enrolledStudents.size === 0}
-                >
-                  Deselect All
-                </button>
+
               </div>
-              <div className="space-y-2">
-                {filteredStudents.map(student => (
-                  <div
-                    key={student.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={enrolledStudents.has(student.id)}
-                        onChange={() => handleToggleStudent(student.id)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        disabled={isLoading}
-                      />
-                      <div>
-                        <p className="font-medium">{student.name}</p>
-                        <p className="text-sm text-gray-500">{student.id}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleToggleStudent(student.id)}
-                      className="text-sm text-red-600 hover:text-red-700"
-                      disabled={isLoading}
+              <div className="space-y-1 rounded-lg border border-gray-200 overflow-hidden bg-white">
+                {filteredStudents.map(student => {
+                  const details = getStudentDetails(student.id);
+                  const isEnrolled = tempEnrolledStudents.has(student.id);
+                  
+                  return (
+                    <div
+                      key={student.id}
+                      className={`flex items-center justify-between p-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 ${
+                        isEnrolled ? 'bg-blue-50/50' : ''
+                      }`}
                     >
-                      {enrolledStudents.has(student.id) ? 'Deselect' : 'Select'}
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-medium text-blue-600">
+                            {student.name?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800">{student.name}</p>
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                            {student.roll_number && <span className="px-2 py-0.5 bg-gray-100 rounded-full">Roll: {student.roll_number}</span>}
+                            {student.email && <span className="truncate max-w-[200px]">{student.email}</span>}
+                            {details.status && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                details.status === 'evaluated' ? 'bg-green-100 text-green-800' :
+                                details.status === 'uploaded' ? 'bg-amber-100 text-amber-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {details.status}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {details.marks_obtained !== null && details.marks_obtained !== undefined && (
+                          <div className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-700">
+                            {details.marks_obtained}/{details.max_marks || 0}
+                          </div>
+                        )}
+                       </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>
         )}
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 mt-6">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            onClick={handleSubmit}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 font-medium shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
             disabled={isLoading}
           >
-            Cancel
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300"
-            disabled={isLoading}
-          >
-            Done
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Processing...</span>
+              </>
+            ) : (
+              <span>Save Changes</span>
+            )}
           </button>
         </div>
       </div>
@@ -779,6 +901,7 @@ const ExamsTab = ({
   onAdd = () => { },
   onEdit = () => { },
   onDelete = () => { },
+  students = [],
 }) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
@@ -943,9 +1066,11 @@ const ExamsTab = ({
       }
 
       showToast(`Student ${isEnrolled ? 'added to' : 'removed from'} exam successfully`, 'success');
+      return true;
     } catch (error) {
       console.error('Error updating enrollment:', error);
       showToast(error.message || 'Failed to update enrollment', 'error');
+      throw error;
     }
   };
 
@@ -1332,6 +1457,7 @@ const ExamsTab = ({
           examId={selectedExamForEnrollments}
           courseId={courseId}
           onEnrollmentChange={handleEnrollmentChange}
+          students={students}
         />
       </motion.div>
 
@@ -1421,3 +1547,4 @@ const ExamsTab = ({
 };
 
 export default ExamsTab;
+
