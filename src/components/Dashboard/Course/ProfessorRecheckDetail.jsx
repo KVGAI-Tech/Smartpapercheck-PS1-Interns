@@ -286,23 +286,23 @@ const AnnotationViewer = ({
   return (
     <div className="relative w-full h-full pointer-events-none">
       {studentAnnotations.map((anno) => {
-        // Extract coordinates with fallbacks
+        
         const startX = anno.coordinates?.startX || anno.startX || 0;
         const startY = anno.coordinates?.startY || anno.startY || 0;
         const endX = anno.coordinates?.endX || anno.endX || 0;
         const endY = anno.coordinates?.endY || anno.endY || 0;
         
-        // Calculate position and dimensions
+        
         const left = Math.min(startX, endX);
         const top = Math.min(startY, endY);
         const width = Math.abs(endX - startX);
         const height = Math.abs(endY - startY);
         
-        // Make sure dimensions are at least 20px for visibility
+        
         const visibleWidth = Math.max(width, 20);
         const visibleHeight = Math.max(height, 20);
         
-        // Check status
+        
         const annotationId = anno.id || anno.annotation_id;
         const isSelected = annotationId === selectedAnnotationId;
         const isResponded = respondedAnnotationIds.includes(annotationId) || 
@@ -1015,12 +1015,12 @@ const StudentAnnotationsList = ({
 
 
 const ProfessorRecheckDetail = () => {
-  // Get both route params and query params
+  
   const { courseId, requestId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Extract query parameters
+  
   const queryParams = new URLSearchParams(location.search);
   const examId = queryParams.get('examId') || courseId;
   const enrollmentId = queryParams.get('enrollmentId') || requestId;
@@ -1116,7 +1116,7 @@ const ProfessorRecheckDetail = () => {
       try {
         console.log("Fetching data with examId:", examId, "and enrollmentId:", enrollmentId);
         
-        // Step 1: Fetch recheck requests - using examId and enrollmentId from query params
+        
         const recheckResponse = await fetch(
           `${API_BASE_URL}/exams/${examId}/enrollments/${enrollmentId}/recheck-requests`,
           {
@@ -1139,7 +1139,7 @@ const ProfessorRecheckDetail = () => {
         const request = recheckData.data[0];
         setMongoId(request._id);
         
-        // Step 2: Fetch answer sheet pages
+        
         const answerSheetResponse = await fetch(
           `${API_BASE_URL}/exams/${request.exam_id || examId}/answer-sheets/${request.enrollment_id || enrollmentId}`,
           {
@@ -1155,13 +1155,13 @@ const ProfessorRecheckDetail = () => {
 
         const answerSheetData = await answerSheetResponse.json();
         
-        // Extract data from responses
+        
         const pages = answerSheetData.data.pages || [];
         const pageUrls = pages.map(page => page.presigned_url || page.url);
         const studentData = answerSheetData.data.student || {};
         const annotationsData = request.annotations || [];
         
-        // Transform annotations to match component format
+        
         const transformedAnnotations = annotationsData.map(anno => ({
           id: anno.annotation_id || `anno-${anno.questionNumber}-${anno.pageNumber}`,
           annotation_id: anno.annotation_id || `anno-${anno.questionNumber}-${anno.pageNumber}`,
@@ -1176,24 +1176,23 @@ const ProfessorRecheckDetail = () => {
           marksAwarded: anno.marksAwarded || 0
         }));
         
-        // Create question marks data
+        
         const qMarks = {};
         const maxMarksByQuestion = { total: 0 };
         let origTotal = 0;
         let newTotal = 0;
         
-        // Group annotations by question number
+        
         const questionMap = {};
         transformedAnnotations.forEach(anno => {
           const qNum = anno.questionNumber;
           if (!questionMap[qNum]) {
             questionMap[qNum] = [];
-            // Estimate max marks per question (adjust as needed)
-            maxMarksByQuestion[qNum] = 10; // Default value, adjust based on your needs
+            
+            maxMarksByQuestion[qNum] = 10; 
           }
           questionMap[qNum].push(anno);
           
-          // Track which questions have been already addressed
           if (anno.status === 'accepted' || anno.status === 'rejected') {
             const profResponse = {
               id: `prof-${Date.now()}-${anno.id}`,
@@ -1217,10 +1216,8 @@ const ProfessorRecheckDetail = () => {
           }
         });
         
-        // Set question marks based on annotations
         Object.keys(questionMap).forEach(qNum => {
           const annotations = questionMap[qNum];
-          // Use the first annotation's values for now
           const firstAnno = annotations[0];
           qMarks[qNum] = {
             originalMark: firstAnno.currentMarks,
@@ -1232,7 +1229,6 @@ const ProfessorRecheckDetail = () => {
           maxMarksByQuestion.total += maxMarksByQuestion[qNum];
         });
         
-        // Prepare request data for component
         const formattedRequestData = {
           id: request._id,
           studentName: studentData.name || "Student",
@@ -1428,7 +1424,6 @@ const ProfessorRecheckDetail = () => {
     setIsSubmitting(true);
     
     try {
-      // Call the API to update the annotation
       const formData = new FormData();
       formData.append('status', 'accepted');
       formData.append('feedback', responseData.comment);
@@ -1451,7 +1446,6 @@ const ProfessorRecheckDetail = () => {
       
       const result = await response.json();
       
-      // Create a new professor response object
       const newResponse = {
         id: `prof-${Date.now()}`,
         questionNumber: responseData.questionNumber,
@@ -1463,7 +1457,6 @@ const ProfessorRecheckDetail = () => {
       
       setProfessorResponses(prev => [...prev, newResponse]);
       
-      // Update the annotation in the local state
       setAnnotations(prev => prev.map(anno => {
         if ((anno.id === responseData.annotationId) || (anno.annotation_id === responseData.annotationId)) {
           return {
@@ -1476,14 +1469,12 @@ const ProfessorRecheckDetail = () => {
         return anno;
       }));
       
-      // Update question marks
       handleQuestionMarkUpdate(
         responseData.questionNumber,
         selectedAnnotation.currentMarks || selectedAnnotation.metadata?.previousMark,
         responseData.newMark
       );
       
-      // Reset UI state
       setShowResponseForm(false);
       setSelectedAnnotation(null);
       setSelectedAnnotationId(null);
@@ -1506,7 +1497,6 @@ const ProfessorRecheckDetail = () => {
     setIsSubmitting(true);
     
     try {
-      // Process any remaining unanswered annotations
       const unansweredAnnotations = annotations.filter(anno => 
         !respondedAnnotationIds.includes(anno.id) && 
         !respondedAnnotationIds.includes(anno.annotation_id) &&
@@ -1514,7 +1504,6 @@ const ProfessorRecheckDetail = () => {
         anno.status !== 'rejected'
       );
       
-      // If rejecting, mark all unanswered annotations as rejected
       if (decision === "rejected") {
         await Promise.all(unansweredAnnotations.map(async (anno) => {
           const formData = new FormData();
@@ -1543,10 +1532,7 @@ const ProfessorRecheckDetail = () => {
         }));
       }
       
-      // After handling all annotations, update the recheck request status
       const updateRecheckStatus = async () => {
-        // Implement the API call to update recheck status when it's available
-        // For now, we'll just simulate success
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         setRequestData(prev => ({
