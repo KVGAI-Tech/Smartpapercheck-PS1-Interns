@@ -4,6 +4,7 @@ import { AlertCircle, Loader } from 'lucide-react';
 const StudentForm = ({ 
   initialData = null,
   sections = [], 
+  courseId = null,  
   onSubmit = () => {},
   onClose = () => {}
 }) => {
@@ -69,7 +70,7 @@ const StudentForm = ({
     if (!validateForm()) {
       return;
     }
-
+  
     setIsSubmitting(true);
     try {
       const submitData = {
@@ -79,6 +80,11 @@ const StudentForm = ({
         batch: formData.batch,
         tut_section: formData.tut_section
       };
+      
+      if (initialData && initialData.id) {
+        submitData.id = initialData.id;
+        submitData.courseId = courseId; 
+      }
       
       await onSubmit(submitData);
       onClose();

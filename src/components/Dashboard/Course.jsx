@@ -45,7 +45,6 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
   const [isHovered, setIsHovered] = useState(false);
   const dropdownRef = useRef(null);
   
-  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -59,7 +58,6 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
     };
   }, []);
 
-  
   const formatDate = (dateString) => {
     try {
       return new Date(dateString).toLocaleDateString(undefined, {
@@ -71,6 +69,13 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
       return dateString;
     }
   };
+  
+  const handleCardClick = (e) => {
+    if (dropdownRef.current && dropdownRef.current.contains(e.target)) {
+      return;
+    }
+    navigate(`/courses/${course.id}`);
+  };
 
   return (
     <motion.div
@@ -79,11 +84,11 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
       animate="visible"
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}
-      className="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full"
+      className="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer"
+      onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
-        
       }}
     >
       <div className="flex justify-between items-start mb-4">
@@ -109,7 +114,10 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
           <motion.button
             whileHover={{ rotate: 90 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDropdown(!showDropdown);
+            }}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
           >
             <MoreVertical className="w-5 h-5 text-gray-500" />
@@ -126,7 +134,8 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
               >
                 <motion.button
                   whileHover={{ backgroundColor: "#F3F4F6" }}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onEdit(course);
                     setShowDropdown(false);
                   }}
@@ -137,7 +146,8 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
                 </motion.button>
                 <motion.button
                   whileHover={{ backgroundColor: "#FEF2F2" }}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation(); 
                     onRemove(course);
                     setShowDropdown(false);
                   }}
@@ -169,12 +179,11 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
       <div className="mt-auto">
         <AnimatePresence>
           {(isHovered || course.is_active) && (
-            <motion.button
+            <motion.div
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              onClick={() => navigate(`/courses/${course.id}`)}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center group"
             >
               View Details 
@@ -185,7 +194,7 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
               >
                 <ArrowRight className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" />
               </motion.span>
-            </motion.button>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

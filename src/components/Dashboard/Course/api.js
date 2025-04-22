@@ -186,7 +186,7 @@ export const checkUploadStatus = async (uploadId) => {
   return fetchApi(`/professors/uploads/${uploadId}`);
 };
 
-export const pollUploadStatus = (uploadId, onComplete, onError) => {
+export const pollUploadStatus = (uploadId, onProgress, onComplete, onError) => {
   if (!uploadId) {
     throw new Error('Upload ID is required');
   }
@@ -209,6 +209,8 @@ export const pollUploadStatus = (uploadId, onComplete, onError) => {
       } else if (response.data.status === 'failed') {
         clearInterval(pollInterval);
         onError(response.data.error_message || 'Upload failed');
+      } else if (response.data.processed_count) {
+        onProgress(response.data.processed_count);
       }
     } catch (error) {
       clearInterval(pollInterval);
@@ -223,13 +225,16 @@ export const updateStudent = async (data) => {
   if (!data || !data.id) {
     throw new Error('Student ID is required for update');
   }
+  if (!data.courseId) {
+    throw new Error('Course ID is required for update');
+  }
   if (!data.name || !data.email) {
     throw new Error('Invalid student data');
   }
   const { id, courseId, name, email, roll_number, batch, tut_section } = data;
   
-  return fetchApi(`/professors/students/${id}`, {
-    method: 'PATCH',
+  return fetchApi(`/professors/courses/${courseId}/students/${id}`, {
+    method: 'PUT',
     body: JSON.stringify({
       name,
       email,

@@ -113,7 +113,7 @@ const CourseDetails = () => {
         } catch (error) {
         }
     };
-  
+
     const handleUpdateExam = async (examId, formData) => {
         try {
             const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}/`, {
@@ -123,7 +123,7 @@ const CourseDetails = () => {
         } catch (error) {
         }
     };
-  
+
     const handleDeleteExam = async (exam) => {
         try {
             await fetchApi(`/professors/courses/${courseId}/exams/${exam.id}`, {
@@ -141,7 +141,7 @@ const CourseDetails = () => {
             }
         }
     };
-    
+
     useEffect(() => {
         const loadCourseData = async () => {
             if (!courseId) {
@@ -252,7 +252,7 @@ const CourseDetails = () => {
         try {
             setUploadStatus('uploading');
             const response = await uploadStudents(courseId, file);
-            
+
             const uploadId = response.data.upload_id;
             setUploadStatus('processing');
 
@@ -264,7 +264,7 @@ const CourseDetails = () => {
                     const studentsResponse = await getCourseStudents(courseId);
                     setStudents(studentsResponse.data || []);
                     showToast('Students imported successfully');
-                    
+
                     setTimeout(() => {
                         setShowStudentImportModal(false);
                         setUploadStatus(null);
@@ -285,7 +285,7 @@ const CourseDetails = () => {
         try {
             setUploadStatus('uploading');
             const response = await uploadInstructors(courseId, file);
-            
+
             const uploadId = response.data.upload_id;
             setUploadStatus('processing');
 
@@ -297,7 +297,7 @@ const CourseDetails = () => {
                     const instructorsResponse = await getCourseInstructors(courseId);
                     setInstructors(instructorsResponse.data || []);
                     showToast('Instructors imported successfully');
-                    
+
                     setTimeout(() => {
                         setShowInstructorImportModal(false);
                         setUploadStatus(null);
@@ -401,7 +401,7 @@ const CourseDetails = () => {
                 return (
                     <StudentsTab
                         courseId={courseId}
-                        students={getFilteredItems(students, 'student')}          
+                        students={getFilteredItems(students, 'student')}
                         sections={courseDetails?.tut_sections || ''}
                         searchQuery={searchQuery}
                         selectedSection={selectedSection}
@@ -411,7 +411,7 @@ const CourseDetails = () => {
                             setSelectedItem(null);
                             setShowAddModal(true);
                         }}
-                        onEdit={(student) => handleEdit(student, 'student')}                      
+                        onEdit={(student) => handleEdit(student, 'student')}
                         onDelete={(student) => {
                             setItemToDelete({ type: 'student', id: student.id });
                             setShowDeleteModal(true);
@@ -446,12 +446,12 @@ const CourseDetails = () => {
                         courseId={courseId}
                     />
                 );
-                
+
             case 'exams':
                 return (
                     <ExamsTab
                         exams={getFilteredItems(exams, 'exam')}
-                        courseId={courseId} 
+                        courseId={courseId}
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
                         onAdd={() => {
@@ -532,6 +532,7 @@ const CourseDetails = () => {
                 {activeTab === 'students' && (
                     <StudentForm
                         initialData={selectedItem}
+                        courseId={courseId}  
                         onSubmit={(data) => handleAdd('student', data)}
                         onClose={() => {
                             setShowAddModal(false);
@@ -539,8 +540,7 @@ const CourseDetails = () => {
                         }}
                         sections={courseDetails.sections}
                     />
-                )}
-                {activeTab === 'instructors' && (
+                )}                {activeTab === 'instructors' && (
                     <InstructorForm
                         initialData={selectedItem}
                         onSubmit={(data) => handleAdd('instructor', data)}

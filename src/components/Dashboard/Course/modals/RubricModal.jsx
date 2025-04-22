@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
+import ReactDOM from 'react-dom'; 
 import {
     X, Plus, Save, Sparkles, AlertCircle,
     Bot, BrainCircuit, Lightbulb, Zap,
@@ -127,6 +128,30 @@ const GenerateLoader = () => (
     </motion.div>
 );
 
+const AutoGrowTextarea = ({ value, onChange, placeholder, rows, className, ...props }) => {
+    const textareaRef = useRef(null);
+    
+    useLayoutEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [value]);
+    
+    return (
+        <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            rows={rows}
+            className={`w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm min-h-[80px] ${className || ''}`}
+            style={{ resize: "none", overflowY: "hidden" }}
+            {...props}
+        />
+    );
+};
+
 const RubricItem = ({ item, index, onDelete, onUpdate }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -216,12 +241,11 @@ const RubricItem = ({ item, index, onDelete, onUpdate }) => (
                                     <Lightbulb className="w-4 h-4 text-gray-400" />
                                     Reasoning
                                 </label>
-                                <textarea
+                                <AutoGrowTextarea
                                     value={item.reasoning || ''}
                                     onChange={(e) => onUpdate(index, { ...item, reasoning: e.target.value })}
                                     placeholder="Explain the reasoning behind this criteria..."
                                     rows={2}
-                                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm"
                                 />
                             </div>
 
@@ -230,12 +254,11 @@ const RubricItem = ({ item, index, onDelete, onUpdate }) => (
                                     <Edit2 className="w-4 h-4 text-gray-400" />
                                     Grading Guidelines
                                 </label>
-                                <textarea
+                                <AutoGrowTextarea
                                     value={item.grading_guidelines || ''}
                                     onChange={(e) => onUpdate(index, { ...item, grading_guidelines: e.target.value })}
                                     placeholder="Provide specific guidelines for grading..."
                                     rows={3}
-                                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm"
                                 />
                             </div>
                         </div>
@@ -382,6 +405,7 @@ const RubricModal = ({
     const [isAnimating, setIsAnimating] = useState(false);
     const previousHeight = useRef(null);
     const modalContentRef = useRef(null);
+    const modalRootRef = useRef(null);
     
     const modalSpring = useSpring({
         transform: isMaximized 
@@ -399,6 +423,52 @@ const RubricModal = ({
             : 'linear-gradient(to right, #ffffff, #ffffff)',
         config: { duration: 300 }
     });
+
+    
+    useEffect(() => {
+        if (isOpen) {
+            
+            const modalRoot = document.createElement('div');
+            
+            
+            Object.assign(modalRoot.style, {
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                right: '0',
+                bottom: '0',
+                width: '100vw',
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(17, 24, 39, 0.4)',
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)', 
+                zIndex: '99999', 
+                overflow: 'hidden'
+            });
+            
+            
+            document.body.appendChild(modalRoot);
+            modalRootRef.current = modalRoot;
+            
+            
+            const originalStyle = window.getComputedStyle(document.body).overflow;
+            document.body.style.overflow = 'hidden';
+            
+            return () => {
+                
+                if (modalRootRef.current) {
+                    document.body.removeChild(modalRootRef.current);
+                    modalRootRef.current = null;
+                }
+                
+                
+                document.body.style.overflow = originalStyle;
+            };
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen && questions.length > 0 && !selectedQuestion) {
@@ -467,7 +537,7 @@ const RubricModal = ({
             setTimeout(() => {
                 setIsMaximized(!isMaximized);
                 setIsAnimating(false);
-            }, 3000);
+            }, 300);
         }
     };
 
@@ -626,8 +696,8 @@ const RubricModal = ({
     if (!isOpen) return null;
 
     if (!questions || questions.length === 0) {
-        return (
-            <div className="fixed inset-0 bg-gray-900/10 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
+        return ReactDOM.createPortal(
+            <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[99999] flex items-center justify-center">
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -680,18 +750,20 @@ const RubricModal = ({
                         </motion.button>
                     </motion.div>
                 </motion.div>
-            </div>
+            </div>,
+            modalRootRef.current || document.body
         );
     }
 
-    return (
+    
+    return ReactDOM.createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-gray-900/10 backdrop-blur-sm z-50 flex items-center justify-center overflow-hidden"
+                    className="w-full h-full flex items-center justify-center overflow-hidden"
                 >
                     <animated.div
                         style={modalSpring}
@@ -900,11 +972,11 @@ const RubricModal = ({
                                                                     <Edit2 className="w-4 h-4 text-blue-500" />
                                                                     <h4 className="font-medium text-gray-900">Problem Feedback</h4>
                                                                 </div>
-                                                                <textarea
+                                                                <AutoGrowTextarea
                                                                     value={feedback}
                                                                     onChange={(e) => setFeedback(e.target.value)}
                                                                     rows={4}
-                                                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                                                                    className="w-full px-4 py-3"
                                                                     placeholder="Enter general feedback for this question..."
                                                                 />
                                                             </CardContent>
@@ -1047,7 +1119,8 @@ const RubricModal = ({
                     </animated.div>
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        modalRootRef.current || document.body
     );
 };
 
