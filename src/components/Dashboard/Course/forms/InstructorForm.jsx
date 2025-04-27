@@ -90,7 +90,13 @@ const InstructorForm = ({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      
+      const submitData = {
+        ...formData,
+        email: formData.email.toLowerCase()
+      };
+      
+      await onSubmit(submitData);
       onClose();
     } catch (error) {
       setErrors({ submit: error.message || 'Failed to submit form' });

@@ -86,7 +86,7 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          email: formData.email, 
+          email: formData.email.toLowerCase(), 
           password: formData.password 
         }),
       });

@@ -8,9 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
 import { Link } from 'react-router-dom';
 
-
 const StudentEvaluationLoader = React.lazy(() => import('./StudentEvaluationLoader'));
-
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -20,7 +18,6 @@ const fadeInUp = {
     transition: { duration: 0.4, ease: "easeOut" }
   }
 };
-
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
@@ -68,7 +65,6 @@ const StatusBadge = ({ status }) => {
     </span>
   );
 };
-
 
 const Toast = ({ show, message, type = 'success', onClose }) => {
   useEffect(() => {
@@ -125,7 +121,6 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
   );
 };
 
-
 const AnimatedCounter = ({ value, duration = 1.5 }) => {
   const [displayValue, setDisplayValue] = useState(0);
 
@@ -146,7 +141,6 @@ const AnimatedCounter = ({ value, duration = 1.5 }) => {
 
   return <span>{displayValue}</span>;
 };
-
 
 const ProgressBar = ({ value, max, color = 'blue' }) => {
   const percentage = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -171,6 +165,44 @@ const ProgressBar = ({ value, max, color = 'blue' }) => {
   );
 };
 
+const BatchProcessingIndicator = ({ completed, total }) => {
+  return (
+    <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg overflow-hidden">
+      <div className="p-4 flex items-start gap-3">
+        <div className="flex-shrink-0 mt-1">
+          <div className="relative w-6 h-6">
+            <motion.div
+              className="w-6 h-6 rounded-full border-2 border-blue-200"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            />
+            <motion.div
+              className="absolute inset-0 border-t-2 border-blue-500 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+          </div>
+        </div>
+        <div className="flex-1">
+          <h3 className="text-blue-700 font-medium mb-2">AI Evaluation in Progress</h3>
+          <p className="text-sm text-blue-600 mb-3">Processing student submissions. This may take several minutes as our AI analyzes answers in detail.</p>
+          <div className="relative w-full h-2 bg-blue-100 rounded-full overflow-hidden">
+            <motion.div
+              className="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
+              initial={{ width: '0%' }}
+              animate={{ width: total > 0 ? `${(completed / total) * 100}%` : '0%' }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+          <div className="mt-2 text-xs text-blue-700 font-medium flex justify-between">
+            <span>{completed} of {total} completed</span>
+            <span>{Math.round((completed / total) * 100)}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ExamEvaluation = ({ examId, onClose }) => {
   const [students, setStudents] = useState([]);
@@ -188,6 +220,10 @@ const ExamEvaluation = ({ examId, onClose }) => {
   const [pageLoaded, setPageLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [evaluationError, setEvaluationError] = useState({});
+  const [evaluationProgress, setEvaluationProgress] = useState({ completed: 0, total: 0, inProgress: [], errors: 0 });
+  
+  const API_TIMEOUT = 600000;
+  const MAX_RETRIES = 2;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -196,14 +232,13 @@ const ExamEvaluation = ({ examId, onClose }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ show: true, message, type });
+  const showToast = useCallback((message, type = 'success', duration = 3000) => {
+    setToast({ show: true, message, type, duration });
   }, []);
 
   const hideToast = useCallback(() => {
     setToast({ show: false, message: '', type: 'success' });
   }, []);
-
 
   const fetchEnrollments = useCallback(async () => {
     try {
@@ -214,9 +249,8 @@ const ExamEvaluation = ({ examId, onClose }) => {
         throw new Error('Exam ID is missing');
       }
 
-
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000);
+      const timeoutId = setTimeout(() => controller.abort(), 600000);
 
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
         method: 'GET',
@@ -235,10 +269,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
       const data = await response.json();
 
-
       if (data && data.code === 200 && data.data && Array.isArray(data.data.enrollments)) {
-        console.log("API Response:", data.data);
-
         const formattedStudents = data.data.enrollments.map(student => ({
           enrollment_id: student.id,
           student_id: student.student_id,
@@ -263,7 +294,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
       }
     } catch (error) {
       console.error("Error fetching enrollments:", error);
-
 
       if (error.name === 'AbortError') {
         setError("Request timed out. Please check your network connection and try again.");
@@ -290,10 +320,8 @@ const ExamEvaluation = ({ examId, onClose }) => {
     }));
   };
 
-
   const filteredStudents = useMemo(() => {
     let result = [...students];
-
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -303,14 +331,12 @@ const ExamEvaluation = ({ examId, onClose }) => {
       );
     }
 
-
     if (statusFilter !== 'all') {
       const isEvaluated = statusFilter === 'completed';
       result = result.filter(student =>
         isEvaluated ? student.marks_obtained !== null : student.marks_obtained === null
       );
     }
-
 
     result.sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
@@ -327,22 +353,15 @@ const ExamEvaluation = ({ examId, onClose }) => {
     return result;
   }, [searchQuery, statusFilter, students, sortConfig]);
 
-
-  const handleEvaluate = async (student) => {
+  const evaluateStudentWithRetry = async (student, retryCount = 0) => {
     try {
-      setEvaluatingStudent(student);
-      setEvaluationError(prev => ({ ...prev, [student.enrollment_id]: null }));
-
-      if (!examId) {
-        throw new Error('Exam ID is missing');
-      }
-
-      showToast('Evaluating submission...', 'info');
-
-
+      setEvaluationProgress(prev => ({
+        ...prev,
+        inProgress: [...prev.inProgress, student.enrollment_id]
+      }));
+      
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000);
-
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
       const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
         method: 'GET',
@@ -355,54 +374,99 @@ const ExamEvaluation = ({ examId, onClose }) => {
       }).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`Evaluation failed. Please try again.`);
+        throw new Error(`API error (${response.status})`);
       }
 
       const data = await response.json();
 
-      if (data.code === 200 && data.data) {
+      if (data.code !== 200 || !data.data || typeof data.data.total_marks !== 'number') {
+        throw new Error('Invalid evaluation data received');
+      }
 
-        if (typeof data.data.total_marks !== 'number') {
-          throw new Error('Invalid evaluation data: missing or invalid total marks');
-        }
+      setEvaluationProgress(prev => ({ 
+        ...prev, 
+        completed: prev.completed + 1,
+        inProgress: prev.inProgress.filter(id => id !== student.enrollment_id)
+      }));
 
+      return {
+        success: true,
+        student,
+        data: data.data
+      };
+    } catch (error) {
+      console.error(`Error evaluating student ${student.enrollment_id}:`, error);
+      
+      if (retryCount < MAX_RETRIES && (error.name === 'AbortError' || error.message.includes('NetworkError'))) {
+        return evaluateStudentWithRetry(student, retryCount + 1);
+      }
+      
+      setEvaluationError(prev => ({
+        ...prev,
+        [student.enrollment_id]: error.message || 'Failed to evaluate'
+      }));
+      
+      setEvaluationProgress(prev => ({ 
+        ...prev, 
+        completed: prev.completed + 1,
+        errors: prev.errors + 1,
+        inProgress: prev.inProgress.filter(id => id !== student.enrollment_id)
+      }));
+      
+      return {
+        success: false,
+        student,
+        error: error.message
+      };
+    }
+  };
 
+  
+  const handleEvaluate = async (student) => {
+    try {
+      setEvaluatingStudent(student);
+      setEvaluationError(prev => ({ ...prev, [student.enrollment_id]: null }));
+
+      if (!examId) {
+        throw new Error('Exam ID is missing');
+      }
+
+      showToast('Evaluating submission...', 'info');
+
+      const result = await evaluateStudentWithRetry(student);
+
+      if (result.success) {
         const updatedStudents = students.map(s =>
           s.enrollment_id === student.enrollment_id
             ? {
               ...s,
-              marks_obtained: data.data.total_marks || 0,
-              feedback: Array.isArray(data.data.overall_feedback)
-                ? data.data.overall_feedback.join('\n')
-                : (data.data.overall_feedback || ''),
+              marks_obtained: result.data.total_marks || 0,
+              feedback: Array.isArray(result.data.overall_feedback)
+                ? result.data.overall_feedback.join('\n')
+                : (result.data.overall_feedback || ''),
               evaluation_status: 'completed'
             }
             : s
         );
 
         setStudents(updatedStudents);
-
-
-        setDetailEnrollmentId(student.enrollment_id);
-        setShowDetailView(true);
-
-        showToast('Evaluation completed successfully', 'success');
+        
+        
+        
+        showToast('Evaluation completed successfully. Click "View Results" to see details.', 'success');
       } else {
-        throw new Error(data.message || 'Evaluation process did not complete successfully');
+        throw new Error(result.error || 'Evaluation process did not complete successfully');
       }
     } catch (error) {
       console.error("Evaluation error:", error);
-
 
       setEvaluationError(prev => ({
         ...prev,
         [student.enrollment_id]: error.message || 'Failed to evaluate submission'
       }));
 
-
       if (error.name === 'AbortError') {
-        showToast('Evaluation timed out. The process might be taking longer than expected.', 'error');
+        showToast('Evaluation timed out. The AI evaluation process might be taking longer than expected.', 'error');
       } else if (error.message.includes('NetworkError') || !navigator.onLine) {
         showToast('Network error during evaluation. Please check your connection.', 'error');
       } else {
@@ -412,7 +476,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
       setEvaluatingStudent(null);
     }
   };
-
 
   const handleEvaluateAll = async () => {
     try {
@@ -424,96 +487,58 @@ const ExamEvaluation = ({ examId, onClose }) => {
       }
 
       setBatchEvaluating(true);
-      showToast(`Evaluating ${pendingStudents.length} submissions...`, 'info');
+      setEvaluationProgress({ 
+        completed: 0, 
+        total: pendingStudents.length, 
+        inProgress: [], 
+        errors: 0 
+      });
+      
+      showToast(`Starting evaluation of ${pendingStudents.length} submissions simultaneously...`, 'info', 5000);
 
-      let successCount = 0;
-      let failCount = 0;
-
-      for (let i = 0; i < pendingStudents.length; i++) {
-        const student = pendingStudents[i];
-
-        try {
-
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 90000);
-
-
-          const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-              'Content-Type': 'application/json'
-            },
-            mode: 'cors',
-            signal: controller.signal
-          }).finally(() => clearTimeout(timeoutId));
-
-          if (!response.ok) {
-            const errorText = await response.text().catch(() => 'Unknown error');
-            throw new Error(`API error (${response.status}): ${errorText}`);
-          }
-
-          const data = await response.json();
-
-          if (data.code === 200 && data.data) {
-
-            if (typeof data.data.total_marks !== 'number') {
-              throw new Error('Invalid evaluation data');
-            }
-
-
-            setStudents(prev => prev.map(s =>
-              s.enrollment_id === student.enrollment_id
-                ? {
-                  ...s,
-                  marks_obtained: data.data.total_marks || 0,
-                  feedback: Array.isArray(data.data.overall_feedback)
-                    ? data.data.overall_feedback.join('\n')
-                    : (data.data.overall_feedback || ''),
-                  evaluation_status: 'completed'
-                }
-                : s
-            ));
-
-            successCount++;
-          } else {
-            throw new Error(data.message || 'Evaluation process failed');
-          }
-
-
-          if (i < pendingStudents.length - 1) {
-            showToast(`Evaluated ${i + 1} of ${pendingStudents.length} submissions (${successCount} successful)`, 'info');
-          }
-
-
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-        } catch (err) {
-          console.error(`Error evaluating student ${student.enrollment_id}:`, err);
-          failCount++;
-
-
-          setEvaluationError(prev => ({
-            ...prev,
-            [student.enrollment_id]: err.message || 'Failed to evaluate'
-          }));
+      const evaluationPromises = pendingStudents.map(student => evaluateStudentWithRetry(student));
+      const results = await Promise.allSettled(evaluationPromises);
+      
+      const successfulResults = results
+        .filter(result => result.status === 'fulfilled' && result.value.success)
+        .map(result => result.value);
+      
+      const updatedStudents = students.map(student => {
+        const result = successfulResults.find(r => r.student.enrollment_id === student.enrollment_id);
+        
+        if (result) {
+          return {
+            ...student,
+            marks_obtained: result.data.total_marks || 0,
+            feedback: Array.isArray(result.data.overall_feedback)
+              ? result.data.overall_feedback.join('\n')
+              : (result.data.overall_feedback || ''),
+            evaluation_status: 'completed'
+          };
         }
-      }
-
-
+        
+        return student;
+      });
+      
+      setStudents(updatedStudents);
+      
+      const successCount = successfulResults.length;
+      const failCount = pendingStudents.length - successCount;
+      
       if (successCount === pendingStudents.length) {
         showToast('All evaluations completed successfully', 'success');
       } else if (successCount > 0) {
         showToast(`Completed ${successCount} of ${pendingStudents.length} evaluations. ${failCount} failed.`,
           failCount > successCount ? 'warning' : 'success');
       } else {
-        showToast('Failed to complete any evaluations. Please try again later.', 'error');
+        showToast('Failed to complete any evaluations. AI evaluation may be temporarily unavailable.', 'error');
       }
     } catch (error) {
       console.error("Batch evaluation error:", error);
       showToast('Error during batch evaluation: ' + error.message, 'error');
     } finally {
       setBatchEvaluating(false);
+      setEvaluationProgress({ completed: 0, total: 0, inProgress: [], errors: 0 });
     }
   };
 
@@ -521,10 +546,15 @@ const ExamEvaluation = ({ examId, onClose }) => {
     return student.marks_obtained !== null;
   };
 
+  const isEvaluationInProgress = (student) => {
+    return evaluationProgress.inProgress.includes(student.enrollment_id) || 
+           evaluatingStudent?.enrollment_id === student.enrollment_id;
+  };
 
   const handleViewRecheckRequest = (student) => {
     window.location.href = `/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`;
   };
+  
   const handleViewResults = (student) => {
     if (!hasEvaluationResults(student)) {
       showToast('No evaluation results available', 'warning');
@@ -549,7 +579,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
     };
   }, [students]);
 
-
   const renderSortIndicator = (key) => {
     if (sortConfig.key !== key) return null;
 
@@ -558,13 +587,11 @@ const ExamEvaluation = ({ examId, onClose }) => {
       : <ArrowDown className="w-4 h-4" />;
   };
 
-
   const handleRetry = useCallback(() => {
     setRetryCount(prev => prev + 1);
     setError(null);
     setLoading(true);
   }, []);
-
 
   const getUploadedBy = (student) => {
     if (student.uploaded_by) {
@@ -587,7 +614,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
     return 'Not uploaded';
   };
-
 
   const LoadingView = () => (
     <motion.div
@@ -631,7 +657,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
     </motion.div>
   );
 
-
   const ErrorState = ({ message, onRetry }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -660,7 +685,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
     </motion.div>
   );
 
-
   const EmptyState = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -680,13 +704,14 @@ const ExamEvaluation = ({ examId, onClose }) => {
     </motion.div>
   );
 
-
   const StudentGridItem = ({ student, index }) => {
     const hasResults = hasEvaluationResults(student);
-    const status = hasResults ? 'completed' : 'pending';
+    const isInProgress = isEvaluationInProgress(student);
+    const status = hasResults ? 'completed' : isInProgress ? 'in Progress' : 'pending';
     const delay = 0.05 * (index % 8);
     const hasError = evaluationError[student.enrollment_id];
-    const canEvaluate = student.status === 'uploaded' && !hasResults;
+    
+    const canEvaluate = student.status === 'uploaded' && !hasResults && !isInProgress && !batchEvaluating;
 
     return (
       <motion.div
@@ -730,12 +755,22 @@ const ExamEvaluation = ({ examId, onClose }) => {
             </div>
           ) : (
             <div className="h-7 mb-4">
-              {hasError && (
+              {isInProgress ? (
+                <p className="text-xs text-blue-600 flex items-center">
+                  <Loader className="w-3 h-3 mr-1 animate-spin" />
+                  Evaluation in progress...
+                </p>
+              ) : batchEvaluating ? (
+                <p className="text-xs text-blue-600 flex items-center">
+                  <Clock className="w-3 h-3 mr-1" />
+                  Waiting for batch evaluation...
+                </p>
+              ) : hasError ? (
                 <p className="text-xs text-rose-600 italic">
                   <AlertTriangle className="w-3 h-3 inline mr-1" />
                   {hasError.length > 50 ? hasError.substring(0, 50) + '...' : hasError}
                 </p>
-              )}
+              ) : null}
             </div>
           )}
         </div>
@@ -766,24 +801,31 @@ const ExamEvaluation = ({ examId, onClose }) => {
             )
           ) : student.status !== 'not_uploaded' ? (
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handleEvaluate(student)}
-              disabled={evaluatingStudent?.enrollment_id === student.enrollment_id || !canEvaluate}
+              whileHover={canEvaluate ? { scale: 1.03 } : {}}
+              whileTap={canEvaluate ? { scale: 0.97 } : {}}
+              onClick={() => canEvaluate && handleEvaluate(student)}
+              disabled={!canEvaluate}
               className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all 
-                ${evaluatingStudent?.enrollment_id === student.enrollment_id
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : !canEvaluate
+                ${isInProgress
+                  ? 'bg-blue-200 text-blue-700 cursor-wait'
+                  : batchEvaluating
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : hasError
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-md'
-                      : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-md'
+                    : !canEvaluate
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : hasError
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-md'
+                        : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-md'
                 }`}
             >
-              {evaluatingStudent?.enrollment_id === student.enrollment_id ? (
+              {isInProgress ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin" />
                   <span className="font-medium">Evaluating...</span>
+                </>
+              ) : batchEvaluating ? (
+                <>
+                  <Clock className="w-4 h-4" />
+                  <span className="font-medium">Batch in Progress</span>
                 </>
               ) : !canEvaluate ? (
                 <>
@@ -812,7 +854,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
       </motion.div>
     );
   };
-
 
   const NavButton = ({ icon: Icon, label, onClick, disabled, variant = "primary" }) => {
     const getStyles = () => {
@@ -866,7 +907,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
     );
   };
 
-
   const StatCard = ({ icon: Icon, label, value, color, percentage }) => {
     const gradients = {
       blue: "from-blue-50 to-indigo-50 border-blue-100",
@@ -908,6 +948,22 @@ const ExamEvaluation = ({ examId, onClose }) => {
         </div>
       </motion.div>
     );
+  };
+
+  const getProgressIndicator = () => {
+    if (!batchEvaluating) return 'Evaluate All';
+    
+    const { completed, total, inProgress, errors } = evaluationProgress;
+    
+    if (inProgress.length > 0) {
+      return `Evaluating (${completed}/${total})`;
+    }
+    
+    if (errors > 0) {
+      return `Processed: ${completed}/${total} (${errors} errors)`;
+    }
+    
+    return `Evaluating (${completed}/${total})`;
   };
 
   return (
@@ -1009,7 +1065,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                     <span>AI Powered</span>
                   </motion.span>
                 </h1>
-                <p className="text-gray-500 mt-1">Review and evaluate student submissions with intelligent scoring</p>
+                <p className="text-gray-500 mt-1">Review and evaluate student submissions with intelligent AI scoring</p>
               </motion.div>
             </div>
 
@@ -1090,14 +1146,22 @@ const ExamEvaluation = ({ examId, onClose }) => {
                   </div>
 
                   <NavButton
-                    icon={PlayCircle}
-                    label={batchEvaluating ? 'Evaluating...' : 'Evaluate All'}
+                    icon={batchEvaluating ? Loader : PlayCircle}
+                    label={getProgressIndicator()}
                     onClick={handleEvaluateAll}
                     disabled={batchEvaluating || stats.pending === 0}
                     variant="success"
                   />
                 </div>
               </div>
+              
+              {batchEvaluating && (
+                <BatchProcessingIndicator 
+                  completed={evaluationProgress.completed} 
+                  total={evaluationProgress.total} 
+                />
+              )}
+              
             </motion.div>
 
             <div className="flex-1 overflow-auto mt-6 pb-6">
@@ -1150,9 +1214,11 @@ const ExamEvaluation = ({ examId, onClose }) => {
                             <AnimatePresence>
                               {filteredStudents.map((student, index) => {
                                 const hasResults = hasEvaluationResults(student);
-                                const status = hasResults ? 'completed' : 'pending';
+                                const isInProgress = isEvaluationInProgress(student);
+                                const status = hasResults ? 'completed' : isInProgress ? 'inProgress' : 'pending';
                                 const hasError = evaluationError[student.enrollment_id];
-                                const canEvaluate = student.status === 'uploaded' && !hasResults;
+                                
+                                const canEvaluate = student.status === 'uploaded' && !hasResults && !isInProgress && !batchEvaluating;
 
                                 return (
                                   <motion.tr
@@ -1213,7 +1279,17 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                         </div>
                                       ) : (
                                         <span className="text-sm text-gray-500 italic">
-                                          {hasError ? (
+                                          {isInProgress ? (
+                                            <span className="text-blue-600 flex items-center">
+                                              <Loader className="w-3 h-3 mr-1 animate-spin" />
+                                              Processing
+                                            </span>
+                                          ) : batchEvaluating ? (
+                                            <span className="text-blue-600 flex items-center">
+                                              <Clock className="w-3 h-3 mr-1" />
+                                              Batch processing
+                                            </span>
+                                          ) : hasError ? (
                                             <span className="text-rose-600 flex items-center">
                                               <AlertTriangle className="w-3 h-3 mr-1" />
                                               Error
@@ -1253,24 +1329,31 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                         </div>
                                       ) : student.status !== 'not_uploaded' ? (
                                         <motion.button
-                                          whileHover={{ scale: 1.05 }}
-                                          whileTap={{ scale: 0.95 }}
-                                          onClick={() => handleEvaluate(student)}
-                                          disabled={evaluatingStudent?.enrollment_id === student.enrollment_id || !canEvaluate}
+                                          whileHover={canEvaluate ? { scale: 1.05 } : {}}
+                                          whileTap={canEvaluate ? { scale: 0.95 } : {}}
+                                          onClick={() => canEvaluate && handleEvaluate(student)}
+                                          disabled={!canEvaluate}
                                           className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md
-        ${evaluatingStudent?.enrollment_id === student.enrollment_id
-                                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                              : !canEvaluate
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : hasError
-                                                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
-                                                  : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                                            ${isInProgress
+                                              ? 'bg-blue-100 text-blue-700 cursor-wait'
+                                              : batchEvaluating
+                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                : !canEvaluate
+                                                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                  : hasError
+                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
+                                                    : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
                                             }`}
                                         >
-                                          {evaluatingStudent?.enrollment_id === student.enrollment_id ? (
+                                          {isInProgress ? (
                                             <>
                                               <Loader className="w-4 h-4 mr-1.5 animate-spin" />
-                                              Evaluating...
+                                              Processing...
+                                            </>
+                                          ) : batchEvaluating ? (
+                                            <>
+                                              <Clock className="w-4 h-4 mr-1.5" />
+                                              Batch in Progress
                                             </>
                                           ) : !canEvaluate ? (
                                             <>
@@ -1290,7 +1373,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                           )}
                                         </motion.button>
                                       ) : (
-                                        <span className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
+                                        <span className="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed">
                                           <XCircle className="w-4 h-4 mr-1.5" />
                                           Not Uploaded
                                         </span>

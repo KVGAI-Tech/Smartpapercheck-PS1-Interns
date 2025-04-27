@@ -75,7 +75,7 @@ const StudentForm = ({
     try {
       const submitData = {
         name: formData.name,
-        email: formData.email,
+        email: formData.email.toLowerCase(), 
         roll_number: formData.roll_number,
         batch: formData.batch,
         tut_section: formData.tut_section

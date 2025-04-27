@@ -274,6 +274,7 @@ const QuestionCard = ({
     isSelected,
     onSelect,
     onGenerate,
+    onEditRubric,
     showGenerateButton,
     isGenerating,
     hasRubric
@@ -337,7 +338,7 @@ const QuestionCard = ({
                         transition={{ delay: 0.1 }}
                         onClick={(e) => {
                             e.stopPropagation();
-                            onGenerate(e);
+                            hasRubric ? onEditRubric(question.question_number) : onGenerate(e);
                         }}
                         disabled={isGenerating}
                         className={`
@@ -403,9 +404,19 @@ const RubricModal = ({
     const [showRubricEditor, setShowRubricEditor] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [generatedQuestionsCount, setGeneratedQuestionsCount] = useState(0);
+    const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
     const previousHeight = useRef(null);
     const modalContentRef = useRef(null);
     const modalRootRef = useRef(null);
+    
+    
+    const hasRubric = (questionNumber) => {
+        const question = questions.find(q => q.question_number === questionNumber);
+        return question &&
+            ((question.rubric && question.rubric.rubric_items && question.rubric.rubric_items.length > 0) ||
+                (question.rubric_items && question.rubric_items.length > 0));
+    };
     
     const modalSpring = useSpring({
         transform: isMaximized 
@@ -425,11 +436,13 @@ const RubricModal = ({
     });
 
     
+    const anyQuestionsNeedRubrics = useMemo(() => {
+        return questions.some(question => !hasRubric(question.question_number));
+    }, [questions]);
+    
     useEffect(() => {
         if (isOpen) {
-            
             const modalRoot = document.createElement('div');
-            
             
             Object.assign(modalRoot.style, {
                 position: 'fixed',
@@ -449,21 +462,17 @@ const RubricModal = ({
                 overflow: 'hidden'
             });
             
-            
             document.body.appendChild(modalRoot);
             modalRootRef.current = modalRoot;
-            
             
             const originalStyle = window.getComputedStyle(document.body).overflow;
             document.body.style.overflow = 'hidden';
             
             return () => {
-                
                 if (modalRootRef.current) {
                     document.body.removeChild(modalRootRef.current);
                     modalRootRef.current = null;
                 }
-                
                 
                 document.body.style.overflow = originalStyle;
             };
@@ -541,6 +550,167 @@ const RubricModal = ({
         }
     };
 
+    
+    const handleEditRubric = (questionNumber) => {
+        const questionData = questions.find(q => q.question_number === questionNumber);
+        if (questionData) {
+            setSelectedQuestion(questionNumber);
+            
+            
+            if (questionData.rubric && questionData.rubric.rubric_items) {
+                setRubricItems(questionData.rubric.rubric_items || []);
+                setFeedback(questionData.rubric.problem_feedback || '');
+            } else {
+                setRubricItems(questionData.rubric_items || []);
+                setFeedback(questionData.problem_feedback || '');
+            }
+            
+            setShowRubricEditor(true);
+        }
+    };
+
+    
+    const generateAllRubrics = async () => {
+        if (isGenerating) return;
+        
+        
+        const questionsWithoutRubrics = questions.filter(question => !hasRubric(question.question_number));
+        
+        
+        if (questionsWithoutRubrics.length === 0) {
+            toast.success('All questions already have rubrics!');
+            return;
+        }
+        
+        setIsGenerating(true);
+        setError('');
+        setShowRubricEditor(false);
+        
+        const loadingToast = toast.loading('Generating rubrics for all questions...');
+        setTotalQuestionsCount(questionsWithoutRubrics.length);
+        setGeneratedQuestionsCount(0);
+        
+        try {
+            
+            const promises = questionsWithoutRubrics.map((question, index) => 
+                fetch(
+                    `${API_BASE_URL}/exams/${examId}/questions/${question.question_number}/rubric`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                )
+                .then(async response => {
+                    
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    setGeneratedQuestionsCount(prev => prev + 1);
+                    
+                    if (!response.ok) {
+                        return { 
+                            questionNumber: question.question_number, 
+                            success: false,
+                            data: null
+                        };
+                    }
+                    
+                    return response.json().then(data => {
+                        if (data.code === 200) {
+                            return {
+                                questionNumber: question.question_number,
+                                success: true,
+                                data: data.data
+                            };
+                        } else {
+                            return {
+                                questionNumber: question.question_number,
+                                success: false,
+                                data: null
+                            };
+                        }
+                    });
+                })
+                .catch(err => {
+                    console.error(`Error generating rubric for question ${question.question_number}:`, err);
+                    setGeneratedQuestionsCount(prev => prev + 1);
+                    return {
+                        questionNumber: question.question_number,
+                        success: false,
+                        data: null
+                    };
+                })
+            );
+            
+            
+            const results = await Promise.all(promises);
+            
+            
+            let successCount = 0;
+            let failCount = 0;
+            
+            
+            const updatedQuestions = [...questions];
+            
+            for (const result of results) {
+                if (result.success) {
+                    successCount++;
+                    
+                    
+                    const questionIndex = updatedQuestions.findIndex(q => q.question_number === result.questionNumber);
+                    if (questionIndex !== -1) {
+                        updatedQuestions[questionIndex].rubric = result.data;
+                        updatedQuestions[questionIndex].rubric_items = result.data.rubric_items;
+                        updatedQuestions[questionIndex].problem_feedback = result.data.problem_feedback;
+                    }
+                } else {
+                    failCount++;
+                    
+                    
+                    const fallbackRubric = createFallbackRubric(result.questionNumber);
+                    
+                    
+                    const questionIndex = updatedQuestions.findIndex(q => q.question_number === result.questionNumber);
+                    if (questionIndex !== -1 && fallbackRubric) {
+                        updatedQuestions[questionIndex].rubric_items = fallbackRubric.rubricItems;
+                        updatedQuestions[questionIndex].problem_feedback = fallbackRubric.feedback;
+                    }
+                }
+            }
+            
+            
+            if (successCount > 0) {
+                toast.success(`Successfully generated ${successCount} rubrics!`, { id: loadingToast });
+            }
+            
+            if (failCount > 0) {
+                toast.error(`Failed to generate ${failCount} rubrics. Using fallback generator.`);
+            }
+            
+            
+            if (questionsWithoutRubrics.length > 0) {
+                const firstQuestion = questionsWithoutRubrics[0].question_number;
+                setSelectedQuestion(firstQuestion);
+                
+                
+                const selectedQuestionData = updatedQuestions.find(q => q.question_number === firstQuestion);
+                if (selectedQuestionData) {
+                    setRubricItems(selectedQuestionData.rubric_items || []);
+                    setFeedback(selectedQuestionData.problem_feedback || '');
+                    setShowRubricEditor(true);
+                }
+            }
+            
+        } catch (err) {
+            console.error("Error generating all rubrics:", err);
+            toast.error('Failed to generate rubrics. Please try again.', { id: loadingToast });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const generateRubric = async (questionNumber, e) => {
         e?.preventDefault();
         setIsGenerating(true);
@@ -587,44 +757,57 @@ const RubricModal = ({
         }
     };
 
+    
+    const createFallbackRubric = (questionNumber) => {
+        const questionData = questions.find(q => q.question_number === questionNumber);
+        if (!questionData) {
+            return null;
+        }
+
+        const maxMarks = questionData.max_marks || 10;
+        
+        const rubricItems = [
+            {
+                description: "Correct setup of the problem",
+                weight: 0.3,
+                max_marks: Math.round(maxMarks * 0.3),
+                reasoning: "Students need to demonstrate understanding of the fundamental concepts",
+                grading_guidelines: "Check for proper identification of variables and initial setup"
+            },
+            {
+                description: "Mathematical accuracy",
+                weight: 0.4,
+                max_marks: Math.round(maxMarks * 0.4),
+                reasoning: "Computational accuracy is essential for reaching the correct solution",
+                grading_guidelines: "Verify calculations and solution method"
+            },
+            {
+                description: "Clear explanation and analysis",
+                weight: 0.3,
+                max_marks: Math.round(maxMarks * 0.3),
+                reasoning: "Students should demonstrate ability to explain their reasoning",
+                grading_guidelines: "Look for well-structured explanations and appropriate justifications"
+            }
+        ];
+
+        const feedback = "This question tests the student's understanding of fundamental concepts and application of mathematical principles. Look for clear problem-solving approach and accurate implementation.";
+        
+        return { rubricItems, feedback };
+    };
+
     const fallbackGenerateRubric = (questionNumber) => {
         try {
-            const questionData = questions.find(q => q.question_number === questionNumber);
-            if (!questionData) {
+            const fallbackRubric = createFallbackRubric(questionNumber);
+            
+            if (!fallbackRubric) {
                 toast.error('Question not found');
                 throw new Error('Question not found');
             }
-
-            const maxMarks = questionData.max_marks || 10;
             
             toast.success('Creating default rubric items');
 
-            const generatedRubricItems = [
-                {
-                    description: "Correct setup of the problem",
-                    weight: 0.3,
-                    max_marks: Math.round(maxMarks * 0.3),
-                    reasoning: "Students need to demonstrate understanding of the fundamental concepts",
-                    grading_guidelines: "Check for proper identification of variables and initial setup"
-                },
-                {
-                    description: "Mathematical accuracy",
-                    weight: 0.4,
-                    max_marks: Math.round(maxMarks * 0.4),
-                    reasoning: "Computational accuracy is essential for reaching the correct solution",
-                    grading_guidelines: "Verify calculations and solution method"
-                },
-                {
-                    description: "Clear explanation and analysis",
-                    weight: 0.3,
-                    max_marks: Math.round(maxMarks * 0.3),
-                    reasoning: "Students should demonstrate ability to explain their reasoning",
-                    grading_guidelines: "Look for well-structured explanations and appropriate justifications"
-                }
-            ];
-
-            setRubricItems(generatedRubricItems);
-            setFeedback("This question tests the student's understanding of fundamental concepts and application of mathematical principles. Look for clear problem-solving approach and accurate implementation.");
+            setRubricItems(fallbackRubric.rubricItems);
+            setFeedback(fallbackRubric.feedback);
             setShowRubricEditor(true);
         } catch (err) {
             setError('Failed to generate rubric. Please create a rubric manually using the "Add Item" button.');
@@ -685,13 +868,6 @@ const RubricModal = ({
 
     const selectedQuestionData = selectedQuestion ?
         questions.find(q => q.question_number === selectedQuestion) : null;
-
-    const hasRubric = (questionNumber) => {
-        const question = questions.find(q => q.question_number === questionNumber);
-        return question &&
-            ((question.rubric && question.rubric.rubric_items && question.rubric.rubric_items.length > 0) ||
-                (question.rubric_items && question.rubric_items.length > 0));
-    };
 
     if (!isOpen) return null;
 
@@ -755,7 +931,6 @@ const RubricModal = ({
         );
     }
 
-    
     return ReactDOM.createPortal(
         <AnimatePresence>
             {isOpen && (
@@ -842,6 +1017,42 @@ const RubricModal = ({
                                             {questions.length} Questions
                                         </motion.span>
                                     </div>
+                                    
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={generateAllRubrics}
+                                        disabled={isGenerating || !anyQuestionsNeedRubrics}
+                                        className={`
+                                            w-full mb-4 py-2 px-3 flex items-center justify-center gap-2 rounded-lg text-sm font-medium
+                                            ${(isGenerating || !anyQuestionsNeedRubrics) 
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                                : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm hover:shadow-md transition-all duration-300'
+                                            }
+                                        `}
+                                    >
+                                        {isGenerating ? (
+                                            <>
+                                                <motion.div 
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                    className="w-4 h-4 border-2 border-blue-300 border-t-transparent rounded-full" 
+                                                />
+                                                <span>Generating All ({generatedQuestionsCount}/{totalQuestionsCount})</span>
+                                            </>
+                                        ) : !anyQuestionsNeedRubrics ? (
+                                            <>
+                                                <Circle className="w-4 h-4" />
+                                                <span>All Rubrics Generated</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="w-4 h-4" />
+                                                <span>Generate All Rubrics</span>
+                                            </>
+                                        )}
+                                    </motion.button>
+                                    
                                     <ScrollArea className="flex-1 pr-4">
                                         <motion.div 
                                             variants={{
@@ -864,8 +1075,9 @@ const RubricModal = ({
                                                     isSelected={selectedQuestion === question.question_number}
                                                     onSelect={() => setSelectedQuestion(question.question_number)}
                                                     onGenerate={(e) => generateRubric(question.question_number, e)}
+                                                    onEditRubric={handleEditRubric}
                                                     showGenerateButton={selectedQuestion === question.question_number}
-                                                    isGenerating={isGenerating && selectedQuestion === question.question_number}
+                                                    isGenerating={isGenerating}
                                                     hasRubric={hasRubric(question.question_number)}
                                                 />
                                             ))}
@@ -1028,10 +1240,13 @@ const RubricModal = ({
                                                             <motion.button
                                                                 whileHover={{ scale: 1.05 }}
                                                                 whileTap={{ scale: 0.95 }}
-                                                                onClick={(e) => selectedQuestion && generateRubric(selectedQuestion, e)}
-                                                                disabled={!selectedQuestion || isGenerating}
-                                                                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg 
-                                                                shadow-md hover:shadow-lg transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                onClick={(e) => selectedQuestion && !hasRubric(selectedQuestion) && generateRubric(selectedQuestion, e)}
+                                                                disabled={!selectedQuestion || isGenerating || hasRubric(selectedQuestion)}
+                                                                className={`inline-flex items-center gap-2 px-6 py-3 ${
+                                                                    !selectedQuestion || hasRubric(selectedQuestion) 
+                                                                    ? 'bg-gray-100 text-gray-500' 
+                                                                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg'
+                                                                } rounded-lg transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                                                             >
                                                                 <Sparkles className="w-4 h-4" />
                                                                 Generate Rubric

@@ -7,7 +7,6 @@ import {
   File, FilePlus, Upload as UploadIcon,
   AlertCircle
 } from 'lucide-react';
-import { API_BASE_URL } from '../../../../BaseURL';
 
 const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions = [] }) => {
   const [questions, setQuestions] = useState([{
@@ -21,7 +20,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     marks: '',
     questionText: '',
     answerText: 'answer',
-    domain: ''
+    domain: '',
+    isExisting: false
   }]);
 
   const [goldenPdfFile, setGoldenPdfFile] = useState(null);
@@ -37,13 +37,10 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   const dropZoneRefs = useRef({});
   const modalRootRef = useRef(null);
 
-  
   useEffect(() => {
     if (isOpen) {
-      
       if (!modalRootRef.current) {
         const modalRoot = document.createElement('div');
-        
         
         Object.assign(modalRoot.style, {
           position: 'fixed',
@@ -62,22 +59,18 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
           zIndex: '9999', 
         });
         
-        
         document.body.appendChild(modalRoot);
         modalRootRef.current = modalRoot;
       }
-      
       
       const originalStyle = window.getComputedStyle(document.body).overflow;
       document.body.style.overflow = 'hidden';
       
       return () => {
-        
         if (modalRootRef.current) {
           document.body.removeChild(modalRootRef.current);
           modalRootRef.current = null;
         }
-        
         
         document.body.style.overflow = originalStyle;
       };
@@ -99,13 +92,15 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         question: null,
         questionPreview: '',
         questionUrl: q.question_file_url || '',
-        answer: "Answer",
+        answer: null,
         answerPreview: '',
         answerUrl: q.answer_file_url || '',
         marks: q.max_marks || '',
         questionText: q.question_text || '',
-        answerText: q.answer?.answer_text || 'answer',
-        domain: q.domain || ''
+        answerText: q.answer_text || 'answer',
+        domain: q.domain || '',
+        isExisting: true, 
+        questionNumber: q.question_number
       }));
       setQuestions(formattedQuestions);
     } else {
@@ -120,7 +115,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         marks: '',
         questionText: '',
         answerText: 'answer',
-        domain: ''
+        domain: '',
+        isExisting: false
       }]);
     }
   }, [existingQuestions]);
@@ -187,7 +183,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         marks: '',
         questionText: '',
         answerText: 'answer',
-        domain: ''
+        domain: '',
+        isExisting: false
       }
     ]);
     
@@ -250,7 +247,12 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       return true;
     }
 
-    const invalidQuestions = questions.filter(q => {
+    
+    const questionsToValidate = questions.filter(q => !q.isExisting || 
+      (!q.questionUrl && !q.question) || 
+      (!q.answerUrl && !q.answer));
+    
+    const invalidQuestions = questionsToValidate.filter(q => {
       const hasQuestionFile = q.question || q.questionUrl;
       const hasAnswerFile = q.answer || q.answerUrl;
       return !hasQuestionFile || !hasAnswerFile || !q.marks || !q.questionText || !q.domain;
@@ -275,61 +277,27 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     
     try {
       if (uploadMode === 'golden-pdf') {
-        if (questionPdfFile) {
-          const questionFormData = new FormData();
-          questionFormData.append('question_pdf', questionPdfFile);
-          
-          try {
-            const response = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/question-pdf`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-              },
-              body: questionFormData
-            });
-            
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ detail: "Failed to upload question PDF" }));
-              throw new Error(errorData.detail || "Failed to upload question PDF");
-            }
-          } catch (error) {
-            setError(`Error uploading question PDF: ${error.message}`);
-            setIsSubmitting(false);
-            return;
-          }
-        }
         
-        if (goldenPdfFile) {
-          const goldenFormData = new FormData();
-          goldenFormData.append('golden_pdf', goldenPdfFile);
-          
-          try {
-            const response = await fetch(`${API_BASE_URL}/professors/courses/${examId}/exams/${examId}/golden-pdf`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-              },
-              body: goldenFormData
-            });
-            
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ detail: "Failed to upload golden answer PDF" }));
-              throw new Error(errorData.detail || "Failed to upload golden answer PDF");
-            }
-          } catch (error) {
-            setError(`Error uploading golden answer PDF: ${error.message}`);
-            setIsSubmitting(false);
-            return;
-          }
-        }
       } else {
-        for (let i = 0; i < questions.length; i++) {
-          const q = questions[i];
+        
+        const newOrModifiedQuestions = questions.filter(q => 
+          !q.isExisting || (q.question || q.answer) 
+        );
+        
+        for (let i = 0; i < newOrModifiedQuestions.length; i++) {
+          const q = newOrModifiedQuestions[i];
+          
+          
+          const originalIndex = questions.findIndex(originalQ => originalQ.id === q.id);
+          
+          
+          const questionNumber = q.isExisting ? q.questionNumber : (originalIndex + 1);
           
           try {
+            
             if (q.question) {
               const questionFormData = new FormData();
-              questionFormData.append('question_number', (i + 1).toString());
+              questionFormData.append('question_number', questionNumber.toString());
               questionFormData.append('file_type', 'question');
               questionFormData.append('file', q.question);
               questionFormData.append('answer_text', q.answerText || 'answer');
@@ -340,9 +308,10 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
               await onSubmit(examId, questionFormData);
             }
             
+            
             if (q.answer) {
               const answerFormData = new FormData();
-              answerFormData.append('question_number', (i + 1).toString());
+              answerFormData.append('question_number', questionNumber.toString());
               answerFormData.append('file_type', 'answer');
               answerFormData.append('file', q.answer);
               answerFormData.append('answer_text', q.answerText || 'answer');
@@ -354,13 +323,13 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
             }
           } catch (error) {
             const errorMessage = error.message || 'Error uploading question';
-            setError(`Error uploading question ${i + 1}: ${errorMessage}`);
+            setError(`Error uploading question ${questionNumber}: ${errorMessage}`);
             setIsSubmitting(false);
             return;
           }
         }
       }
-
+  
       onClose();
     } catch (error) {
       setError(error.message || 'Failed to upload files');
@@ -368,7 +337,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       setIsSubmitting(false);
     }
   };
-
+  
   const QuestionDisplay = ({ type, data, onFileChange, questionId }) => {
     const [isDragActive, setIsDragActive] = useState(false);
     const preview = data[`${type}Preview`];
@@ -376,15 +345,12 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     const title = type === 'question' ? 'Question' : 'Answer';
     const dropZoneId = `${type}-${questionId}`;
     
-    
     const dropZoneRef = useRef(null);
-    
     
     useEffect(() => {
       if (dropZoneRef.current) {
         dropZoneRefs.current[dropZoneId] = dropZoneRef.current;
       }
-      
       
       return () => {
         if (dropZoneRefs.current[dropZoneId]) {
@@ -408,8 +374,6 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     const handleDragLeave = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
-      
       
       if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget)) {
         setIsDragActive(false);
@@ -619,7 +583,6 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     );
   };
 
-  
   if (!isOpen) return null;
 
   const ModalContent = (
@@ -729,7 +692,6 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
             </button>
           </div>
           
-          {/* Tip moved to the top of the standard mode section */}
           <div className="px-6 pt-4 pb-2">
             <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-md flex items-start animate-fadeIn">
               <span className="text-blue-500 mr-2">💡</span>
@@ -751,7 +713,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
+<div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
         {uploadMode === 'golden-pdf' ? (
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="space-y-6">
@@ -760,7 +722,6 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
                 <h3 className="text-lg font-medium text-gray-900">PDF Upload Mode</h3>
               </div>
 
-              {/* Tip moved to the top */}
               <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-md flex items-start animate-fadeIn">
                 <span className="text-blue-500 mr-2">💡</span>
                 <span>
@@ -803,7 +764,14 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
                     <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-50 text-blue-600 font-medium text-sm">
                       {index + 1}
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900">Question {index + 1}</h3>
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Question {index + 1}
+                      {question.isExisting && (
+                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                          Existing
+                        </span>
+                      )}
+                    </h3>
                   </div>
                   {questions.length > 1 && (
                     <button
@@ -982,13 +950,11 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     </div>
   );
 
-  
   return modalRootRef.current ? ReactDOM.createPortal(
     ModalContent,
     modalRootRef.current
   ) : null;
 };
-
 
 const addStyles = () => {
   const style = document.createElement('style');
@@ -1014,4 +980,4 @@ const addStyles = () => {
 
 addStyles();
 
-export default UploadQnAModal;
+export default UploadQnAModal

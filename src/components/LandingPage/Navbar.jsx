@@ -80,7 +80,7 @@ const MobileMenu = () => {
                 navigate('/auth');
               }}
             >
-              Request Demo
+              Free grading Tool 🚀
             </button>
           </div>
         </div>
@@ -172,7 +172,7 @@ const Navbar = () => {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            Request Demo
+            Free grading Tool 🚀
           </motion.button>
         </div>
 

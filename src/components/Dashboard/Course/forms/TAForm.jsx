@@ -53,7 +53,7 @@ const TAForm = ({
     try {
       const payload = {
         name: formData.name,
-        email: formData.email,
+        email: formData.email.toLowerCase(), 
         department: formData.department,
         details: formData.details || null
       };

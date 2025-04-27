@@ -181,7 +181,7 @@ const handleSubmit = useCallback(async (e) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: formData.email, 
+          email: formData.email.toLowerCase(), 
           password: formData.password 
         }),
       });
@@ -205,7 +205,7 @@ const handleSubmit = useCallback(async (e) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
-          email: formData.email,
+          email: formData.email.toLowerCase(),
           password: formData.password,
         }),
       });
@@ -222,7 +222,7 @@ const handleSubmit = useCallback(async (e) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            email: formData.email, 
+            email: formData.email.toLowerCase(), 
             password: formData.password 
           }),
         });

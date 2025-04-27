@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -24,11 +24,12 @@ import {
   GripVertical,
   RefreshCw,
   Info,
+  Lock,
+  Shield,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { API_BASE_URL } from "../BaseURL";
-
 
 const mockDocument = {
   Document: ({ children }) => children,
@@ -55,8 +56,125 @@ const mockDocument = {
 const STORAGE_KEY = "exam-viewer-annotations";
 
 
-const examsApi = {
+const SecurityManager = {
   
+  screenshotDetectionMethods: {
+    
+    keyboardScreenshot: (e) => {
+      return (
+        e.key === "PrintScreen" ||
+        (e.ctrlKey && e.key === "p") ||
+        (e.metaKey && e.key === "p")
+      );
+    },
+    
+    devTools: (e) => {
+      return (
+        (e.ctrlKey &&
+          e.shiftKey &&
+          (e.key === "I" || e.key === "i" || e.key === "C" || e.key === "c" || e.key === "J" || e.key === "j")) ||
+        (e.metaKey &&
+          e.shiftKey &&
+          (e.key === "I" || e.key === "i" || e.key === "C" || e.key === "c" || e.key === "J" || e.key === "j"))
+      );
+    },
+    
+    screenCapture: (e) => {
+      return (
+        (e.ctrlKey && 
+          e.shiftKey && 
+          (e.key === "4" || e.key === "$" || e.key === "5" || e.key === "%")) ||
+        (e.metaKey &&
+          e.shiftKey &&
+          (e.key === "3" || e.key === "#" || e.key === "4" || e.key === "$" || e.key === "5" || e.key === "%"))
+      );
+    }
+  },
+
+  
+  generateWatermark: (studentInfo, pdfContainer) => {
+    if (!studentInfo || !pdfContainer) return null;
+    
+    const watermarkContainer = document.createElement('div');
+    watermarkContainer.className = 'absolute inset-0 pointer-events-none select-none';
+    watermarkContainer.style.zIndex = '30';
+    watermarkContainer.style.overflow = 'hidden';
+    
+    
+    const watermarkText = `${studentInfo.name} (${studentInfo.roll_number}) - CONFIDENTIAL`;
+    const watermarkCount = 20; 
+    
+    for (let i = 0; i < watermarkCount; i++) {
+      const watermark = document.createElement('div');
+      watermark.className = 'absolute select-none';
+      watermark.style.transform = `rotate(-30deg)`;
+      watermark.style.opacity = '0.12';
+      watermark.style.color = '#001a4d';
+      watermark.style.fontSize = '14px';
+      watermark.style.fontWeight = 'bold';
+      watermark.style.whiteSpace = 'nowrap';
+      watermark.style.top = `${5 + (i * 20)}%`;
+      watermark.style.left = `${(i % 2) * 20}%`;
+      watermark.style.fontFamily = 'Arial, sans-serif';
+      watermark.textContent = watermarkText;
+      
+      watermarkContainer.appendChild(watermark);
+    }
+    
+    return watermarkContainer;
+  },
+  
+  
+  applySecurityFeatures: (pdfContainer, studentInfo) => {
+    if (!pdfContainer) return;
+    
+    
+    if (studentInfo) {
+      const watermark = SecurityManager.generateWatermark(studentInfo, pdfContainer);
+      if (watermark) {
+        pdfContainer.appendChild(watermark);
+      }
+    }
+    
+    
+    pdfContainer.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    });
+    
+    
+    pdfContainer.addEventListener('selectstart', (e) => {
+      if (e.target.closest('.pdf-content-container')) {
+        e.preventDefault();
+        return false;
+      }
+    });
+    
+    
+    const rotateWatermarks = () => {
+      const watermarks = pdfContainer.querySelectorAll('.absolute.select-none');
+      watermarks.forEach(watermark => {
+        const currentRotation = parseInt(watermark.style.transform.replace(/[^\d-]/g, '')) || -30;
+        const newRotation = currentRotation === -30 ? -35 : -30;
+        watermark.style.transform = `rotate(${newRotation}deg)`;
+        
+        
+        const currentOpacity = parseFloat(watermark.style.opacity) || 0.12;
+        watermark.style.opacity = (currentOpacity === 0.12) ? '0.14' : '0.12';
+      });
+    };
+    
+    
+    const intervalId = setInterval(rotateWatermarks, 2500);
+    
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }
+};
+
+const examsApi = {
   submitRecheckRequest: async (examId, enrollmentId, requestData) => {
     const token = localStorage.getItem('accessToken');
     
@@ -76,7 +194,6 @@ const examsApi = {
     );
   },
   
-  
   getRecheckRequests: async (examId, enrollmentId) => {
     const token = localStorage.getItem('accessToken');
     
@@ -95,7 +212,6 @@ const examsApi = {
     );
   }
 };
-
 
 const Toast = ({ message, type, visible, onClose }) => {
   useEffect(() => {
@@ -131,7 +247,6 @@ const Toast = ({ message, type, visible, onClose }) => {
   );
 };
 
-
 const PDFViewer = ({
   file,
   pageNumber,
@@ -141,15 +256,24 @@ const PDFViewer = ({
   onTotalPagesChange,
   pdfFallbackImage,
   selectedAnnotations,
+  studentInfo,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [useFallbackMode, setUseFallbackMode] = useState(false);
   const [imageUrl, setImageUrl] = useState(null);
   const contentRef = useRef(null);
+  const pdfContainerRef = useRef(null);
+
+  
+  useEffect(() => {
+    if (pdfContainerRef.current && studentInfo) {
+      const cleanup = SecurityManager.applySecurityFeatures(pdfContainerRef.current, studentInfo);
+      return cleanup;
+    }
+  }, [studentInfo, pdfContainerRef.current, pageNumber]);
 
   useEffect(() => {
-    
     if (pdfFallbackImage) {
       setImageUrl(pdfFallbackImage);
       setUseFallbackMode(true);
@@ -158,7 +282,6 @@ const PDFViewer = ({
         onTotalPagesChange(1);
       }
     } else if (file) {
-      
       setUseFallbackMode(true);
       setIsLoading(false);
     } else {
@@ -183,35 +306,45 @@ const PDFViewer = ({
   const renderSelectedAnnotations = () => {
     if (!selectedAnnotations || selectedAnnotations.length === 0) return null;
 
-    return selectedAnnotations.filter(anno => anno.pageNumber === pageNumber).map((anno, index) => (
-      <div
-        key={`selected-anno-${index}`}
-        className="absolute border-2 border-yellow-500 bg-yellow-100/40 z-30 pointer-events-none"
-        style={{
-          left: `${anno.coordinates.startX}%`,
-          top: `${anno.coordinates.startY}%`,
-          width: `${Math.abs(anno.coordinates.endX - anno.coordinates.startX)}%`,
-          height: `${Math.abs(anno.coordinates.endY - anno.coordinates.startY)}%`,
-        }}
-      >
-        <div className="absolute -top-7 left-0 bg-yellow-50 text-xs px-2 py-1 rounded shadow-sm border border-yellow-200 flex items-center gap-1 z-40">
-          <span className="bg-yellow-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
-            {anno.questionNumber}
-          </span>
-          <span className="font-medium text-yellow-700">
-            +{anno.expectedMarks - anno.currentMarks}
-          </span>
+    return selectedAnnotations.filter(anno => anno.pageNumber === pageNumber).map((anno, index) => {
+      
+      const coordinates = anno.coordinates || {
+        startX: anno.startX,
+        startY: anno.startY,
+        endX: anno.endX,
+        endY: anno.endY
+      };
+
+      return (
+        <div
+          key={`selected-anno-${index}`}
+          className="absolute border-2 border-yellow-500 bg-yellow-100/40 z-30 pointer-events-none"
+          style={{
+            left: `${coordinates.startX}%`,
+            top: `${coordinates.startY}%`,
+            width: `${Math.abs(coordinates.endX - coordinates.startX)}%`,
+            height: `${Math.abs(coordinates.endY - coordinates.startY)}%`,
+          }}
+        >
+          <div className="absolute -top-7 left-0 bg-yellow-50 text-xs px-2 py-1 rounded shadow-sm border border-yellow-200 flex items-center gap-1 z-40">
+            <span className="bg-yellow-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
+              {anno.questionNumber}
+            </span>
+            <span className="font-medium text-yellow-700">
+              +{anno.expectedMarks - anno.currentMarks}
+            </span>
+          </div>
         </div>
-      </div>
-    ));
+      );
+    });
   };
 
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden w-full h-full">
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full" ref={pdfContainerRef}>
         <div
           ref={contentRef}
-          className="w-full h-full flex flex-col items-center justify-center"
+          className="w-full h-full flex flex-col items-center justify-center pdf-content-container"
           style={{
             transform: `scale(${zoomLevel})`,
             transformOrigin: "center",
@@ -331,11 +464,15 @@ const PDFViewer = ({
             </motion.button>
           </div>
         )}
+
+        <div className="absolute top-4 left-4 bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs flex items-center gap-1 z-20 select-none">
+          <Shield size={12} />
+          <span>Secured Document</span>
+        </div>
       </div>
     </div>
   );
 };
-
 
 const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enrollmentId }) => {
   const [reason, setReason] = useState("");
@@ -344,6 +481,7 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
 
   if (!isOpen) return null;
 
+  
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -357,6 +495,7 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
         grievance: anno.metadata.grievance,
         currentMarks: anno.metadata.actualMarks,
         expectedMarks: anno.metadata.expectedMarks,
+        
         coordinates: {
           startX: anno.startX,
           startY: anno.startY,
@@ -367,7 +506,6 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
     };
 
     try {
-      
       examsApi.submitRecheckRequest(examData.id, enrollmentId, requestData)
         .then(response => {
           if (response.data && (response.data.code === 200 || response.data.code === 201)) {
@@ -560,7 +698,6 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
   );
 };
 
-
 const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }) => {
   const [annotations, setAnnotations] = useState(() => {
     try {
@@ -582,17 +719,26 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
     actualMarks: 0,
   });
   const [forceUpdate, setForceUpdate] = useState(false); 
+  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
 
+  const updateContainerDimensions = useCallback(() => {
+    if (containerRef.current) {
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      setContainerDimensions({ width, height });
+      setForceUpdate(prev => !prev);
+    }
+  }, []);
   
   useEffect(() => {
     if (!containerRef.current) return;
     
+    updateContainerDimensions();
+    
     const resizeObserver = new ResizeObserver(() => {
-      
-      setForceUpdate(prev => !prev);
+      updateContainerDimensions();
     });
     
     resizeObserver.observe(containerRef.current);
@@ -602,7 +748,12 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
         resizeObserver.unobserve(containerRef.current);
       }
     };
-  }, []);
+  }, [updateContainerDimensions]);
+
+  
+  useEffect(() => {
+    updateContainerDimensions();
+  }, [zoomLevel, updateContainerDimensions]);
 
   useEffect(() => {
     try {
@@ -615,11 +766,13 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
   }, [annotations, onAnnotationChange]);
 
   
+  
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
+    
     
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -643,12 +796,12 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
     setIsDrawing(true);
   };
 
-  
   const draw = (e) => {
     if (!isDrawing || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
+    
     
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -716,7 +869,6 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
     (anno) => anno.pageNumber === currentPage
   );
 
-  
   useEffect(() => {
     const pdfContainer = document.querySelector('.pdf-content-container');
     if (pdfContainer && containerRef.current) {
@@ -727,27 +879,12 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
 
   
   const getAnnotationStyle = (anno) => {
-    if (!canvasRef.current) return {};
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    
-    
-    const startXPx = (anno.startX * rect.width) / 100;
-    const startYPx = (anno.startY * rect.height) / 100;
-    const endXPx = (anno.endX * rect.width) / 100;
-    const endYPx = (anno.endY * rect.height) / 100;
-    
-    const left = Math.min(startXPx, endXPx);
-    const top = Math.min(startYPx, endYPx);
-    const width = Math.abs(endXPx - startXPx);
-    const height = Math.abs(endYPx - startYPx);
     
     return {
-      left: `${left}px`,
-      top: `${top}px`,
-      width: `${width}px`,
-      height: `${height}px`,
-      
+      left: `${Math.min(anno.startX, anno.endX)}%`,
+      top: `${Math.min(anno.startY, anno.endY)}%`,
+      width: `${Math.abs(anno.endX - anno.startX)}%`,
+      height: `${Math.abs(anno.endY - anno.startY)}%`,
     };
   };
 
@@ -1064,7 +1201,6 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
   );
 };
 
-
 const ErrorDisplay = ({ message, onRetry, onBack }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
@@ -1100,7 +1236,6 @@ const ErrorDisplay = ({ message, onRetry, onBack }) => {
   );
 };
 
-
 const LoadingDisplay = ({ message = "Loading exam data..." }) => {
   return (
     <div className="text-center">
@@ -1109,7 +1244,6 @@ const LoadingDisplay = ({ message = "Loading exam data..." }) => {
     </div>
   );
 };
-
 
 const RecheckRequestHistory = ({ requests, loading, error, onViewRequest }) => {
   if (loading) {
@@ -1201,6 +1335,48 @@ const RecheckRequestHistory = ({ requests, loading, error, onViewRequest }) => {
 };
 
 
+const ScreenshotProtection = ({ active, studentInfo }) => {
+  if (!active) return null;
+  
+  
+  const watermarkText = studentInfo ? 
+    `${studentInfo.name} (${studentInfo.roll_number}) - SCREENSHOT DETECTED - UNAUTHORIZED` : 
+    'SCREENSHOT DETECTED - UNAUTHORIZED';
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center"
+    >
+      <div className="absolute inset-0 overflow-hidden">
+        {Array.from({ length: 50 }).map((_, index) => (
+          <div 
+            key={index}
+            className="absolute text-red-500 text-opacity-80 font-bold text-xl select-none"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              transform: `rotate(-${30 + Math.random() * 15}deg)`,
+            }}
+          >
+            {watermarkText}
+          </div>
+        ))}
+      </div>
+      <Lock className="text-red-500 w-20 h-20 mb-6" />
+      <p className="text-white text-2xl font-bold mb-2">
+        Screenshots Are Not Allowed
+      </p>
+      <p className="text-white text-lg">
+        This is a secure document protected by screenshot detection.
+      </p>
+    </motion.div>
+  );
+};
+
 const StudentExamDetails = ({ isHistory = false }) => {
   
   const { courseId, id: examId } = useParams();
@@ -1243,6 +1419,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
   const mainContentRef = useRef(null);
   const splitDividerRef = useRef(null);
+  const pdfContainerRef = useRef(null);
 
   
   useEffect(() => {
@@ -1277,7 +1454,6 @@ const StudentExamDetails = ({ isHistory = false }) => {
     };
   }, [isResizing]);
 
-  
   const handleMouseDown = (e) => {
     e.preventDefault();
     setIsResizing(true);
@@ -1287,12 +1463,12 @@ const StudentExamDetails = ({ isHistory = false }) => {
   const handleViewRecheckRequest = (request) => {
     setSelectedRecheckRequest(request);
     
-    
     if (request.annotations && request.annotations.length > 0) {
       
       if (request.annotations[0].pageNumber) {
         setPageNumber(request.annotations[0].pageNumber);
       }
+      
       
       setSelectedAnnotations(request.annotations);
       
@@ -1513,43 +1689,57 @@ const StudentExamDetails = ({ isHistory = false }) => {
     }
   }, [annotations, examData]);
 
+  
   useEffect(() => {
     if (!totalPages || totalPages === 1) {
-      
       if (!pdfImageUrl && !pdfFile) {
         setTotalPages(1);
       }
     }
   }, [totalPages, pdfImageUrl, pdfFile]);
 
+  
   useEffect(() => {
-    const handleScreenshotAttempt = () => {
-      setIsScreenshotAttempted(true);
-
-      setTimeout(() => {
-        setIsScreenshotAttempted(false);
-      }, 1500);
+    const handleScreenshotAttempt = (e) => {
+      
+      const isScreenshot = 
+        SecurityManager.screenshotDetectionMethods.keyboardScreenshot(e) ||
+        SecurityManager.screenshotDetectionMethods.devTools(e) ||
+        SecurityManager.screenshotDetectionMethods.screenCapture(e);
+      
+      if (isScreenshot) {
+        setIsScreenshotAttempted(true);
+        
+        
+        setTimeout(() => {
+          setIsScreenshotAttempted(false);
+        }, 3000);
+      }
     };
 
-    document.addEventListener("keydown", (e) => {
-      if (
-        e.key === "PrintScreen" ||
-        (e.ctrlKey &&
-          e.shiftKey &&
-          (e.key === "I" || e.key === "i" || e.key === "4" || e.key === "$")) ||
-        (e.metaKey &&
-          e.shiftKey &&
-          (e.key === "3" || e.key === "4" || e.key === "#" || e.key === "$"))
-      ) {
-        handleScreenshotAttempt();
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        
+        const now = new Date().getTime();
+        
+        
+        if (!window._lastVisibilityChange || now - window._lastVisibilityChange > 5000) {
+          window._lastVisibilityChange = now;
+        }
       }
-    });
+    };
 
+    document.addEventListener("keydown", handleScreenshotAttempt);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    
     return () => {
       document.removeEventListener("keydown", handleScreenshotAttempt);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
+  
   useEffect(() => {
     const handleResize = () => {
       if (mainContentRef.current) {
@@ -1568,12 +1758,14 @@ const StudentExamDetails = ({ isHistory = false }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  
   useEffect(() => {
     if (currentTab === "recheck" && !showAnnotation) {
       setShowAnnotation(true);
     }
   }, [currentTab, showAnnotation]);
 
+  
   useEffect(() => {
     try {
       const savedAnnotations = localStorage.getItem(STORAGE_KEY);
@@ -1684,13 +1876,10 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col relative">
-      {isScreenshotAttempted && (
-        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-          <p className="text-white text-xl font-medium">
-            Screenshots are not allowed
-          </p>
-        </div>
-      )}
+      <ScreenshotProtection 
+        active={isScreenshotAttempted} 
+        studentInfo={examData.student}
+      />
 
       <header className="bg-white shadow-sm p-4 border-b">
         <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1734,6 +1923,15 @@ const StudentExamDetails = ({ isHistory = false }) => {
                   <Clock className="w-4 h-4 mr-1" /> Pending
                 </>
               )}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700"
+            >
+              <Shield className="w-4 h-4 mr-1" /> Secured
             </motion.div>
 
             {isHistory ? null : (
@@ -1991,6 +2189,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
               className="relative h-full w-full max-w-4xl mx-auto"
+              ref={pdfContainerRef}
             >
               <PDFViewer
                 file={pdfFile}
@@ -2001,6 +2200,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                 zoomLevel={zoomLevel}
                 onTotalPagesChange={handleTotalPagesChange}
                 selectedAnnotations={selectedAnnotations}
+                studentInfo={examData.student}
               />
             </motion.div>
 
@@ -2014,22 +2214,6 @@ const StudentExamDetails = ({ isHistory = false }) => {
                 />
               </div>
             )}
-
-            <div className="absolute inset-0 pointer-events-none z-5 overflow-hidden opacity-10">
-              {[...Array(20)].map((_, index) => (
-                <div
-                  key={index}
-                  className="absolute text-gray-800 text-opacity-20 font-bold text-lg"
-                  style={{
-                    top: `${Math.random() * 100}%`,
-                    left: `${Math.random() * 100}%`,
-                    transform: `rotate(-${30 + Math.random() * 15}deg)`,
-                  }}
-                >
-                  CONFIDENTIAL
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -2086,7 +2270,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                       className="bg-white rounded-lg shadow p-4 border border-gray-100"
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-sm font-medium text-gray-700">
+                      <h3 className="text-sm font-medium text-gray-700">
                           Overall Score
                         </h3>
                         <div

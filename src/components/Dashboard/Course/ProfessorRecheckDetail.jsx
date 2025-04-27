@@ -115,6 +115,21 @@ const PageViewer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const imageRef = useRef(null);
+  const containerRef = useRef(null);
+
+  
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight' && pageNumber < totalPages) {
+        onPageChange(pageNumber + 1);
+      } else if (e.key === 'ArrowLeft' && pageNumber > 1) {
+        onPageChange(pageNumber - 1);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pageNumber, totalPages, onPageChange]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -147,7 +162,7 @@ const PageViewer = ({
   }
 
   return (
-    <div className="relative flex items-center justify-center h-full w-full">
+    <div className="relative flex items-center justify-center h-full w-full" ref={containerRef}>
       {isLoading && (
         <motion.div 
           initial={{ opacity: 0 }}
@@ -245,6 +260,7 @@ const PageViewer = ({
                 ? "text-gray-400 cursor-not-allowed"
                 : "text-gray-200 hover:text-white"
             }`}
+            aria-label="Previous page"
           >
             <ChevronLeft size={22} />
           </motion.button>
@@ -261,6 +277,7 @@ const PageViewer = ({
                 ? "text-gray-400 cursor-not-allowed"
                 : "text-gray-200 hover:text-white"
             }`}
+            aria-label="Next page"
           >
             <ChevronRight size={22} />
           </motion.button>
@@ -270,96 +287,194 @@ const PageViewer = ({
   );
 };
 
-
 const AnnotationViewer = ({ 
   annotations = [], 
   currentPage,
   onSelectAnnotation,
   selectedAnnotationId,
-  respondedAnnotationIds = []
+  respondedAnnotationIds = [],
+  zoomLevel = 1
 }) => {
+  const canvasRef = useRef(null);
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+  const containerRef = useRef(null);
+  const imageContainerRef = useRef(null);
+
   
   const studentAnnotations = annotations.filter(
     anno => anno.pageNumber === currentPage
   );
 
-  return (
-    <div className="relative w-full h-full pointer-events-none">
-      {studentAnnotations.map((anno) => {
-        
-        const startX = anno.coordinates?.startX || anno.startX || 0;
-        const startY = anno.coordinates?.startY || anno.startY || 0;
-        const endX = anno.coordinates?.endX || anno.endX || 0;
-        const endY = anno.coordinates?.endY || anno.endY || 0;
-        
-        
-        const left = Math.min(startX, endX);
-        const top = Math.min(startY, endY);
-        const width = Math.abs(endX - startX);
-        const height = Math.abs(endY - startY);
+  
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const updateDimensions = () => {
+      const container = containerRef.current;
+      const imageContainer = imageContainerRef.current || document.querySelector('.will-change-transform');
+      
+      if (container && imageContainer) {
+        const { width, height } = imageContainer.getBoundingClientRect();
+        setCanvasDimensions({ width, height });
         
         
-        const visibleWidth = Math.max(width, 20);
-        const visibleHeight = Math.max(height, 20);
-        
-        
-        const annotationId = anno.id || anno.annotation_id;
-        const isSelected = annotationId === selectedAnnotationId;
-        const isResponded = respondedAnnotationIds.includes(annotationId) || 
-                           anno.status === 'accepted' || 
-                           anno.status === 'rejected';
+        if (canvasRef.current) {
+          canvasRef.current.width = width;
+          canvasRef.current.height = height;
+        }
+      }
+    };
+    
+    
+    updateDimensions();
+    
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+    
+    
+    const imageContainer = imageContainerRef.current || document.querySelector('.will-change-transform');
+    if (imageContainer) {
+      resizeObserver.observe(imageContainer);
+    }
+    
+    
+    const handleImageLoad = () => {
+      setTimeout(updateDimensions, 100); 
+    };
+    
+    const images = document.querySelectorAll('img');
+    images.forEach(img => img.addEventListener('load', handleImageLoad));
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+      if (imageContainer) {
+        resizeObserver.unobserve(imageContainer);
+      }
+      images.forEach(img => img.removeEventListener('load', handleImageLoad));
+    };
+  }, [currentPage, zoomLevel]);
 
-        return (
-          <motion.div
-            key={annotationId}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1,
-              boxShadow: isSelected ? '0 0 0 4px rgba(59, 130, 246, 0.8)' : isResponded ? '0 0 0 4px rgba(34, 197, 94, 0.6)' : 'none'
-            }}
-            transition={{ duration: 0.3, type: "spring" }}
-            className={`absolute border-4 ${
-              isSelected ? 'ring-4 ring-blue-500' : 
-              isResponded ? 'ring-4 ring-green-500' : ''
-            } pointer-events-auto`}
-            style={{
-              left: `${left}px`,
-              top: `${top}px`,
-              width: `${visibleWidth}px`,
-              height: `${visibleHeight}px`,
-              borderColor: isResponded ? 'rgb(34, 197, 94)' : 'rgb(59, 130, 246)',
-              backgroundColor: isResponded ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.3)',
-              cursor: 'pointer',
-              zIndex: isSelected ? 30 : 20
-            }}
-            onClick={() => onSelectAnnotation(anno)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className={`absolute -top-10 left-0 bg-white text-xs px-2 py-1.5 rounded-md shadow-md border ${
-                isResponded ? "border-green-200" : "border-blue-200"
-              } z-40`}
-            >
-              <span className={`${
-                isResponded ? "bg-green-500" : "bg-blue-500"
-              } text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold`}>
-                {anno.questionNumber}
-              </span>
-              {isResponded && (
-                <span className="ml-1 text-xs text-green-600 font-medium">✓</span>
-              )}
-            </motion.div>
-          </motion.div>
-        );
-      })}
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || canvasDimensions.width === 0) return;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    studentAnnotations.forEach(anno => {
+      
+      const startX = anno.coordinates?.startX || anno.startX || 0;
+      const startY = anno.coordinates?.startY || anno.startY || 0;
+      const endX = anno.coordinates?.endX || anno.endX || 0;
+      const endY = anno.coordinates?.endY || anno.endY || 0;
+      
+      
+      const pixelLeft = (Math.min(startX, endX) / 100) * canvasDimensions.width;
+      const pixelTop = (Math.min(startY, endY) / 100) * canvasDimensions.height;
+      const pixelWidth = (Math.abs(endX - startX) / 100) * canvasDimensions.width;
+      const pixelHeight = (Math.abs(endY - startY) / 100) * canvasDimensions.height;
+      
+      
+      const annotationId = anno.id || anno.annotation_id;
+      const isSelected = annotationId === selectedAnnotationId;
+      const isResponded = respondedAnnotationIds.includes(annotationId) || 
+                          anno.status === 'accepted' || 
+                          anno.status === 'rejected';
+      
+      
+      ctx.fillStyle = isResponded ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.3)';
+      ctx.strokeStyle = isResponded ? 'rgb(34, 197, 94)' : 'rgb(59, 130, 246)';
+      ctx.lineWidth = isSelected ? 4 : 3;
+      
+      ctx.fillRect(pixelLeft, pixelTop, pixelWidth, pixelHeight);
+      ctx.strokeRect(pixelLeft, pixelTop, pixelWidth, pixelHeight);
+      
+      
+      const questionNumber = anno.questionNumber || '?';
+      const labelX = pixelLeft + 5;
+      const labelY = pixelTop - 10;
+      
+      
+      ctx.fillStyle = isResponded ? 'rgb(34, 197, 94)' : 'rgb(59, 130, 246)';
+      ctx.beginPath();
+      ctx.arc(labelX + 10, labelY - 10, 12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 12px Arial';
+      ctx.fillText(questionNumber.toString(), labelX + 10, labelY - 10);
+      
+      
+      if (isResponded) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText('✓', labelX + 28, labelY - 10);
+      }
+    });
+  }, [studentAnnotations, canvasDimensions, selectedAnnotationId, respondedAnnotationIds, zoomLevel]);
+
+  
+  const handleCanvasClick = useCallback((e) => {
+    if (!canvasRef.current || studentAnnotations.length === 0) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    
+    const clickXPercent = (x / canvasDimensions.width) * 100;
+    const clickYPercent = (y / canvasDimensions.height) * 100;
+    
+    
+    for (const anno of studentAnnotations) {
+      const startX = anno.coordinates?.startX || anno.startX || 0;
+      const startY = anno.coordinates?.startY || anno.startY || 0;
+      const endX = anno.coordinates?.endX || anno.endX || 0;
+      const endY = anno.coordinates?.endY || anno.endY || 0;
+      
+      const left = Math.min(startX, endX);
+      const right = Math.max(startX, endX);
+      const top = Math.min(startY, endY);
+      const bottom = Math.max(startY, endY);
+      
+      if (clickXPercent >= left && clickXPercent <= right && 
+          clickYPercent >= top && clickYPercent <= bottom) {
+        onSelectAnnotation(anno);
+        break;
+      }
+    }
+  }, [studentAnnotations, canvasDimensions, onSelectAnnotation]);
+
+  return (
+    <div 
+      ref={containerRef} 
+      className="absolute inset-0 pointer-events-none z-20"
+    >
+      <div 
+        ref={imageContainerRef}
+        className="absolute inset-0 pointer-events-none"
+      >
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 pointer-events-auto cursor-pointer"
+          onClick={handleCanvasClick}
+          style={{
+            zIndex: 25
+          }}
+        />
+      </div>
     </div>
   );
 };
-
-
 const AnnotationResponseForm = ({ 
   selectedAnnotation, 
   onClose, 
@@ -2042,14 +2157,15 @@ const ProfessorRecheckDetail = () => {
             />
             
             <div className="absolute inset-0 bg-transparent">
-              <AnnotationViewer
-                annotations={annotations}
-                currentPage={pageNumber}
-                onSelectAnnotation={handleSelectAnnotation}
-                selectedAnnotationId={selectedAnnotationId}
-                respondedAnnotationIds={respondedAnnotationIds}
-              />
-            </div>
+  <AnnotationViewer
+    annotations={annotations}
+    currentPage={pageNumber}
+    onSelectAnnotation={handleSelectAnnotation}
+    selectedAnnotationId={selectedAnnotationId}
+    respondedAnnotationIds={respondedAnnotationIds}
+    zoomLevel={zoomLevel}
+  />
+</div>
             
             <AnimatePresence>
               {showResponseForm && selectedAnnotation && (
