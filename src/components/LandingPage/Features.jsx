@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion";
 import {
   HiOutlineClock,
@@ -72,7 +71,17 @@ const FeatureCard = ({
   );
 };
 
-const Features = () => {
+const Features = ({
+  timeImage,
+  unbiasedImage,
+  feedbackImage,
+  analyticsImage,
+  VLMImage,
+  rubrikImage,
+  diagramImage,
+  batchPDFImage,
+  multilingualImage,
+}) => {
   const benefits = [
     {
       icon: <HiOutlineClock className="w-6 h-6 text-teal-600" />,
@@ -258,8 +267,7 @@ const Features = () => {
               className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-3 rounded-full text-white font-medium transition-all duration-300 shadow-md"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/auth')}
-              >
+            >
               Get Started Today
             </motion.button>
           </div>
