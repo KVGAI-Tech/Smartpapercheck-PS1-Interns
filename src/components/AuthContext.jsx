@@ -68,9 +68,6 @@ export const AuthProvider = ({ children }) => {
         case 'professor':
           navigate('/dashboard', { replace: true });
           break;
-        case 'ta':
-          navigate('/ta-dashboard', { replace: true });
-          break;
         default:
           throw new Error(`Invalid role type: ${role}`);
       }

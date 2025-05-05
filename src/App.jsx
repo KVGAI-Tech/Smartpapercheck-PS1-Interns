@@ -5,7 +5,6 @@ import DashboardLayout from "./components/Dashboard/DashboardLayout";
 import StudentDashboardLayout from "./components/StudentDashboardLayout";
 import Dashboard from "./components/Dashboard/DashboardHome";
 import StudentDashboard from "./components/StudentDashboard";
-import TADashboard from "./components/TADashboard";
 import Courses from "./components/Dashboard/Course";
 import CourseDetails from "./components/Dashboard/Course/CourseDetails";
 import RoleAuth from "./components/RoleAuth";
@@ -133,16 +132,6 @@ function App() {
             element={
               <RoleRoute requiredRole="student">
                 <StudentExamDetails isHistory />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/ta-dashboard"
-            element={
-              <RoleRoute requiredRole="ta">
-                <DashboardLayout>
-                  <TADashboard />
-                </DashboardLayout>
               </RoleRoute>
             }
           />

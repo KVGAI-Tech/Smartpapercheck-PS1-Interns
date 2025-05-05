@@ -22,7 +22,6 @@ const RoleRoute = ({ children, requiredRole }) => {
       const redirectPaths = {
         professor: '/dashboard',
         student: '/student-dashboard',
-        ta: '/ta-dashboard',
       };
       
       const redirectPath = redirectPaths[userRole] || '/auth';
