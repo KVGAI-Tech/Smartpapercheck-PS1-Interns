@@ -55,7 +55,6 @@ const PoliciesPage = () => {
         justifyContent: "center",
         fontSize: "1.5rem"
       }}>
-        <div>Loading Smart QnA...</div>
       </div>
     );
   }

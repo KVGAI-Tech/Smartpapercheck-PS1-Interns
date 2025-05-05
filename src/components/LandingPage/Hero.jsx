@@ -29,7 +29,6 @@ const Hero = ({ scrollToDemo }) => {
   
   return (
     <section className="min-h-screen pt-24 lg:pt-28 px-4 md:px-12 relative overflow-hidden bg-gradient-to-b from-white to-gray-50">
-      {/* Animated Background Shapes */}
       {backgroundShapes.map((shape, index) => (
         <motion.div 
           key={index}
@@ -55,13 +54,11 @@ const Hero = ({ scrollToDemo }) => {
         />
       ))}
       
-      {/* Grid background */}
       <div className="absolute inset-0 z-0">
         <div className="absolute h-full w-full opacity-10 bg-grid-pattern" />
       </div>
       
       <div className="container mx-auto max-w-6xl relative z-10 flex flex-col items-center justify-center pt-16 md:pt-28">
-        {/* Badge */}
         <motion.div
           className="flex items-center gap-2 mb-6 bg-gradient-to-r from-teal-200 to-blue-100 rounded-full px-4 py-2 text-sm font-medium"
           custom={0}
@@ -73,7 +70,6 @@ const Hero = ({ scrollToDemo }) => {
           <span className="text-gray-700">Built with Explainable AI · Powered by LLMs · Trusted by Institutions</span>
         </motion.div>
         
-        {/* Headline */}
         <motion.h1 
           className="text-4xl md:text-6xl lg:text-7xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-teal-800 to-gray-900"
           custom={1}
@@ -85,7 +81,6 @@ const Hero = ({ scrollToDemo }) => {
           Evaluation with AI & LLMs
         </motion.h1>
         
-        {/* Subheadline */}
         <motion.p 
           className="text-lg md:text-xl text-center text-gray-700 max-w-4xl mb-12"
           custom={2}
@@ -97,7 +92,6 @@ const Hero = ({ scrollToDemo }) => {
           cutting-edge Vision-Language Models & Agentic AI Workflows.
         </motion.p>
         
-        {/* CTA Buttons */}
         <motion.div 
           className="flex flex-col sm:flex-row gap-4 mb-16"
           custom={3}
@@ -126,9 +120,7 @@ const Hero = ({ scrollToDemo }) => {
           </motion.button>
         </motion.div>
         
-        {/* Hero Image with Animation */}
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          {/* Animated Text and Features */}
           <motion.div
             className="order-2 md:order-1"
             initial={{ opacity: 0, x: -20 }}
@@ -174,7 +166,7 @@ const Hero = ({ scrollToDemo }) => {
             </div>
           </motion.div>
           
-          {/* Dashboard Mockup */}
+          {}
           <motion.div 
             className="order-1 md:order-2 relative"
             initial={{ opacity: 0, x: 20 }}
@@ -196,7 +188,7 @@ const Hero = ({ scrollToDemo }) => {
                 transition={{ duration: 0.2 }}
               >
                 <img 
-                  src="/placeholder-732pxX732px.png" 
+                  src="../../../public/Screenshot 2025-05-02 at 1.45.52 PM.png" 
                   alt="SmartQnA Dashboard" 
                   className="rounded-xl object-cover w-full h-auto"
                 />
@@ -214,7 +206,7 @@ const Hero = ({ scrollToDemo }) => {
         </div>
       </div>
       
-      {/* Wave separator */}
+      {}
       <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-50 to-transparent z-10" />
     </section>
   );

@@ -4,23 +4,8 @@ import { motion } from 'framer-motion';
 const Clientele = () => {
   const clients = [
     { 
-      name: 'Harvard University', 
-      logo: '/harvard.png',
-      type: 'institution'
-    },
-    { 
-      name: 'Stanford University', 
-      logo: '/stanford.png',
-      type: 'institution'
-    },
-    { 
       name: 'BITS Pilani', 
       logo: '/bitspilani.png',
-      type: 'institution'
-    },
-    { 
-      name: 'Wharton School', 
-      logo: '/wharton.png',
       type: 'institution'
     },
     { 

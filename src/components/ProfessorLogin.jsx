@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
 import { API_BASE_URL } from '../BaseURL';
-
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 const MinimalBackground = React.memo(() => {
   return (
@@ -99,6 +99,7 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
   
   const passwordChecks = useMemo(() => ({
@@ -156,6 +157,14 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
     validateEmail, passwordChecks, termsAccepted
   ]);
 
+  const handleOpenForgotPassword = useCallback(() => {
+    setIsForgotPasswordOpen(true);
+  }, []);
+
+  const handleCloseForgotPassword = useCallback(() => {
+    setIsForgotPasswordOpen(false);
+  }, []);
+
 const handleSubmit = useCallback(async (e) => {
   e.preventDefault();
 
@@ -181,7 +190,7 @@ const handleSubmit = useCallback(async (e) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: formData.email.toLowerCase(), 
+          email: formData.email, 
           password: formData.password 
         }),
       });
@@ -205,7 +214,7 @@ const handleSubmit = useCallback(async (e) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
-          email: formData.email.toLowerCase(),
+          email: formData.email,
           password: formData.password,
         }),
       });
@@ -222,7 +231,7 @@ const handleSubmit = useCallback(async (e) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            email: formData.email.toLowerCase(), 
+            email: formData.email, 
             password: formData.password 
           }),
         });
@@ -318,6 +327,7 @@ const handleSubmit = useCallback(async (e) => {
           
           <button
             type="button"
+            onClick={handleOpenForgotPassword}
             className="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             Forgot Password?
@@ -497,49 +507,61 @@ const handleSubmit = useCallback(async (e) => {
   );
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-auto border border-gray-200/50 relative overflow-hidden">
-      <MinimalBackground />
-      
-      <div className="relative z-10">
-        <div className="mb-4">
-          <button
-            onClick={onBack}
-            className="flex items-center text-gray-600 hover:text-blue-600 transition-colors text-sm"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to role selection
-          </button>
+    <>
+      <div className={`bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-auto border border-gray-200/50 relative overflow-hidden ${isForgotPasswordOpen ? 'filter blur-sm' : ''}`}>
+        <MinimalBackground />
+        
+        <div className="relative z-10">
+          <div className="mb-4">
+            <button
+              onClick={onBack}
+              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors text-sm"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to role selection
+            </button>
+          </div>
+          
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                <User className="h-5 w-5 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {activeTab === 'login' ? 'Professor Login' : 'Create Professor Account'}
+              </h2>
+            </div>
+          </div>
+
+          <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm mb-5">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            {activeTab === 'login' ? renderLoginForm() : renderSignupForm()}
+          </AnimatePresence>
         </div>
         
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-              <User className="h-5 w-5 text-blue-600" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {activeTab === 'login' ? 'Professor Login' : 'Create Professor Account'}
-            </h2>
-          </div>
+        <div className="relative z-10 mt-6 text-center text-xs text-gray-500">
+          <p>© 2025 Smart QnA. All rights reserved.</p>
         </div>
+      </div>
 
-        <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm mb-5">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+      <AnimatePresence>
+        {isForgotPasswordOpen && (
+          <ForgotPasswordModal 
+            isOpen={isForgotPasswordOpen}
+            onClose={handleCloseForgotPassword}
+            userType="professor"
+          />
         )}
-
-        <AnimatePresence mode="wait">
-          {activeTab === 'login' ? renderLoginForm() : renderSignupForm()}
-        </AnimatePresence>
-      </div>
-      
-      <div className="relative z-10 mt-6 text-center text-xs text-gray-500">
-        <p>© 2025 Smart QnA. All rights reserved.</p>
-      </div>
-    </div>
+      </AnimatePresence>
+    </>
   );
 };
 

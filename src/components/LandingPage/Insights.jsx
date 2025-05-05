@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   HiOutlineChartBar, 
@@ -77,7 +78,7 @@ const HeatmapChart = () => (
   <div className="relative h-full w-full p-2">
     <div className="grid grid-cols-5 grid-rows-4 gap-1 h-full">
       {Array.from({ length: 20 }).map((_, i) => {
-        const intensity = Math.random(); // 0 to 1
+        const intensity = Math.random(); 
         let bgColor;
         
         if (intensity > 0.8) bgColor = 'bg-teal-500';
@@ -151,6 +152,7 @@ const PerformanceChart = () => (
 );
 
 const Insights = () => {
+  const navigate = useNavigate();
   return (
     <section id="insights" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -212,6 +214,7 @@ const Insights = () => {
             className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-3 rounded-full text-white font-medium shadow-md transition-all duration-300"
             whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/auth")}
           >
             Explore All Analytics Features
           </motion.button>

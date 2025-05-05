@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { HiOutlineCheck, HiOutlineArrowRight } from "react-icons/hi";
 
 
-// PricingCard Component
+
 const PricingCard = ({ plan, isPopular, features, price, type, description, index }) => {
+  const navigate = useNavigate();
   return (
     <motion.div
       className={`relative rounded-2xl overflow-hidden ${
@@ -67,6 +69,7 @@ const PricingCard = ({ plan, isPopular, features, price, type, description, inde
           }`}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
+          onClick={() => navigate("/auth")}
         >
           <span>Get Started</span>
           <HiOutlineArrowRight className="w-4 h-4" />

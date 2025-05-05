@@ -69,7 +69,6 @@ const ResourcesPage = () => {
           fontSize: "1.5rem",
         }}
       >
-        <div>Loading Smart QnA...</div>
       </div>
     );
   }
@@ -94,7 +93,6 @@ const ResourcesPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto py-16 px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* Product Demos & Walkthroughs */}
         <ResourceCard
           icon={<Play className="h-8 w-8 text-teal-400" />}
           title="Product Demos & Walkthroughs"
@@ -118,7 +116,6 @@ const ResourcesPage = () => {
           ]}
         />
 
-        {/* Whitepapers & Technical Blogs */}
         <ResourceCard
           icon={<FileText className="h-8 w-8 text-teal-400" />}
           title="Whitepapers & Technical Blogs"
@@ -142,7 +139,6 @@ const ResourcesPage = () => {
           ]}
         />
 
-        {/* Pitch Deck / Company Profile */}
         <ResourceCard
           icon={<BookOpen className="h-8 w-8 text-teal-400" />}
           title="Pitch Deck / Company Profile"
@@ -166,7 +162,6 @@ const ResourcesPage = () => {
           ]}
         />
 
-        {/* FAQs for Institutions / Educators */}
         <ResourceCard
           icon={<FileQuestion className="h-8 w-8 text-teal-400" />}
           title="FAQs for Institutions / Educators"
@@ -190,7 +185,6 @@ const ResourcesPage = () => {
           ]}
         />
 
-        {/* Research Highlights / Publications */}
         <ResourceCard
           icon={<Award className="h-8 w-8 text-teal-400" />}
           title="Research Highlights / Publications"
@@ -214,7 +208,6 @@ const ResourcesPage = () => {
           ]}
         />
 
-        {/* Media Kit */}
         <ResourceCard
           icon={<FileText className="h-8 w-8 text-teal-400" />}
           title="Media Kit"
@@ -238,7 +231,6 @@ const ResourcesPage = () => {
           ]}
         />
 
-        {/* Case Studies / Testimonials */}
         <ResourceCard
           icon={<Users className="h-8 w-8 text-teal-400" />}
           title="Case Studies / Testimonials"
@@ -262,7 +254,6 @@ const ResourcesPage = () => {
           ]}
         />
 
-        {/* Contact / Support */}
         <ResourceCard
           icon={<Mail className="h-8 w-8 text-teal-400" />}
           title="Contact / Support"
@@ -302,18 +293,6 @@ function ResourceCard({ icon, title, description, links }) {
       <div className="pb-4">
         <p className="text-slate-400 text-base">{description}</p>
       </div>
-      {/* <div className="flex flex-col items-start gap-2 mt-auto">
-        {links.map((link, index) => (
-          <a
-            key={index}
-            href={link.href}
-            className="text-teal-400 hover:text-teal-300 transition-colors flex items-center"
-          >
-            {link.label}
-            {link.icon}
-          </a>
-        ))}
-      </div> */}
     </div>
   );
 }

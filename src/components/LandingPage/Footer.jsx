@@ -3,26 +3,12 @@ import { motion } from "framer-motion";
 import { HiOutlineSun, HiOutlineMoon } from "react-icons/hi";
 
 const Footer = () => {
-  // Simulated dark mode state
-  const [isDarkMode, setIsDarkMode] = React.useState(false);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    // In a real implementation, you would toggle a class on the document or update a theme context
-  };
-
   const quickLinks = [
     { name: "Home", href: "/" },
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
     { name: "FAQ", href: "#faq" },
     { name: "Contact", href: "#contact" }
-  ];
-
-  const legalLinks = [
-    { name: "Privacy Policy", href: "/privacy" },
-    { name: "Terms of Service", href: "/terms" },
-    { name: "Cookie Policy", href: "/cookies" }
   ];
 
   const socialLinks = [
@@ -58,8 +44,8 @@ const Footer = () => {
   return (
     <footer className="bg-gray-50 border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-          <div className="col-span-1 md:col-span-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="col-span-1">
             <div className="flex items-center mb-6">
               <img 
                 src="/logo_smartqna.png" 
@@ -87,7 +73,7 @@ const Footer = () => {
             </div>
           </div>
           
-          <div className="col-span-1 md:col-span-1">
+          <div className="col-span-1">
             <h3 className="text-gray-900 font-medium mb-4">Quick Links</h3>
             <ul className="space-y-3">
               {quickLinks.map((link, index) => (
@@ -103,7 +89,7 @@ const Footer = () => {
             </ul>
           </div>
           
-          <div className="col-span-1 md:col-span-1">
+          <div className="col-span-1">
             <h3 className="text-gray-900 font-medium mb-4">Contact Us</h3>
             <ul className="space-y-3 text-sm">
               <li className="text-gray-600">
@@ -120,42 +106,9 @@ const Footer = () => {
               </li>
               <li className="text-gray-600">
                 <strong className="text-gray-900">Location:</strong><br />
-                New Delhi, India
+                Rajasthan, India
               </li>
             </ul>
-          </div>
-          
-          <div className="col-span-1 md:col-span-1">
-            <h3 className="text-gray-900 font-medium mb-4">Legal</h3>
-            <ul className="space-y-3 mb-6">
-              {legalLinks.map((link, index) => (
-                <li key={index}>
-                  <a 
-                    href={link.href} 
-                    className="text-gray-600 hover:text-teal-600 transition-colors duration-200 text-sm"
-                  >
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            
-            <div className="flex items-center">
-              <button
-                onClick={toggleDarkMode}
-                className="flex items-center justify-center rounded-full p-2 bg-gray-200 hover:bg-gray-300 transition-colors duration-200"
-                aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {isDarkMode ? (
-                  <HiOutlineSun className="w-5 h-5 text-teal-600" />
-                ) : (
-                  <HiOutlineMoon className="w-5 h-5 text-blue-600" />
-                )}
-              </button>
-              <span className="ml-2 text-gray-600 text-sm">
-                {isDarkMode ? "Light Mode" : "Dark Mode"}
-              </span>
-            </div>
           </div>
         </div>
         
@@ -172,4 +125,4 @@ const Footer = () => {
   );
 };
 
-export default Footer; 
+export default Footer;

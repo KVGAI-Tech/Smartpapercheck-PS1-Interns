@@ -145,13 +145,6 @@ const Testimonials = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <motion.button
-            className="bg-white border border-gray-200 hover:bg-gray-100 px-8 py-3 rounded-full text-gray-800 font-medium transition-colors duration-300 shadow-sm"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Read More Testimonials
-          </motion.button>
         </motion.div>
       </div>
     </section>

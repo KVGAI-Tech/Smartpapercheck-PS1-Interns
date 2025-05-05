@@ -21,12 +21,12 @@ const ContactForm = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
+    
     setTimeout(() => {
       setIsLoading(false);
       setIsSubmitted(true);
       
-      // Reset form after 5 seconds
+      
       setTimeout(() => {
         setIsSubmitted(false);
         setFormData({
@@ -205,7 +205,7 @@ const ContactForm = () => {
                   transition={{ duration: 0.2 }}
                 >
                   <img 
-                    src="/placeholder-732pxX732px.png" 
+                    src="../../../public/TLMS_20230629_1200x628-1.png" 
                     alt="Contact illustration" 
                     className="w-full h-auto rounded-lg mb-4"
                   />
