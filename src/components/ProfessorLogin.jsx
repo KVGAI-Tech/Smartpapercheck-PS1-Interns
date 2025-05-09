@@ -547,9 +547,6 @@ const handleSubmit = useCallback(async (e) => {
           </AnimatePresence>
         </div>
         
-        <div className="relative z-10 mt-6 text-center text-xs text-gray-500">
-          <p>© 2025 Smart QnA. All rights reserved.</p>
-        </div>
       </div>
 
       <AnimatePresence>

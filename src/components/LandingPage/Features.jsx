@@ -24,7 +24,7 @@ const FeatureCard = ({
 
   return (
     <motion.div
-      className="bg-white shadow-md border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300"
+      className="bg-white shadow-md border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300 h-full flex flex-col"
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -37,10 +37,10 @@ const FeatureCard = ({
         {icon}
       </div>
       <h3 className="text-xl font-medium mb-2 text-gray-900">{title}</h3>
-      <p className="text-gray-600 mb-4">{description}</p>
+      <p className="text-gray-600 mb-4 flex-grow min-h-[3rem]">{description}</p>
 
       {(imageSrc || hoverImageSrc) && (
-        <div className="relative h-40 mt-4 overflow-hidden rounded-lg">
+        <div className="relative h-40 mt-auto overflow-hidden rounded-lg">
           <motion.img
             src={isHovered ? hoverImageSrc : imageSrc}
             alt={title}

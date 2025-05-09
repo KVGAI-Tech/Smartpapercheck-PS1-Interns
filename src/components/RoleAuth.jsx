@@ -3,23 +3,58 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProfessorLogin from "./ProfessorLogin";
 import StudentLogin from "./StudentLogin";
 import { useAuth } from "./AuthContext";
+import { useNavigate } from "react-router-dom";
+
+const BackButton = () => {
+  const navigate = useNavigate();
+
+  return (
+    <motion.button
+      onClick={() => navigate("/")}
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      whileHover={{ 
+        scale: 1.05,
+        boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.3)"
+      }}
+      whileTap={{ scale: 0.95 }}
+      className="group fixed top-4 left-4 md:top-6 md:left-6 z-50 flex items-center gap-2 
+                px-5 py-3 rounded-full font-medium text-white shadow-lg
+                bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
+                hover:from-indigo-600 hover:via-purple-600 hover:to-blue-600"
+    >
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        fill="currentColor" 
+        className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1"
+      >
+        <path fillRule="evenodd" d="M7.28 7.72a.75.75 0 010 1.06l-2.47 2.47H21a.75.75 0 010 1.5H4.81l2.47 2.47a.75.75 0 11-1.06 1.06l-3.75-3.75a.75.75 0 010-1.06l3.75-3.75a.75.75 0 011.06 0z" clipRule="evenodd" />
+      </svg>
+      <span>Back to Home</span>
+    </motion.button>
+  );
+};
 
 const AnimatedBackground = () => {
   return (
     <div className="absolute inset-0 -z-10 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-purple-900/20 to-indigo-900/30"></div>
 
-      {[...Array(6)].map((_, i) => (
+      {[...Array(8)].map((_, i) => (
         <motion.div
           key={i}
           className="absolute rounded-full blur-3xl opacity-20"
           style={{
             background: `radial-gradient(circle, ${
-              i % 3 === 0
+              i % 4 === 0
                 ? "rgba(79, 70, 229, 0.8)"
-                : i % 3 === 1
+                : i % 4 === 1
                 ? "rgba(147, 51, 234, 0.8)"
-                : "rgba(59, 130, 246, 0.8)"
+                : i % 4 === 2
+                ? "rgba(59, 130, 246, 0.8)"
+                : "rgba(236, 72, 153, 0.8)"
             }, transparent)`,
             width: `${Math.random() * 30 + 15}rem`,
             height: `${Math.random() * 30 + 15}rem`,
@@ -86,6 +121,59 @@ const FloatingShapes = () => {
         scale: [1, 1.08, 1],
       },
     },
+    {
+      type: "diamond",
+      className:
+        "w-12 h-12 bg-pink-400/30 backdrop-blur-sm border border-pink-400/50",
+      style: { transform: "rotate(45deg)" },
+      animate: {
+        y: [-12, 12, -12],
+        x: [6, -6, 6],
+        rotate: [45, 55, 45],
+        scale: [1, 1.1, 1],
+      },
+    },
+    {
+      type: "hexagon",
+      className:
+        "w-14 h-12 bg-amber-400/30 backdrop-blur-sm border border-amber-400/50",
+      style: {
+        clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+      },
+      animate: {
+        y: [5, -5, 5],
+        x: [-7, 7, -7],
+        rotate: [0, 10, 0],
+        scale: [1, 0.95, 1],
+      },
+    },
+    {
+      type: "star",
+      className:
+        "w-10 h-10 bg-cyan-400/30 backdrop-blur-sm border border-cyan-400/50",
+      style: {
+        clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
+      },
+      animate: {
+        y: [-8, 8, -8],
+        rotate: [0, 15, 0],
+        scale: [1, 1.08, 1],
+      },
+    },
+    {
+      type: "wave",
+      className:
+        "w-16 h-8 bg-emerald-400/30 backdrop-blur-sm border border-emerald-400/50",
+      style: {
+        borderRadius: "50% 50% 50% 50% / 60% 60% 40% 40%",
+      },
+      animate: {
+        y: [0, -10, 0],
+        x: [5, -5, 5],
+        rotate: [0, -5, 0],
+        scale: [1, 1.05, 1],
+      },
+    },
   ];
 
   return (
@@ -95,7 +183,8 @@ const FloatingShapes = () => {
           key={index}
           className={`absolute ${shape.className}`}
           style={{
-            top: `${15 + index * 20}%`,
+            ...shape.style,
+            top: `${10 + index * 12}%`,
             left: index % 2 === 0 ? "10%" : "85%",
           }}
           animate={shape.animate}
@@ -112,7 +201,8 @@ const FloatingShapes = () => {
           key={`right-${index}`}
           className={`absolute ${shape.className}`}
           style={{
-            top: `${25 + index * 15}%`,
+            ...shape.style,
+            top: `${20 + index * 10}%`,
             right: index % 2 === 0 ? "18%" : "5%",
           }}
           animate={shape.animate}
@@ -163,7 +253,7 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
       textColor: "text-green-600",
       bgColor: "bg-green-50",
       borderColor: "border-green-500",
-      description: "Take exams, submit assignments, and track your progress",
+      description: "View enrolled courses, track results, and submit rechecks",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -298,9 +388,6 @@ const RoleAuth = () => {
     out: { opacity: 0, y: -20 },
   };
 
-  
-  
-
   const handleRoleSelect = (role, confirmed = false) => {
     try {
       if (!role) {
@@ -311,7 +398,6 @@ const RoleAuth = () => {
       setError(null);
       
       if (confirmed) {
-        
         setIsComponentTransitioning(true);
         
         setTimeout(() => {
@@ -330,7 +416,6 @@ const RoleAuth = () => {
 
   const handleBackToRoles = () => {
     try {
-      
       setIsComponentTransitioning(true);
       setTimeout(() => {
         setStep("select-role");
@@ -364,7 +449,6 @@ const RoleAuth = () => {
 
   const renderLoginForm = () => {
     try {
-      
       if (isComponentTransitioning) {
         return (
           <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md mx-auto border border-gray-200/50 relative overflow-hidden">
@@ -378,7 +462,6 @@ const RoleAuth = () => {
       if (!selectedRole || step !== "login") {
         throw new Error("Component not ready for rendering");
       }
-      
       
       try {
         switch (selectedRole) {
@@ -424,6 +507,7 @@ const RoleAuth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-10 relative">
+      <BackButton />
       <AnimatedBackground />
       <FloatingShapes />
       
