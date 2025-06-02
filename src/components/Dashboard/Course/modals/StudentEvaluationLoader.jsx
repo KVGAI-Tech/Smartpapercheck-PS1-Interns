@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   ChevronRight,
@@ -15,133 +15,18 @@ import {
   Hash,
   Award,
   ThumbsUp,
-  ThumbsDown,
   ZoomIn,
-  ZoomOut,
-  RefreshCw,
-  ExternalLink,
   Eye,
   EyeOff,
   Filter,
-  Clipboard,
-  Calculator,
   PieChart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { API_BASE_URL } from "../../../../BaseURL";
 import ExamEvaluationDetail from "./ExamEvaluationDetail";
 import ImageZoomModal from "./ImageZoomModal";
-
-const getSafeImageUrl = (url) => {
-  if (!url) return null;
-
-  if (
-    url.startsWith("data:") ||
-    url.startsWith("blob:") ||
-    url.startsWith("/api/placeholder")
-  ) {
-    return url;
-  }
-
-  if (url.toLowerCase().endsWith(".pdf")) {
-    return "/api/placeholder/800/1200";
-  }
-
-  if (url.includes("?")) {
-    return url;
-  } else {
-    return url;
-  }
-};
-
-const PageViewer = ({ url, onZoomIn, onZoomOut, onZoomReset, zoomLevel }) => {
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const handleError = () => {
-    console.error("Failed to load image:", url);
-    setError(true);
-    setLoading(false);
-  };
-
-  const handleLoad = () => {
-    setLoading(false);
-    setError(false);
-  };
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full bg-gray-800 text-white p-6 text-center">
-        <AlertCircle className="w-16 h-16 text-red-400 mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Unable to load image</h3>
-        <p className="text-gray-300 mb-6 max-w-md">
-          The image could not be loaded due to access restrictions or CORS
-          policy.
-        </p>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
-        >
-          <ExternalLink className="w-4 h-4" />
-          <span>Open in new window</span>
-        </a>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative flex items-center justify-center h-full w-full">
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-80 z-10">
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mb-4"></div>
-            <p className="text-white">Loading image...</p>
-          </div>
-        </div>
-      )}
-      <div
-        className="transition-transform duration-300 ease-out"
-        style={{ transform: `scale(${zoomLevel})` }}
-      >
-        <img
-          src={getSafeImageUrl(url)}
-          alt="Student Answer Sheet"
-          className="max-w-full object-contain shadow-2xl rounded-lg"
-          onError={handleError}
-          onLoad={handleLoad}
-        />
-      </div>
-
-      <div className="absolute bottom-6 right-6 flex bg-gray-900 bg-opacity-80 p-2 rounded-full shadow-xl">
-        <button
-          onClick={onZoomOut}
-          className="p-2 text-gray-200 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
-          title="Zoom out"
-          disabled={zoomLevel <= 0.5}
-        >
-          <ZoomOut className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onZoomReset}
-          className="p-2 text-gray-200 hover:text-white hover:bg-gray-700 rounded-full transition-colors mx-1"
-          title="Reset zoom"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onZoomIn}
-          className="p-2 text-gray-200 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
-          title="Zoom in"
-          disabled={zoomLevel >= 3}
-        >
-          <ZoomIn className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-  );
-};
+import { getSafeImageUrl } from "../../../../lib/utils";
+import { PageViewer } from "./PageViewer/PageViewer";
+import fetchStudentEvaluation from "../../../../lib/apis/fetchStudentEvaluation";
 
 const ScoreDisplay = ({ marks, maxMarks }) => {
   const percentage = Math.round((marks / maxMarks) * 100) || 0;
@@ -221,105 +106,17 @@ const StudentEvaluationLoader = ({
   };
 
   useEffect(() => {
-    const fetchStudentEvaluation = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/exams/${examId}/feedback/${enrollmentId}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              "Content-Type": "application/json",
-            },
-            mode: "cors",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch evaluation: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.code === 200) {
-          setStudentData(data.data);
-
-          if (data.data.pages && Array.isArray(data.data.pages)) {
-            const processedPages = data.data.pages.map((page) => ({
-              pageNumber: page.page_number,
-              totalPages: page.total_pages,
-              imageUrl: page.presigned_url,
-            }));
-            setAnswerScriptPages(processedPages);
-          }
-
-          const initialFeedback = {};
-          Object.entries(data.data.evaluations || {}).forEach(
-            ([qKey, qEval]) => {
-              initialFeedback[qKey] = {
-                overall: qEval.overall_feedback || "",
-                items:
-                  qEval.item_grades?.map((grade) => ({
-                    ...grade,
-                    editedFeedback: grade.feedback,
-                  })) || [],
-              };
-            }
-          );
-
-          setFeedbackEdits(initialFeedback);
-
-          await fetchQuestions();
-        } else {
-          throw new Error(data.message || "Failed to load student evaluation");
-        }
-      } catch (error) {
-        console.error("Error fetching student evaluation:", error);
-        setError(error.message || "Failed to load student evaluation");
-        onError(error.message || "Failed to load student evaluation");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchQuestions = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/exams/${examId}/question-answer`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              "Content-Type": "application/json",
-            },
-            mode: "cors",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch questions: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (
-          data.code === 200 &&
-          data.data &&
-          Array.isArray(data.data.questions)
-        ) {
-          setQuestions(data.data.questions);
-        } else {
-          throw new Error(data.message || "Failed to load questions");
-        }
-      } catch (error) {
-        console.error("Error fetching questions:", error);
-        onError(error.message || "Failed to load questions");
-      }
-    };
-
     if (examId && enrollmentId) {
-      fetchStudentEvaluation();
+      fetchStudentEvaluation(
+        examId,
+        enrollmentId,
+        setAnswerScriptPages,
+        setFeedbackEdits,
+        setError,
+        onError,
+        setLoading,
+        setQuestions
+      );
     } else {
       setError("Missing required exam ID or enrollment ID");
       setLoading(false);
