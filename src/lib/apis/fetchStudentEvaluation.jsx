@@ -10,7 +10,8 @@ export default function fetchStudentEvaluation(
   setError,
   onError,
   setLoading,
-  setQuestions
+  setQuestions,
+  setStudentData
 ) {
   const token = localStorage.getItem("accessToken");
   if (token) {
