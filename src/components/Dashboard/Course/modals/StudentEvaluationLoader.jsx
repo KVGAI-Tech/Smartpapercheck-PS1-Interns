@@ -1,32 +1,32 @@
-import { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertCircle,
   ArrowLeft,
-  ChevronRight,
-  ChevronLeft,
-  Download,
-  Share,
-  FileText,
-  MessageSquare,
+  Award,
   BarChart,
   CheckCircle,
-  AlertCircle,
-  User,
-  Mail,
-  Hash,
-  Award,
-  ThumbsUp,
-  ZoomIn,
+  ChevronLeft,
+  ChevronRight,
+  Download,
   Eye,
   EyeOff,
+  FileText,
   Filter,
+  Hash,
+  Mail,
+  MessageSquare,
   PieChart,
+  Share,
+  ThumbsUp,
+  User,
+  ZoomIn,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import fetchStudentEvaluation from "../../../../lib/apis/fetchStudentEvaluation";
+import { getSafeImageUrl } from "../../../../lib/utils";
 import ExamEvaluationDetail from "./ExamEvaluationDetail";
 import ImageZoomModal from "./ImageZoomModal";
-import { getSafeImageUrl } from "../../../../lib/utils";
 import { PageViewer } from "./PageViewer/PageViewer";
-import fetchStudentEvaluation from "../../../../lib/apis/fetchStudentEvaluation";
 
 const ScoreDisplay = ({ marks, maxMarks }) => {
   const percentage = Math.round((marks / maxMarks) * 100) || 0;
@@ -115,7 +115,8 @@ const StudentEvaluationLoader = ({
         setError,
         onError,
         setLoading,
-        setQuestions
+        setQuestions,
+        setStudentData
       );
     } else {
       setError("Missing required exam ID or enrollment ID");
