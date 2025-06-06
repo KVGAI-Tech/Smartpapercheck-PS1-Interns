@@ -30,7 +30,7 @@ export default function fetchStudentEvaluation(
           const processedPages = data.data.pages.map((page) => ({
             pageNumber: page.page_number,
             totalPages: page.total_pages,
-            imageUrl: page.presigned_url,
+            imageUrl: page.url,
           }));
           setAnswerScriptPages(processedPages);
         }

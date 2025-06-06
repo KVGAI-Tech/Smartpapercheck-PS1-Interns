@@ -1,34 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowLeft,
-  FileText,
-  Clock,
-  CheckCircle,
-  Eye,
-  History,
-  X,
   AlertTriangle,
-  PenTool,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  Save,
-  ThumbsUp,
-  ThumbsDown,
+  ArrowLeft,
+  Bookmark,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
-  MessageSquare,
-  List,
-  Bookmark,
+  Clock,
+  Eye,
+  FileText,
   GripVertical,
-  RefreshCw,
+  History,
   Info,
+  List,
   Lock,
+  MessageSquare,
+  PenTool,
+  RefreshCw,
+  RotateCw,
+  Save,
   Shield,
+  X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../BaseURL";
 
 const mockDocument = {
@@ -55,11 +53,8 @@ const mockDocument = {
 
 const STORAGE_KEY = "exam-viewer-annotations";
 
-
 const SecurityManager = {
-  
   screenshotDetectionMethods: {
-    
     keyboardScreenshot: (e) => {
       return (
         e.key === "PrintScreen" ||
@@ -67,150 +62,160 @@ const SecurityManager = {
         (e.metaKey && e.key === "p")
       );
     },
-    
+
     devTools: (e) => {
       return (
         (e.ctrlKey &&
           e.shiftKey &&
-          (e.key === "I" || e.key === "i" || e.key === "C" || e.key === "c" || e.key === "J" || e.key === "j")) ||
+          (e.key === "I" ||
+            e.key === "i" ||
+            e.key === "C" ||
+            e.key === "c" ||
+            e.key === "J" ||
+            e.key === "j")) ||
         (e.metaKey &&
           e.shiftKey &&
-          (e.key === "I" || e.key === "i" || e.key === "C" || e.key === "c" || e.key === "J" || e.key === "j"))
+          (e.key === "I" ||
+            e.key === "i" ||
+            e.key === "C" ||
+            e.key === "c" ||
+            e.key === "J" ||
+            e.key === "j"))
       );
     },
-    
+
     screenCapture: (e) => {
       return (
-        (e.ctrlKey && 
-          e.shiftKey && 
+        (e.ctrlKey &&
+          e.shiftKey &&
           (e.key === "4" || e.key === "$" || e.key === "5" || e.key === "%")) ||
         (e.metaKey &&
           e.shiftKey &&
-          (e.key === "3" || e.key === "#" || e.key === "4" || e.key === "$" || e.key === "5" || e.key === "%"))
+          (e.key === "3" ||
+            e.key === "#" ||
+            e.key === "4" ||
+            e.key === "$" ||
+            e.key === "5" ||
+            e.key === "%"))
       );
-    }
+    },
   },
 
-  
   generateWatermark: (studentInfo, pdfContainer) => {
     if (!studentInfo || !pdfContainer) return null;
-    
-    const watermarkContainer = document.createElement('div');
-    watermarkContainer.className = 'absolute inset-0 pointer-events-none select-none';
-    watermarkContainer.style.zIndex = '30';
-    watermarkContainer.style.overflow = 'hidden';
-    
-    
+
+    const watermarkContainer = document.createElement("div");
+    watermarkContainer.className =
+      "absolute inset-0 pointer-events-none select-none";
+    watermarkContainer.style.zIndex = "30";
+    watermarkContainer.style.overflow = "hidden";
+
     const watermarkText = `${studentInfo.name} (${studentInfo.roll_number}) - CONFIDENTIAL`;
-    const watermarkCount = 20; 
-    
+    const watermarkCount = 20;
+
     for (let i = 0; i < watermarkCount; i++) {
-      const watermark = document.createElement('div');
-      watermark.className = 'absolute select-none';
+      const watermark = document.createElement("div");
+      watermark.className = "absolute select-none";
       watermark.style.transform = `rotate(-30deg)`;
-      watermark.style.opacity = '0.12';
-      watermark.style.color = '#001a4d';
-      watermark.style.fontSize = '14px';
-      watermark.style.fontWeight = 'bold';
-      watermark.style.whiteSpace = 'nowrap';
-      watermark.style.top = `${5 + (i * 20)}%`;
+      watermark.style.opacity = "0.12";
+      watermark.style.color = "#001a4d";
+      watermark.style.fontSize = "14px";
+      watermark.style.fontWeight = "bold";
+      watermark.style.whiteSpace = "nowrap";
+      watermark.style.top = `${5 + i * 20}%`;
       watermark.style.left = `${(i % 2) * 20}%`;
-      watermark.style.fontFamily = 'Arial, sans-serif';
+      watermark.style.fontFamily = "Arial, sans-serif";
       watermark.textContent = watermarkText;
-      
+
       watermarkContainer.appendChild(watermark);
     }
-    
+
     return watermarkContainer;
   },
-  
-  
+
   applySecurityFeatures: (pdfContainer, studentInfo) => {
     if (!pdfContainer) return;
-    
-    
+
     if (studentInfo) {
-      const watermark = SecurityManager.generateWatermark(studentInfo, pdfContainer);
+      const watermark = SecurityManager.generateWatermark(
+        studentInfo,
+        pdfContainer
+      );
       if (watermark) {
         pdfContainer.appendChild(watermark);
       }
     }
-    
-    
-    pdfContainer.addEventListener('contextmenu', (e) => {
+
+    pdfContainer.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       return false;
     });
-    
-    
-    pdfContainer.addEventListener('selectstart', (e) => {
-      if (e.target.closest('.pdf-content-container')) {
+
+    pdfContainer.addEventListener("selectstart", (e) => {
+      if (e.target.closest(".pdf-content-container")) {
         e.preventDefault();
         return false;
       }
     });
-    
-    
+
     const rotateWatermarks = () => {
-      const watermarks = pdfContainer.querySelectorAll('.absolute.select-none');
-      watermarks.forEach(watermark => {
-        const currentRotation = parseInt(watermark.style.transform.replace(/[^\d-]/g, '')) || -30;
+      const watermarks = pdfContainer.querySelectorAll(".absolute.select-none");
+      watermarks.forEach((watermark) => {
+        const currentRotation =
+          parseInt(watermark.style.transform.replace(/[^\d-]/g, "")) || -30;
         const newRotation = currentRotation === -30 ? -35 : -30;
         watermark.style.transform = `rotate(${newRotation}deg)`;
-        
-        
+
         const currentOpacity = parseFloat(watermark.style.opacity) || 0.12;
-        watermark.style.opacity = (currentOpacity === 0.12) ? '0.14' : '0.12';
+        watermark.style.opacity = currentOpacity === 0.12 ? "0.14" : "0.12";
       });
     };
-    
-    
+
     const intervalId = setInterval(rotateWatermarks, 2500);
-    
-    
+
     return () => {
       clearInterval(intervalId);
     };
-  }
+  },
 };
 
 const examsApi = {
   submitRecheckRequest: async (examId, enrollmentId, requestData) => {
-    const token = localStorage.getItem('accessToken');
-    
+    const token = localStorage.getItem("accessToken");
+
     if (!token) {
-      throw new Error('Authentication token not found');
+      throw new Error("Authentication token not found");
     }
-    
+
     return axios.post(
       `${API_BASE_URL}/exams/${examId}/enrollments/${enrollmentId}/recheck`,
       requestData,
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
     );
   },
-  
+
   getRecheckRequests: async (examId, enrollmentId) => {
-    const token = localStorage.getItem('accessToken');
-    
+    const token = localStorage.getItem("accessToken");
+
     if (!token) {
-      throw new Error('Authentication token not found');
+      throw new Error("Authentication token not found");
     }
-    
+
     return axios.get(
       `${API_BASE_URL}/exams/${examId}/enrollments/${enrollmentId}/recheck-requests`,
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
     );
-  }
+  },
 };
 
 const Toast = ({ message, type, visible, onClose }) => {
@@ -265,10 +270,12 @@ const PDFViewer = ({
   const contentRef = useRef(null);
   const pdfContainerRef = useRef(null);
 
-  
   useEffect(() => {
     if (pdfContainerRef.current && studentInfo) {
-      const cleanup = SecurityManager.applySecurityFeatures(pdfContainerRef.current, studentInfo);
+      const cleanup = SecurityManager.applySecurityFeatures(
+        pdfContainerRef.current,
+        studentInfo
+      );
       return cleanup;
     }
   }, [studentInfo, pdfContainerRef.current, pageNumber]);
@@ -302,41 +309,41 @@ const PDFViewer = ({
     setUseFallbackMode(true);
   }
 
-  
   const renderSelectedAnnotations = () => {
     if (!selectedAnnotations || selectedAnnotations.length === 0) return null;
 
-    return selectedAnnotations.filter(anno => anno.pageNumber === pageNumber).map((anno, index) => {
-      
-      const coordinates = anno.coordinates || {
-        startX: anno.startX,
-        startY: anno.startY,
-        endX: anno.endX,
-        endY: anno.endY
-      };
+    return selectedAnnotations
+      .filter((anno) => anno.pageNumber === pageNumber)
+      .map((anno, index) => {
+        const coordinates = anno.coordinates || {
+          startX: anno.startX,
+          startY: anno.startY,
+          endX: anno.endX,
+          endY: anno.endY,
+        };
 
-      return (
-        <div
-          key={`selected-anno-${index}`}
-          className="absolute border-2 border-yellow-500 bg-yellow-100/40 z-30 pointer-events-none"
-          style={{
-            left: `${coordinates.startX}%`,
-            top: `${coordinates.startY}%`,
-            width: `${Math.abs(coordinates.endX - coordinates.startX)}%`,
-            height: `${Math.abs(coordinates.endY - coordinates.startY)}%`,
-          }}
-        >
-          <div className="absolute -top-7 left-0 bg-yellow-50 text-xs px-2 py-1 rounded shadow-sm border border-yellow-200 flex items-center gap-1 z-40">
-            <span className="bg-yellow-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
-              {anno.questionNumber}
-            </span>
-            <span className="font-medium text-yellow-700">
-              +{anno.expectedMarks - anno.currentMarks}
-            </span>
+        return (
+          <div
+            key={`selected-anno-${index}`}
+            className="absolute border-2 border-yellow-500 bg-yellow-100/40 z-30 pointer-events-none"
+            style={{
+              left: `${coordinates.startX}%`,
+              top: `${coordinates.startY}%`,
+              width: `${Math.abs(coordinates.endX - coordinates.startX)}%`,
+              height: `${Math.abs(coordinates.endY - coordinates.startY)}%`,
+            }}
+          >
+            <div className="absolute -top-7 left-0 bg-yellow-50 text-xs px-2 py-1 rounded shadow-sm border border-yellow-200 flex items-center gap-1 z-40">
+              <span className="bg-yellow-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
+                {anno.questionNumber}
+              </span>
+              <span className="font-medium text-yellow-700">
+                +{anno.expectedMarks - anno.currentMarks}
+              </span>
+            </div>
           </div>
-        </div>
-      );
-    });
+        );
+      });
   };
 
   return (
@@ -350,7 +357,7 @@ const PDFViewer = ({
             transformOrigin: "center",
             transition: "transform 0.3s ease",
           }}
-          data-zoom-level={zoomLevel} 
+          data-zoom-level={zoomLevel}
         >
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
@@ -372,9 +379,9 @@ const PDFViewer = ({
             <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md w-full max-w-4xl mx-auto">
               {imageUrl ? (
                 <div className="relative w-full pdf-content-container">
-                  <img 
-                    src={imageUrl} 
-                    alt={`Answer sheet page ${pageNumber}`} 
+                  <img
+                    src={imageUrl}
+                    alt={`Answer sheet page ${pageNumber}`}
                     className="w-full h-auto rounded-md shadow-sm object-contain"
                     style={{ maxHeight: "800px" }}
                   />
@@ -390,7 +397,8 @@ const PDFViewer = ({
                     PDF Content
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    PDF viewer is using fallback mode due to security restrictions.
+                    PDF viewer is using fallback mode due to security
+                    restrictions.
                   </p>
                   <div className="bg-gray-100 rounded-lg p-8 w-full min-h-[600px] flex items-center justify-center">
                     <p className="text-center text-gray-500">
@@ -474,14 +482,20 @@ const PDFViewer = ({
   );
 };
 
-const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enrollmentId }) => {
+const RecheckModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  annotations,
+  examData,
+  enrollmentId,
+}) => {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   if (!isOpen) return null;
 
-  
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -495,7 +509,7 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
         grievance: anno.metadata.grievance,
         currentMarks: anno.metadata.actualMarks,
         expectedMarks: anno.metadata.expectedMarks,
-        
+
         coordinates: {
           startX: anno.startX,
           startY: anno.startY,
@@ -506,26 +520,38 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
     };
 
     try {
-      examsApi.submitRecheckRequest(examData.id, enrollmentId, requestData)
-        .then(response => {
-          if (response.data && (response.data.code === 200 || response.data.code === 201)) {
+      examsApi
+        .submitRecheckRequest(examData.id, enrollmentId, requestData)
+        .then((response) => {
+          if (
+            response.data &&
+            (response.data.code === 200 || response.data.code === 201)
+          ) {
             onSubmit({
               requestPayload: requestData,
-              apiResponse: response.data
+              apiResponse: response.data,
             });
             onClose();
           } else {
-            setError(response.data?.message || "Failed to submit recheck request");
+            setError(
+              response.data?.message || "Failed to submit recheck request"
+            );
           }
         })
-        .catch(err => {
-          setError(err.response?.data?.message || err.message || "An error occurred while submitting the request");
+        .catch((err) => {
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "An error occurred while submitting the request"
+          );
         })
         .finally(() => {
           setSubmitting(false);
         });
     } catch (error) {
-      setError("Failed to submit request: " + (error.message || "Unknown error"));
+      setError(
+        "Failed to submit request: " + (error.message || "Unknown error")
+      );
       setSubmitting(false);
     }
   };
@@ -563,9 +589,14 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
           </div>
 
           <div className="mb-5 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-            <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
+            <AlertTriangle
+              className="text-yellow-600 flex-shrink-0 mt-0.5"
+              size={18}
+            />
             <div className="text-sm text-yellow-700">
-              <strong className="font-bold">Important:</strong> You can submit a recheck request only once per exam. Please ensure all your annotations are accurate before submitting.
+              <strong className="font-bold">Important:</strong> You can submit a
+              recheck request only once per exam. Please ensure all your
+              annotations are accurate before submitting.
             </div>
           </div>
 
@@ -698,7 +729,12 @@ const RecheckModal = ({ isOpen, onClose, onSubmit, annotations, examData, enroll
   );
 };
 
-const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }) => {
+const AnnotationTool = ({
+  onAnnotationChange,
+  currentPage,
+  examData,
+  zoomLevel,
+}) => {
   const [annotations, setAnnotations] = useState(() => {
     try {
       const savedAnnotations = localStorage.getItem(STORAGE_KEY);
@@ -718,8 +754,11 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
     expectedMarks: 0,
     actualMarks: 0,
   });
-  const [forceUpdate, setForceUpdate] = useState(false); 
-  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [forceUpdate, setForceUpdate] = useState(false);
+  const [containerDimensions, setContainerDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -728,21 +767,21 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
     if (containerRef.current) {
       const { width, height } = containerRef.current.getBoundingClientRect();
       setContainerDimensions({ width, height });
-      setForceUpdate(prev => !prev);
+      setForceUpdate((prev) => !prev);
     }
   }, []);
-  
+
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     updateContainerDimensions();
-    
+
     const resizeObserver = new ResizeObserver(() => {
       updateContainerDimensions();
     });
-    
+
     resizeObserver.observe(containerRef.current);
-    
+
     return () => {
       if (containerRef.current) {
         resizeObserver.unobserve(containerRef.current);
@@ -750,7 +789,6 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
     };
   }, [updateContainerDimensions]);
 
-  
   useEffect(() => {
     updateContainerDimensions();
   }, [zoomLevel, updateContainerDimensions]);
@@ -765,15 +803,12 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
     onAnnotationChange(annotations);
   }, [annotations, onAnnotationChange]);
 
-  
-  
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    
-    
+
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
@@ -801,8 +836,7 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    
-    
+
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
@@ -818,7 +852,7 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
 
     if (
       currentAnnotation &&
-      Math.abs(currentAnnotation.endX - currentAnnotation.startX) > 1 && 
+      Math.abs(currentAnnotation.endX - currentAnnotation.startX) > 1 &&
       Math.abs(currentAnnotation.endY - currentAnnotation.startY) > 1
     ) {
       setSelectedAnnotation(currentAnnotation);
@@ -870,16 +904,14 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
   );
 
   useEffect(() => {
-    const pdfContainer = document.querySelector('.pdf-content-container');
+    const pdfContainer = document.querySelector(".pdf-content-container");
     if (pdfContainer && containerRef.current) {
-      containerRef.current.style.width = pdfContainer.offsetWidth + 'px';
-      containerRef.current.style.height = pdfContainer.offsetHeight + 'px';
+      containerRef.current.style.width = pdfContainer.offsetWidth + "px";
+      containerRef.current.style.height = pdfContainer.offsetHeight + "px";
     }
   }, [forceUpdate]);
 
-  
   const getAnnotationStyle = (anno) => {
-    
     return {
       left: `${Math.min(anno.startX, anno.endX)}%`,
       top: `${Math.min(anno.startY, anno.endY)}%`,
@@ -889,13 +921,13 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
   };
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="absolute inset-0 pointer-events-auto"
-      style={{ 
-        transform: `scale(${zoomLevel})`, 
-        transformOrigin: 'center',
-        transition: 'transform 0.3s ease'
+      style={{
+        transform: `scale(${zoomLevel})`,
+        transformOrigin: "center",
+        transition: "transform 0.3s ease",
       }}
     >
       <div
@@ -994,12 +1026,16 @@ const AnnotationTool = ({ onAnnotationChange, currentPage, examData, zoomLevel }
                   }
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-blue-50/50"
                 >
-                  {examData && examData.questions && examData.questions.map((q) => (
-                    <option key={q.question_number} value={q.question_number}>
-                      Question {q.question_number}
-                    </option>
-                  ))}
-                  {(!examData || !examData.questions || examData.questions.length === 0) && (
+                  {examData &&
+                    examData.questions &&
+                    examData.questions.map((q) => (
+                      <option key={q.question_number} value={q.question_number}>
+                        Question {q.question_number}
+                      </option>
+                    ))}
+                  {(!examData ||
+                    !examData.questions ||
+                    examData.questions.length === 0) && (
                     <option value={1}>Question 1</option>
                   )}
                 </select>
@@ -1206,7 +1242,9 @@ const ErrorDisplay = ({ message, onRetry, onBack }) => {
     <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
       <div className="text-center">
         <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Exam</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          Error Loading Exam
+        </h2>
         <p className="text-gray-600 mb-6">{message}</p>
         <div className="flex space-x-3 justify-center">
           {onRetry && (
@@ -1296,36 +1334,50 @@ const RecheckRequestHistory = ({ requests, loading, error, onViewRequest }) => {
                 Submitted on: {new Date(request.created_at).toLocaleString()}
               </p>
             </div>
-            <div className={`px-2 py-1 rounded-full text-xs font-medium 
-              ${request.status === 'approved' ? 'bg-green-100 text-green-700' : 
-               request.status === 'rejected' ? 'bg-red-100 text-red-700' : 
-               'bg-yellow-100 text-yellow-700'}`}>
+            <div
+              className={`px-2 py-1 rounded-full text-xs font-medium 
+              ${
+                request.status === "approved"
+                  ? "bg-green-100 text-green-700"
+                  : request.status === "rejected"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-yellow-100 text-yellow-700"
+              }`}
+            >
               {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
             </div>
           </div>
-          
+
           <p className="text-sm text-gray-700 mb-4 bg-gray-50 p-3 rounded-lg">
             {request.reason}
           </p>
-          
+
           <div>
-            <h5 className="text-xs font-medium text-gray-700 mb-2">Annotations ({request.annotations?.length || 0})</h5>
+            <h5 className="text-xs font-medium text-gray-700 mb-2">
+              Annotations ({request.annotations?.length || 0})
+            </h5>
             <div className="space-y-2 max-h-48 overflow-auto">
-              {request.annotations && request.annotations.map((anno, idx) => (
-                <div key={idx} className="p-2 border border-blue-100 rounded-md bg-blue-50 text-xs">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-medium">Question {anno.questionNumber}</span>
-                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                      +{anno.expectedMarks - anno.currentMarks} marks
-                    </span>
+              {request.annotations &&
+                request.annotations.map((anno, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2 border border-blue-100 rounded-md bg-blue-50 text-xs"
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-medium">
+                        Question {anno.questionNumber}
+                      </span>
+                      <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                        +{anno.expectedMarks - anno.currentMarks} marks
+                      </span>
+                    </div>
+                    <p className="text-gray-600 mb-1">{anno.grievance}</p>
+                    <div className="flex justify-between text-gray-500">
+                      <span>Current: {anno.currentMarks}</span>
+                      <span>Expected: {anno.expectedMarks}</span>
+                    </div>
                   </div>
-                  <p className="text-gray-600 mb-1">{anno.grievance}</p>
-                  <div className="flex justify-between text-gray-500">
-                    <span>Current: {anno.currentMarks}</span>
-                    <span>Expected: {anno.expectedMarks}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </motion.div>
@@ -1334,15 +1386,13 @@ const RecheckRequestHistory = ({ requests, loading, error, onViewRequest }) => {
   );
 };
 
-
 const ScreenshotProtection = ({ active, studentInfo }) => {
   if (!active) return null;
-  
-  
-  const watermarkText = studentInfo ? 
-    `${studentInfo.name} (${studentInfo.roll_number}) - SCREENSHOT DETECTED - UNAUTHORIZED` : 
-    'SCREENSHOT DETECTED - UNAUTHORIZED';
-  
+
+  const watermarkText = studentInfo
+    ? `${studentInfo.name} (${studentInfo.roll_number}) - SCREENSHOT DETECTED - UNAUTHORIZED`
+    : "SCREENSHOT DETECTED - UNAUTHORIZED";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1353,7 +1403,7 @@ const ScreenshotProtection = ({ active, studentInfo }) => {
     >
       <div className="absolute inset-0 overflow-hidden">
         {Array.from({ length: 50 }).map((_, index) => (
-          <div 
+          <div
             key={index}
             className="absolute text-red-500 text-opacity-80 font-bold text-xl select-none"
             style={{
@@ -1378,13 +1428,11 @@ const ScreenshotProtection = ({ active, studentInfo }) => {
 };
 
 const StudentExamDetails = ({ isHistory = false }) => {
-  
   const { courseId, id: examId } = useParams();
   const [searchParams] = useSearchParams();
-  const enrollmentId = searchParams.get('enrollment_id');
+  const enrollmentId = searchParams.get("enrollment_id");
   const navigate = useNavigate();
 
-  
   const [currentTab, setCurrentTab] = useState("overview");
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -1421,36 +1469,35 @@ const StudentExamDetails = ({ isHistory = false }) => {
   const splitDividerRef = useRef(null);
   const pdfContainerRef = useRef(null);
 
-  
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing || !mainContentRef.current) return;
-      
+
       const container = mainContentRef.current;
       const containerRect = container.getBoundingClientRect();
-      const newPosition = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-      
-      
+      const newPosition =
+        ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
       const limitedPosition = Math.min(Math.max(newPosition, 20), 80);
       setSplitPosition(limitedPosition);
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
+      document.body.style.cursor = "default";
+      document.body.style.userSelect = "auto";
     };
 
     if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'ew-resize';
-      document.body.style.userSelect = 'none';
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "ew-resize";
+      document.body.style.userSelect = "none";
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isResizing]);
 
@@ -1459,27 +1506,22 @@ const StudentExamDetails = ({ isHistory = false }) => {
     setIsResizing(true);
   };
 
-  
   const handleViewRecheckRequest = (request) => {
     setSelectedRecheckRequest(request);
-    
+
     if (request.annotations && request.annotations.length > 0) {
-      
       if (request.annotations[0].pageNumber) {
         setPageNumber(request.annotations[0].pageNumber);
       }
-      
-      
+
       setSelectedAnnotations(request.annotations);
-      
-      
+
       if (currentTab !== "history") {
         setCurrentTab("history");
       }
     }
   };
 
-  
   useEffect(() => {
     if (currentTab !== "history") {
       setSelectedAnnotations([]);
@@ -1487,209 +1529,199 @@ const StudentExamDetails = ({ isHistory = false }) => {
     }
   }, [currentTab]);
 
-  
   const fetchRecheckRequests = async () => {
     if (!examId || !enrollmentId) return;
-    
+
     setLoadingRecheckRequests(true);
     setRecheckRequestsError(null);
-    
+
     try {
       const response = await examsApi.getRecheckRequests(examId, enrollmentId);
-      
+
       if (response.data && response.data.code === 200) {
         const requests = response.data.data || [];
         setRecheckRequests(requests);
-        
-        
+
         if (requests.length > 0) {
-          const latestRequest = requests[0]; 
+          const latestRequest = requests[0];
           setRequestStatus({
             id: latestRequest._id,
             timestamp: new Date(latestRequest.created_at).toLocaleString(),
-            status: latestRequest.status
+            status: latestRequest.status,
           });
-          
-          
+
           setHasSubmittedRecheck(true);
         }
       } else {
-        throw new Error(response.data?.message || 'Failed to fetch recheck requests');
+        throw new Error(
+          response.data?.message || "Failed to fetch recheck requests"
+        );
       }
     } catch (err) {
-      console.error('Error fetching recheck requests:', err);
-      setRecheckRequestsError(err.message || 'Failed to load recheck requests');
+      console.error("Error fetching recheck requests:", err);
+      setRecheckRequestsError(err.message || "Failed to load recheck requests");
     } finally {
       setLoadingRecheckRequests(false);
     }
   };
 
-  
   useEffect(() => {
     const fetchExamData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const token = localStorage.getItem('accessToken');
-        
+        const token = localStorage.getItem("accessToken");
+
         if (!token) {
-          throw new Error('Authentication token not found');
+          throw new Error("Authentication token not found");
         }
-        
-        
+
         const response = await axios.get(
           `${API_BASE_URL}/exams/${examId}/answer-sheets/${enrollmentId}`,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           }
         );
-        
-        
+
         if (response && response.data && response.data.code === 200) {
-          
           const apiData = response.data.data;
-          console.log('API Response:', apiData);
-          
-          
+          console.log("API Response:", apiData);
+
           const questions = [];
           const detailedFeedbackData = {};
-          
+
           if (apiData.evaluations) {
             Object.keys(apiData.evaluations).forEach((key) => {
               const questionData = apiData.evaluations[key];
-              
-              const questionNumber = parseInt(key.replace(/\D/g, ''));
-              
+
+              const questionNumber = parseInt(key.replace(/\D/g, ""));
+
               if (isNaN(questionNumber)) {
-                console.warn(`Could not parse question number from key: ${key}`);
+                console.warn(
+                  `Could not parse question number from key: ${key}`
+                );
                 return;
               }
-              
-              
+
               const totalMarks = parseFloat(questionData.total_marks) || 0;
-              
-              
+
               questions.push({
                 question_number: questionNumber,
-                question_text: apiData.problem_feedback?.[key] || `Question ${questionNumber}`,
-                max_marks: 10, 
+                question_text:
+                  apiData.problem_feedback?.[key] ||
+                  `Question ${questionNumber}`,
+                max_marks: 10,
                 marks_obtained: totalMarks,
-                feedback: questionData.overall_feedback || ""
+                feedback: questionData.overall_feedback || "",
               });
-              
-              
-              if (questionData.item_grades && questionData.item_grades.length > 0) {
+
+              if (
+                questionData.item_grades &&
+                questionData.item_grades.length > 0
+              ) {
                 detailedFeedbackData[questionNumber] = {
                   items: questionData.item_grades,
                   overall: questionData.overall_feedback,
-                  improvement: questionData.improvement_suggestions
+                  improvement: questionData.improvement_suggestions,
                 };
               }
             });
           }
-          
-          
+
           questions.sort((a, b) => a.question_number - b.question_number);
 
-          
           setDetailedFeedback(detailedFeedbackData);
 
-          
           const transformedData = {
             id: parseInt(examId),
             title: apiData.exam_name || "Exam",
             type: "Exam",
-            date: new Date(apiData.upload_time || new Date()).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
+            date: new Date(
+              apiData.upload_time || new Date()
+            ).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
             }),
             score: questions.reduce((sum, q) => sum + q.marks_obtained, 0),
-            maxScore: questions.length * 10, 
+            maxScore: questions.length * 10,
             status: apiData.evaluation_status || "pending",
             questions: questions,
-            student: apiData.student || null
+            student: apiData.student || null,
           };
-          
+
           setExamData(transformedData);
-          
-          
+
           if (transformedData.maxScore > 0) {
-            setProgressPercentage((transformedData.score / transformedData.maxScore) * 100);
+            setProgressPercentage(
+              (transformedData.score / transformedData.maxScore) * 100
+            );
           }
-          
-          
+
           if (apiData.answer_sheet_url) {
             setPdfFile(apiData.answer_sheet_url);
           }
-          
-          
+
           if (apiData.pages && apiData.pages.length > 0) {
             setTotalPages(apiData.pages.length);
-            
-            setPdfImageUrl(apiData.pages[0].presigned_url);
+
+            setPdfImageUrl(apiData.pages[0].url);
           }
-          
-          
+
           if (transformedData.questions.length > 0) {
             setAnnotationsByQuestion(
-              transformedData.questions.map(question => ({
+              transformedData.questions.map((question) => ({
                 questionNumber: question.question_number,
-                count: 0
+                count: 0,
               }))
             );
           }
-          
-          
+
           fetchRecheckRequests();
-          
         } else {
-          throw new Error(response?.data?.message || 'Failed to load exam data');
+          throw new Error(
+            response?.data?.message || "Failed to load exam data"
+          );
         }
       } catch (err) {
-        console.error('Error fetching exam data:', err);
+        console.error("Error fetching exam data:", err);
         setError(err.message || "Failed to load exam data. Please try again.");
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchExamData();
-    
+
     return () => {
-      
       if (pdfFile && pdfFile.startsWith("blob:")) {
         URL.revokeObjectURL(pdfFile);
       }
     };
   }, [examId, enrollmentId]);
 
-  
   useEffect(() => {
     if (examData && examData.questions) {
       const questionCounts = {};
-      
-      
-      annotations.forEach(anno => {
+
+      annotations.forEach((anno) => {
         const qNum = anno.metadata.questionNumber;
         questionCounts[qNum] = (questionCounts[qNum] || 0) + 1;
       });
-      
-      
-      const updatedAnnotationsByQuestion = examData.questions.map(q => ({
+
+      const updatedAnnotationsByQuestion = examData.questions.map((q) => ({
         questionNumber: q.question_number,
-        count: questionCounts[q.question_number] || 0
+        count: questionCounts[q.question_number] || 0,
       }));
-      
+
       setAnnotationsByQuestion(updatedAnnotationsByQuestion);
     }
   }, [annotations, examData]);
 
-  
   useEffect(() => {
     if (!totalPages || totalPages === 1) {
       if (!pdfImageUrl && !pdfFile) {
@@ -1698,33 +1730,30 @@ const StudentExamDetails = ({ isHistory = false }) => {
     }
   }, [totalPages, pdfImageUrl, pdfFile]);
 
-  
   useEffect(() => {
     const handleScreenshotAttempt = (e) => {
-      
-      const isScreenshot = 
+      const isScreenshot =
         SecurityManager.screenshotDetectionMethods.keyboardScreenshot(e) ||
         SecurityManager.screenshotDetectionMethods.devTools(e) ||
         SecurityManager.screenshotDetectionMethods.screenCapture(e);
-      
+
       if (isScreenshot) {
         setIsScreenshotAttempted(true);
-        
-        
+
         setTimeout(() => {
           setIsScreenshotAttempted(false);
         }, 3000);
       }
     };
 
-    
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        
+      if (document.visibilityState === "hidden") {
         const now = new Date().getTime();
-        
-        
-        if (!window._lastVisibilityChange || now - window._lastVisibilityChange > 5000) {
+
+        if (
+          !window._lastVisibilityChange ||
+          now - window._lastVisibilityChange > 5000
+        ) {
           window._lastVisibilityChange = now;
         }
       }
@@ -1732,14 +1761,13 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
     document.addEventListener("keydown", handleScreenshotAttempt);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener("keydown", handleScreenshotAttempt);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
-  
   useEffect(() => {
     const handleResize = () => {
       if (mainContentRef.current) {
@@ -1758,14 +1786,12 @@ const StudentExamDetails = ({ isHistory = false }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  
   useEffect(() => {
     if (currentTab === "recheck" && !showAnnotation) {
       setShowAnnotation(true);
     }
   }, [currentTab, showAnnotation]);
 
-  
   useEffect(() => {
     try {
       const savedAnnotations = localStorage.getItem(STORAGE_KEY);
@@ -1776,7 +1802,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
       console.error("Error loading annotations from localStorage:", error);
     }
   }, []);
-  
+
   const handleAnnotationChange = (newAnnotations) => {
     setAnnotations(newAnnotations);
 
@@ -1789,15 +1815,13 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
   const handleRecheckSubmit = (data) => {
     console.log("Recheck data submitted:", data);
-    
-    
+
     setRequestStatus({
       id: data.apiResponse?.data?._id || Math.floor(Math.random() * 10000),
       timestamp: new Date().toLocaleString(),
       status: "pending",
     });
 
-    
     setHasSubmittedRecheck(true);
 
     setToast({
@@ -1805,8 +1829,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
       message: "Recheck request submitted successfully",
       type: "success",
     });
-    
-    
+
     fetchRecheckRequests();
   };
 
@@ -1835,12 +1858,11 @@ const StudentExamDetails = ({ isHistory = false }) => {
   const handleTotalPagesChange = (numPages) => {
     setTotalPages(numPages);
   };
-  
+
   const handleRetry = () => {
     window.location.reload();
   };
-  
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1849,11 +1871,10 @@ const StudentExamDetails = ({ isHistory = false }) => {
     );
   }
 
-  
   if (error && !examData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <ErrorDisplay 
+        <ErrorDisplay
           message={error}
           onRetry={handleRetry}
           onBack={() => navigate(`/student/evaluations/${courseId}`)}
@@ -1862,11 +1883,10 @@ const StudentExamDetails = ({ isHistory = false }) => {
     );
   }
 
-  
   if (!examData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <ErrorDisplay 
+        <ErrorDisplay
           message="No exam data available. The requested exam could not be found or has not been evaluated yet."
           onBack={() => navigate(`/student/evaluations/${courseId}`)}
         />
@@ -1876,8 +1896,8 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col relative">
-      <ScreenshotProtection 
-        active={isScreenshotAttempted} 
+      <ScreenshotProtection
+        active={isScreenshotAttempted}
         studentInfo={examData.student}
       />
 
@@ -1895,7 +1915,11 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
             <div>
               <h1 className="text-xl font-bold text-gray-900">
-                {examData.student && <span>{examData.student.name} ({examData.student.roll_number})</span>}
+                {examData.student && (
+                  <span>
+                    {examData.student.name} ({examData.student.roll_number})
+                  </span>
+                )}
               </h1>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <span>{examData.date}</span>
@@ -2108,7 +2132,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                 )}
               </motion.button>
             )}
-            
+
             {recheckRequests.length > 0 && (
               <motion.button
                 whileHover={{ scale: 1.03 }}
@@ -2140,11 +2164,11 @@ const StudentExamDetails = ({ isHistory = false }) => {
         ref={mainContentRef}
         className="flex-1 flex flex-col md:flex-row overflow-hidden"
       >
-        <div 
+        <div
           className="flex flex-col"
-          style={{ 
-            width: window.innerWidth >= 768 ? `${splitPosition}%` : '100%',
-            height: window.innerWidth >= 768 ? '100%' : '50%' 
+          style={{
+            width: window.innerWidth >= 768 ? `${splitPosition}%` : "100%",
+            height: window.innerWidth >= 768 ? "100%" : "50%",
           }}
         >
           <div className="bg-gray-100 p-3 flex items-center justify-between border-b border-gray-200">
@@ -2204,7 +2228,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
               />
             </motion.div>
 
-            {showAnnotation && currentTab !== 'history' && (
+            {showAnnotation && currentTab !== "history" && (
               <div className="absolute inset-0 bg-transparent">
                 <AnnotationTool
                   onAnnotationChange={handleAnnotationChange}
@@ -2218,7 +2242,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
         </div>
 
         {window.innerWidth >= 768 && (
-          <div 
+          <div
             ref={splitDividerRef}
             className="relative cursor-ew-resize w-1 bg-gray-300 hover:bg-blue-500 active:bg-blue-600 flex items-center justify-center transition-colors"
             onMouseDown={handleMouseDown}
@@ -2229,11 +2253,12 @@ const StudentExamDetails = ({ isHistory = false }) => {
           </div>
         )}
 
-        <div 
+        <div
           className="bg-white border-l border-gray-200 flex flex-col overflow-hidden"
-          style={{ 
-            width: window.innerWidth >= 768 ? `${100 - splitPosition}%` : '100%',
-            height: window.innerWidth >= 768 ? '100%' : '50%' 
+          style={{
+            width:
+              window.innerWidth >= 768 ? `${100 - splitPosition}%` : "100%",
+            height: window.innerWidth >= 768 ? "100%" : "50%",
           }}
         >
           <div className="flex-1 overflow-auto p-4 md:p-6">
@@ -2270,7 +2295,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                       className="bg-white rounded-lg shadow p-4 border border-gray-100"
                     >
                       <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-sm font-medium text-gray-700">
+                        <h3 className="text-sm font-medium text-gray-700">
                           Overall Score
                         </h3>
                         <div
@@ -2333,8 +2358,10 @@ const StudentExamDetails = ({ isHistory = false }) => {
                         </div>
                       </div>
                       <div className="text-2xl font-bold">
-                        {examData.questions.length > 0 
-                          ? (examData.score / examData.questions.length).toFixed(1)
+                        {examData.questions.length > 0
+                          ? (
+                              examData.score / examData.questions.length
+                            ).toFixed(1)
                           : "0.0"}
                       </div>
                     </motion.div>
@@ -2504,9 +2531,10 @@ const StudentExamDetails = ({ isHistory = false }) => {
                       className="flex items-center gap-2"
                     >
                       <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
-                        {examData.questions[currentQuestion].max_marks > 0 
+                        {examData.questions[currentQuestion].max_marks > 0
                           ? Math.round(
-                              (examData.questions[currentQuestion].marks_obtained /
+                              (examData.questions[currentQuestion]
+                                .marks_obtained /
                                 examData.questions[currentQuestion].max_marks) *
                                 100
                             )
@@ -2561,12 +2589,28 @@ const StudentExamDetails = ({ isHistory = false }) => {
                         )}
                       </p>
 
-                      {annotationsByQuestion.find(a => a.questionNumber === examData.questions[currentQuestion].question_number)?.count > 0 && (
+                      {annotationsByQuestion.find(
+                        (a) =>
+                          a.questionNumber ===
+                          examData.questions[currentQuestion].question_number
+                      )?.count > 0 && (
                         <div className="mt-3 flex items-center gap-2">
                           <div className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs flex items-center">
                             <PenTool className="w-3 h-3 mr-1" />
-                            {annotationsByQuestion.find(a => a.questionNumber === examData.questions[currentQuestion].question_number).count}{" "}
-                            {annotationsByQuestion.find(a => a.questionNumber === examData.questions[currentQuestion].question_number).count === 1
+                            {
+                              annotationsByQuestion.find(
+                                (a) =>
+                                  a.questionNumber ===
+                                  examData.questions[currentQuestion]
+                                    .question_number
+                              ).count
+                            }{" "}
+                            {annotationsByQuestion.find(
+                              (a) =>
+                                a.questionNumber ===
+                                examData.questions[currentQuestion]
+                                  .question_number
+                            ).count === 1
                               ? "annotation"
                               : "annotations"}{" "}
                             for this question
@@ -2586,42 +2630,59 @@ const StudentExamDetails = ({ isHistory = false }) => {
                         Overall Feedback
                       </h3>
                       <p className="text-gray-700">
-                        {examData.questions[currentQuestion].feedback || "No feedback provided."}
+                        {examData.questions[currentQuestion].feedback ||
+                          "No feedback provided."}
                       </p>
                     </motion.div>
 
-                    {detailedFeedback[examData.questions[currentQuestion].question_number] && 
-                     detailedFeedback[examData.questions[currentQuestion].question_number].items && 
-                     detailedFeedback[examData.questions[currentQuestion].question_number].items.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                        className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm"
-                      >
-                        <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
-                          <List size={16} className="text-blue-600" />
-                          Detailed Assessment
-                        </h3>
-                        <div className="space-y-3">
-                          {detailedFeedback[examData.questions[currentQuestion].question_number].items.map((item, idx) => (
-                            <div key={idx} className="p-3 bg-gray-50 rounded-md border border-gray-100">
-                              <div className="flex justify-between items-center mb-1">
-                                <h4 className="text-sm font-medium text-gray-700">
-                                  Criteria {item.item_number}
-                                </h4>
-                                <div className="text-sm font-medium text-gray-600">
-                                  Score: {item.marks_awarded}/10
+                    {detailedFeedback[
+                      examData.questions[currentQuestion].question_number
+                    ] &&
+                      detailedFeedback[
+                        examData.questions[currentQuestion].question_number
+                      ].items &&
+                      detailedFeedback[
+                        examData.questions[currentQuestion].question_number
+                      ].items.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.4 }}
+                          className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm"
+                        >
+                          <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                            <List size={16} className="text-blue-600" />
+                            Detailed Assessment
+                          </h3>
+                          <div className="space-y-3">
+                            {detailedFeedback[
+                              examData.questions[currentQuestion]
+                                .question_number
+                            ].items.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3 bg-gray-50 rounded-md border border-gray-100"
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <h4 className="text-sm font-medium text-gray-700">
+                                    Criteria {item.item_number}
+                                  </h4>
+                                  <div className="text-sm font-medium text-gray-600">
+                                    Score: {item.marks_awarded}/10
+                                  </div>
                                 </div>
+                                <p className="text-sm text-gray-600">
+                                  {item.feedback}
+                                </p>
                               </div>
-                              <p className="text-sm text-gray-600">{item.feedback}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
 
-                    {detailedFeedback[examData.questions[currentQuestion].question_number]?.improvement && (
+                    {detailedFeedback[
+                      examData.questions[currentQuestion].question_number
+                    ]?.improvement && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -2633,11 +2694,15 @@ const StudentExamDetails = ({ isHistory = false }) => {
                           Improvement Suggestions
                         </h3>
                         <p className="text-gray-700">
-                          {detailedFeedback[examData.questions[currentQuestion].question_number].improvement}
+                          {
+                            detailedFeedback[
+                              examData.questions[currentQuestion]
+                                .question_number
+                            ].improvement
+                          }
                         </p>
                       </motion.div>
                     )}
-
                   </motion.div>
                 </motion.div>
               )}
@@ -2665,16 +2730,16 @@ const StudentExamDetails = ({ isHistory = false }) => {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setShowRecheckModal(true)}
-                      disabled={
-                        annotations.length === 0 || hasSubmittedRecheck
-                      }
+                      disabled={annotations.length === 0 || hasSubmittedRecheck}
                       className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm ${
                         annotations.length === 0 || hasSubmittedRecheck
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                           : "bg-blue-600 text-white hover:bg-blue-700"
                       }`}
                     >
-                      {hasSubmittedRecheck ? "Request Submitted" : "Submit Request"}
+                      {hasSubmittedRecheck
+                        ? "Request Submitted"
+                        : "Submit Request"}
                     </motion.button>
                   </div>
 
@@ -2683,13 +2748,19 @@ const StudentExamDetails = ({ isHistory = false }) => {
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-amber-50 p-4 rounded-lg border border-amber-200 flex items-start gap-3 shadow-sm"
                   >
-                    <Info size={22} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <Info
+                      size={22}
+                      className="text-amber-600 flex-shrink-0 mt-0.5"
+                    />
                     <div>
                       <h3 className="font-bold text-amber-800 text-base mb-1">
                         Important Notice
                       </h3>
                       <p className="text-amber-700">
-                        You can submit a recheck request <span className="font-bold underline">only once</span> per exam. Please ensure all your annotations are accurate before submitting.
+                        You can submit a recheck request{" "}
+                        <span className="font-bold underline">only once</span>{" "}
+                        per exam. Please ensure all your annotations are
+                        accurate before submitting.
                       </p>
                     </div>
                   </motion.div>
@@ -2698,7 +2769,8 @@ const StudentExamDetails = ({ isHistory = false }) => {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-green-50 rounded-lg p-4 border border-green-100 shadow-sm">
+                      className="bg-green-50 rounded-lg p-4 border border-green-100 shadow-sm"
+                    >
                       <h3 className="font-medium text-green-800 mb-2 flex items-center gap-2">
                         <CheckCircle size={16} className="text-green-600" />
                         Request Successfully Submitted
@@ -2728,11 +2800,13 @@ const StudentExamDetails = ({ isHistory = false }) => {
                     <div className="space-y-3 text-sm text-gray-600">
                       <p>
                         1. Use the annotation tool on the left to highlight
-                        areas of your answer that you believe were incorrectly evaluated.
+                        areas of your answer that you believe were incorrectly
+                        evaluated.
                       </p>
                       <p>
                         2. For each annotation, provide details about what you
-                        believe was incorrectly evaluated and the marks you expected.
+                        believe was incorrectly evaluated and the marks you
+                        expected.
                       </p>
                       <p>
                         3. Once you've added all annotations, click "Submit
@@ -2879,7 +2953,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                       <History className="text-blue-600" size={20} />
                       Recheck Request History
                     </motion.h2>
-                    
+
                     {selectedRecheckRequest && (
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -2906,86 +2980,122 @@ const StudentExamDetails = ({ isHistory = false }) => {
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <h3 className="font-medium text-gray-800 flex items-center gap-2">
-                              Request #{selectedRecheckRequest.request_number || ''}
+                              Request #
+                              {selectedRecheckRequest.request_number || ""}
                             </h3>
                             <p className="text-xs text-gray-500 mt-1">
-                              Submitted on: {new Date(selectedRecheckRequest.created_at).toLocaleString()}
+                              Submitted on:{" "}
+                              {new Date(
+                                selectedRecheckRequest.created_at
+                              ).toLocaleString()}
                             </p>
                           </div>
-                          <div className={`px-2 py-1 rounded-full text-xs font-medium 
-                            ${selectedRecheckRequest.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                            selectedRecheckRequest.status === 'rejected' ? 'bg-red-100 text-red-700' : 
-                            'bg-yellow-100 text-yellow-700'}`}>
-                            {selectedRecheckRequest.status.charAt(0).toUpperCase() + selectedRecheckRequest.status.slice(1)}
+                          <div
+                            className={`px-2 py-1 rounded-full text-xs font-medium 
+                            ${
+                              selectedRecheckRequest.status === "approved"
+                                ? "bg-green-100 text-green-700"
+                                : selectedRecheckRequest.status === "rejected"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}
+                          >
+                            {selectedRecheckRequest.status
+                              .charAt(0)
+                              .toUpperCase() +
+                              selectedRecheckRequest.status.slice(1)}
                           </div>
                         </div>
-                        
+
                         <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-1">Reason</h4>
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">
+                            Reason
+                          </h4>
                           <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                            <p className="text-gray-700">{selectedRecheckRequest.reason}</p>
+                            <p className="text-gray-700">
+                              {selectedRecheckRequest.reason}
+                            </p>
                           </div>
                         </div>
-                        
+
                         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-sm text-blue-700 flex items-center gap-2 mb-4">
                           <Info size={16} />
                           <span>
-                            The annotations from this request are highlighted in yellow on the document. 
-                            Navigate through pages to view all annotations.
+                            The annotations from this request are highlighted in
+                            yellow on the document. Navigate through pages to
+                            view all annotations.
                           </span>
                         </div>
-                        
+
                         <div>
                           <h4 className="text-sm font-medium text-gray-700 mb-2">
-                            Annotations ({selectedRecheckRequest.annotations?.length || 0})
+                            Annotations (
+                            {selectedRecheckRequest.annotations?.length || 0})
                           </h4>
                           <div className="space-y-2 max-h-96 overflow-auto">
-                            {selectedRecheckRequest.annotations && selectedRecheckRequest.annotations.map((anno, idx) => (
-                              <motion.div 
-                                key={idx} 
-                                className="p-3 border border-yellow-200 rounded-md bg-yellow-50 text-sm hover:shadow-md transition-all cursor-pointer"
-                                onClick={() => {
-                                  if (anno.pageNumber) {
-                                    setPageNumber(anno.pageNumber);
-                                  }
-                                }}
-                              >
-                                <div className="flex justify-between items-center mb-1">
-                                  <span className="font-medium flex items-center gap-1">
-                                    <Eye size={14} className="text-yellow-600" />
-                                    Question {anno.questionNumber}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">
-                                      Page {anno.pageNumber}
-                                    </span>
-                                    <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">
-                                      +{anno.expectedMarks - anno.currentMarks} marks
-                                    </span>
-                                  </div>
-                                </div>
-                                <p className="text-gray-700 mb-1">{anno.grievance}</p>
-                                <div className="flex justify-between text-xs text-gray-500">
-                                  <span>Current: {anno.currentMarks}</span>
-                                  <span>Expected: {anno.expectedMarks}</span>
-                                </div>
-                              </motion.div>
-                            ))}
+                            {selectedRecheckRequest.annotations &&
+                              selectedRecheckRequest.annotations.map(
+                                (anno, idx) => (
+                                  <motion.div
+                                    key={idx}
+                                    className="p-3 border border-yellow-200 rounded-md bg-yellow-50 text-sm hover:shadow-md transition-all cursor-pointer"
+                                    onClick={() => {
+                                      if (anno.pageNumber) {
+                                        setPageNumber(anno.pageNumber);
+                                      }
+                                    }}
+                                  >
+                                    <div className="flex justify-between items-center mb-1">
+                                      <span className="font-medium flex items-center gap-1">
+                                        <Eye
+                                          size={14}
+                                          className="text-yellow-600"
+                                        />
+                                        Question {anno.questionNumber}
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">
+                                          Page {anno.pageNumber}
+                                        </span>
+                                        <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">
+                                          +
+                                          {anno.expectedMarks -
+                                            anno.currentMarks}{" "}
+                                          marks
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <p className="text-gray-700 mb-1">
+                                      {anno.grievance}
+                                    </p>
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                      <span>Current: {anno.currentMarks}</span>
+                                      <span>
+                                        Expected: {anno.expectedMarks}
+                                      </span>
+                                    </div>
+                                  </motion.div>
+                                )
+                              )}
                           </div>
                         </div>
                       </div>
-                      
+
                       {selectedRecheckRequest.feedback && (
                         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-                          <h3 className="font-medium text-gray-800 mb-2">Evaluator Feedback</h3>
+                          <h3 className="font-medium text-gray-800 mb-2">
+                            Evaluator Feedback
+                          </h3>
                           <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                            <p className="text-gray-700">{selectedRecheckRequest.feedback}</p>
+                            <p className="text-gray-700">
+                              {selectedRecheckRequest.feedback}
+                            </p>
                           </div>
                         </div>
                       )}
                     </motion.div>
                   ) : (
-                    <RecheckRequestHistory 
+                    <RecheckRequestHistory
                       requests={recheckRequests}
                       loading={loadingRecheckRequests}
                       error={recheckRequestsError}
