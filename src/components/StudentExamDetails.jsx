@@ -1540,7 +1540,18 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
       if (response.data && response.data.code === 200) {
         const requests = response.data.data || [];
+
         setRecheckRequests(requests);
+
+        let newMarks = 0;
+
+        for (let question of requests[0].annotations) {
+          newMarks += question.currentMarks;
+        }
+
+        if (requests[0]) {
+          setProgressPercentage((newMarks / 10) * 100);
+        }
 
         if (requests.length > 0) {
           const latestRequest = requests[0];
@@ -2001,7 +2012,11 @@ const StudentExamDetails = ({ isHistory = false }) => {
                 delay: 0.4,
               }}
               className={`h-16 w-16 rounded-full flex flex-col items-center justify-center ${
-                progressPercentage >= 70 ? "bg-green-100" : "bg-amber-100"
+                progressPercentage >= 70
+                  ? "bg-green-100"
+                  : progressPercentage >= 40
+                  ? "bg-blue-100"
+                  : "bg-amber-100"
               }`}
             >
               <span
@@ -2025,7 +2040,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                   transition={{ delay: 0.5 }}
                   className="text-2xl font-bold text-gray-900"
                 >
-                  {examData.score}
+                  {progressPercentage / parseInt(examData.maxScore)}
                 </motion.h2>
                 <motion.span
                   initial={{ opacity: 0 }}
