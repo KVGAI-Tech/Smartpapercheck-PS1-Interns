@@ -1,16 +1,17 @@
-import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
-  HiOutlineClock,
-  HiOutlineScale,
-  HiOutlineChatAlt2,
   HiOutlineChartBar,
-  HiOutlineDocumentText,
+  HiOutlineChatAlt2,
+  HiOutlineClock,
   HiOutlineDatabase,
+  HiOutlineDocumentText,
   HiOutlinePhotograph,
-  HiOutlineUpload,
+  HiOutlineScale,
   HiOutlineTranslate,
+  HiOutlineUpload,
 } from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
 
 const FeatureCard = ({
   icon,
@@ -82,6 +83,7 @@ const Features = ({
   batchPDFImage,
   multilingualImage,
 }) => {
+  const navigate = useNavigate();
   const benefits = [
     {
       icon: <HiOutlineClock className="w-6 h-6 text-teal-600" />,
@@ -267,6 +269,9 @@ const Features = ({
               className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-3 rounded-full text-white font-medium transition-all duration-300 shadow-md"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                navigate("/auth");
+              }}
             >
               Get Started Today
             </motion.button>
