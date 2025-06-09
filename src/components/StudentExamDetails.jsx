@@ -1372,6 +1372,17 @@ const RecheckRequestHistory = ({ requests, loading, error, onViewRequest }) => {
                       </span>
                     </div>
                     <p className="text-gray-600 mb-1">{anno.grievance}</p>
+                    {anno.professorFeedback &&
+                      anno.professorFeedback !== "" && (
+                        <>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium">Feedback</span>
+                          </div>
+                          <p className="text-gray-600 mb-1">
+                            {anno.professorFeedback}
+                          </p>
+                        </>
+                      )}
                     <div className="flex justify-between text-gray-500">
                       <span>Current: {anno.currentMarks}</span>
                       <span>Expected: {anno.expectedMarks}</span>
