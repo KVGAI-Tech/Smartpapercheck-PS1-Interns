@@ -1,20 +1,20 @@
-import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
-import Navbar from "./LandingPage/Navbar";
-import Hero from "./LandingPage/Hero";
 import Clientele from "./LandingPage/Clientele";
-import Testimonials from "./LandingPage/Testimonials";
-import VideoDemo from "./LandingPage/VideoDemo";
-import Features from "./LandingPage/Features";
 import ComparisonMetrics from "./LandingPage/ComparisonMetrics";
-import USP from "./LandingPage/USP";
-import Insights from "./LandingPage/Insights";
-import Pricing from "./LandingPage/Pricing";
-import FAQ from "./LandingPage/FAQ";
 import ContactForm from "./LandingPage/ContactForm";
-import Footer from "./LandingPage/Footer";
 import DepartmentAnalytics from "./LandingPage/DepartmentAnalytics";
+import FAQ from "./LandingPage/FAQ";
+import Features from "./LandingPage/Features";
+import Footer from "./LandingPage/Footer";
+import Hero from "./LandingPage/Hero";
+import Insights from "./LandingPage/Insights";
+import Navbar from "./LandingPage/Navbar";
+import Pricing from "./LandingPage/Pricing";
+import Testimonials from "./LandingPage/Testimonials";
+import USP from "./LandingPage/USP";
+import VideoDemo from "./LandingPage/VideoDemo";
 
 const LoadingAnimation = () => {
   return (
@@ -43,15 +43,15 @@ const LoadingAnimation = () => {
         <motion.div
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-teal-200/20 to-blue-200/20"
           initial={{ width: 20, height: 20 }}
-          animate={{ 
+          animate={{
             width: ["20px", "240px", "20px"],
             height: ["20px", "240px", "20px"],
-            opacity: [0.8, 0.2, 0.8]
+            opacity: [0.8, 0.2, 0.8],
           }}
-          transition={{ 
+          transition={{
             duration: 2,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         />
 
@@ -59,23 +59,23 @@ const LoadingAnimation = () => {
         <motion.div
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-200/20 to-teal-200/20"
           initial={{ width: 20, height: 20 }}
-          animate={{ 
+          animate={{
             width: ["20px", "240px", "20px"],
             height: ["20px", "240px", "20px"],
-            opacity: [0.8, 0.2, 0.8]
+            opacity: [0.8, 0.2, 0.8],
           }}
-          transition={{ 
+          transition={{
             duration: 2,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 1
+            delay: 1,
           }}
         />
       </div>
 
       {/* Loading Text */}
       <div className="mt-12">
-        <motion.div 
+        <motion.div
           className="flex space-x-1"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -109,21 +109,21 @@ const LoadingAnimation = () => {
 
       {/* Document Animation */}
       <div className="mt-8 relative">
-        <motion.div 
+        <motion.div
           className="absolute w-16 h-20 rounded-md bg-white shadow-md border border-gray-100"
           initial={{ x: -60, y: 0, rotate: -5, opacity: 0 }}
           animate={{ x: 0, y: 0, rotate: -5, opacity: 0.9 }}
           transition={{ duration: 0.5 }}
         />
-        
-        <motion.div 
+
+        <motion.div
           className="absolute w-16 h-20 rounded-md bg-white shadow-md border border-gray-100"
           initial={{ x: -30, y: 0, rotate: 2, opacity: 0 }}
           animate={{ x: 0, y: 0, rotate: 2, opacity: 0.9 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         />
-        
-        <motion.div 
+
+        <motion.div
           className="relative w-16 h-20 rounded-md bg-gradient-to-r from-teal-50 to-blue-50 shadow-md border border-gray-100 flex items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -133,11 +133,11 @@ const LoadingAnimation = () => {
             className="w-10 h-2 bg-gradient-to-r from-teal-400 to-blue-400 rounded-full"
             initial={{ width: "20%" }}
             animate={{ width: "70%" }}
-            transition={{ 
-              duration: 1.2, 
-              repeat: Infinity, 
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
               repeatType: "reverse",
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
         </motion.div>
@@ -145,11 +145,11 @@ const LoadingAnimation = () => {
 
       {/* Progress Bar */}
       <div className="mt-12 w-64 sm:w-80 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-        <motion.div 
+        <motion.div
           className="h-1.5 rounded-full bg-gradient-to-r from-teal-500 to-blue-500"
           initial={{ width: "0%" }}
           animate={{ width: "100%" }}
-          transition={{ 
+          transition={{
             duration: 3,
             repeat: Infinity,
           }}
@@ -162,10 +162,25 @@ const LoadingAnimation = () => {
 const LandingPage = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const demoRef = useRef(null);
+  const featureRef = useRef(null);
+  const pricingRef = useRef(null);
+  const faqRef = useRef(null);
+  const contactRef = useRef(null);
+  const homeRef = useRef(null);
 
   const scrollToDemo = () => {
     demoRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const scrollToHelper = (targetRef) => () => {
+    targetRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollToFeatures = scrollToHelper(featureRef);
+  const scrollToPricing = scrollToHelper(pricingRef);
+  const scrollToFaq = scrollToHelper(faqRef);
+  const scrollToContact = scrollToHelper(contactRef);
+  const scrollToHome = scrollToHelper(homeRef);
 
   const prependHelper = (name) => `/images/landing/${name}.jpeg`;
   const analytics = prependHelper("analytics");
@@ -233,9 +248,18 @@ const LandingPage = () => {
   }
 
   return (
-    <div className="landing-page overflow-x-hidden bg-[#f8f9fa] text-[#212529]">
+    <div
+      className="landing-page overflow-x-hidden bg-[#f8f9fa] text-[#212529]"
+      ref={homeRef}
+    >
       <div className="relative">
-        <Navbar />
+        <Navbar
+          scrollToFeatures={scrollToFeatures}
+          scrollToContact={scrollToContact}
+          scrollToFaq={scrollToFaq}
+          scrollToHome={scrollToHome}
+          scrollToPricing={scrollToPricing}
+        />
         <Hero scrollToDemo={scrollToDemo} />
       </div>
 
@@ -290,6 +314,7 @@ const LandingPage = () => {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
+        ref={featureRef}
       >
         <Features
           analyticsImage={analytics}
@@ -303,7 +328,6 @@ const LandingPage = () => {
           multilingualImage={multilingualSupport}
         />
       </motion.div>
-
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -328,6 +352,7 @@ const LandingPage = () => {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
+        ref={pricingRef}
       >
         <Pricing />
       </motion.div>
@@ -337,6 +362,7 @@ const LandingPage = () => {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
+        ref={faqRef}
       >
         <FAQ />
       </motion.div>
@@ -346,6 +372,7 @@ const LandingPage = () => {
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
+        ref={contactRef}
       >
         <ContactForm />
       </motion.div>
