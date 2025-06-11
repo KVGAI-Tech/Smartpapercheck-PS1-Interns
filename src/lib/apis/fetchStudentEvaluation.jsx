@@ -23,40 +23,69 @@ export default function fetchStudentEvaluation(
           "Content-Type": "application/json",
         },
       })
-      .then((data) => {
-        setStudentData(data.data);
+      .then((response) => {
+        console.log("Student evaluation API response:", response.data);
+        
+        if (response.data && response.data.code === 200 && response.data.data) {
+          const data = response.data.data;
+          setStudentData(data);
 
-        if (data.data.pages && Array.isArray(data.data.pages)) {
-          const processedPages = data.data.pages.map((page) => ({
-            pageNumber: page.page_number,
-            totalPages: page.total_pages,
-            imageUrl: page.url,
-          }));
-          setAnswerScriptPages(processedPages);
+          if (data.pages && Array.isArray(data.pages)) {
+            const processedPages = data.pages.map((page) => ({
+              pageNumber: page.page_number,
+              totalPages: page.total_pages,
+              imageUrl: page.presigned_url || page.url,
+            }));
+            setAnswerScriptPages(processedPages);
+          } else {
+            console.warn("No pages found in response or pages is not an array");
+            setAnswerScriptPages([]);
+          }
+
+          const initialFeedback = {};
+          if (data.evaluations && typeof data.evaluations === 'object') {
+            Object.entries(data.evaluations).forEach(([qKey, qEval]) => {
+              initialFeedback[qKey] = {
+                overall: qEval.overall_feedback || "",
+                items:
+                  qEval.item_grades?.map((grade) => ({
+                    ...grade,
+                    editedFeedback: grade.feedback,
+                  })) || [],
+              };
+            });
+          }
+
+          setFeedbackEdits(initialFeedback);
+
+          fetchQuestions(examId, setQuestions, onError);
+        } else {
+          console.error("Unexpected response structure:", response.data);
+          const errorMessage = response.data?.message || "Failed to load student evaluation - unexpected response structure";
+          setError(errorMessage);
+          onError(errorMessage);
         }
-
-        const initialFeedback = {};
-        Object.entries(data.data.evaluations || {}).forEach(([qKey, qEval]) => {
-          initialFeedback[qKey] = {
-            overall: qEval.overall_feedback || "",
-            items:
-              qEval.item_grades?.map((grade) => ({
-                ...grade,
-                editedFeedback: grade.feedback,
-              })) || [],
-          };
-        });
-
-        setFeedbackEdits(initialFeedback);
-
-        fetchQuestions(examId, setQuestions, onError);
       })
       .catch((error) => {
-        setError(error.message || "Failed to load student evaluation");
-        onError(error.message || "Failed to load student evaluation");
+        console.error("Error fetching student evaluation:", error);
+        console.error("Error details:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        
+        const errorMessage = error.response?.data?.message || error.message || "Failed to load student evaluation";
+        setError(errorMessage);
+        onError(errorMessage);
       })
       .finally(() => {
         setLoading(false);
       });
+  } else {
+    console.error("No access token found");
+    const errorMessage = "Authentication required";
+    setError(errorMessage);
+    onError(errorMessage);
+    setLoading(false);
   }
 }

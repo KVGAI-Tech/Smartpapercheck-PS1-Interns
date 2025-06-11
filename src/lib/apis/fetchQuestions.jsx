@@ -6,19 +6,42 @@ export default function fetchQuestions(examId, setQuestions, onError) {
   if (token) {
     axios
       .get(`${API_BASE_URL}/exams/${examId}/question-answer`, {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        "Content-Type": "application/json",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       })
-      .then((data) => {
-        if (data.data && Array.isArray(data.data.questions)) {
-          setQuestions(data.data.questions);
+      .then((response) => {
+        console.log("Questions API response:", response.data);
+        
+        if (response.data && response.data.code === 200 && response.data.data && Array.isArray(response.data.data.questions)) {
+          const questions = response.data.data.questions.map(question => ({
+            ...question,
+            max_marks: Math.abs(question.max_marks || 0) 
+          }));
+          
+          setQuestions(questions);
         } else {
-          throw new Error(data.message || "Failed to load questions");
+          console.error("Unexpected response structure:", response.data);
+          throw new Error(response.data?.message || "Failed to load questions - unexpected response structure");
         }
       })
       .catch((error) => {
         console.error("Error fetching questions:", error);
-        onError(error.message || "Failed to load questions");
+        console.error("Error details:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        
+        if (onError) {
+          onError(error.response?.data?.message || error.message || "Failed to load questions");
+        }
       });
+  } else {
+    console.error("No access token found");
+    if (onError) {
+      onError("Authentication required");
+    }
   }
 }

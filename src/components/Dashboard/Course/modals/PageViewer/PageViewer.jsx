@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { PageViewError } from "./PageViewError";
 import { RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
+import { getSafeImageUrl } from "../../../../../lib/utils";
+import { PageViewError } from "./PageViewError";
 
 export const PageViewer = ({
   url,
@@ -23,6 +24,8 @@ export const PageViewer = ({
     setError(false);
   };
 
+  const safeUrl = getSafeImageUrl ? getSafeImageUrl(url) : url;
+
   if (error) {
     return <PageViewError url={url} />;
   }
@@ -42,7 +45,7 @@ export const PageViewer = ({
         style={{ transform: `scale(${zoomLevel})` }}
       >
         <img
-          src={getSafeImageUrl(url)}
+          src={safeUrl}
           alt="Student Answer Sheet"
           className="max-w-full object-contain shadow-2xl rounded-lg"
           onError={handleError}

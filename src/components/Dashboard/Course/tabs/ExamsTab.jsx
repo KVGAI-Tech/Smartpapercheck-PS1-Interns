@@ -1,228 +1,310 @@
-/* 
-  When i click on enrollments a popup should open with the list of enrollments in the course (students enrolled in the course) and professor should be able to deselect any student from the list
-  and then click on submit button to save the changes.
-  There should be a checkbox near a student name to select the student and a button to deselect the student.
-  There should be a submit button to save the changes.
-  There should be a cancel button to close the popup.
-  There should be a search bar to search for a student.
-  The list of students should come from students tab
- */
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Search, Plus, Edit2, Trash2,
-  ChevronRight, Calendar, Upload,
-  Users, PlayCircle, X, AlertCircle, CheckCircle,
-  Check, History
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import UploadQnAModal from '../modals/UploadQnAModal';
-import RubricModal from '../modals/RubricModal';
-import { API_BASE_URL } from '../../../../BaseURL';
-const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
-const Toast = ({ message, type, show, onClose }) => {
-  useEffect(() => {
-    if (show) {
-      const timer = setTimeout(() => onClose(), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [show, onClose]);
-
-  if (!show) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
-        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-      }`}
-    >
-      {type === 'success' ? (
-        <CheckCircle className="w-5 h-5" />
-      ) : (
-        <AlertCircle className="w-5 h-5" />
-      )}
-      <span>{message}</span>
-    </motion.div>
-  );
-};
-
-const StepDot = ({ number, isActive, isCompleted, onClick }) => (
-  <motion.button
-    whileHover={{ scale: 1.1 }}
-    whileTap={{ scale: 0.95 }}
-    onClick={onClick}
-    className="relative"
-  >
-    <motion.div
-      initial={{ scale: 0.9 }}
-      animate={{ 
-        scale: isActive ? 1.1 : 1,
-        boxShadow: isActive 
-          ? '0 0 0 6px rgba(59, 130, 246, 0.15)' 
-          : isCompleted 
-            ? '0 0 0 4px rgba(16, 185, 129, 0.15)' 
-            : '0 0 0 4px rgba(229, 231, 235, 0.6)'
-      }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 300,
-        duration: 0.3
-      }}
-      className={`w-14 h-14 rounded-full flex items-center justify-center text-base 
-        font-semibold cursor-pointer transition-all duration-300 
+  import React, { useState, useEffect, useCallback, useMemo } from 'react';
+  import {
+    Search, Plus, Edit2, Trash2,
+    ChevronRight, Calendar, Upload,
+    Users, PlayCircle, X, AlertCircle, CheckCircle,
+    Check, History
+  } from 'lucide-react';
+  import UploadQnAModal from '../modals/UploadQnAModal';
+  import RubricModal from '../modals/RubricModal';
+  import { API_BASE_URL } from '../../../../BaseURL';
+  const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
+  
+  const Toast = ({ message, type, show, onClose }) => {
+    useEffect(() => {
+      if (show) {
+        const timer = setTimeout(() => onClose(), 3000);
+        return () => clearTimeout(timer);
+      }
+    }, [show, onClose]);
+  
+    if (!show) return null;
+  
+    return (
+      <div
+        className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all duration-300 ${
+          type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        } ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+      >
+        {type === 'success' ? (
+          <CheckCircle className="w-5 h-5" />
+        ) : (
+          <AlertCircle className="w-5 h-5" />
+        )}
+        <span>{message}</span>
+      </div>
+    );
+  };
+  
+  const StepDot = ({ number, isActive, isCompleted, onClick }) => (
+    <button
+      onClick={onClick}
+      className={`relative w-14 h-14 rounded-full flex items-center justify-center text-base 
+        font-semibold cursor-pointer transition-all duration-300 transform hover:scale-110
         ${isActive 
-          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25' 
+          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' 
           : isCompleted 
             ? 'bg-gradient-to-br from-green-100 to-green-200 text-green-700 border-2 border-green-500' 
             : 'bg-white text-gray-500 border-2 border-gray-200 hover:border-blue-300'
         }`}
     >
       {isCompleted ? (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 500, delay: 0.1 }}
-        >
-          <Check className="w-6 h-6" />
-        </motion.div>
+        <Check className="w-6 h-6" />
       ) : (
-        <motion.span
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          {number}
-        </motion.span>
+        <span>{number}</span>
       )}
-    </motion.div>
-  </motion.button>
-);
-
-const StepConnector = ({ isActive, isCompleted }) => (
-  <div className="flex-1 px-2 sm:px-6 flex items-center">
-    <div className="w-full relative h-2 rounded-full bg-gray-100 overflow-hidden">
-      <motion.div
-        initial={{ width: "0%" }}
-        animate={{ 
-          width: isCompleted ? "100%" : isActive ? "50%" : "0%" 
-        }}
-        transition={{ duration: 0.5, ease: "easeInOut" }}
-        className={`absolute inset-0 h-full rounded-full 
-          ${isCompleted 
-            ? 'bg-gradient-to-r from-green-400 to-green-500' 
-            : 'bg-gradient-to-r from-blue-400 to-blue-500'
-          }`}
-      />
+    </button>
+  );
+  
+  const StepConnector = ({ isActive, isCompleted }) => (
+    <div className="flex-1 px-2 sm:px-6 flex items-center">
+      <div className="w-full relative h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className={`absolute inset-0 h-full rounded-full transition-all duration-500 ease-in-out
+            ${isCompleted 
+              ? 'bg-gradient-to-r from-green-400 to-green-500 w-full' 
+              : isActive 
+                ? 'bg-gradient-to-r from-blue-400 to-blue-500 w-1/2'
+                : 'w-0'
+            }`}
+        />
+      </div>
     </div>
-  </div>
-);
-
-const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
-  const [file, setFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState('');
-  const [dragActive, setDragActive] = useState(false);
-
-  useEffect(() => {
-    if (isOpen && !courseId) {
-      console.error('CourseId is undefined in AnswerUploadModal');
-      setError('Course ID is missing. Please try again or contact support.');
-    }
-  }, [isOpen, courseId]);
-
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && (droppedFile.type === 'application/zip' || droppedFile.name.endsWith('.zip'))) {
-      setFile(droppedFile);
-      setError('');
-    } else {
-      setError('Please drop a valid ZIP file');
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile && (selectedFile.type === 'application/zip' || selectedFile.name.endsWith('.zip'))) {
-      setFile(selectedFile);
-      setError('');
-    } else {
-      setError('Please select a valid ZIP file');
-      setFile(null);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!file) {
-      setError('Please select a file');
-      return;
-    }
-
-    if (!courseId) {
-      setError('Course ID is missing. Please try again or contact support.');
-      return;
-    }
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('zip_file', file);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
+  );
+  
+  const EditExamModal = ({ isOpen, onClose, exam, onSave }) => {
+    const [examName, setExamName] = useState('');
+    const [fullMarks, setFullMarks] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+  
+    useEffect(() => {
+      if (isOpen && exam) {
+        setExamName(exam.exam_name || '');
+        setFullMarks(exam.full_marks || exam.maxMarks || '');
+        setError('');
       }
-
-      const data = await response.json();
-      await onUpload(data);
-      onClose();
-    } catch (error) {
-      console.error('Error uploading answers:', error);
-      setError(error.message || 'Upload failed. Please try again.');
-    } finally {
-      setIsUploading(false);
-    }
+    }, [isOpen, exam]);
+  
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      
+      if (!examName.trim()) {
+        setError('Exam name is required');
+        return;
+      }
+      
+      if (!fullMarks || fullMarks <= 0) {
+        setError('Please enter valid marks');
+        return;
+      }
+  
+      setIsLoading(true);
+      setError('');
+  
+      try {
+        await onSave({
+          ...exam,
+          exam_name: examName.trim(),
+          full_marks: parseInt(fullMarks)
+        });
+        onClose();
+      } catch (error) {
+        setError(error.message || 'Failed to update exam');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    if (!isOpen) return null;
+  
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div
+          className="bg-white rounded-xl p-6 max-w-md w-full m-4 shadow-xl transform transition-all duration-300 scale-100"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">Edit Exam</h3>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              disabled={isLoading}
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+  
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Exam Name
+              </label>
+              <input
+                type="text"
+                value={examName}
+                onChange={(e) => setExamName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Enter exam name"
+                disabled={isLoading}
+                required
+              />
+            </div>
+  
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Full Marks
+              </label>
+              <input
+                type="number"
+                value={fullMarks}
+                onChange={(e) => setFullMarks(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Enter total marks"
+                min="1"
+                disabled={isLoading}
+                required
+              />
+            </div>
+  
+            {error && (
+              <p className="text-red-500 text-sm mb-4 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </p>
+            )}
+  
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg
+                  transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg 
+                  hover:bg-blue-700 transition-colors disabled:bg-blue-300
+                  disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Update Exam
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   };
-
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ scale: 0.9, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.9, y: 20 }}
+  
+  const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
+    const [file, setFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState('');
+    const [dragActive, setDragActive] = useState(false);
+  
+    useEffect(() => {
+      if (isOpen && !courseId) {
+        console.error('CourseId is undefined in AnswerUploadModal');
+        setError('Course ID is missing. Please try again or contact support.');
+      }
+    }, [isOpen, courseId]);
+  
+    const handleDrag = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.type === "dragenter" || e.type === "dragover") {
+        setDragActive(true);
+      } else if (e.type === "dragleave") {
+        setDragActive(false);
+      }
+    };
+  
+    const handleDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
+      
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile && (droppedFile.type === 'application/zip' || droppedFile.name.endsWith('.zip'))) {
+        setFile(droppedFile);
+        setError('');
+      } else {
+        setError('Please drop a valid ZIP file');
+      }
+    };
+  
+    const handleFileChange = (e) => {
+      const selectedFile = e.target.files[0];
+      if (selectedFile && (selectedFile.type === 'application/zip' || selectedFile.name.endsWith('.zip'))) {
+        setFile(selectedFile);
+        setError('');
+      } else {
+        setError('Please select a valid ZIP file');
+        setFile(null);
+      }
+    };
+  
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!file) {
+        setError('Please select a file');
+        return;
+      }
+  
+      if (!courseId) {
+        setError('Course ID is missing. Please try again or contact support.');
+        return;
+      }
+  
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('zip_file', file);
+  
+      try {
+        const response = await fetch(`${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: formData
+        });
+  
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.status}`);
+        }
+  
+        const data = await response.json();
+        await onUpload(data);
+        onClose();
+      } catch (error) {
+        console.error('Error uploading answers:', error);
+        setError(error.message || 'Upload failed. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
+    };
+  
+    if (!isOpen) return null;
+  
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div
           className="bg-white rounded-xl p-6 max-w-md w-full m-4 shadow-xl"
           onClick={e => e.stopPropagation()}
         >
@@ -235,10 +317,10 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
-
+  
           <form onSubmit={handleSubmit}>
             <div
-              className={`mb-6 relative ${dragActive ? 'ring-2 ring-blue-500' : ''}`}
+              className={`mb-6 relative transition-all ${dragActive ? 'ring-2 ring-blue-500' : ''}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -269,18 +351,14 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
                 )}
               </div>
             </div>
-
+  
             {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-red-500 text-sm mb-4 flex items-center gap-2"
-              >
+              <p className="text-red-500 text-sm mb-4 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
                 {error}
-              </motion.p>
+              </p>
             )}
-
+  
             <div className="flex justify-end gap-3">
               <button
                 type="button"
@@ -299,11 +377,7 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
               >
                 {isUploading ? (
                   <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                    />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Uploading...
                   </>
                 ) : (
@@ -315,153 +389,126 @@ const AnswerUploadModal = ({ isOpen, onClose, examId, courseId, onUpload }) => {
               </button>
             </div>
           </form>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
-
-const ExamCard = ({
-  exam,
-  onEdit,
-  onDelete,
-  onUploadQnA,
-  onGenerateRubrics,
-  onUploadAnswers,
-  onGetEnrollments,
-  onStartEvaluation,
-}) => {
-  const [activeStep, setActiveStep] = useState(0);
-    
-  const steps = [
-    { 
-      label: 'Upload Q&A', 
-      description: 'Upload your question paper',
-      icon: Upload,
-      action: () => onUploadQnA(exam.id) 
-    },
-    { 
-      label: 'Generate Rubrics', 
-      description: 'Create marking criteria',
-      icon: CheckCircle,
-      action: () => onGenerateRubrics(exam.id) 
-    },
-    { 
-      label: 'Upload Answer Sheets', 
-      description: 'Upload student answer files',
-      icon: Upload,
-      action: () => onUploadAnswers(exam.id) 
-    }
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden
-        transition-all duration-300 hover:shadow-lg"
-    >
-      <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-50">
-        <div className="flex items-center gap-6">
-          <h3 className="text-xl font-semibold text-gray-900">{exam.exam_name}</h3>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              {new Date(exam.date || Date.now()).toLocaleDateString()}
-            </div>
-            <div className="w-1 h-1 rounded-full bg-gray-200" />
-            <span className="font-medium">{exam.full_marks || exam.maxMarks || 100} marks</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onGetEnrollments(exam.id)}
-            className="px-4 py-2 text-gray-700 bg-gray-50 hover:bg-gray-100 
-              rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <Users className="w-4 h-4" />
-            <span>Manage Enrollments</span>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onStartEvaluation(exam.id)}
-            className="px-4 py-2 text-white bg-green-600 hover:bg-green-700
-              rounded-lg flex items-center gap-2 transition-colors shadow-sm"
-          >
-            <PlayCircle className="w-4 h-4" />
-            <span>Evaluate</span>
-          </motion.button>
-
-          <div className="flex items-center gap-2 ml-2">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => onEdit(exam)}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg
-                hover:bg-gray-50 transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => onDelete(exam)}
-              className="p-2 text-gray-400 hover:text-red-600 rounded-lg
-                hover:bg-red-50 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </motion.button>
-          </div>
         </div>
       </div>
-
-      <div className="px-6 sm:px-10 py-10 bg-gradient-to-b from-white to-gray-50">
-        
-        <div className="flex flex-col items-center">
-          <div className="flex items-center justify-center w-full max-w-3xl mx-auto mb-8">
-            {steps.map((step, index) => (
-              <React.Fragment key={index}>
-                <StepDot
-                  number={index + 1}
-                  isActive={activeStep === index}
-                  isCompleted={index < activeStep}
-                  onClick={() => {
-                    setActiveStep(index);
-                    step.action();
-                  }}
-                />
-                {index < steps.length - 1 && (
-                  <StepConnector
-                    isActive={activeStep > index}
-                    isCompleted={index < activeStep - 1}
-                  />
-                )}
-              </React.Fragment>
-            ))}
+    );
+  };
+  
+  const ExamCard = ({
+    exam,
+    onEdit,
+    onDelete,
+    onUploadQnA,
+    onGenerateRubrics,
+    onUploadAnswers,
+    onGetEnrollments,
+    onStartEvaluation,
+  }) => {
+    const [activeStep, setActiveStep] = useState(0);
+      
+    const steps = [
+      { 
+        label: 'Upload Q&A', 
+        description: 'Upload your question paper',
+        icon: Upload,
+        action: () => onUploadQnA(exam.id) 
+      },
+      { 
+        label: 'Generate Rubrics', 
+        description: 'Create marking criteria',
+        icon: CheckCircle,
+        action: () => onGenerateRubrics(exam.id) 
+      },
+      { 
+        label: 'Upload Answer Sheets', 
+        description: 'Upload student answer files',
+        icon: Upload,
+        action: () => onUploadAnswers(exam.id) 
+      }
+    ];
+  
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden
+        transition-all duration-300 hover:shadow-lg">
+        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-50">
+          <div className="flex items-center gap-6">
+            <h3 className="text-xl font-semibold text-gray-900">{exam.exam_name}</h3>
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                {new Date(exam.date || Date.now()).toLocaleDateString()}
+              </div>
+              <div className="w-1 h-1 rounded-full bg-gray-200" />
+              <span className="font-medium">{exam.full_marks || exam.maxMarks || 100} marks</span>
+            </div>
           </div>
-          
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeStep}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="text-center mb-4"
+  
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onGetEnrollments(exam.id)}
+              className="px-4 py-2 text-gray-700 bg-gray-50 hover:bg-gray-100 
+                rounded-lg flex items-center gap-2 transition-colors transform hover:scale-105"
             >
+              <Users className="w-4 h-4" />
+              <span>Manage Enrollments</span>
+            </button>
+            <button
+              onClick={() => onStartEvaluation(exam.id)}
+              className="px-4 py-2 text-white bg-green-600 hover:bg-green-700
+                rounded-lg flex items-center gap-2 transition-colors shadow-sm transform hover:scale-105"
+            >
+              <PlayCircle className="w-4 h-4" />
+              <span>Evaluate</span>
+            </button>
+  
+            <div className="flex items-center gap-2 ml-2">
+              <button
+                onClick={() => onEdit(exam)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg
+                  hover:bg-gray-50 transition-all transform hover:scale-110"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onDelete(exam)}
+                className="p-2 text-gray-400 hover:text-red-600 rounded-lg
+                  hover:bg-red-50 transition-all transform hover:scale-110"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+  
+        <div className="px-6 sm:px-10 py-10 bg-gradient-to-b from-white to-gray-50">
+          <div className="flex flex-col items-center">
+            <div className="flex items-center justify-center w-full max-w-3xl mx-auto mb-8">
+              {steps.map((step, index) => (
+                <React.Fragment key={index}>
+                  <StepDot
+                    number={index + 1}
+                    isActive={activeStep === index}
+                    isCompleted={index < activeStep}
+                    onClick={() => {
+                      setActiveStep(index);
+                      step.action();
+                    }}
+                  />
+                  {index < steps.length - 1 && (
+                    <StepConnector
+                      isActive={activeStep > index}
+                      isCompleted={index < activeStep - 1}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+            
+            <div key={activeStep} className="text-center mb-4 transition-all duration-300">
               <div className="flex flex-col items-center gap-2">
-                <motion.div 
-                  className="p-3 bg-blue-50 rounded-full mb-2" 
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
+                <div className="p-3 bg-blue-50 rounded-full mb-2 transform transition-all">
                   {React.createElement(steps[activeStep].icon, { className: "w-6 h-6 text-blue-600" })}
-                </motion.div>
+                </div>
                 <h4 className="text-lg font-semibold text-gray-800">
                   {steps[activeStep].label}
                 </h4>
@@ -469,845 +516,899 @@ const ExamCard = ({
                   {steps[activeStep].description}
                 </p>
               </div>
-            </motion.div>
-          </AnimatePresence>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={steps[activeStep].action}
-            className="mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-full flex items-center gap-2
-              shadow-md hover:shadow-lg hover:bg-blue-700 transition-all duration-300"
-          >
-            {React.createElement(steps[activeStep].icon, { className: "w-4 h-4" })}
-            <span>{steps[activeStep].label}</span>
-          </motion.button>
-          
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
-              disabled={activeStep === 0}
-              className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
-                disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              <ChevronRight className="w-5 h-5 transform rotate-180" />
-            </motion.button>
-            <div className="text-sm text-gray-500">
-              Step {activeStep + 1} of {steps.length}
             </div>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
-              disabled={activeStep === steps.length - 1}
-              className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
-                disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+  
+            <button
+              onClick={steps[activeStep].action}
+              className="mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-full flex items-center gap-2
+                shadow-md hover:shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105"
             >
-              <ChevronRight className="w-5 h-5" />
-            </motion.button>
+              {React.createElement(steps[activeStep].icon, { className: "w-4 h-4" })}
+              <span>{steps[activeStep].label}</span>
+            </button>
+            
+            <div className="flex items-center justify-center gap-4 mt-6">
+              <button
+                onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+                disabled={activeStep === 0}
+                className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
+                  disabled:opacity-30 disabled:cursor-not-allowed transition-all transform hover:scale-110"
+              >
+                <ChevronRight className="w-5 h-5 transform rotate-180" />
+              </button>
+              <div className="text-sm text-gray-500">
+                Step {activeStep + 1} of {steps.length}
+              </div>
+              <button
+                onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
+                disabled={activeStep === steps.length - 1}
+                className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
+                  disabled:opacity-30 disabled:cursor-not-allowed transition-all transform hover:scale-110"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </motion.div>
-  );
-};
-
-const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChange, students = [] }) => {
-  const [enrolledStudents, setEnrolledStudents] = useState(new Set());
-  const [tempEnrolledStudents, setTempEnrolledStudents] = useState(new Set());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [enrollmentDetails, setEnrollmentDetails] = useState([]);
-  const [statusCounts, setStatusCounts] = useState({});
-  const [localStudents, setLocalStudents] = useState([]);
-
-  // Load students from local storage
-  useEffect(() => {
-    if (courseId) {
-      try {
-        const storedStudents = localStorage.getItem(`course_${courseId}_students`);
-        if (storedStudents) {
-          setLocalStudents(JSON.parse(storedStudents));
-        }
-      } catch (error) {
-        console.error("Error loading students from localStorage:", error);
-      }
-    }
-  }, [courseId]);
-
-  // Compute the combined student list - use enrollments, passed students, and local storage
-  const combinedStudents = useMemo(() => {
-    // Start with students passed via props
-    if (students && students.length > 0) {
-      return students;
-    }
-    
-    // If no students were passed, try local storage
-    if (localStudents && localStudents.length > 0) {
-      return localStudents.map(student => ({
-        id: student.id,
-        name: student.user_name || `Student ${student.id}`,
-        email: student.user_email,
-        roll_number: student.roll_number
-      }));
-    }
-    
-    // As a fallback, create student list from enrollment details
-    const studentsFromEnrollments = enrollmentDetails
-      .filter(enrollment => enrollment && (enrollment.student_name || enrollment.student_id))
-      .map(enrollment => ({
-        id: enrollment.student_id || enrollment.id,
-        name: enrollment.student_name || `Student ${enrollment.student_id || enrollment.id}`
-      }));
-      
-    return studentsFromEnrollments;
-  }, [students, localStudents, enrollmentDetails]);
-  
-  // Filter the combined students list based on search
-  const filteredStudents = useMemo(() => {
-    const query = searchQuery.toLowerCase();
-    return combinedStudents.filter(student => 
-      (student.name && student.name.toLowerCase().includes(query)) || 
-      (student.email && student.email.toLowerCase().includes(query)) ||
-      (student.roll_number && student.roll_number.toLowerCase().includes(query)) ||
-      String(student.id).toLowerCase().includes(query)
     );
-  }, [combinedStudents, searchQuery]);
-
-  useEffect(() => {
-    if (isOpen && examId) {
-      fetchEnrollments();
-    }
-  }, [isOpen, examId]);
-
-  // Reset temporary selections when the modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setTempEnrolledStudents(new Set(enrolledStudents));
-    }
-  }, [isOpen, enrolledStudents]);
-
-  const fetchEnrollments = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      // Fetch exam enrollments
-      const enrollmentsResponse = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        credentials: 'omit'
-      });
-
-      if (!enrollmentsResponse.ok) {
-        throw new Error('Failed to fetch enrollments');
-      }
-
-      const enrollmentsData = await enrollmentsResponse.json();
-      console.log("Raw enrollment data:", enrollmentsData);
-      
-      if (enrollmentsData.code !== 200) {
-        throw new Error(enrollmentsData.message || 'Failed to fetch enrollments');
-      }
-
-      // More flexible data extraction
-      let allEnrollments = [];
-      let counts = {};
-      
-      if (Array.isArray(enrollmentsData.data)) {
-        // Case 1: data is an array of objects with enrollments property
-        enrollmentsData.data.forEach(item => {
-          if (item && Array.isArray(item.enrollments)) {
-            allEnrollments = [...allEnrollments, ...item.enrollments];
-            if (item.status_counts) {
-              counts = item.status_counts;
-            }
-          } 
-          // Case 2: data is directly an array of enrollment objects
-          else if (item && item.student_id) {
-            allEnrollments.push(item);
+  };
+  
+  const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChange, students = [] }) => {
+    const [enrolledStudents, setEnrolledStudents] = useState(new Set());
+    const [tempEnrolledStudents, setTempEnrolledStudents] = useState(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [enrollmentDetails, setEnrollmentDetails] = useState([]);
+    const [statusCounts, setStatusCounts] = useState({});
+    const [localStudents, setLocalStudents] = useState([]);
+  
+    
+    useEffect(() => {
+      if (courseId) {
+        try {
+          const storedStudents = localStorage.getItem(`course_${courseId}_students`);
+          if (storedStudents) {
+            setLocalStudents(JSON.parse(storedStudents));
           }
-        });
-      } 
-      // Case 3: data is a single object with enrollments property
-      else if (enrollmentsData.data && Array.isArray(enrollmentsData.data.enrollments)) {
-        allEnrollments = enrollmentsData.data.enrollments;
-        if (enrollmentsData.data.status_counts) {
-          counts = enrollmentsData.data.status_counts;
+        } catch (error) {
+          console.error("Error loading students from localStorage:", error);
         }
       }
-      // Case 4: data is directly an enrollment object
-      else if (enrollmentsData.data && enrollmentsData.data.student_id) {
-        allEnrollments = [enrollmentsData.data];
-      }
-      
-      console.log('Processed enrollment details:', allEnrollments);
-      console.log('Status counts:', counts);
-      
-      // Ensure we have something to work with
-      if (allEnrollments.length === 0) {
-        console.warn("No enrollments extracted from data. Using raw data as fallback.");
-        // Last resort: try to use the data directly
-        if (Array.isArray(enrollmentsData.data)) {
-          allEnrollments = enrollmentsData.data;
-        } else if (enrollmentsData.data) {
-          allEnrollments = [enrollmentsData.data];
-        }
-      }
-      
-      setEnrollmentDetails(allEnrollments);
-      setStatusCounts(counts || {});
-
-      // Extract student_id values with more fallbacks
-      const enrolledIds = new Set(
-        allEnrollments
-          .filter(enrollment => enrollment && (enrollment.student_id || enrollment.id))
-          .map(enrollment => enrollment.student_id || enrollment.id)
-      );
-
-      setEnrolledStudents(enrolledIds);
-      setTempEnrolledStudents(new Set(enrolledIds));
-    } catch (error) {
-      console.error('Error fetching enrollments:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleToggleStudent = (studentId) => {
-    setTempEnrolledStudents(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(studentId)) {
-        newSet.delete(studentId);
-      } else {
-        newSet.add(studentId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleDeselectAll = () => {
-    setTempEnrolledStudents(new Set());
-  };
-
-  const handleSelectAll = () => {
-    const allStudentIds = filteredStudents.map(student => student.id);
-    setTempEnrolledStudents(new Set(allStudentIds));
-  };
-
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      // Find students to add (in temp but not in original)
-      const studentsToAdd = Array.from(tempEnrolledStudents).filter(id => !enrolledStudents.has(id));
-      
-      // Find students to remove (in original but not in temp)
-      const studentsToRemove = Array.from(enrolledStudents).filter(id => !tempEnrolledStudents.has(id));
-      
-      // Process additions
-      for (const studentId of studentsToAdd) {
-        await onEnrollmentChange(studentId, true);
-      }
-      
-      // Process removals
-      for (const studentId of studentsToRemove) {
-        await onEnrollmentChange(studentId, false);
-      }
-      
-      // Update our local state to match the server state
-      setEnrolledStudents(new Set(tempEnrolledStudents));
-      
-      onClose();
-    } catch (error) {
-      console.error('Error updating enrollments:', error);
-      setError(error.message || 'Failed to update enrollments');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Find students in enrollment details with info
-  const getStudentDetails = (studentId) => {
-    const details = enrollmentDetails.find(e => String(e.student_id) === String(studentId)) || {};
+    }, [courseId]);
+  
     
-    // For enrolled students without a status, assume 'not_uploaded'
-    if (tempEnrolledStudents.has(studentId) && !details.status) {
-      return { ...details, status: 'not_uploaded' };
-    }
-    
-    return details;
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Manage Enrollments</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-            disabled={isLoading}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {isLoading && (
-          <div className="flex justify-center items-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {!isLoading && Object.keys(statusCounts).length > 0 && (
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            <div className="bg-blue-50 p-3 rounded-lg text-center">
-              <div className="text-lg font-semibold text-blue-700">{statusCounts.not_uploaded || 0}</div>
-              <div className="text-xs text-gray-500">Not Uploaded</div>
-            </div>
-            <div className="bg-amber-50 p-3 rounded-lg text-center">
-              <div className="text-lg font-semibold text-amber-700">{statusCounts.uploaded || 0}</div>
-              <div className="text-xs text-gray-500">Uploaded</div>
-            </div>
-            <div className="bg-green-50 p-3 rounded-lg text-center">
-              <div className="text-lg font-semibold text-green-700">{statusCounts.evaluated || 0}</div>
-              <div className="text-xs text-gray-500">Evaluated</div>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg text-center">
-              <div className="text-lg font-semibold text-purple-700">{statusCounts.recheck_requested || 0}</div>
-              <div className="text-xs text-gray-500">Recheck Requested</div>
-            </div>
-          </div>
-        )}
-        
-
-        {!isLoading && combinedStudents.length === 0 && (
-          <div className="text-center py-4 text-gray-500">
-            No students found in this course.
-          </div>
-        )}
-
-        {!isLoading && combinedStudents.length > 0 && (
-          <>
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search students..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-gray-600">
-                  {filteredStudents.length} students found
-                </span>
-
-              </div>
-              <div className="space-y-1 rounded-lg border border-gray-200 overflow-hidden bg-white">
-                {filteredStudents.map(student => {
-                  const details = getStudentDetails(student.id);
-                  const isEnrolled = tempEnrolledStudents.has(student.id);
-                  
-                  return (
-                    <div
-                      key={student.id}
-                      className={`flex items-center justify-between p-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 ${
-                        isEnrolled ? 'bg-blue-50/50' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-medium text-blue-600">
-                            {student.name?.charAt(0) || '?'}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-800">{student.name}</p>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                            {student.roll_number && <span className="px-2 py-0.5 bg-gray-100 rounded-full">Roll: {student.roll_number}</span>}
-                            {student.email && <span className="truncate max-w-[200px]">{student.email}</span>}
-                            {details.status && (
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                details.status === 'evaluated' ? 'bg-green-100 text-green-800' :
-                                details.status === 'uploaded' ? 'bg-amber-100 text-amber-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {details.status}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {details.marks_obtained !== null && details.marks_obtained !== undefined && (
-                          <div className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-700">
-                            {details.marks_obtained}/{details.max_marks || 0}
-                          </div>
-                        )}
-                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={handleSubmit}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 font-medium shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Processing...</span>
-              </>
-            ) : (
-              <span>Save Changes</span>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ExamsTab = ({
-  exams = [],
-  courseId, 
-  searchQuery = '',
-  onSearchChange = () => { },
-  onAdd = () => { },
-  onEdit = () => { },
-  onDelete = () => { },
-  students = [],
-}) => {
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
-  const [selectedExamId, setSelectedExamId] = useState(null);
-  const [existingQuestions, setExistingQuestions] = useState([]);
-  const [showRubricModal, setShowRubricModal] = useState(false);
-  const [currentExamQuestions, setCurrentExamQuestions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [showEvaluation, setShowEvaluation] = useState(false);
-  const [selectedExamForEvaluation, setSelectedExamForEvaluation] = useState(null);
-  const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
-  const [showRecheckRequests, setShowRecheckRequests] = useState(false);
-  const [selectedExamForRecheck, setSelectedExamForRecheck] = useState(null);
-  const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
-  const [selectedExamForEnrollments, setSelectedExamForEnrollments] = useState(null);
-
-  useEffect(() => {
-    if (!courseId) {
-      console.error('CourseId is undefined in ExamsTab component');
-      showToast('Error: Course ID is missing. Some features may not work correctly.', 'error');
-    } else {
-      console.log(`ExamsTab initialized with courseId: ${courseId}`);
-    }
-  }, [courseId]);
-
-  const filteredExams = exams.filter(exam =>
-    exam.exam_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type }), 3000);
-  }, []);
-
-  const fetchExamQuestions = useCallback(async (examId) => {
-    try {
-      if (!examId) {
-        throw new Error('Exam ID is missing');
+    const combinedStudents = useMemo(() => {
+      
+      if (students && students.length > 0) {
+        return students;
       }
       
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        }
-      });
-  
-      if (response.status === 404) {
-        const errorData = await response.json();
-        if (errorData.message && errorData.message.includes('No questions found')) {
-          setQuestionsHaveRubrics(prev => ({
-            ...prev,
-            [examId]: false
-          }));
-          return [];
-        }
-        throw new Error(`Failed to fetch questions: ${response.status}`);
-      }
-  
-      if (!response.ok) {
-        throw new Error(`Failed to fetch questions: ${response.status}`);
-      }
-  
-      const data = await response.json();
       
-      if (data.code === 200) {
-        let questionsList = [];
-        
-        if (data.data.questions) {
-          questionsList = data.data.questions || [];
-        } else if (data.data.question_number) {
-          questionsList = [data.data];
-        }
-        
-        const hasRubrics = questionsList.some(question => {
-          const hasExplicitRubricItems = question.rubric_items && question.rubric_items.length > 0;
-          const hasRubricProperty = question.rubric && question.rubric.rubric_items && question.rubric.rubric_items.length > 0;
-          return hasExplicitRubricItems || hasRubricProperty;
-        });
-        
-        setQuestionsHaveRubrics(prev => ({
-          ...prev,
-          [examId]: hasRubrics
+      if (localStudents && localStudents.length > 0) {
+        return localStudents.map(student => ({
+          id: student.id,
+          name: student.user_name || `Student ${student.id}`,
+          email: student.user_email,
+          roll_number: student.roll_number
+        }));
+      }
+      
+      
+      const studentsFromEnrollments = enrollmentDetails
+        .filter(enrollment => enrollment && (enrollment.student_name || enrollment.student_id))
+        .map(enrollment => ({
+          id: enrollment.student_id || enrollment.id,
+          name: enrollment.student_name || `Student ${enrollment.student_id || enrollment.id}`
         }));
         
-        return questionsList;
-      } else {
-        throw new Error(data.message || 'Failed to fetch questions');
-      }
-    } catch (error) {
-      console.error('Error fetching questions:', error);
-      
-      if (error.message && error.message.includes('NotFoundError: No questions found')) {
-        showToast('No questions have been uploaded for this exam yet.', 'info');
-        return [];
-      }
-      
-      showToast(`Error loading exam questions: ${error.message}`, 'error');
-      throw error;
-    }
-  }, [showToast]);
+      return studentsFromEnrollments;
+    }, [students, localStudents, enrollmentDetails]);
+    
+    
+    const filteredStudents = useMemo(() => {
+      const query = searchQuery.toLowerCase();
+      return combinedStudents.filter(student => 
+        (student.name && student.name.toLowerCase().includes(query)) || 
+        (student.email && student.email.toLowerCase().includes(query)) ||
+        (student.roll_number && student.roll_number.toLowerCase().includes(query)) ||
+        String(student.id).toLowerCase().includes(query)
+      );
+    }, [combinedStudents, searchQuery]);
   
-  const handleRubricSave = async (data) => {
-    try {
-      showToast('Rubric saved successfully', 'success');
-      setQuestionsHaveRubrics(prev => ({
-        ...prev,
-        [selectedExamId]: true
-      }));
-      return data;
-    } catch (error) {
-      showToast(error.message || 'Failed to save rubric', 'error');
-      throw error;
-    }
-  };
-
-  const handleStartEvaluation = async (examId) => {
-    try {
-      if (!examId) {
-        throw new Error('Exam ID is missing');
+    useEffect(() => {
+      if (isOpen && examId) {
+        fetchEnrollments();
       }
-      
-      showToast('Preparing evaluation...', 'success');
-      
-      setSelectedExamForEvaluation(examId);
-      setShowEvaluation(true);
-      
-    } catch (error) {
-      console.error('Error starting evaluation:', error);
-      showToast(error.message || 'Failed to start evaluation', 'error');
-    }
-  };
-
-  const handleGetEnrollments = async (examId) => {
-    setSelectedExamForEnrollments(examId);
-    setShowEnrollmentsModal(true);
-  };
-
-  const handleEnrollmentChange = async (studentId, isEnrolled) => {
-    try {
-      if (!selectedExamForEnrollments) {
-        throw new Error('No exam selected');
+    }, [isOpen, examId]);
+  
+    
+    useEffect(() => {
+      if (isOpen) {
+        setTempEnrolledStudents(new Set(enrolledStudents));
       }
-
-      const endpoint = `${API_BASE_URL}/exams/${selectedExamForEnrollments}/enrollments`;
-      const response = await fetch(endpoint, {
-        method: isEnrolled ? 'POST' : 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ student_id: studentId })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${isEnrolled ? 'add' : 'remove'} student`);
-      }
-
-      const data = await response.json();
-      if (data.code !== 200) {
-        throw new Error(data.message || `Failed to ${isEnrolled ? 'add' : 'remove'} student`);
-      }
-
-      showToast(`Student ${isEnrolled ? 'added to' : 'removed from'} exam successfully`, 'success');
-      return true;
-    } catch (error) {
-      console.error('Error updating enrollment:', error);
-      showToast(error.message || 'Failed to update enrollment', 'error');
-      throw error;
-    }
-  };
-
-  const handleUploadClick = async (examId) => {
-    if (!examId) {
-      showToast('Error: Exam ID is missing', 'error');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      let questions = [];
+    }, [isOpen, enrolledStudents]);
+  
+    const fetchEnrollments = async () => {
+      setIsLoading(true);
+      setError('');
       try {
+        
+        const enrollmentsResponse = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          credentials: 'omit'
+        });
+  
+        if (!enrollmentsResponse.ok) {
+          throw new Error('Failed to fetch enrollments');
+        }
+  
+        const enrollmentsData = await enrollmentsResponse.json();
+        console.log("Raw enrollment data:", enrollmentsData);
+        
+        if (enrollmentsData.code !== 200) {
+          throw new Error(enrollmentsData.message || 'Failed to fetch enrollments');
+        }
+  
+        
+        let allEnrollments = [];
+        let counts = {};
+        
+        if (Array.isArray(enrollmentsData.data)) {
+          
+          enrollmentsData.data.forEach(item => {
+            if (item && Array.isArray(item.enrollments)) {
+              allEnrollments = [...allEnrollments, ...item.enrollments];
+              if (item.status_counts) {
+                counts = item.status_counts;
+              }
+            } 
+            
+            else if (item && item.student_id) {
+              allEnrollments.push(item);
+            }
+          });
+        } 
+        
+        else if (enrollmentsData.data && Array.isArray(enrollmentsData.data.enrollments)) {
+          allEnrollments = enrollmentsData.data.enrollments;
+          if (enrollmentsData.data.status_counts) {
+            counts = enrollmentsData.data.status_counts;
+          }
+        }
+        
+        else if (enrollmentsData.data && enrollmentsData.data.student_id) {
+          allEnrollments = [enrollmentsData.data];
+        }
+        
+        console.log('Processed enrollment details:', allEnrollments);
+        console.log('Status counts:', counts);
+        
+        
+        if (allEnrollments.length === 0) {
+          console.warn("No enrollments extracted from data. Using raw data as fallback.");
+          
+          if (Array.isArray(enrollmentsData.data)) {
+            allEnrollments = enrollmentsData.data;
+          } else if (enrollmentsData.data) {
+            allEnrollments = [enrollmentsData.data];
+          }
+        }
+        
+        setEnrollmentDetails(allEnrollments);
+        setStatusCounts(counts || {});
+  
+        
+        const enrolledIds = new Set(
+          allEnrollments
+            .filter(enrollment => enrollment && (enrollment.student_id || enrollment.id))
+            .map(enrollment => enrollment.student_id || enrollment.id)
+        );
+  
+        setEnrolledStudents(enrolledIds);
+        setTempEnrolledStudents(new Set(enrolledIds));
+      } catch (error) {
+        console.error('Error fetching enrollments:', error);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    const handleToggleStudent = (studentId) => {
+      setTempEnrolledStudents(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(studentId)) {
+          newSet.delete(studentId);
+        } else {
+          newSet.add(studentId);
+        }
+        return newSet;
+      });
+    };
+  
+    const handleSubmit = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        
+        const studentsToAdd = Array.from(tempEnrolledStudents).filter(id => !enrolledStudents.has(id));
+        
+        
+        const studentsToRemove = Array.from(enrolledStudents).filter(id => !tempEnrolledStudents.has(id));
+        
+        
+        for (const studentId of studentsToAdd) {
+          await onEnrollmentChange(studentId, true);
+        }
+        
+        
+        for (const studentId of studentsToRemove) {
+          await onEnrollmentChange(studentId, false);
+        }
+        
+        
+        setEnrolledStudents(new Set(tempEnrolledStudents));
+        
+        onClose();
+      } catch (error) {
+        console.error('Error updating enrollments:', error);
+        setError(error.message || 'Failed to update enrollments');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    
+    const getStudentDetails = (studentId) => {
+      const details = enrollmentDetails.find(e => String(e.student_id) === String(studentId)) || {};
+      
+      
+      if (tempEnrolledStudents.has(studentId) && !details.status) {
+        return { ...details, status: 'not_uploaded' };
+      }
+      
+      return details;
+    };
+  
+    if (!isOpen) return null;
+  
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Manage Enrollments</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+              disabled={isLoading}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+  
+          {isLoading && (
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+  
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+  
+          {!isLoading && Object.keys(statusCounts).length > 0 && (
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              <div className="bg-blue-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-semibold text-blue-700">{statusCounts.not_uploaded || 0}</div>
+                <div className="text-xs text-gray-500">Not Uploaded</div>
+              </div>
+              <div className="bg-amber-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-semibold text-amber-700">{statusCounts.uploaded || 0}</div>
+                <div className="text-xs text-gray-500">Uploaded</div>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-semibold text-green-700">{statusCounts.evaluated || 0}</div>
+                <div className="text-xs text-gray-500">Evaluated</div>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-semibold text-purple-700">{statusCounts.recheck_requested || 0}</div>
+                <div className="text-xs text-gray-500">Recheck Requested</div>
+              </div>
+            </div>
+          )}
+          
+  
+          {!isLoading && combinedStudents.length === 0 && (
+            <div className="text-center py-4 text-gray-500">
+              No students found in this course.
+            </div>
+          )}
+  
+          {!isLoading && combinedStudents.length > 0 && (
+            <>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search students..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+  
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-medium text-gray-600">
+                    {filteredStudents.length} students found
+                  </span>
+                </div>
+                <div className="space-y-1 rounded-lg border border-gray-200 overflow-hidden bg-white">
+                  {filteredStudents.map(student => {
+                    const details = getStudentDetails(student.id);
+                    const isEnrolled = tempEnrolledStudents.has(student.id);
+                    
+                    return (
+                      <div
+                        key={student.id}
+                        className={`flex items-center justify-between p-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 ${
+                          isEnrolled ? 'bg-blue-50/50' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="checkbox"
+                            checked={isEnrolled}
+                            onChange={() => handleToggleStudent(student.id)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-medium text-blue-600">
+                              {student.name?.charAt(0) || '?'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-800">{student.name}</p>
+                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                              {student.roll_number && <span className="px-2 py-0.5 bg-gray-100 rounded-full">Roll: {student.roll_number}</span>}
+                              {student.email && <span className="truncate max-w-[200px]">{student.email}</span>}
+                              {details.status && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  details.status === 'evaluated' ? 'bg-green-100 text-green-800' :
+                                  details.status === 'uploaded' ? 'bg-amber-100 text-amber-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {details.status}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {details.marks_obtained !== null && details.marks_obtained !== undefined && (
+                            <div className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-700">
+                              {details.marks_obtained}/{details.max_marks || 0}
+                            </div>
+                          )}
+                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+  
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 font-medium shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <span>Save Changes</span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  const ExamsTab = ({
+    exams = [],
+    courseId, 
+    searchQuery = '',
+    onSearchChange = () => { },
+    onAdd = () => { },
+    onEdit = () => { },
+    onDelete = () => { },
+    onRefresh = () => { },
+    students = [],
+  }) => {
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
+    const [selectedExamId, setSelectedExamId] = useState(null);
+    const [existingQuestions, setExistingQuestions] = useState([]);
+    const [showRubricModal, setShowRubricModal] = useState(false);
+    const [currentExamQuestions, setCurrentExamQuestions] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [showEvaluation, setShowEvaluation] = useState(false);
+    const [selectedExamForEvaluation, setSelectedExamForEvaluation] = useState(null);
+    const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
+    const [showRecheckRequests, setShowRecheckRequests] = useState(false);
+    const [selectedExamForRecheck, setSelectedExamForRecheck] = useState(null);
+    const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
+    const [selectedExamForEnrollments, setSelectedExamForEnrollments] = useState(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedExamForEdit, setSelectedExamForEdit] = useState(null);
+  
+    useEffect(() => {
+      if (!courseId) {
+        console.error('CourseId is undefined in ExamsTab component');
+        showToast('Error: Course ID is missing. Some features may not work correctly.', 'error');
+      } else {
+        console.log(`ExamsTab initialized with courseId: ${courseId}`);
+      }
+    }, [courseId]);
+  
+    const filteredExams = exams.filter(exam =>
+      exam.exam_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  
+    const showToast = useCallback((message, type = 'success') => {
+      setToast({ show: true, message, type });
+      setTimeout(() => setToast({ show: false, message: '', type }), 3000);
+    }, []);
+  
+    
+    const handleEditExam = (exam) => {
+      setSelectedExamForEdit(exam);
+      setShowEditModal(true);
+    };
+  
+    
+    const handleUpdateExam = async (updatedExam) => {
+      try {
+        if (!courseId || !updatedExam.id) {
+          throw new Error('Course ID or Exam ID is missing');
+        }
+  
+        
+        const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${updatedExam.id}/`;
+        
+        console.log('Making PUT request to:', fullUrl);
+        console.log('Request payload:', {
+          exam_name: updatedExam.exam_name,
+          full_marks: updatedExam.full_marks
+        });
+        
+        const response = await fetch(fullUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            exam_name: updatedExam.exam_name,
+            full_marks: updatedExam.full_marks
+          })
+        });
+  
+        console.log('Response status:', response.status);
+  
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API Error:', errorData);
+          throw new Error(errorData.message || `Failed to update exam: ${response.status}`);
+        }
+  
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.code === 200) {
+          showToast('Exam updated successfully', 'success');
+          
+          
+          if (onRefresh) {
+            onRefresh();
+          }
+          
+          return data.data;
+        } else {
+          throw new Error(data.message || 'Failed to update exam');
+        }
+      } catch (error) {
+        console.error('Error updating exam:', error);
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        
+        
+        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+          showToast('Network error: Please check if the API server supports HTTPS', 'error');
+        } else {
+          showToast(error.message || 'Failed to update exam', 'error');
+        }
+        throw error;
+      }
+    };
+  
+    const fetchExamQuestions = useCallback(async (examId) => {
+      try {
+        if (!examId) {
+          throw new Error('Exam ID is missing');
+        }
+        
         const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           }
         });
+    
         if (response.status === 404) {
-          console.log('No existing questions found for this exam');
-        } else if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: "Failed to fetch questions" }));
-          throw new Error(errorData.detail || `Failed to fetch questions: ${response.status}`);
+          const errorData = await response.json();
+          if (errorData.message && errorData.message.includes('No questions found')) {
+            setQuestionsHaveRubrics(prev => ({
+              ...prev,
+              [examId]: false
+            }));
+            return [];
+          }
+          throw new Error(`Failed to fetch questions: ${response.status}`);
+        }
+    
+        if (!response.ok) {
+          throw new Error(`Failed to fetch questions: ${response.status}`);
+        }
+    
+        const data = await response.json();
+        
+        if (data.code === 200) {
+          let questionsList = [];
+          
+          if (data.data.questions) {
+            questionsList = data.data.questions || [];
+          } else if (data.data.question_number) {
+            questionsList = [data.data];
+          }
+          
+          const hasRubrics = questionsList.some(question => {
+            const hasExplicitRubricItems = question.rubric_items && question.rubric_items.length > 0;
+            const hasRubricProperty = question.rubric && question.rubric.rubric_items && question.rubric.rubric_items.length > 0;
+            return hasExplicitRubricItems || hasRubricProperty;
+          });
+          
+          setQuestionsHaveRubrics(prev => ({
+            ...prev,
+            [examId]: hasRubrics
+          }));
+          
+          return questionsList;
         } else {
-          const data = await response.json();
-          if (data.code === 200) {
-            if (data.data.questions) {
-              questions = data.data.questions || [];
-            } else if (data.data.question_number) {
-              questions = [data.data];
-            }
-          }
+          throw new Error(data.message || 'Failed to fetch questions');
         }
       } catch (error) {
-        if (!error.message.includes('Questions not found')) {
-          console.error('Error loading questions:', error);
-          showToast('Failed to load existing questions. You can still upload a new question paper.', 'error');
+        console.error('Error fetching questions:', error);
+        
+        if (error.message && error.message.includes('NotFoundError: No questions found')) {
+          showToast('No questions have been uploaded for this exam yet.', 'info');
+          return [];
         }
+        
+        showToast(`Error loading exam questions: ${error.message}`, 'error');
+        throw error;
       }
-      setExistingQuestions(questions);
-      setSelectedExamId(examId);
-      setShowUploadModal(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  const handleAnswerUpload = async (examId) => {
-    if (!examId) {
-      showToast('Error: Exam ID is missing', 'error');
-      return;
-    }
+    }, [showToast]);
     
-    setSelectedExamId(examId);
-    setShowAnswerUploadModal(true);
-  };
-
-  const handleGenerateRubrics = async (examId) => {
-    if (!examId) {
-      showToast('Error: Exam ID is missing', 'error');
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      let questions = [];
+    const handleRubricSave = async (data) => {
       try {
-        questions = await fetchExamQuestions(examId);
+        showToast('Rubric saved successfully', 'success');
+        setQuestionsHaveRubrics(prev => ({
+          ...prev,
+          [selectedExamId]: true
+        }));
+        return data;
       } catch (error) {
-        console.error('Error loading questions for rubrics:', error);
-        showToast('Failed to load questions. Creating empty rubric template.', 'error');
-        
-        questions = [
-          { 
-            question_number: 1, 
-            question_text: "Question 1 (API unavailable)", 
-            max_marks: 10,
-            domain: "Math" 
-          }
-        ];
+        showToast(error.message || 'Failed to save rubric', 'error');
+        throw error;
       }
-      
-      if (questions && questions.length > 0) {
-        const processedQuestions = questions.map(question => {
-          const hasDirectRubricItems = question.rubric_items && question.rubric_items.length > 0;
-          
-          const hasRubricProperty = question.rubric && 
-                                   question.rubric.rubric_items && 
-                                   question.rubric.rubric_items.length > 0;
-          
-          return {
-            ...question,
-            rubric_items: hasDirectRubricItems ? question.rubric_items : 
-                         (hasRubricProperty ? question.rubric.rubric_items : []),
-            problem_feedback: hasDirectRubricItems ? question.problem_feedback :
-                            (hasRubricProperty ? question.rubric.problem_feedback : '')
-          };
+    };
+  
+    const handleStartEvaluation = async (examId) => {
+      try {
+        if (!examId) {
+          throw new Error('Exam ID is missing');
+        }
+        
+        showToast('Preparing evaluation...', 'success');
+        
+        setSelectedExamForEvaluation(examId);
+        setShowEvaluation(true);
+        
+      } catch (error) {
+        console.error('Error starting evaluation:', error);
+        showToast(error.message || 'Failed to start evaluation', 'error');
+      }
+    };
+  
+    const handleGetEnrollments = async (examId) => {
+      setSelectedExamForEnrollments(examId);
+      setShowEnrollmentsModal(true);
+    };
+  
+    const handleEnrollmentChange = async (studentId, isEnrolled) => {
+      try {
+        if (!selectedExamForEnrollments) {
+          throw new Error('No exam selected');
+        }
+  
+        const endpoint = `${API_BASE_URL}/exams/${selectedExamForEnrollments}/enrollments`;
+        const response = await fetch(endpoint, {
+          method: isEnrolled ? 'POST' : 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ student_id: studentId })
         });
-        
-        setCurrentExamQuestions(processedQuestions);
-        setSelectedExamId(examId);
-        setShowRubricModal(true);
-      } else {
-        showToast('No questions found. Please upload a question paper first.', 'error');
+  
+        if (!response.ok) {
+          throw new Error(`Failed to ${isEnrolled ? 'add' : 'remove'} student`);
+        }
+  
+        const data = await response.json();
+        if (data.code !== 200) {
+          throw new Error(data.message || `Failed to ${isEnrolled ? 'add' : 'remove'} student`);
+        }
+  
+        showToast(`Student ${isEnrolled ? 'added to' : 'removed from'} exam successfully`, 'success');
+        return true;
+      } catch (error) {
+        console.error('Error updating enrollment:', error);
+        showToast(error.message || 'Failed to update enrollment', 'error');
+        throw error;
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUploadQuestionAndAnswerPdfs = async (examId, questionPdf, goldenPdf) => {
-    try {
+    };
+  
+    const handleUploadClick = async (examId) => {
       if (!examId) {
         showToast('Error: Exam ID is missing', 'error');
+        return;
+      }
+      setIsLoading(true);
+      try {
+        let questions = [];
+        try {
+          const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            }
+          });
+          if (response.status === 404) {
+            console.log('No existing questions found for this exam');
+          } else if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Failed to fetch questions" }));
+            throw new Error(errorData.detail || `Failed to fetch questions: ${response.status}`);
+          } else {
+            const data = await response.json();
+            if (data.code === 200) {
+              if (data.data.questions) {
+                questions = data.data.questions || [];
+              } else if (data.data.question_number) {
+                questions = [data.data];
+              }
+            }
+          }
+        } catch (error) {
+          if (!error.message.includes('Questions not found')) {
+            console.error('Error loading questions:', error);
+            showToast('Failed to load existing questions. You can still upload a new question paper.', 'error');
+          }
+        }
+        setExistingQuestions(questions);
+        setSelectedExamId(examId);
+        setShowUploadModal(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    const handleAnswerUpload = async (examId) => {
+      if (!examId) {
+        showToast('Error: Exam ID is missing', 'error');
+        return;
+      }
+      
+      setSelectedExamId(examId);
+      setShowAnswerUploadModal(true);
+    };
+  
+    const handleGenerateRubrics = async (examId) => {
+      if (!examId) {
+        showToast('Error: Exam ID is missing', 'error');
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        let questions = [];
+        try {
+          questions = await fetchExamQuestions(examId);
+        } catch (error) {
+          console.error('Error loading questions for rubrics:', error);
+          showToast('Failed to load questions. Creating empty rubric template.', 'error');
+          
+          questions = [
+            { 
+              question_number: 1, 
+              question_text: "Question 1 (API unavailable)", 
+              max_marks: 10,
+              domain: "Math" 
+            }
+          ];
+        }
+        
+        if (questions && questions.length > 0) {
+          const processedQuestions = questions.map(question => {
+            const hasDirectRubricItems = question.rubric_items && question.rubric_items.length > 0;
+            
+            const hasRubricProperty = question.rubric && 
+                                     question.rubric.rubric_items && 
+                                     question.rubric.rubric_items.length > 0;
+            
+            return {
+              ...question,
+              rubric_items: hasDirectRubricItems ? question.rubric_items : 
+                           (hasRubricProperty ? question.rubric.rubric_items : []),
+              problem_feedback: hasDirectRubricItems ? question.problem_feedback :
+                              (hasRubricProperty ? question.rubric.problem_feedback : '')
+            };
+          });
+          
+          setCurrentExamQuestions(processedQuestions);
+          setSelectedExamId(examId);
+          setShowRubricModal(true);
+        } else {
+          showToast('No questions found. Please upload a question paper first.', 'error');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    const handleUploadQuestionAndAnswerPdfs = async (examId, questionPdf, goldenPdf) => {
+      try {
+        if (!examId) {
+          showToast('Error: Exam ID is missing', 'error');
+          return false;
+        }
+        
+        if (questionPdf) {
+          const questionFormData = new FormData();
+          questionFormData.append('question_pdf', questionPdf);
+          
+          const questionResponse = await fetch(`${API_BASE_URL}/exams/${examId}/question-pdf`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: questionFormData
+          });
+          
+          if (!questionResponse.ok) {
+            throw new Error(`Question PDF upload failed: ${questionResponse.status}`);
+          }
+          
+          showToast('Question PDF uploaded successfully', 'success');
+        }
+        
+        if (goldenPdf) {
+          const goldenFormData = new FormData();
+          goldenFormData.append('golden_pdf', goldenPdf);
+          
+          const goldenResponse = await fetch(`${API_BASE_URL}/exams/${examId}/golden-pdf`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: goldenFormData
+          });
+          
+          if (!goldenResponse.ok) {
+            throw new Error(`Golden PDF upload failed: ${goldenResponse.status}`);
+          }
+          
+          showToast('Golden answer PDF uploaded successfully', 'success');
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error uploading PDFs:', error);
+        showToast(error.message || 'Failed to upload PDF files', 'error');
         return false;
       }
-      
-      if (questionPdf) {
-        const questionFormData = new FormData();
-        questionFormData.append('question_pdf', questionPdf);
-        
-        const questionResponse = await fetch(`${API_BASE_URL}/exams/${examId}/question-pdf`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-          body: questionFormData
-        });
-        
-        if (!questionResponse.ok) {
-          throw new Error(`Question PDF upload failed: ${questionResponse.status}`);
-        }
-        
-        showToast('Question PDF uploaded successfully', 'success');
-      }
-      
-      if (goldenPdf) {
-        const goldenFormData = new FormData();
-        goldenFormData.append('golden_pdf', goldenPdf);
-        
-        const goldenResponse = await fetch(`${API_BASE_URL}/exams/${examId}/golden-pdf`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-          body: goldenFormData
-        });
-        
-        if (!goldenResponse.ok) {
-          throw new Error(`Golden PDF upload failed: ${goldenResponse.status}`);
-        }
-        
-        showToast('Golden answer PDF uploaded successfully', 'success');
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error uploading PDFs:', error);
-      showToast(error.message || 'Failed to upload PDF files', 'error');
-      return false;
-    }
-  };
-
+    };
   
-  const handleViewRecheckRequests = (examId) => {
-    setSelectedExamForRecheck(examId);
-    setShowRecheckRequests(true);
-    showToast('Loading recheck requests...', 'success');
-  };
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-6"
-      >
-        <nav className="flex items-center gap-2 text-sm">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            Courses
-          </motion.button>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            CS F111
-          </motion.button>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-blue-600 font-medium">Exams</span>
-        </nav>
-
-        <div className="flex items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search exams..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                transition-all duration-300 text-gray-700"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">                                    
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onAdd}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white
-                rounded-xl hover:bg-blue-700 transition-all duration-300
-                shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              <Plus className="w-5 h-5" />
-              Create Exam
-            </motion.button>
-          </div>
-        </div>
-
-        <motion.div
-          layout
-          className="space-y-4"
-        >
-          <AnimatePresence>
-            {filteredExams.map((exam) => (
-              <motion.div
-                key={exam.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+    
+    const handleViewRecheckRequests = (examId) => {
+      setSelectedExamForRecheck(examId);
+      setShowRecheckRequests(true);
+      showToast('Loading recheck requests...', 'success');
+    };
+  
+    return (
+      <>
+        <div className="space-y-6 opacity-100 transition-opacity duration-1000">
+          <nav className="flex items-center gap-2 text-sm">
+            <button className="text-gray-500 hover:text-gray-700 transition-colors transform hover:scale-105">
+              Courses
+            </button>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <button className="text-gray-500 hover:text-gray-700 transition-colors transform hover:scale-105">
+              CS F111
+            </button>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <span className="text-blue-600 font-medium">Exams</span>
+          </nav>
+  
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-xl">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search exams..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl
+                  focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                  transition-all duration-300 text-gray-700"
+              />
+            </div>
+  
+            <div className="flex items-center gap-3">                                    
+              <button
+                onClick={onAdd}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white
+                  rounded-xl hover:bg-blue-700 transition-all duration-300 transform hover:scale-102
+                  shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
+                <Plus className="w-5 h-5" />
+                Create Exam
+              </button>
+            </div>
+          </div>
+  
+          <div className="space-y-4">
+            {filteredExams.map((exam) => (
+              <div key={exam.id} className="transition-all duration-300">
                 <ExamCard
                   exam={exam}
-                  onEdit={onEdit}
+                  onEdit={handleEditExam}
                   onDelete={onDelete}
                   onUploadQnA={handleUploadClick}
                   onGenerateRubrics={handleGenerateRubrics}
@@ -1316,28 +1417,17 @@ const ExamsTab = ({
                   onStartEvaluation={handleStartEvaluation}
                   onViewRecheckRequests={handleViewRecheckRequests}
                 />
-              </motion.div>
+              </div>
             ))}
-
+  
             {filteredExams.length === 0 && (
-              <motion.div
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 
-                  p-12 text-center"
-              >
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 
+                p-12 text-center">
                 <div className="flex flex-col items-center max-w-sm mx-auto">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200 }}
-                    className="w-16 h-16 bg-gray-50 rounded-full flex items-center 
-                      justify-center mb-4"
-                  >
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center 
+                    justify-center mb-4 transform transition-all duration-500 scale-100">
                     <Search className="w-8 h-8 text-gray-400" />
-                  </motion.div>
+                  </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     No exams found
                   </h3>
@@ -1348,203 +1438,188 @@ const ExamsTab = ({
                     }
                   </p>
                   {!searchQuery && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                    <button
                       onClick={onAdd}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 
                         text-white rounded-xl hover:bg-blue-700 transition-all duration-300
-                        shadow-sm hover:shadow-md"
+                        shadow-sm hover:shadow-md transform hover:scale-105"
                     >
                       <Plus className="w-5 h-5" />
                       Create First Exam
-                    </motion.button>
+                    </button>
                   )}
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
-        </motion.div>
-
-        <Toast
-          show={toast.show}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ ...toast, show: false })}
-        />
-
-        <UploadQnAModal
-          isOpen={showUploadModal}
-          onClose={() => {
-            setShowUploadModal(false);
-            setSelectedExamId(null);
-            setExistingQuestions([]);
-          }}
-          examId={selectedExamId}
-          existingQuestions={existingQuestions}
-          onSubmit={async (examId, formData) => {
-            try {
-              if (!examId) {
-                showToast('Error: Exam ID is missing', 'error');
-                throw new Error('Exam ID is missing');
-              }
-              
-              if (formData.get('golden_pdf') || formData.get('question_pdf')) {
-                return await handleUploadQuestionAndAnswerPdfs(
-                  examId,
-                  formData.get('question_pdf'),
-                  formData.get('golden_pdf')
-                );
-              }
-              
-              const response = await fetch(`${API_BASE_URL}/exams/${examId}/upload`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                },
-                body: formData
-              });
-
-              if (!response.ok) {
-                throw new Error(`Upload failed: ${response.status}`);
-              }
-              const data = await response.json();
-              if (data.code === 200) {
-                showToast('Question paper uploaded successfully', 'success');
-                return data;
-              } else {
-                throw new Error(data.message || 'Upload failed');
-              }
-            } catch (error) {
-              console.error('Error uploading question paper:', error);
-              showToast(error.message || 'Failed to upload question paper', 'error');
-              throw error;
-            }
-          }}
-        />
-        <RubricModal
-          isOpen={showRubricModal}
-          onClose={() => {
-            setShowRubricModal(false);
-            setSelectedExamId(null);
-            setCurrentExamQuestions([]);
-          }}
-          examId={selectedExamId}
-          questions={currentExamQuestions}
-          onSave={handleRubricSave}
-        />
-
-        <AnswerUploadModal
-          isOpen={showAnswerUploadModal}
-          onClose={() => {
-            setShowAnswerUploadModal(false);
-            setSelectedExamId(null);
-          }}
-          examId={selectedExamId}
-          courseId={courseId}
-          onUpload={async (data) => {
-            showToast('Answer sheets uploaded successfully', 'success');
-            return data;
-          }}
-        />
-
-        <EnrollmentsModal
-          isOpen={showEnrollmentsModal}
-          onClose={() => {
-            setShowEnrollmentsModal(false);
-            setSelectedExamForEnrollments(null);
-          }}
-          examId={selectedExamForEnrollments}
-          courseId={courseId}
-          onEnrollmentChange={handleEnrollmentChange}
-          students={students}
-        />
-      </motion.div>
-
-      {showEvaluation && (
-        <div className="fixed inset-0 z-50 bg-white">
-          <div className="min-h-screen p-6">
-            <React.Suspense
-              fallback={
-                <div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                </div>
-              }
-            >
-              <ExamEvaluation
-                examId={selectedExamForEvaluation}
-                courseId={courseId}
-                onClose={() => {
-                  setShowEvaluation(false);
-                  setSelectedExamForEvaluation(null);
-                }}
-                onEvaluateSubmission={async (examId, enrollmentId) => {
-                  try {
-                    if (!examId || !enrollmentId) {
-                      showToast('Error: Missing parameters for evaluation', 'error');
-                      return { status: 'failed', message: 'Missing parameters' };
-                    }
-                    
-                    const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${enrollmentId}`, {
-                      method: 'GET',
-                      headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({}) 
-                    });
-
-                    if (!response.ok) {
-                      throw new Error(`API call failed with status ${response.status}`);
-                    } 
-                    
-                    const data = await response.json();
-                    if (data.code === 200) {
-                      showToast('Evaluation completed successfully', 'success');
-                      return data.data;
-                    } else {
-                      throw new Error(data.message || 'Evaluation failed');
-                    }
-                  } catch (error) {
-                    console.error('Error evaluating submission:', error);
-                    showToast(error.message || 'Failed to evaluate submission', 'error');
-                    
-                    return { 
-                      status: 'failed', 
-                      message: error.message || 'Failed to evaluate submission'
-                    };
-                  }
-                }}
-              />
-            </React.Suspense>
           </div>
-        </div>
-      )}
-      {showRecheckRequests && (
-        <div className="fixed inset-0 z-50 bg-white">
-          <div className="min-h-screen p-6">
-            <React.Suspense
-              fallback={
-                <div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                </div>
+  
+          <Toast
+            show={toast.show}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast({ ...toast, show: false })}
+          />
+  
+          {}
+          <EditExamModal
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedExamForEdit(null);
+            }}
+            exam={selectedExamForEdit}
+            onSave={handleUpdateExam}
+          />
+  
+          <UploadQnAModal
+            isOpen={showUploadModal}
+            onClose={() => {
+              setShowUploadModal(false);
+              setSelectedExamId(null);
+              setExistingQuestions([]);
+            }}
+            examId={selectedExamId}
+            existingQuestions={existingQuestions}
+            onSubmit={async (examId, formData) => {
+              try {
+                if (!examId) {
+                  showToast('Error: Exam ID is missing', 'error');
+                  throw new Error('Exam ID is missing');
+                }
+                
+                if (formData.get('golden_pdf') || formData.get('question_pdf')) {
+                  return await handleUploadQuestionAndAnswerPdfs(
+                    examId,
+                    formData.get('question_pdf'),
+                    formData.get('golden_pdf')
+                  );
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/exams/${examId}/upload`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                  },
+                  body: formData
+                });
+  
+                if (!response.ok) {
+                  throw new Error(`Upload failed: ${response.status}`);
+                }
+                const data = await response.json();
+                if (data.code === 200) {
+                  showToast('Question paper uploaded successfully', 'success');
+                  return data;
+                } else {
+                  throw new Error(data.message || 'Upload failed');
+                }
+              } catch (error) {
+                console.error('Error uploading question paper:', error);
+                showToast(error.message || 'Failed to upload question paper', 'error');
+                throw error;
               }
-            >
-              <ProfessorRecheckRequests
-                examId={selectedExamForRecheck}
-                courseId={courseId}
-                onClose={() => {
-                  setShowRecheckRequests(false);
-                  setSelectedExamForRecheck(null);
-                }}
-              />
-            </React.Suspense>
-          </div>
+            }}
+          />
+          <RubricModal
+            isOpen={showRubricModal}
+            onClose={() => {
+              setShowRubricModal(false);
+              setSelectedExamId(null);
+              setCurrentExamQuestions([]);
+            }}
+            examId={selectedExamId}
+            questions={currentExamQuestions}
+            onSave={handleRubricSave}
+          />
+  
+          <AnswerUploadModal
+            isOpen={showAnswerUploadModal}
+            onClose={() => {
+              setShowAnswerUploadModal(false);
+              setSelectedExamId(null);
+            }}
+            examId={selectedExamId}
+            courseId={courseId}
+            onUpload={async (data) => {
+              showToast('Answer sheets uploaded successfully', 'success');
+              return data;
+            }}
+          />
+  
+          <EnrollmentsModal
+            isOpen={showEnrollmentsModal}
+            onClose={() => {
+              setShowEnrollmentsModal(false);
+              setSelectedExamForEnrollments(null);
+            }}
+            examId={selectedExamForEnrollments}
+            courseId={courseId}
+            onEnrollmentChange={handleEnrollmentChange}
+            students={students}
+          />
         </div>
-      )}
-    </>
-  );
-};
-
-export default ExamsTab;
-
+  
+        {showEvaluation && (
+          <div className="fixed inset-0 z-50 bg-white">
+            <div className="min-h-screen p-6">
+              <React.Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                }
+              >
+                <ExamEvaluation
+                  examId={selectedExamForEvaluation}
+                  courseId={courseId}
+                  onClose={() => {
+                    setShowEvaluation(false);
+                    setSelectedExamForEvaluation(null);
+                  }}
+                  onEvaluateSubmission={async (examId, enrollmentId) => {
+                    try {
+                      if (!examId || !enrollmentId) {
+                        showToast('Error: Missing parameters for evaluation', 'error');
+                        return { status: 'failed', message: 'Missing parameters' };
+                      }
+                      
+                      const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${enrollmentId}`, {
+                        method: 'GET',
+                        headers: {
+                          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({}) 
+                      });
+  
+                      if (!response.ok) {
+                        throw new Error(`API call failed with status ${response.status}`);
+                      } 
+                      
+                      const data = await response.json();
+                      if (data.code === 200) {
+                        showToast('Evaluation completed successfully', 'success');
+                        return data.data;
+                      } else {
+                        throw new Error(data.message || 'Evaluation failed');
+                      }
+                    } catch (error) {
+                      console.error('Error evaluating submission:', error);
+                      showToast(error.message || 'Failed to evaluate submission', 'error');
+                      
+                      return { 
+                        status: 'failed', 
+                        message: error.message || 'Failed to evaluate submission'
+                      };
+                    }
+                  }}
+                />
+              </React.Suspense>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+  
+  export default ExamsTab;

@@ -92,9 +92,10 @@ const StudentEvaluationLoader = ({
       0
     );
   };
+  
   const getMaxMarks = () => {
     return questions.reduce(
-      (sum, question) => sum + (question.max_marks || 0),
+      (sum, question) => sum + (Math.abs(question.max_marks) || 0),
       0
     );
   };
@@ -106,7 +107,10 @@ const StudentEvaluationLoader = ({
   };
 
   useEffect(() => {
+    console.log("🚀 StudentEvaluationLoader useEffect - examId:", examId, "enrollmentId:", enrollmentId);
+    
     if (examId && enrollmentId) {
+      console.log("✅ Parameters valid, fetching student evaluation...");
       fetchStudentEvaluation(
         examId,
         enrollmentId,
@@ -119,9 +123,11 @@ const StudentEvaluationLoader = ({
         setStudentData
       );
     } else {
-      setError("Missing required exam ID or enrollment ID");
+      console.error("❌ Missing required parameters - examId:", examId, "enrollmentId:", enrollmentId);
+      const errorMessage = "Missing required exam ID or enrollment ID";
+      setError(errorMessage);
       setLoading(false);
-      onError("Missing required exam ID or enrollment ID");
+      onError(errorMessage);
     }
   }, [examId, enrollmentId, onError]);
 
@@ -155,19 +161,32 @@ const StudentEvaluationLoader = ({
   };
 
   const getCurrentQuestion = () => {
-    if (!questions.length) return null;
-    return questions[currentQuestionIndex];
+    console.log("🔍 getCurrentQuestion - questions:", questions.length, "currentQuestionIndex:", currentQuestionIndex);
+    if (!questions.length) {
+      console.log("❌ No questions available");
+      return null;
+    }
+    const question = questions[currentQuestionIndex];
+    console.log("📝 Current question:", question?.question_number, question?.question_text?.substring(0, 50));
+    return question;
   };
 
   const getCurrentEvaluation = () => {
-    if (!studentData?.evaluations) return null;
+    if (!studentData?.evaluations) {
+      console.log("❌ No student evaluations available");
+      return null;
+    }
     const currentQuestion = getCurrentQuestion();
-    if (!currentQuestion) return null;
+    if (!currentQuestion) {
+      console.log("❌ No current question for evaluation");
+      return null;
+    }
 
-    return (
-      studentData.evaluations[`question_${currentQuestion.question_number}`] ||
-      null
-    );
+    const evaluationKey = `question_${currentQuestion.question_number}`;
+    const evaluation = studentData.evaluations[evaluationKey];
+    console.log("📊 Current evaluation for", evaluationKey, ":", !!evaluation);
+    
+    return evaluation || null;
   };
 
   const handleOpenQuestionImage = () => {
@@ -219,7 +238,21 @@ const StudentEvaluationLoader = ({
     }, 3000);
   };
 
+  // Debug logging for render state
+  console.log("🎯 StudentEvaluationLoader render state:", {
+    loading,
+    error: !!error,
+    questionsLength: questions.length,
+    studentData: !!studentData,
+    answerScriptPagesLength: answerScriptPages.length,
+    currentQuestionIndex,
+    currentQuestion: !!getCurrentQuestion(),
+    currentEvaluation: !!getCurrentEvaluation(),
+    feedbackEditsKeys: Object.keys(feedbackEdits)
+  });
+
   if (loading) {
+    console.log("⏳ StudentEvaluationLoader - Loading state");
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -243,6 +276,7 @@ const StudentEvaluationLoader = ({
   }
 
   if (error) {
+    console.log("❌ StudentEvaluationLoader - Error state:", error);
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -307,6 +341,46 @@ const StudentEvaluationLoader = ({
 
   const totalMarks = getTotalMarks();
   const maxTotalMarks = getMaxMarks();
+
+  // Show a fallback if no questions are loaded
+  if (!loading && questions.length === 0) {
+    console.log("⚠️ No questions loaded, showing fallback message");
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="fixed inset-0 bg-white z-50 flex items-center justify-center"
+      >
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-center max-w-md px-6"
+        >
+          <div className="inline-block bg-yellow-100 p-6 rounded-full mb-6">
+            <FileText className="w-12 h-12 text-yellow-500" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-3">
+            No Questions Available
+          </h2>
+          <p className="text-gray-600 mb-8">
+            This exam doesn't have any questions yet or there was an issue loading them.
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onClose}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+          >
+            Go Back
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  console.log("🎨 Rendering main StudentEvaluationLoader UI");
 
   return (
     <div
@@ -630,7 +704,6 @@ const StudentEvaluationLoader = ({
                               alt={`Question ${questionNumber}`}
                               className="max-h-full object-contain rounded shadow-sm"
                               onError={(e) => {
-                                // e.target.src = "/api/placeholder/400/300";
                                 e.target.onerror = null;
                               }}
                             />
@@ -676,7 +749,6 @@ const StudentEvaluationLoader = ({
                               alt={`Answer for Question ${questionNumber}`}
                               className="max-h-full object-contain rounded shadow-sm"
                               onError={(e) => {
-                                // e.target.src = "/api/placeholder/400/300";
                                 e.target.onerror = null;
                               }}
                             />
@@ -711,12 +783,12 @@ const StudentEvaluationLoader = ({
                         <div className="flex items-center gap-2">
                           <div className="font-medium text-blue-600">
                             {currentEvaluation.total_marks} /{" "}
-                            {currentQuestion?.max_marks || 10}
+                            {Math.abs(currentQuestion?.max_marks) || 10}
                           </div>
                           <div className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                             {formatPercentage(
                               currentEvaluation.total_marks,
-                              currentQuestion?.max_marks || 10
+                              Math.abs(currentQuestion?.max_marks) || 10
                             )}
                           </div>
                         </div>
@@ -758,7 +830,7 @@ const StudentEvaluationLoader = ({
                         </h3>
                         <ScoreDisplay
                           marks={currentEvaluation.total_marks}
-                          maxMarks={currentQuestion?.max_marks || 0}
+                          maxMarks={Math.abs(currentQuestion?.max_marks) || 0}
                         />
                       </motion.div>
 
@@ -776,7 +848,7 @@ const StudentEvaluationLoader = ({
                             {feedbackEdits[`question_${questionNumber}`]
                               ?.overall ||
                               currentEvaluation.overall_feedback ||
-                              ""}
+                              "No feedback available"}
                           </div>
                         </motion.div>
 
@@ -811,9 +883,8 @@ const StudentEvaluationLoader = ({
                                     {item.item_number}
                                   </div>
                                   <h5 className="text-sm font-medium text-gray-900 line-clamp-1">
-                                    {item.rubric_description ||
-                                      `Criterion ${item.item_number}`}
-                                  </h5>
+  {currentQuestion?.rubric_items?.[index]?.description || 'No description available'}
+</h5>
                                 </div>
                                 <div className="flex items-center gap-1 text-sm px-3 py-1.5 bg-blue-50 rounded-lg shadow-sm whitespace-nowrap">
                                   <span className="font-medium text-blue-600">
@@ -828,7 +899,7 @@ const StudentEvaluationLoader = ({
                                   {feedbackEdits[`question_${questionNumber}`]
                                     ?.items[index]?.editedFeedback ||
                                     item.feedback ||
-                                    ""}
+                                    "No feedback provided"}
                                 </div>
 
                                 <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -836,7 +907,7 @@ const StudentEvaluationLoader = ({
                                     className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
                                     style={{
                                       width: `${
-                                        (item.marks_awarded / item.max_marks) *
+                                        (item.marks_awarded / (item.max_marks || 1)) *
                                         100
                                       }%`,
                                     }}
@@ -901,6 +972,7 @@ const StudentEvaluationLoader = ({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         className="mt-6 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
+                        onClick={() => setUseExamDetail(true)}
                       >
                         Add Feedback
                       </motion.button>
@@ -928,7 +1000,7 @@ const StudentEvaluationLoader = ({
                     {currentEvaluation && (
                       <ScoreDisplay
                         marks={currentEvaluation.total_marks}
-                        maxMarks={currentQuestion?.max_marks || 0}
+                        maxMarks={Math.abs(currentQuestion?.max_marks) || 0}
                       />
                     )}
                   </motion.h3>
@@ -945,7 +1017,7 @@ const StudentEvaluationLoader = ({
                           {
                             label: "Score",
                             value: currentEvaluation.total_marks,
-                            max: currentQuestion?.max_marks || 10,
+                            max: Math.abs(currentQuestion?.max_marks) || 10,
                             color: "from-blue-500 to-blue-600",
                             icon: <Award className="w-5 h-5 text-blue-50" />,
                           },
@@ -953,7 +1025,7 @@ const StudentEvaluationLoader = ({
                             label: "Percentage",
                             value: `${Math.round(
                               (currentEvaluation.total_marks /
-                                (currentQuestion?.max_marks || 10)) *
+                                (Math.abs(currentQuestion?.max_marks) || 10)) *
                                 100
                             )}%`,
                             color: "from-green-500 to-green-600",
@@ -1019,7 +1091,7 @@ const StudentEvaluationLoader = ({
                                     {index + 1}
                                   </div>
                                   <span className="line-clamp-1">
-                                    {item.rubric_description ||
+                                    {currentQuestion?.rubric_items?.[index]?.description ||
                                       `Criterion ${item.item_number}`}
                                   </span>
                                 </div>
@@ -1029,7 +1101,7 @@ const StudentEvaluationLoader = ({
                                   </span>
                                   <span className="text-gray-400">/</span>
                                   <span className="text-gray-600">
-                                    {item.max_marks}
+                                    {currentQuestion?.rubric_items?.[index]?.max_marks || 1}
                                   </span>
                                 </div>
                               </div>
@@ -1039,7 +1111,7 @@ const StudentEvaluationLoader = ({
                                   initial={{ width: 0 }}
                                   animate={{
                                     width: `${
-                                      (item.marks_awarded / item.max_marks) *
+                                      (item.marks_awarded / (item.max_marks || 1)) *
                                       100
                                     }%`,
                                   }}
