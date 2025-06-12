@@ -1560,10 +1560,6 @@ const StudentExamDetails = ({ isHistory = false }) => {
           newMarks += question.currentMarks;
         }
 
-        if (requests[0]) {
-          setProgressPercentage((newMarks / 10) * 100);
-        }
-
         if (requests.length > 0) {
           const latestRequest = requests[0];
           setRequestStatus({
@@ -1678,12 +1674,6 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
           setExamData(transformedData);
 
-          if (transformedData.maxScore > 0) {
-            setProgressPercentage(
-              (transformedData.score / transformedData.maxScore) * 100
-            );
-          }
-
           if (apiData.answer_sheet_url) {
             setPdfFile(apiData.answer_sheet_url);
           }
@@ -1725,6 +1715,34 @@ const StudentExamDetails = ({ isHistory = false }) => {
       }
     };
   }, [examId, enrollmentId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
+    axios
+      .get(`${API_BASE_URL}/students/courses/${courseId}/exams`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+      .then(({ data }) => {
+        console.log(courseId);
+        for (let exam of data.data) {
+          if (exam.exam_id === parseInt(examId)) {
+            setProgressPercentage(
+              (100 * exam.marks_obtained) / exam.full_marks
+            );
+          }
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }, [courseId]);
 
   useEffect(() => {
     if (examData && examData.questions) {
