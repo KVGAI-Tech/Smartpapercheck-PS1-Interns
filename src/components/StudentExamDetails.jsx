@@ -19,13 +19,12 @@ import {
   PenTool,
   RefreshCw,
   RotateCw,
-  Save,
   Shield,
   X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../BaseURL";
 
@@ -754,44 +753,34 @@ const AnnotationTool = ({
     expectedMarks: 0,
     actualMarks: 0,
   });
-  const [forceUpdate, setForceUpdate] = useState(false);
-  const [containerDimensions, setContainerDimensions] = useState({
-    width: 0,
-    height: 0,
-  });
 
   const canvasRef = useRef(null);
-  const containerRef = useRef(null);
+  const containerRef = useRef(null); // This will be our main container
 
-  const updateContainerDimensions = useCallback(() => {
-    if (containerRef.current) {
-      const { width, height } = containerRef.current.getBoundingClientRect();
-      setContainerDimensions({ width, height });
-      setForceUpdate((prev) => !prev);
-    }
-  }, []);
-
+  // This effect will sync our annotation container with the PDF/image content
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    updateContainerDimensions();
+    const contentElement = document.querySelector(".pdf-content-container");
+    if (!contentElement || !containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      updateContainerDimensions();
+      if (containerRef.current && contentElement) {
+        const { width, height, top, left } =
+          contentElement.getBoundingClientRect();
+        const parentRect =
+          containerRef.current.parentElement.getBoundingClientRect();
+
+        // Position the annotation container directly over the content
+        containerRef.current.style.width = `${width}px`;
+        containerRef.current.style.height = `${height}px`;
+        containerRef.current.style.top = `${top - parentRect.top}px`;
+        containerRef.current.style.left = `${left - parentRect.left}px`;
+      }
     });
 
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(contentElement);
 
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-    };
-  }, [updateContainerDimensions]);
-
-  useEffect(() => {
-    updateContainerDimensions();
-  }, [zoomLevel, updateContainerDimensions]);
+    return () => resizeObserver.unobserve(contentElement);
+  }, [currentPage, zoomLevel]);
 
   useEffect(() => {
     try {
@@ -799,7 +788,6 @@ const AnnotationTool = ({
     } catch (error) {
       console.error("Error saving annotations to localStorage:", error);
     }
-
     onAnnotationChange(annotations);
   }, [annotations, onAnnotationChange]);
 
@@ -809,15 +797,20 @@ const AnnotationTool = ({
 
     const rect = canvas.getBoundingClientRect();
 
+    // We calculate the position as a percentage of the canvas, which is now the same size as the image
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
+    // Clamp coordinates to be within the 0-100 range to avoid issues
+    const clampedX = Math.max(0, Math.min(x, 100));
+    const clampedY = Math.max(0, Math.min(y, 100));
+
     setCurrentAnnotation({
       id: Date.now().toString(),
-      startX: x,
-      startY: y,
-      endX: x,
-      endY: y,
+      startX: clampedX,
+      startY: clampedY,
+      endX: clampedX,
+      endY: clampedY,
       pageNumber: currentPage,
       color: "rgba(59, 130, 246, 0.3)",
       metadata: {
@@ -840,10 +833,13 @@ const AnnotationTool = ({
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
+    const clampedX = Math.max(0, Math.min(x, 100));
+    const clampedY = Math.max(0, Math.min(y, 100));
+
     setCurrentAnnotation((prev) => ({
       ...prev,
-      endX: x,
-      endY: y,
+      endX: clampedX,
+      endY: clampedY,
     }));
   };
 
@@ -923,7 +919,7 @@ const AnnotationTool = ({
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 pointer-events-auto"
+      className="absolute pointer-events-none" // pointer-events-none on container
       style={{
         transform: `scale(${zoomLevel})`,
         transformOrigin: "center",
@@ -932,7 +928,7 @@ const AnnotationTool = ({
     >
       <div
         ref={canvasRef}
-        className="absolute inset-0 cursor-crosshair z-10"
+        className="absolute inset-0 cursor-crosshair z-10 pointer-events-auto" // pointer-events-auto on canvas
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
