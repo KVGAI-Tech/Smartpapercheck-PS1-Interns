@@ -15,6 +15,7 @@ import Pricing from "./LandingPage/Pricing";
 import Testimonials from "./LandingPage/Testimonials";
 import USP from "./LandingPage/USP";
 import VideoDemo from "./LandingPage/VideoDemo";
+import LandingHighlights from "./LandingPage/LandingHighlights";
 
 const LoadingAnimation = () => {
   return (
@@ -270,6 +271,15 @@ const LandingPage = () => {
         viewport={{ once: true }}
       >
         <Clientele />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        viewport={{ once: true }}
+      >
+        <LandingHighlights />
       </motion.div>
 
       <motion.div

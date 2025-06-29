@@ -4,7 +4,8 @@ import {
     X, Plus, Save, Sparkles, AlertCircle,
     Bot, BrainCircuit, Lightbulb, Zap,
     Trash2, Edit2, Database, Cpu,
-    Circle, FileText, Settings, Minimize2, Maximize2
+    Circle, FileText, Settings, Minimize2, Maximize2,
+    AlertTriangle, CheckCircle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,6 +14,7 @@ import { useSpring, animated } from '@react-spring/web';
 import { toast } from 'react-hot-toast';
 
 import { API_BASE_URL } from '../../../../BaseURL';
+
 const GenerateLoader = () => (
     <motion.div 
         initial={{ opacity: 0, y: 10 }}
@@ -152,122 +154,266 @@ const AutoGrowTextarea = ({ value, onChange, placeholder, rows, className, ...pr
     );
 };
 
-const RubricItem = ({ item, index, onDelete, onUpdate }) => (
-    <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: index * 0.1 }}
-        exit={{ opacity: 0, y: -20 }}
-        layout
-    >
-        <Card className="group hover:shadow-xl transition-all duration-300 border-l-4 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <motion.div 
-                whileHover={{ scale: 1.01 }}
-                className="relative z-10"
-            >
-                <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-6">
-                        <div className="flex-1 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <motion.div 
-                                        whileHover={{ scale: 1.2, rotate: 180 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <Circle className="w-4 h-4 text-blue-500 fill-current" />
-                                    </motion.div>
-                                    <h4 className="font-medium text-gray-900">Rubric Item {index + 1}</h4>
-                                </div>
-                                <motion.button
-                                    whileHover={{ scale: 1.1, rotate: 10 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => onDelete(index)}
-                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-300"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </motion.button>
-                            </div>
+const ValidationAlert = ({ validationErrors }) => {
+    if (validationErrors.length === 0) return null;
 
-                            <div className="grid gap-6 md:grid-cols-2">
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg"
+        >
+            <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                    <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following issues:</h4>
+                    <ul className="text-sm text-red-700 space-y-1">
+                        {validationErrors.map((error, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                                <span className="w-1.5 h-1.5 bg-red-400 rounded-full flex-shrink-0 mt-2"></span>
+                                <span>{error}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemDescription, itemIndex }) => {
+    if (!isOpen) return null;
+
+    return ReactDOM.createPortal(
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center gap-3 mb-4">
+                    <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                        className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center"
+                    >
+                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                    </motion.div>
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Delete Rubric Item</h3>
+                        <p className="text-sm text-gray-500">This action cannot be undone</p>
+                    </div>
+                </div>
+
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                    <p className="text-sm text-gray-700 mb-2">
+                        <span className="font-medium">Item {itemIndex + 1}:</span> {itemDescription || 'Untitled rubric item'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                        Are you sure you want to delete this rubric item? This will affect your total weight and marks calculations.
+                    </p>
+                </div>
+
+                <div className="flex gap-3">
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={onClose}
+                        className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+                    >
+                        Cancel
+                    </motion.button>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                            onConfirm();
+                            onClose();
+                        }}
+                        className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Item
+                    </motion.button>
+                </div>
+            </motion.div>
+        </motion.div>,
+        document.body
+    );
+};
+
+const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) => {
+    const hasErrors = validationErrors.length > 0;
+    
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+            exit={{ opacity: 0, y: -20 }}
+            layout
+        >
+            <Card className={`group hover:shadow-xl transition-all duration-300 border-l-4 overflow-hidden relative ${
+                hasErrors ? 'border-l-red-400 bg-red-50/30' : 'border-l-blue-400'
+            }`}>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <motion.div 
+                    whileHover={{ scale: 1.01 }}
+                    className="relative z-10"
+                >
+                    <CardContent className="p-6">
+                        <div className="flex items-start justify-between gap-6">
+                            <div className="flex-1 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <motion.div 
+                                            whileHover={{ scale: 1.2, rotate: 180 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <Circle className={`w-4 h-4 ${hasErrors ? 'text-red-500' : 'text-blue-500'} fill-current`} />
+                                        </motion.div>
+                                        <h4 className="font-medium text-gray-900">Rubric Item {index + 1}</h4>
+                                        {hasErrors && (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-600 rounded-full text-xs"
+                                            >
+                                                <AlertTriangle className="w-3 h-3" />
+                                                <span>Issues</span>
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                    <motion.button
+                                        whileHover={{ scale: 1.1, rotate: 10 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => onDelete(index)}
+                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-300"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </motion.button>
+                                </div>
+
+                                {hasErrors && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="bg-red-50 border border-red-200 rounded-lg p-3"
+                                    >
+                                        <div className="text-sm text-red-700">
+                                            {validationErrors.map((error, errorIndex) => (
+                                                <div key={errorIndex} className="flex items-center gap-2">
+                                                    <span className="w-1 h-1 bg-red-400 rounded-full"></span>
+                                                    <span>{error}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                <div className="grid gap-6 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                            <FileText className="w-4 h-4 text-gray-400" />
+                                            Description
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={item.description || ''}
+                                            onChange={(e) => onUpdate(index, { ...item, description: e.target.value })}
+                                            placeholder="Enter criteria description..."
+                                            className={`w-full px-4 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm ${
+                                                validationErrors.some(error => error.includes('description')) 
+                                                    ? 'border-red-300 bg-red-50' 
+                                                    : 'border-gray-200'
+                                            }`}
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                                <Settings className="w-4 h-4 text-gray-400" />
+                                                Weight
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={item.weight || 0}
+                                                onChange={(e) => onUpdate(index, { ...item, weight: parseFloat(e.target.value) || 0 })}
+                                                step="0.01"
+                                                min="0"
+                                                max="1"
+                                                className={`w-full px-4 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm ${
+                                                    validationErrors.some(error => error.includes('weight')) 
+                                                        ? 'border-red-300 bg-red-50' 
+                                                        : 'border-gray-200'
+                                                }`}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                                <Circle className="w-4 h-4 text-gray-400" />
+                                                Max Marks
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={item.max_marks || 0}
+                                                onChange={(e) => onUpdate(index, { ...item, max_marks: parseFloat(e.target.value) || 0 })}
+                                                min="0"
+                                                step="0.01"
+                                                className={`w-full px-4 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm ${
+                                                    validationErrors.some(error => error.includes('marks')) 
+                                                        ? 'border-red-300 bg-red-50' 
+                                                        : 'border-gray-200'
+                                                }`}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                        <FileText className="w-4 h-4 text-gray-400" />
-                                        Description
+                                        <Lightbulb className="w-4 h-4 text-gray-400" />
+                                        Reasoning
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={item.description || ''}
-                                        onChange={(e) => onUpdate(index, { ...item, description: e.target.value })}
-                                        placeholder="Enter criteria description..."
-                                        className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm"
+                                    <AutoGrowTextarea
+                                        value={item.reasoning || ''}
+                                        onChange={(e) => onUpdate(index, { ...item, reasoning: e.target.value })}
+                                        placeholder="Explain the reasoning behind this criteria..."
+                                        rows={2}
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                            <Settings className="w-4 h-4 text-gray-400" />
-                                            Weight
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={item.weight || 0}
-                                            onChange={(e) => onUpdate(index, { ...item, weight: parseFloat(e.target.value) })}
-                                            step="0.01"
-                                            min="0"
-                                            max="1"
-                                            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                            <Circle className="w-4 h-4 text-gray-400" />
-                                            Max Marks
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={item.max_marks || 0}
-                                            onChange={(e) => onUpdate(index, { ...item, max_marks: parseInt(e.target.value) })}
-                                            min="0"
-                                            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm"
-                                        />
-                                    </div>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                        <Edit2 className="w-4 h-4 text-gray-400" />
+                                        Grading Guidelines
+                                    </label>
+                                    <AutoGrowTextarea
+                                        value={item.grading_guidelines || ''}
+                                        onChange={(e) => onUpdate(index, { ...item, grading_guidelines: e.target.value })}
+                                        placeholder="Provide specific guidelines for grading..."
+                                        rows={3}
+                                    />
                                 </div>
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                    <Lightbulb className="w-4 h-4 text-gray-400" />
-                                    Reasoning
-                                </label>
-                                <AutoGrowTextarea
-                                    value={item.reasoning || ''}
-                                    onChange={(e) => onUpdate(index, { ...item, reasoning: e.target.value })}
-                                    placeholder="Explain the reasoning behind this criteria..."
-                                    rows={2}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                    <Edit2 className="w-4 h-4 text-gray-400" />
-                                    Grading Guidelines
-                                </label>
-                                <AutoGrowTextarea
-                                    value={item.grading_guidelines || ''}
-                                    onChange={(e) => onUpdate(index, { ...item, grading_guidelines: e.target.value })}
-                                    placeholder="Provide specific guidelines for grading..."
-                                    rows={3}
-                                />
-                            </div>
                         </div>
-                    </div>
-                </CardContent>
-            </motion.div>
-        </Card>
-    </motion.div>
-);
+                    </CardContent>
+                </motion.div>
+            </Card>
+        </motion.div>
+    );
+};
 
 const QuestionCard = ({
     question,
@@ -406,10 +552,70 @@ const RubricModal = ({
     const [isAnimating, setIsAnimating] = useState(false);
     const [generatedQuestionsCount, setGeneratedQuestionsCount] = useState(0);
     const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
+    const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, index: null, itemDescription: '' });
     const previousHeight = useRef(null);
     const modalContentRef = useRef(null);
     const modalRootRef = useRef(null);
     
+    // Updated strict validation logic
+    const validation = useMemo(() => {
+        const errors = [];
+        const itemErrors = {};
+        
+        if (rubricItems.length === 0) {
+            return { isValid: true, errors: [], itemErrors: {} };
+        }
+
+        const totalWeight = rubricItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+        const totalMaxMarks = rubricItems.reduce((sum, item) => sum + (parseFloat(item.max_marks) || 0), 0);
+        const selectedQuestionData = questions.find(q => q.question_number === selectedQuestion);
+        const questionMaxMarks = Math.abs(selectedQuestionData?.max_marks || 10);
+
+        // STRICT: Total weight must be exactly 1.0
+        if (Math.abs(totalWeight - 1.0) > 0.001) {  // Using small epsilon for floating point comparison
+            if (totalWeight === 0) {
+                errors.push('Total weight cannot be 0. Please assign weights to rubric items.');
+            } else {
+                errors.push(`Total weight must be exactly 1.0 (currently ${totalWeight.toFixed(3)})`);
+            }
+        }
+
+        // STRICT: Total max marks must exactly equal question max marks
+        if (Math.abs(totalMaxMarks - questionMaxMarks) > 0.01) {
+            errors.push(`Total rubric marks (${totalMaxMarks.toFixed(2)}) must exactly equal question marks (${questionMaxMarks})`);
+        }
+
+        // Validate each rubric item
+        rubricItems.forEach((item, index) => {
+            const itemErrorsList = [];
+            
+            // Check description
+            if (!item.description || item.description.trim() === '') {
+                itemErrorsList.push('Description is required');
+            }
+            
+            // Check weight
+            if (!item.weight || item.weight <= 0) {
+                itemErrorsList.push('Weight must be greater than 0');
+            } else if (item.weight > 1) {
+                itemErrorsList.push('Weight cannot exceed 1.0');
+            }
+            
+            // Check max marks
+            if (!item.max_marks || item.max_marks <= 0) {
+                itemErrorsList.push('Max marks must be greater than 0.00');
+            }
+            
+            if (itemErrorsList.length > 0) {
+                itemErrors[index] = itemErrorsList;
+                errors.push(`Item ${index + 1}: ${itemErrorsList.join(', ')}`);
+            }
+        });
+
+        const isValid = errors.length === 0;
+        
+        return { isValid, errors, itemErrors, totalWeight, totalMaxMarks };
+    }, [rubricItems, selectedQuestion, questions]);
     
     const hasRubric = (questionNumber) => {
         const question = questions.find(q => q.question_number === questionNumber);
@@ -435,7 +641,6 @@ const RubricModal = ({
         config: { duration: 300 }
     });
 
-    
     const anyQuestionsNeedRubrics = useMemo(() => {
         return questions.some(question => !hasRubric(question.question_number));
     }, [questions]);
@@ -508,19 +713,43 @@ const RubricModal = ({
     }, [selectedQuestion, questions]);
 
     const handleDeleteRubricItem = (index) => {
-        setRubricItems(items => items.filter((_, i) => i !== index));
+        const item = rubricItems[index];
+        setDeleteConfirmation({
+            show: true,
+            index: index,
+            itemDescription: item?.description || 'Untitled rubric item'
+        });
+    };
+
+    const confirmDeleteRubricItem = () => {
+        if (deleteConfirmation.index !== null) {
+            setRubricItems(items => items.filter((_, i) => i !== deleteConfirmation.index));
+            toast.success('Rubric item deleted successfully');
+        }
+        setDeleteConfirmation({ show: false, index: null, itemDescription: '' });
+    };
+
+    const cancelDeleteRubricItem = () => {
+        setDeleteConfirmation({ show: false, index: null, itemDescription: '' });
     };
 
     const handleAddRubricItem = () => {
         const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
-        const maxMarks = currentQuestion?.max_marks || 10;
+        const maxMarks = Math.abs(currentQuestion?.max_marks || 10);
+        const remainingItems = 4 - rubricItems.length;
+        const currentTotalWeight = rubricItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
+        const currentTotalMarks = rubricItems.reduce((sum, item) => sum + (parseFloat(item.max_marks) || 0), 0);
+        
+        // Calculate suggested values to help reach exactly 1.0 weight and exact max marks
+        const suggestedWeight = remainingItems > 0 ? (1.0 - currentTotalWeight) / remainingItems : 0.25;
+        const suggestedMarks = remainingItems > 0 ? parseFloat(((maxMarks - currentTotalMarks) / remainingItems).toFixed(2)) : parseFloat((maxMarks / 4).toFixed(2));
 
         setRubricItems(prev => [
             ...prev,
             {
                 description: '',
-                weight: 0.25,
-                max_marks: Math.floor(maxMarks / 4),
+                weight: Math.max(0, Math.min(1, suggestedWeight || 0.25)),
+                max_marks: Math.max(0.01, suggestedMarks || parseFloat((maxMarks / 4).toFixed(2))),
                 reasoning: '',
                 grading_guidelines: ''
             }
@@ -550,12 +779,10 @@ const RubricModal = ({
         }
     };
 
-    
     const handleEditRubric = (questionNumber) => {
         const questionData = questions.find(q => q.question_number === questionNumber);
         if (questionData) {
             setSelectedQuestion(questionNumber);
-            
             
             if (questionData.rubric && questionData.rubric.rubric_items) {
                 setRubricItems(questionData.rubric.rubric_items || []);
@@ -569,13 +796,10 @@ const RubricModal = ({
         }
     };
 
-    
     const generateAllRubrics = async () => {
         if (isGenerating) return;
         
-        
         const questionsWithoutRubrics = questions.filter(question => !hasRubric(question.question_number));
-        
         
         if (questionsWithoutRubrics.length === 0) {
             toast.success('All questions already have rubrics!');
@@ -591,7 +815,6 @@ const RubricModal = ({
         setGeneratedQuestionsCount(0);
         
         try {
-            
             const promises = questionsWithoutRubrics.map((question, index) => 
                 fetch(
                     `${API_BASE_URL}/exams/${examId}/questions/${question.question_number}/rubric`,
@@ -604,7 +827,6 @@ const RubricModal = ({
                     }
                 )
                 .then(async response => {
-                    
                     await new Promise(resolve => setTimeout(resolve, 500));
                     
                     setGeneratedQuestionsCount(prev => prev + 1);
@@ -644,20 +866,16 @@ const RubricModal = ({
                 })
             );
             
-            
             const results = await Promise.all(promises);
-            
             
             let successCount = 0;
             let failCount = 0;
-            
             
             const updatedQuestions = [...questions];
             
             for (const result of results) {
                 if (result.success) {
                     successCount++;
-                    
                     
                     const questionIndex = updatedQuestions.findIndex(q => q.question_number === result.questionNumber);
                     if (questionIndex !== -1) {
@@ -668,9 +886,7 @@ const RubricModal = ({
                 } else {
                     failCount++;
                     
-                    
                     const fallbackRubric = createFallbackRubric(result.questionNumber);
-                    
                     
                     const questionIndex = updatedQuestions.findIndex(q => q.question_number === result.questionNumber);
                     if (questionIndex !== -1 && fallbackRubric) {
@@ -680,7 +896,6 @@ const RubricModal = ({
                 }
             }
             
-            
             if (successCount > 0) {
                 toast.success(`Successfully generated ${successCount} rubrics!`, { id: loadingToast });
             }
@@ -689,11 +904,9 @@ const RubricModal = ({
                 toast.error(`Failed to generate ${failCount} rubrics. Using fallback generator.`);
             }
             
-            
             if (questionsWithoutRubrics.length > 0) {
                 const firstQuestion = questionsWithoutRubrics[0].question_number;
                 setSelectedQuestion(firstQuestion);
-                
                 
                 const selectedQuestionData = updatedQuestions.find(q => q.question_number === firstQuestion);
                 if (selectedQuestionData) {
@@ -757,34 +970,34 @@ const RubricModal = ({
         }
     };
 
-    
     const createFallbackRubric = (questionNumber) => {
         const questionData = questions.find(q => q.question_number === questionNumber);
         if (!questionData) {
             return null;
         }
 
-        const maxMarks = questionData.max_marks || 10;
+        const maxMarks = Math.abs(questionData.max_marks || 10);
         
+        // Create rubric items that sum to exactly 1.0 weight and exact max marks
         const rubricItems = [
             {
                 description: "Correct setup of the problem",
                 weight: 0.3,
-                max_marks: Math.round(maxMarks * 0.3),
+                max_marks: parseFloat((maxMarks * 0.3).toFixed(2)),
                 reasoning: "Students need to demonstrate understanding of the fundamental concepts",
                 grading_guidelines: "Check for proper identification of variables and initial setup"
             },
             {
                 description: "Mathematical accuracy",
                 weight: 0.4,
-                max_marks: Math.round(maxMarks * 0.4),
+                max_marks: parseFloat((maxMarks * 0.4).toFixed(2)),
                 reasoning: "Computational accuracy is essential for reaching the correct solution",
                 grading_guidelines: "Verify calculations and solution method"
             },
             {
                 description: "Clear explanation and analysis",
                 weight: 0.3,
-                max_marks: Math.round(maxMarks * 0.3),
+                max_marks: parseFloat((maxMarks - parseFloat((maxMarks * 0.3).toFixed(2)) - parseFloat((maxMarks * 0.4).toFixed(2))).toFixed(2)), // Remaining marks
                 reasoning: "Students should demonstrate ability to explain their reasoning",
                 grading_guidelines: "Look for well-structured explanations and appropriate justifications"
             }
@@ -821,6 +1034,12 @@ const RubricModal = ({
         if (!selectedQuestion) {
             setError('No question selected');
             toast.error('No question selected');
+            return;
+        }
+
+        if (!validation.isValid) {
+            setError('Please fix validation errors before saving');
+            toast.error('Please fix validation errors before saving');
             return;
         }
 
@@ -872,66 +1091,79 @@ const RubricModal = ({
     if (!isOpen) return null;
 
     if (!questions || questions.length === 0) {
-        return ReactDOM.createPortal(
-            <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[99999] flex items-center justify-center">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl"
-                    onClick={e => e.stopPropagation()}
-                >
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-semibold text-gray-900">Generate Rubrics</h3>
-                        <motion.button 
-                            whileHover={{ rotate: 90 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={onClose} 
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                        >
-                            <X className="w-5 h-5 text-gray-500" />
-                        </motion.button>
-                    </div>
-
-                    <motion.div 
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-center py-8"
-                    >
+        return (
+            <>
+                {ReactDOM.createPortal(
+                    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[99999] flex items-center justify-center">
                         <motion.div 
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ 
-                                type: "spring", 
-                                stiffness: 260, 
-                                damping: 20, 
-                                delay: 0.3 
-                            }}
-                            className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl"
+                            onClick={e => e.stopPropagation()}
                         >
-                            <AlertCircle className="w-8 h-8 text-red-500" />
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-semibold text-gray-900">Generate Rubrics</h3>
+                                <motion.button 
+                                    whileHover={{ rotate: 90 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={onClose} 
+                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </motion.button>
+                            </div>
+
+                            <motion.div 
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-center py-8"
+                            >
+                                <motion.div 
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ 
+                                        type: "spring", 
+                                        stiffness: 260, 
+                                        damping: 20, 
+                                        delay: 0.3 
+                                    }}
+                                    className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4"
+                                >
+                                    <AlertCircle className="w-8 h-8 text-red-500" />
+                                </motion.div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">No Questions Found</h3>
+                                <p className="text-gray-500 mb-6">
+                                    Please upload a question paper first before generating rubrics.
+                                </p>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={onClose}
+                                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all duration-300"
+                                >
+                                    Close
+                                </motion.button>
+                            </motion.div>
                         </motion.div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Questions Found</h3>
-                        <p className="text-gray-500 mb-6">
-                            Please upload a question paper first before generating rubrics.
-                        </p>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={onClose}
-                            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all duration-300"
-                        >
-                            Close
-                        </motion.button>
-                    </motion.div>
-                </motion.div>
-            </div>,
-            modalRootRef.current || document.body
+                    </div>,
+                    modalRootRef.current || document.body
+                )}
+                <DeleteConfirmationModal
+                    isOpen={deleteConfirmation.show}
+                    onClose={cancelDeleteRubricItem}
+                    onConfirm={confirmDeleteRubricItem}
+                    itemDescription={deleteConfirmation.itemDescription}
+                    itemIndex={deleteConfirmation.index}
+                />
+            </>
         );
     }
 
-    return ReactDOM.createPortal(
+    return (
+        <>
+            {ReactDOM.createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div 
@@ -1119,9 +1351,18 @@ const RubricModal = ({
                                                     <div className="flex items-center gap-2 mb-3">
                                                         <FileText className="w-5 h-5 text-blue-500" />
                                                         <h3 className="font-medium text-gray-900">Question Details</h3>
+                                                        <span className="text-sm text-gray-500">
+                                                            (Max Marks: {Math.abs(selectedQuestionData.max_marks || 10)})
+                                                        </span>
                                                     </div>
                                                     <p className="text-gray-700">{selectedQuestionData.question_text}</p>
                                                 </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        <AnimatePresence>
+                                            {!validation.isValid && validation.errors.length > 0 && showRubricEditor && (
+                                                <ValidationAlert validationErrors={validation.errors} />
                                             )}
                                         </AnimatePresence>
 
@@ -1167,6 +1408,7 @@ const RubricModal = ({
                                                                     index={index}
                                                                     onDelete={handleDeleteRubricItem}
                                                                     onUpdate={handleUpdateRubricItem}
+                                                                    validationErrors={validation.itemErrors[index] || []}
                                                                 />
                                                             ))}
                                                         </motion.div>
@@ -1277,18 +1519,40 @@ const RubricModal = ({
                                         className="border-t bg-gradient-to-r from-gray-50 to-white p-4 shadow-lg"
                                     >
                                         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-                                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                <motion.div
-                                                    animate={{ 
-                                                        scale: [1, 1.1, 1],
-                                                    }}
-                                                    transition={{ duration: 2, repeat: Infinity }}
-                                                >
-                                                    <Circle className="w-4 h-4 text-blue-500" />
-                                                </motion.div>
-                                                <span>Total Items: {rubricItems.length}</span>
-                                                <span className="w-1 h-1 bg-blue-300 rounded-full"></span>
-                                                <span>Total Weight: {rubricItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0).toFixed(2)}</span>
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <div className="flex items-center gap-2 text-gray-500">
+                                                    <motion.div
+                                                        animate={{ 
+                                                            scale: [1, 1.1, 1],
+                                                        }}
+                                                        transition={{ duration: 2, repeat: Infinity }}
+                                                    >
+                                                        <Circle className="w-4 h-4 text-blue-500" />
+                                                    </motion.div>
+                                                    <span>Total Items: {rubricItems.length}</span>
+                                                </div>
+                                                
+                                                <div className={`flex items-center gap-2 ${
+                                                    Math.abs(validation.totalWeight - 1.0) > 0.001 ? 'text-red-600' : 'text-green-600'
+                                                }`}>
+                                                    {Math.abs(validation.totalWeight - 1.0) > 0.001 ? (
+                                                        <AlertTriangle className="w-4 h-4" />
+                                                    ) : (
+                                                        <CheckCircle className="w-4 h-4" />
+                                                    )}
+                                                    <span>Total Weight: {validation.totalWeight?.toFixed(3) || '0.000'}/1.000</span>
+                                                </div>
+                                                
+                                                <div className={`flex items-center gap-2 ${
+                                                    Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? 'text-red-600' : 'text-green-600'
+                                                }`}>
+                                                    {Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? (
+                                                        <AlertTriangle className="w-4 h-4" />
+                                                    ) : (
+                                                        <CheckCircle className="w-4 h-4" />
+                                                    )}
+                                                    <span>Total Marks: {validation.totalMaxMarks?.toFixed(2) || '0.00'}/{selectedQuestionData?.max_marks || 10}</span>
+                                                </div>
                                             </div>
 
                                             <div className="flex items-center gap-3">
@@ -1302,12 +1566,18 @@ const RubricModal = ({
                                                     Cancel
                                                 </motion.button>
                                                 <motion.button
-                                                    whileHover={{ scale: 1.05, boxShadow: "0 4px 12px rgba(59, 130, 246, 0.5)" }}
-                                                    whileTap={{ scale: 0.95 }}
+                                                    whileHover={{ 
+                                                        scale: validation.isValid ? 1.05 : 1, 
+                                                        boxShadow: validation.isValid ? "0 4px 12px rgba(59, 130, 246, 0.5)" : "" 
+                                                    }}
+                                                    whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
                                                     onClick={handleSave}
-                                                    disabled={isLoading || rubricItems.length === 0}
-                                                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg
-                                                    disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium shadow-md"
+                                                    disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
+                                                    className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-all duration-300 font-medium shadow-md ${
+                                                        isLoading || rubricItems.length === 0 || !validation.isValid
+                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                            : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg'
+                                                    }`}
                                                 >
                                                     {isLoading ? (
                                                         <>
@@ -1336,6 +1606,16 @@ const RubricModal = ({
             )}
         </AnimatePresence>,
         modalRootRef.current || document.body
+    )}
+    
+    <DeleteConfirmationModal
+        isOpen={deleteConfirmation.show}
+        onClose={cancelDeleteRubricItem}
+        onConfirm={confirmDeleteRubricItem}
+        itemDescription={deleteConfirmation.itemDescription}
+        itemIndex={deleteConfirmation.index}
+    />
+        </>
     );
 };
 
@@ -1406,14 +1686,12 @@ const injectStyles = () => {
         background-image: linear-gradient(to right, #3b82f6, #4f46e5);
       }
       
-      
       .glass {
         background: rgba(255, 255, 255, 0.25);
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.18);
       }
-      
       
       .shadow-transition {
         transition: box-shadow 0.3s ease;
@@ -1423,7 +1701,6 @@ const injectStyles = () => {
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       }
       
-      
       .card-hover {
         transition: transform 0.3s ease, box-shadow 0.3s ease;
       }
@@ -1432,7 +1709,6 @@ const injectStyles = () => {
         transform: translateY(-5px);
         box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2);
       }
-      
       
       .button-glow {
         position: relative;
