@@ -16,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CourseModal } from "./Course/modals/CourseModal";
+import { useAuth } from "../AuthContext";
 
 import { API_BASE_URL } from "../../BaseURL";
 
@@ -52,7 +53,7 @@ export const fetchApi = async (endpoint, options = {}) => {
   return response.json();
 };
 
-const CourseCard = ({ course, onEdit, onRemove, index }) => {
+const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -87,7 +88,11 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
     if (dropdownRef.current && dropdownRef.current.contains(e.target)) {
       return;
     }
-    navigate(`/courses/${course.id}`);
+    if (userRole === "professor") {
+      navigate(`/courses/${course.id}`);
+    } else {
+      navigate(`/student/evaluations/${course.id}`);
+    }
   };
 
   return (
@@ -127,56 +132,58 @@ const CourseCard = ({ course, onEdit, onRemove, index }) => {
           </h4>
         </div>
 
-        <div className="relative ml-4" ref={dropdownRef}>
-          <motion.button
-            whileHover={{ rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDropdown(!showDropdown);
-            }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-          >
-            <MoreVertical className="w-5 h-5 text-gray-500" />
-          </motion.button>
+        {userRole === "professor" && (
+          <div className="relative ml-4" ref={dropdownRef}>
+            <motion.button
+              whileHover={{ rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDropdown(!showDropdown);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            >
+              <MoreVertical className="w-5 h-5 text-gray-500" />
+            </motion.button>
 
-          <AnimatePresence>
-            {showDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-10 overflow-hidden"
-              >
-                <motion.button
-                  whileHover={{ backgroundColor: "#F3F4F6" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(course);
-                    setShowDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            <AnimatePresence>
+              {showDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-10 overflow-hidden"
                 >
-                  <Pencil className="w-4 h-4" />
-                  <span>Edit Course</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ backgroundColor: "#FEF2F2" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove(course);
-                    setShowDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Remove Course</span>
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                  <motion.button
+                    whileHover={{ backgroundColor: "#F3F4F6" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(course);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span>Edit Course</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ backgroundColor: "#FEF2F2" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(course);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Remove Course</span>
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 mb-6">
@@ -352,6 +359,7 @@ const DeleteConfirmationModal = ({
 
 const Courses = () => {
   const navigate = useNavigate();
+  const { userRole } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -368,12 +376,16 @@ const Courses = () => {
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [userRole]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const response = await fetchApi("/professors/courses");
+      const endpoint =
+        userRole === "professor"
+          ? "/professors/courses"
+          : "/students/courses";
+      const response = await fetchApi(endpoint);
       setCourses(response.data);
     } catch (err) {
       setError(err.message);
@@ -459,15 +471,17 @@ const Courses = () => {
         Get started by adding your first course. Courses help you organize your
         teaching materials and students.
       </p>
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setShowAddModal(true)}
-        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-300"
-      >
-        <Plus className="w-5 h-5 mr-2" />
-        <span>Create First Course</span>
-      </motion.button>
+      {userRole === "professor" && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-300"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          <span>Create First Course</span>
+        </motion.button>
+      )}
     </motion.div>
   );
 
@@ -552,6 +566,7 @@ const Courses = () => {
             key={course.id}
             course={course}
             index={index}
+            userRole={userRole}
             onEdit={(course) => {
               setSelectedCourse(course);
               setShowAddModal(true);
@@ -580,21 +595,23 @@ const Courses = () => {
             </p>
           </div>
 
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.4)",
-            }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setSelectedCourse(null);
-              setShowAddModal(true);
-            }}
-            className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-300"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            <span className="font-medium">Add Course</span>
-          </motion.button>
+          {userRole === "professor" && (
+            <motion.button
+              whileHover={{
+                scale: 1.05,
+                boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.4)",
+              }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setSelectedCourse(null);
+                setShowAddModal(true);
+              }}
+              className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-300"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              <span className="font-medium">Add Course</span>
+            </motion.button>
+          )}
         </motion.div>
 
         <div className="mb-6">
@@ -653,16 +670,18 @@ const Courses = () => {
         {renderContent()}
       </div>
 
-      <CourseModal
-        isOpen={showAddModal}
-        onClose={() => {
-          setShowAddModal(false);
-          setSelectedCourse(null);
-        }}
-        course={selectedCourse}
-        onSubmit={selectedCourse ? handleUpdateCourse : handleAddCourse}
-        isEditing={!!selectedCourse}
-      />
+      {userRole === "professor" && (
+        <CourseModal
+          isOpen={showAddModal}
+          onClose={() => {
+            setShowAddModal(false);
+            setSelectedCourse(null);
+          }}
+          course={selectedCourse}
+          onSubmit={selectedCourse ? handleUpdateCourse : handleAddCourse}
+          isEditing={!!selectedCourse}
+        />
+      )}
 
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}

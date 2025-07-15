@@ -13,25 +13,21 @@ const RoleRoute = ({ children, requiredRole }) => {
     );
   }
 
-  try {
-    if (!isAuthenticated) {
-      return <Navigate to="/auth" replace />;
-    }
-
-    if (userRole !== requiredRole) {
-      const redirectPaths = {
-        professor: '/dashboard',
-        student: '/student-dashboard',
-      };
-      
-      const redirectPath = redirectPaths[userRole] || '/auth';
-      return <Navigate to={redirectPath} replace />;
-    }
-
-    return children;
-  } catch (error) {
+  if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
+
+  if (userRole !== requiredRole) {
+    const redirectPaths = {
+      professor: '/dashboard',
+      student: '/student-dashboard',
+    };
+    
+    const redirectPath = redirectPaths[userRole] || '/auth';
+    return <Navigate to={redirectPath} replace />;
+  }
+
+  return children;
 };
 
 export default RoleRoute;
