@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fetchApi } from "../../Course";
+import { fetchApi } from "../../Courses";
 
 export const CourseModal = ({
   isOpen,
