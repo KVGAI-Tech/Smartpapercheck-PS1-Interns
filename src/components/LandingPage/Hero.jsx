@@ -51,7 +51,7 @@ const Hero = ({ scrollToDemo }) => {
   ];
 
   return (
-    <section className="min-h-screen pt-24 lg:pt-28 px-4 md:px-12 relative overflow-hidden bg-gradient-to-b from-white to-gray-50">
+    <section className="min-h-screen pt-24 lg:pt-28 px-4 md:px-8 relative overflow-hidden bg-gradient-to-b from-white to-gray-50">
       {backgroundShapes.map((shape, index) => (
         <motion.div
           key={index}
@@ -81,9 +81,9 @@ const Hero = ({ scrollToDemo }) => {
         <div className="absolute h-full w-full opacity-10 bg-grid-pattern" />
       </div>
 
-      <div className="container mx-auto max-w-6xl relative z-10 flex flex-col items-center justify-center pt-16 md:pt-28">
+      <div className="container mx-auto max-w-6xl relative z-10 flex flex-col items-center justify-center pt-12 md:pt-20 text-center">
         <motion.div
-          className="flex items-center gap-2 mb-6 bg-gradient-to-r from-teal-200 to-blue-100 rounded-full px-4 py-2 text-sm font-medium"
+          className="inline-flex items-center gap-2 mb-6 bg-gradient-to-r from-teal-200 to-blue-100 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium"
           custom={0}
           initial="hidden"
           animate="visible"
@@ -97,7 +97,7 @@ const Hero = ({ scrollToDemo }) => {
         </motion.div>
 
         <motion.h1
-          className="text-4xl md:text-6xl lg:text-7xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-teal-800 to-gray-900"
+          className="text-3xl sm:text-5xl lg:text-6xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-teal-800 to-gray-900 leading-tight"
           custom={1}
           initial="hidden"
           animate="visible"
@@ -108,7 +108,7 @@ const Hero = ({ scrollToDemo }) => {
         </motion.h1>
 
         <motion.p
-          className="text-lg md:text-xl text-center text-gray-700 max-w-4xl mb-12"
+          className="text-base sm:text-lg text-center text-gray-700 max-w-3xl mb-10"
           custom={2}
           initial="hidden"
           animate="visible"
@@ -119,7 +119,7 @@ const Hero = ({ scrollToDemo }) => {
         </motion.p>
 
         <motion.div
-          className="flex flex-col sm:flex-row gap-4 mb-16"
+          className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-14"
           custom={3}
           initial="hidden"
           animate="visible"
@@ -127,7 +127,7 @@ const Hero = ({ scrollToDemo }) => {
         >
           <motion.button
             onClick={scrollToDemo}
-            className="group flex items-center justify-center gap-2 bg-gray-100 border border-gray-200 hover:bg-gray-200 shadow-sm px-8 py-4 rounded-full text-gray-800 font-medium transition-all duration-300"
+            className="group flex items-center justify-center gap-2 bg-gray-100 border border-gray-200 hover:bg-gray-200 shadow-sm px-6 py-3 sm:px-8 sm:py-4 rounded-full text-gray-800 font-medium text-sm sm:text-base transition-all duration-300"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -137,7 +137,7 @@ const Hero = ({ scrollToDemo }) => {
 
           <motion.button
             onClick={() => navigate("/auth")}
-            className="group flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-4 rounded-full text-white font-medium transition-all duration-300 shadow-md"
+            className="group flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-6 py-3 sm:px-8 sm:py-4 rounded-full text-white font-medium text-sm sm:text-base transition-all duration-300 shadow-md"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >

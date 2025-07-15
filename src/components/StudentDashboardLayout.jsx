@@ -300,8 +300,8 @@ const StudentDashboardLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="p-6">
-          <div className="max-w-7xl mx-auto">{children}</div>
+        <main className="min-h-[calc(100vh-4rem)] bg-gray-50">
+          <div className="p-4 md:p-6 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

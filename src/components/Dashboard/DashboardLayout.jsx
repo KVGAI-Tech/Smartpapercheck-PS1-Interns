@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../BaseURL";
 import {
-  Menu,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
-  BookOpen,
   LogOut,
+  Menu,
 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../BaseURL";
 import PaymentModal from "../Payments/PaymentModal";
 
 const DashboardLayout = ({ children }) => {
@@ -114,12 +114,11 @@ const DashboardLayout = ({ children }) => {
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-500 ease-in-out 
+        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out 
           ${isSidebarOpen ? "w-72" : "w-20"} 
-          bg-white border-r border-gray-100 shadow-lg transform
-          ${
-            isMobile && !isSidebarOpen ? "-translate-x-full" : "translate-x-0"
-          }`}
+          bg-white border-r border-gray-100 shadow-lg 
+          ${isMobile && !isSidebarOpen ? "-translate-x-full" : "translate-x-0"} 
+          md:translate-x-0`}
       >
         <div className="flex flex-col h-full">
           <div
@@ -257,8 +256,8 @@ const DashboardLayout = ({ children }) => {
       </aside>
 
       <div
-        className={`flex-1 transition-all duration-500 ease-in-out relative
-        ${isSidebarOpen ? "md:ml-72" : "md:ml-20"} ${isMobile ? "ml-0" : ""}`}
+        className={`flex-1 transition-all duration-300 ease-in-out relative
+        ${isSidebarOpen ? "md:ml-72" : "md:ml-20"} ml-0`}
       >
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 md:px-6 h-16">
@@ -276,7 +275,7 @@ const DashboardLayout = ({ children }) => {
               <PaymentModal />
               <div className="h-8 w-px bg-gray-200 hidden sm:block" />
               <div className="flex items-center space-x-3">
-                <div className="relative hidden sm:block">
+                <div className="relative">
                   <div className="w-8 h-8 rounded-full border border-gray-200 bg-blue-500 text-white flex items-center justify-center font-medium text-sm">
                     {userData?.name
                       ? userData.name.charAt(0).toUpperCase()
@@ -284,7 +283,7 @@ const DashboardLayout = ({ children }) => {
                   </div>
                   <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 rounded-full border border-white" />
                 </div>
-                <span className="text-sm font-medium text-gray-700 hidden lg:block">
+                <span className="text-sm font-medium text-gray-700 hidden sm:block">
                   {userData?.name || "Guest User"}
                 </span>
               </div>
@@ -292,10 +291,8 @@ const DashboardLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] bg-gray-50">
-          <div className="p-4 md:p-6">
-            <div className="max-w-7xl mx-auto">{children}</div>
-          </div>
+        <main className="min-h-[calc(100vh-4rem)] bg-gray-50 p-4 md:p-6">
+          <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

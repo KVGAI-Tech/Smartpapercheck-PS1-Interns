@@ -16,6 +16,7 @@ import {
   LoadingDisplay,
 } from "./StudentExamDetails/StatusDisplays";
 import Toast from "./StudentExamDetails/Toast";
+import QuestionOverview from "./StudentExamDetails/QuestionOverview";
 
 const StudentExamDetails = ({ isHistory = false }) => {
   const { courseId, id: examId } = useParams();
@@ -678,8 +679,31 @@ const StudentExamDetails = ({ isHistory = false }) => {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {currentTab === "overview" && <div>Overview Content</div>}
-              {currentTab === "recheck" && <div>Recheck Content</div>}
+              {currentTab === "overview" && (
+                <QuestionOverview
+                  questions={examData.questions}
+                  detailedFeedback={detailedFeedback}
+                />
+              )}
+              {currentTab === "recheck" && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Recheck Request</h2>
+                  {hasSubmittedRecheck ? (
+                    <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 rounded-md" role="alert">
+                      <p className="font-bold">Recheck Request Submitted</p>
+                      <p>Your recheck request has been submitted and is awaiting review.</p>
+                      {requestStatus && (
+                        <div className="mt-2 text-sm">
+                          <p><strong>Status:</strong> {requestStatus.status}</p>
+                          <p><strong>Submitted On:</strong> {requestStatus.timestamp}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600">Click the "Request Recheck" button above to submit a recheck request for this exam.</p>
+                  )}
+                </div>
+              )}
               {currentTab === "history" && (
                 <RecheckRequestHistory
                   requests={recheckRequests}
