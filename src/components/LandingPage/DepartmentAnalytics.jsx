@@ -15,37 +15,37 @@ import {
 
 // Enhanced data structure with real institutions and departments
 const institutions = [
-  { name: 'BITS Pilani', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-teal-500" />, color: 'teal' },
-  { name: 'IIT Delhi', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-blue-500" />, color: 'blue' },
-  { name: 'ISB', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-indigo-500" />, color: 'indigo' },
-  { name: 'IIM Bangalore', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-purple-500" />, color: 'purple' },
+  { name: 'BITS Pilani', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
+  { name: 'IIT Delhi', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
+  { name: 'ISB', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
+  { name: 'IIM Bangalore', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
 ];
 
 // Define departments with better icons and metadata
 const departmentsByInstitution = {
   'BITS Pilani': [
-    { name: 'Computer Science', icon: <HiOutlineAcademicCap className="w-5 h-5 text-teal-500" />, color: 'teal' },
-    { name: 'Humanities', icon: <HiOutlineBookOpen className="w-5 h-5 text-blue-500" />, color: 'blue' },
-    { name: 'Science', icon: <HiOutlineBeaker className="w-5 h-5 text-purple-500" />, color: 'purple' },
-    { name: 'Electrical', icon: <HiOutlineLightBulb className="w-5 h-5 text-amber-500" />, color: 'amber' },
+    { name: 'Computer Science', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Humanities', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Science', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Electrical', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ],
   'IIT Delhi': [
-    { name: 'Computer Science', icon: <HiOutlineAcademicCap className="w-5 h-5 text-blue-500" />, color: 'blue' },
-    { name: 'Humanities', icon: <HiOutlineBookOpen className="w-5 h-5 text-indigo-500" />, color: 'indigo' },
-    { name: 'Science', icon: <HiOutlineBeaker className="w-5 h-5 text-green-500" />, color: 'green' },
-    { name: 'Electrical', icon: <HiOutlineLightBulb className="w-5 h-5 text-yellow-500" />, color: 'yellow' },
+    { name: 'Computer Science', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Humanities', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Science', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Electrical', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ],
   'ISB': [
-    { name: 'Finance', icon: <HiOutlineAcademicCap className="w-5 h-5 text-indigo-500" />, color: 'indigo' },
-    { name: 'Marketing', icon: <HiOutlineBookOpen className="w-5 h-5 text-pink-500" />, color: 'pink' },
-    { name: 'Operations', icon: <HiOutlineBeaker className="w-5 h-5 text-orange-500" />, color: 'orange' },
-    { name: 'Strategy', icon: <HiOutlineLightBulb className="w-5 h-5 text-red-500" />, color: 'red' },
+    { name: 'Finance', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Marketing', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Operations', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Strategy', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ],
   'IIM Bangalore': [
-    { name: 'Economics', icon: <HiOutlineAcademicCap className="w-5 h-5 text-purple-500" />, color: 'purple' },
-    { name: 'Organizational Behavior', icon: <HiOutlineBookOpen className="w-5 h-5 text-rose-500" />, color: 'rose' },
-    { name: 'Statistics', icon: <HiOutlineBeaker className="w-5 h-5 text-emerald-500" />, color: 'emerald' },
-    { name: 'Information Systems', icon: <HiOutlineLightBulb className="w-5 h-5 text-cyan-500" />, color: 'cyan' },
+    { name: 'Economics', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Organizational Behavior', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Statistics', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Information Systems', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ]
 };
 
@@ -355,7 +355,7 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
       onHoverEnd={() => !disabled && setHover(false)}
     >
       <label className="block text-sm font-semibold text-gray-700 mb-3">{label}</label>
-      <div className={`flex items-center bg-white rounded-2xl border-2 border-gray-100 shadow-lg px-6 py-4 transition-all duration-300 hover:border-teal-300 hover:shadow-xl focus-within:border-teal-400 focus-within:shadow-xl focus-within:ring-4 focus-within:ring-teal-100 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-gray-50/50'}`}>
+      <div className={`flex items-center bg-white rounded-2xl border-2 border-gray-100 shadow-lg px-6 py-4 transition-all duration-300 hover:border-accent/30 hover:shadow-xl focus-within:border-accent/40 focus-within:shadow-xl focus-within:ring-4 focus-within:ring-accent/10 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-gray-50/50'}`}>
         {(icon || selectedIcon) && <span className="mr-4 flex-shrink-0">{selectedIcon || icon}</span>}
         <select
           className="appearance-none bg-transparent outline-none w-full text-lg font-medium text-gray-800 pr-4 cursor-pointer disabled:cursor-not-allowed"
@@ -385,304 +385,6 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
   );
 };
 
-
-
-// Enhanced single course chart component
-const SingleCourseChart = ({ data, label }) => {
-  const chartHeight = 250; // Fixed chart height in pixels
-  
-  // Calculate smart range for better visualization of small differences
-  const minScore = Math.min(data.smartQnA, data.ta);
-  const maxScore = Math.max(data.smartQnA, data.ta);
-  const scoreDiff = maxScore - minScore;
-  
-  // Add padding to make differences more visible (minimum 10% range)
-  const padding = Math.max(scoreDiff * 0.3, 5); // 30% padding or minimum 5%
-  const rangeMin = Math.max(0, minScore - padding);
-  const rangeMax = Math.min(100, maxScore + padding);
-  const range = rangeMax - rangeMin;
-  
-  // Calculate heights based on the focused range
-  const smartQnAHeight = ((data.smartQnA - rangeMin) / range) * chartHeight;
-  const taHeight = ((data.ta - rangeMin) / range) * chartHeight;
-  const difference = data.smartQnA - data.ta;
-  
-  return (
-    <motion.div
-      className="relative bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl border border-blue-100 p-8 flex flex-col min-h-[650px] hover:shadow-2xl transition-shadow duration-300 overflow-hidden group"
-      variants={fadeInUp}
-      initial="hidden"
-      whileInView="visible"
-      layoutId={`chart-${label}`}
-    >
-      {/* Background gradient blobs */}
-      <motion.div 
-        className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-b from-teal-100/40 to-blue-100/30 blur-xl"
-        variants={backgroundPulse}
-        initial="initial"
-        animate="animate"
-      />
-      <motion.div 
-        className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-gradient-to-t from-blue-100/30 to-teal-100/20 blur-xl"
-        variants={backgroundPulse}
-        initial="initial"
-        animate="animate"
-        transition={{ delay: 1 }}
-      />
-      
-      {/* Card content */}
-      <div className="relative z-10 flex flex-col h-full">
-        <div className="flex justify-between items-start mb-8">
-          <div className="flex items-start space-x-4">
-            <div className="w-14 h-14 flex items-center justify-center rounded-full bg-gradient-to-r from-teal-100 to-blue-100 shadow-sm mt-1">
-              <HiOutlineChartPie className="w-7 h-7 text-teal-600" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">{label}</h3>
-              <div className="flex items-center space-x-4 mb-2">
-                <span className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
-                  {data.students} students enrolled
-                </span>
-                <span className="text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                  {data.totalAssignments} assignments graded
-                </span>
-              </div>
-              <div className="flex items-center">
-                <span className={`text-sm font-medium px-3 py-1 rounded-full flex items-center ${
-                  difference < 0 ? 'text-red-600 bg-red-50' : 'text-teal-600 bg-teal-50'
-                }`}>
-                  {difference < 0 ? (
-                    <>TA scores {Math.abs(difference).toFixed(1)}% higher</>
-                  ) : (
-                    <>SmartQnA scores {difference.toFixed(1)}% higher</>
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col items-end space-y-3">
-            <div className="flex items-center">
-              <span className="w-4 h-4 rounded-full bg-gradient-to-r from-teal-400 to-blue-500 mr-2"></span>
-              <span className="text-sm text-gray-700 font-semibold">SmartQnA</span>
-            </div>
-            <div className="flex items-center">
-              <span className="w-4 h-4 rounded-full bg-gray-400 mr-2"></span>
-              <span className="text-sm text-gray-700 font-semibold">TA</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Performance metrics */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="text-center p-3 bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-teal-600">{data.smartQnA.toFixed(1)}%</div>
-            <div className="text-xs text-gray-600">SmartQnA Score</div>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-600">{data.ta.toFixed(1)}%</div>
-            <div className="text-xs text-gray-600">TA Score</div>
-          </div>
-          <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-            <div className="text-2xl font-bold text-orange-600">{Math.abs(difference).toFixed(1)}%</div>
-            <div className="text-xs text-gray-600">Score Gap</div>
-          </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{data.avgGradingTime}</div>
-            <div className="text-xs text-gray-600">Grading Time</div>
-          </div>
-        </div>
-      
-                  {/* Chart area */}
-          <div className="flex-1 relative bg-gradient-to-b from-teal-50/40 to-blue-50/40 rounded-2xl border border-teal-100/60 p-8">
-            {/* Y-axis label */}
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-              <span className="text-sm text-gray-500 font-medium transform -rotate-90 whitespace-nowrap">
-                Score (%)
-              </span>
-            </div>
-
-            {/* Range indicator */}
-            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md border border-gray-200">
-              <div className="text-xs text-gray-600 font-medium">
-                Focused Range: {rangeMin.toFixed(1)}% - {rangeMax.toFixed(1)}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                📊 Zoomed to highlight {Math.abs(difference).toFixed(1)}% difference
-              </div>
-            </div>
-          
-          {/* Chart area */}
-          <div className="ml-12 relative" style={{ height: `${chartHeight + 80}px` }}>
-            {/* Y-axis ticks and grid lines */}
-            <div className="absolute left-0 top-0 w-full" style={{ height: `${chartHeight}px` }}>
-              {(() => {
-                // Generate smart tick marks based on the range
-                const tickCount = 5;
-                const tickInterval = range / (tickCount - 1);
-                const ticks = [];
-                for (let i = 0; i < tickCount; i++) {
-                  const tickValue = rangeMin + (i * tickInterval);
-                  ticks.push(Math.round(tickValue * 10) / 10); // Round to 1 decimal
-                }
-                return ticks.map((tick, index) => (
-                  <div
-                    key={tick}
-                    className="absolute left-0 w-full border-t border-dashed border-gray-200"
-                    style={{ bottom: `${(index / (tickCount - 1)) * chartHeight}px` }}
-                  >
-                    <span className="absolute -left-12 -top-2 text-sm text-gray-500 font-medium bg-white px-1 rounded">
-                      {tick}%
-                    </span>
-                  </div>
-                ));
-              })()}
-            </div>
-            
-            {/* Chart baseline */}
-            <div className="absolute bottom-16 left-0 w-full h-1 bg-gray-300 rounded-full"></div>
-            
-            {/* Baseline label */}
-            <div className="absolute bottom-12 left-0">
-              <span className="text-xs text-gray-500 font-medium bg-white px-1 rounded">
-                {rangeMin.toFixed(1)}%
-              </span>
-            </div>
-            
-            {/* Bars container */}
-            <div className="absolute bottom-16 left-0 w-full flex justify-center gap-24" style={{ height: `${chartHeight}px` }}>
-              {/* SmartQnA Bar */}
-              <div className="relative flex flex-col justify-end items-center h-full">
-                <motion.div
-                  className="w-24 bg-gradient-to-t from-teal-600 via-cyan-400 to-blue-400 shadow-2xl relative overflow-hidden"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ 
-                    height: `${smartQnAHeight}px`,
-                    opacity: 1
-                  }}
-                  transition={{ 
-                    duration: 2.0, 
-                    type: 'spring', 
-                    bounce: 0.4,
-                    delay: 0.3
-                  }}
-                  style={{ 
-                    borderRadius: smartQnAHeight < 10 ? '4px' : '12px 12px 4px 4px'
-                  }}
-                >
-                  {/* Value label on top */}
-                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-white px-3 py-1.5 rounded-lg shadow-lg border border-teal-200">
-                      <span className="text-lg font-bold text-teal-800">{data.smartQnA.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                  
-                  {/* Visual effects */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-teal-600/90 via-cyan-300/70 to-blue-300/80" style={{ borderRadius: 'inherit' }} />
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-80" />
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent" style={{ borderRadius: 'inherit' }} />
-                  {smartQnAHeight >= 10 && (
-                    <div className="absolute top-0 left-1 right-1 h-2 bg-gradient-to-r from-transparent via-white/60 to-transparent rounded-t-xl" />
-                  )}
-                </motion.div>
-                <span className="text-base font-semibold text-gray-700 mt-3">SmartQnA</span>
-              </div>
-              
-              {/* TA Bar */}
-              <div className="relative flex flex-col justify-end items-center h-full">
-                <motion.div
-                  className="w-24 bg-gradient-to-t from-gray-600 via-slate-300 to-gray-300 shadow-2xl relative overflow-hidden"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ 
-                    height: `${taHeight}px`,
-                    opacity: 1
-                  }}
-                  transition={{ 
-                    duration: 2.0, 
-                    type: 'spring', 
-                    bounce: 0.4,
-                    delay: 0.5
-                  }}
-                  style={{ 
-                    borderRadius: taHeight < 10 ? '4px' : '12px 12px 4px 4px'
-                  }}
-                >
-                  {/* Value label on top */}
-                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-white px-3 py-1.5 rounded-lg shadow-lg border border-gray-300">
-                      <span className="text-lg font-bold text-gray-800">{data.ta.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                  
-                  {/* Visual effects */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-600/90 via-slate-300/80 to-gray-200/90" style={{ borderRadius: 'inherit' }} />
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-90" />
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-transparent to-transparent" style={{ borderRadius: 'inherit' }} />
-                  {taHeight >= 10 && (
-                    <div className="absolute top-0 left-1 right-1 h-2 bg-gradient-to-r from-transparent via-white/70 to-transparent rounded-t-xl" />
-                  )}
-                </motion.div>
-                <span className="text-base font-semibold text-gray-700 mt-3">TA</span>
-              </div>
-            </div>
-
-            {/* Difference indicator - positioned between bars at appropriate height */}
-            <motion.div
-              className="absolute left-1/2 transform -translate-x-1/2 z-10"
-              style={{ 
-                bottom: `${16 + Math.min(smartQnAHeight, taHeight) + (Math.abs(smartQnAHeight - taHeight) / 2)}px`
-              }}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1.5, duration: 0.5 }}
-            >
-              <div className="bg-orange-50/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg border-2 border-orange-200">
-                <div className="text-center">
-                  <div className="text-sm font-bold text-orange-600">
-                    {Math.abs(difference).toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-orange-500">
-                    {difference < 0 ? '↗️' : '↘️'} Gap
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Additional insights */}
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <div className="grid grid-cols-2 gap-6 text-sm mb-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Grading Consistency:</span>
-              <span className="font-medium text-gray-800">
-                {difference < 0 ? 'TA shows higher scoring' : 'SmartQnA shows higher scoring'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Score Difference:</span>
-              <span className="font-medium text-gray-800">{Math.abs(difference).toFixed(1)}% gap</span>
-            </div>
-          </div>
-          
-          {/* Visualization note */}
-          <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100">
-            <div className="flex items-start space-x-2">
-              <div className="text-blue-500 mt-0.5">📊</div>
-              <div>
-                <div className="text-xs font-semibold text-blue-700">Smart Visualization</div>
-                <div className="text-xs text-blue-600 mt-1">
-                  Chart is zoomed to range {rangeMin.toFixed(1)}%-{rangeMax.toFixed(1)}% to better highlight the {Math.abs(difference).toFixed(1)}% difference between grading approaches.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
 // Animated floating particles background
 const ParticleBackground = () => {
   return (
@@ -690,7 +392,7 @@ const ParticleBackground = () => {
       {[...Array(20)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-2 h-2 rounded-full bg-gradient-to-b from-teal-200/20 to-blue-200/30"
+          className="absolute w-2 h-2 rounded-full bg-accent/10"
           initial={{ 
             x: Math.random() * 100 + "%", 
             y: Math.random() * 100 + "%", 
@@ -726,6 +428,86 @@ const ParticleBackground = () => {
   );
 };
 
+const SingleCourseChart = ({ data, label }) => {
+  const smartQnAValue = typeof data?.smartQnA === 'number' ? data.smartQnA : 0;
+  const taValue = typeof data?.ta === 'number' ? data.ta : 0;
+  const max = Math.max(1, smartQnAValue, taValue);
+
+  return (
+    <div className="bg-white/70 backdrop-blur-lg rounded-3xl border border-gray-200 shadow-2xl p-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900">{label}</h3>
+          <p className="text-sm text-gray-500 mt-1">SmartQnA vs TA grading comparison</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
+            <span className="w-2 h-2 rounded-full bg-accent" /> SmartQnA
+          </span>
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
+            <span className="w-2 h-2 rounded-full bg-gray-400" /> TA
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6">
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-700">SmartQnA Score</p>
+            <p className="text-2xl font-bold text-accent">{smartQnAValue}%</p>
+          </div>
+          <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-accent"
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.round((smartQnAValue / max) * 100)}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-gray-600">
+            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+              <p className="text-gray-500">Students</p>
+              <p className="font-semibold text-gray-800">{data?.students ?? '-'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+              <p className="text-gray-500">Assignments</p>
+              <p className="font-semibold text-gray-800">{data?.totalAssignments ?? '-'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+              <p className="text-gray-500">Avg Time</p>
+              <p className="font-semibold text-gray-800">{data?.avgGradingTime ?? '-'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6">
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-700">TA Score</p>
+            <p className="text-2xl font-bold text-gray-700">{taValue}%</p>
+          </div>
+          <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gray-400"
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.round((taValue / max) * 100)}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+            />
+          </div>
+          <div className="mt-4 flex items-center justify-between bg-accent/5 border border-accent/20 rounded-2xl p-4">
+            <div>
+              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Difference</p>
+              <p className="text-sm text-gray-600 mt-1">TA - SmartQnA</p>
+            </div>
+            <p className={`text-xl font-bold ${taValue - smartQnAValue >= 0 ? 'text-gray-700' : 'text-accent'}`}>
+              {(taValue - smartQnAValue > 0 ? '+' : '') + (Math.round((taValue - smartQnAValue) * 10) / 10)}%
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main component
 const DepartmentAnalytics = () => {
   // States for filters and UI
@@ -735,6 +517,7 @@ const DepartmentAnalytics = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [allCoursesData, setAllCoursesData] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
   
   // Get the current departments based on selected institution
   const currentDepartments = departmentsByInstitution[selectedInstitution] || [];
@@ -848,11 +631,11 @@ const DepartmentAnalytics = () => {
       totalAssignments
     };
   };
-  
+
   const summaryStats = getSummaryStats();
 
   return (
-    <section className="relative py-16 px-4 sm:px-6 md:px-8 lg:px-12 min-h-screen bg-gradient-to-b from-gray-50 to-white overflow-hidden">
+    <section className="relative py-16 px-4 sm:px-6 md:px-8 lg:px-12 min-h-screen bg-gray-50 overflow-hidden">
       <ParticleBackground />
       
       <div className="max-w-7xl mx-auto relative z-10">
@@ -864,11 +647,11 @@ const DepartmentAnalytics = () => {
           transition={{ duration: 0.7 }}
         >
           <motion.div 
-            className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-base shadow-md font-semibold tracking-wide gap-2 mb-6"
+            className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-accent/10 text-gray-800 text-base shadow-md font-semibold tracking-wide gap-2 mb-6"
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <HiOutlineChartBar className="w-5 h-5 text-teal-500" /> Analytics
+            <HiOutlineChartBar className="w-5 h-5 text-accent" /> Analytics
           </motion.div>
           
           <motion.h2 
@@ -877,7 +660,7 @@ const DepartmentAnalytics = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.7 }}
           >
-            Department <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Analytics</span>
+            Department <span className="text-accent">Analytics</span>
           </motion.h2>
           
           <motion.p 
@@ -897,7 +680,7 @@ const DepartmentAnalytics = () => {
               exit={{ opacity: 0 }}
               key="loading"
             >
-              <div className="w-16 h-16 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>
+              <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
               <p className="text-gray-500 animate-pulse">Loading analytics data...</p>
             </motion.div>
           ) : (
@@ -956,7 +739,7 @@ const DepartmentAnalytics = () => {
                         options={currentCourses}
                         value={selectedCourse}
                         onChange={handleCourseChange}
-                        icon={<HiOutlineAcademicCap className="w-5 h-5 text-teal-400" />}
+                        icon={<HiOutlineAcademicCap className="w-5 h-5 text-accent" />}
                         label="Course"
                         disabled={currentCourses.length === 0}
                       />
@@ -973,8 +756,8 @@ const DepartmentAnalytics = () => {
                   >
                     <motion.button
                       onClick={handleRefresh}
-                      className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
-                      whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(20, 184, 166, 0.3)" }}
+                      className="flex items-center gap-3 px-6 py-3 bg-accent text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
+                      whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(var(--accent-rgb), 0.25)" }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <HiOutlineRefresh className="w-5 h-5" />
@@ -1021,12 +804,12 @@ const DepartmentAnalytics = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                   {/* Average SmartQnA score */}
-                  <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-xl p-5 shadow-md border border-teal-100">
+                  <div className="bg-accent/5 rounded-xl p-5 shadow-md border border-accent/20">
                     <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. SmartQnA Score</p>
-                    <p className="text-3xl font-bold text-teal-600 mb-1">
+                    <p className="text-3xl font-bold text-accent mb-1">
                       {summaryStats.avgSmartQnA}%
                     </p>
-                    <p className="text-xs text-teal-600">Conservative grading</p>
+                    <p className="text-xs text-accent">Conservative grading</p>
                   </div>
                   
                   {/* Average TA score */}
@@ -1039,48 +822,42 @@ const DepartmentAnalytics = () => {
                   </div>
                   
                   {/* Score difference */}
-                  <div className={`rounded-xl p-5 shadow-md border ${
-                    summaryStats.avgImprovement < 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'
-                  }`}>
+                  <div className={`rounded-xl p-5 shadow-md border ${summaryStats.avgImprovement < 0 ? 'bg-red-50 border-red-100' : 'bg-accent/5 border-accent/20'}`}>
                     <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Score Difference</p>
-                    <p className={`text-3xl font-bold mb-1 ${
-                      summaryStats.avgImprovement < 0 ? 'text-red-600' : 'text-green-600'
-                    }`}>
+                    <p className={`text-3xl font-bold mb-1 ${summaryStats.avgImprovement < 0 ? 'text-red-600' : 'text-accent'}`}>
                       {summaryStats.avgImprovement > 0 ? '+' : ''}
                       {summaryStats.avgImprovement}%
                     </p>
-                    <p className={`text-xs ${
-                      summaryStats.avgImprovement < 0 ? 'text-red-600' : 'text-green-600'
-                    }`}>
+                    <p className={`text-xs ${summaryStats.avgImprovement < 0 ? 'text-red-600' : 'text-accent'}`}>
                       {summaryStats.avgImprovement < 0 ? 'TA scores higher' : 'SmartQnA higher'}
                     </p>
                   </div>
                   
                   {/* Total students */}
-                  <div className="bg-purple-50 rounded-xl p-5 shadow-md border border-purple-100">
+                  <div className="bg-accent/5 rounded-xl p-5 shadow-md border border-accent/20">
                     <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Total Students</p>
-                    <p className="text-3xl font-bold text-purple-600 mb-1">
+                    <p className="text-3xl font-bold text-accent mb-1">
                       {summaryStats.totalStudents.toLocaleString()}
                     </p>
-                    <p className="text-xs text-purple-600">Across {summaryStats.count} courses</p>
+                    <p className="text-xs text-accent">Across {summaryStats.count} courses</p>
                   </div>
                   
                   {/* Total assignments */}
-                  <div className="bg-orange-50 rounded-xl p-5 shadow-md border border-orange-100">
+                  <div className="bg-gray-50 rounded-xl p-5 shadow-md border border-gray-200">
                     <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Assignments Graded</p>
-                    <p className="text-3xl font-bold text-orange-600 mb-1">
+                    <p className="text-3xl font-bold text-gray-600 mb-1">
                       {summaryStats.totalAssignments}
                     </p>
-                    <p className="text-xs text-orange-600">Total submissions</p>
+                    <p className="text-xs text-gray-500">Total submissions</p>
                   </div>
                   
                   {/* Courses analyzed */}
-                  <div className="bg-blue-50 rounded-xl p-5 shadow-md border border-blue-100">
+                  <div className="bg-accent/5 rounded-xl p-5 shadow-md border border-accent/20">
                     <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Courses Analyzed</p>
-                    <p className="text-3xl font-bold text-blue-600 mb-1">
+                    <p className="text-3xl font-bold text-accent mb-1">
                       {summaryStats.count}
                     </p>
-                    <p className="text-xs text-blue-600">Active courses</p>
+                    <p className="text-xs text-accent">Active courses</p>
                   </div>
                 </div>
 
@@ -1114,7 +891,7 @@ const DepartmentAnalytics = () => {
                 transition={{ duration: 0.7, delay: 0.4 }}
               >
                 <motion.div 
-                  className="inline-block py-6 px-8 rounded-2xl bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-100 shadow-lg backdrop-blur-lg"
+                  className="inline-block py-6 px-8 rounded-2xl bg-accent/5 border border-accent/20 shadow-lg backdrop-blur-lg"
                   whileHover={{ 
                     y: -5, 
                     boxShadow: "0 15px 30px -5px rgba(59, 130, 246, 0.1)"
@@ -1122,7 +899,7 @@ const DepartmentAnalytics = () => {
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <div className="flex items-center space-x-3 mb-2">
-                    <HiOutlineLightBulb className="w-6 h-6 text-blue-600" />
+                    <HiOutlineLightBulb className="w-6 h-6 text-accent" />
                     <h4 className="text-lg font-bold text-gray-900">Grading Philosophy</h4>
                   </div>
                   <p className="text-gray-700 font-medium text-base md:text-lg max-w-2xl">

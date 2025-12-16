@@ -1,7 +1,5 @@
 import {
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -99,13 +97,13 @@ const DashboardLayout = ({ children }) => {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex min-h-screen bg-white">
       {isMobile && isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-500"
@@ -115,7 +113,7 @@ const DashboardLayout = ({ children }) => {
 
       <aside
         className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out 
-          ${isSidebarOpen ? "w-72" : "w-20"} 
+          ${isSidebarOpen ? "w-64" : "w-16"} 
           bg-white border-r border-gray-100 shadow-lg 
           ${isMobile && !isSidebarOpen ? "-translate-x-full" : "translate-x-0"} 
           md:translate-x-0`}
@@ -130,19 +128,16 @@ const DashboardLayout = ({ children }) => {
                 isSidebarOpen ? "w-40" : "w-0"
               }`}
             >
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent whitespace-nowrap">
+              <h1 className="text-xl font-bold text-accent whitespace-nowrap">
                 Smart QnA
               </h1>
             </div>
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg hover:bg-blue-50 group transition-all duration-300 flex-shrink-0"
+              aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              className="p-2 rounded-lg hover:bg-accent/10 group transition-all duration-300 flex-shrink-0"
             >
-              {isSidebarOpen ? (
-                <ChevronLeft className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transform transition-transform group-hover:scale-110" />
-              ) : (
-                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transform transition-transform group-hover:scale-110" />
-              )}
+              <Menu className="w-5 h-5 text-gray-500 group-hover:text-accent transform transition-transform group-hover:scale-110" />
             </button>
           </div>
 
@@ -155,7 +150,7 @@ const DashboardLayout = ({ children }) => {
                     transition-all duration-300 ease-in-out relative overflow-hidden
                     ${
                       isActive(item.to)
-                        ? "bg-blue-50 text-blue-600"
+                        ? "bg-accent/10 text-accent"
                         : "text-gray-600 hover:bg-gray-50"
                     }`}
                   onMouseEnter={() => setHoveredItem(item.label)}
@@ -165,8 +160,8 @@ const DashboardLayout = ({ children }) => {
                     className={`w-5 h-5 transition-all duration-300 transform group-hover:scale-110
                     ${
                       isActive(item.to)
-                        ? "text-blue-600"
-                        : "text-gray-400 group-hover:text-blue-600"
+                        ? "text-accent"
+                        : "text-gray-400 group-hover:text-accent"
                     }`}
                   />
                   <div
@@ -180,7 +175,7 @@ const DashboardLayout = ({ children }) => {
                   </div>
                   {!isSidebarOpen && hoveredItem === item.label && (
                     <div
-                      className="absolute left-14 bg-white px-2 py-1 rounded-md shadow-lg border border-gray-100
+                      className="absolute left-12 bg-white px-2 py-1 rounded-md shadow-lg border border-gray-100
                       transition-all duration-300 z-50"
                     >
                       <span className="text-sm font-medium whitespace-nowrap">
@@ -189,7 +184,7 @@ const DashboardLayout = ({ children }) => {
                     </div>
                   )}
                   {isActive(item.to) && (
-                    <span className="absolute inset-y-0 left-0 w-1 bg-blue-600 rounded-r-full" />
+                    <span className="absolute inset-y-0 left-0 w-1 bg-accent rounded-r-full" />
                   )}
                 </Link>
                 {isSidebarOpen && item.subItems && (
@@ -202,7 +197,7 @@ const DashboardLayout = ({ children }) => {
                           transition-all duration-300 group
                           ${
                             isActive(subItem.to)
-                              ? "text-blue-600 bg-blue-50"
+                              ? "text-accent bg-accent/10"
                               : "text-gray-600 hover:bg-gray-50"
                           }`}
                       >
@@ -210,8 +205,8 @@ const DashboardLayout = ({ children }) => {
                           className={`w-1.5 h-1.5 rounded-full mr-3 transition-all duration-300 transform group-hover:scale-110
                           ${
                             isActive(subItem.to)
-                              ? "bg-blue-400"
-                              : "bg-gray-300 group-hover:bg-blue-400"
+                              ? "bg-accent"
+                              : "bg-gray-300 group-hover:bg-accent"
                           }`}
                         />
                         {subItem.label}
@@ -242,7 +237,7 @@ const DashboardLayout = ({ children }) => {
               </div>
               {!isSidebarOpen && (
                 <div
-                  className="absolute left-14 bg-white px-2 py-1 rounded-md shadow-lg border border-gray-100
+                  className="absolute left-12 bg-white px-2 py-1 rounded-md shadow-lg border border-gray-100
                   opacity-0 group-hover:opacity-100 transition-all duration-300"
                 >
                   <span className="text-sm font-medium whitespace-nowrap">
@@ -257,7 +252,7 @@ const DashboardLayout = ({ children }) => {
 
       <div
         className={`flex-1 transition-all duration-300 ease-in-out relative
-        ${isSidebarOpen ? "md:ml-72" : "md:ml-20"} ml-0`}
+        ${isSidebarOpen ? "md:ml-64" : "md:ml-16"} ml-0`}
       >
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 md:px-6 h-16">
@@ -265,6 +260,7 @@ const DashboardLayout = ({ children }) => {
               {isMobile && (
                 <button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
                   className="p-2 rounded-lg hover:bg-gray-50 transition-all duration-300"
                 >
                   <Menu className="w-5 h-5 text-gray-500 transform transition-transform hover:scale-110" />
@@ -276,7 +272,7 @@ const DashboardLayout = ({ children }) => {
               <div className="h-8 w-px bg-gray-200 hidden sm:block" />
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <div className="w-8 h-8 rounded-full border border-gray-200 bg-blue-500 text-white flex items-center justify-center font-medium text-sm">
+                  <div className="w-8 h-8 rounded-full border border-gray-200 bg-accent text-white flex items-center justify-center font-medium text-sm">
                     {userData?.name
                       ? userData.name.charAt(0).toUpperCase()
                       : "G"}
@@ -291,7 +287,7 @@ const DashboardLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] bg-gray-50 p-4 md:p-6">
+        <main className="min-h-[calc(100vh-4rem)] bg-white p-4 md:p-6">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>

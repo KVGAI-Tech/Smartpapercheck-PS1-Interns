@@ -24,7 +24,7 @@
     return (
       <div
         className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all duration-300 ${
-          type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          type === 'success' ? 'bg-accent text-white' : 'bg-red-500 text-white'
         } ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
       >
         {type === 'success' ? (
@@ -43,10 +43,10 @@
       className={`relative w-14 h-14 rounded-full flex items-center justify-center text-base 
         font-semibold cursor-pointer transition-all duration-300 transform hover:scale-110
         ${isActive 
-          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' 
+          ? 'bg-accent text-white shadow-md' 
           : isCompleted 
-            ? 'bg-gradient-to-br from-green-100 to-green-200 text-green-700 border-2 border-green-500' 
-            : 'bg-white text-gray-500 border-2 border-gray-200 hover:border-blue-300'
+            ? 'bg-accent/10 text-accent border-2 border-accent' 
+            : 'bg-white text-gray-500 border-2 border-gray-200 hover:border-accent/30'
         }`}
     >
       {isCompleted ? (
@@ -63,9 +63,9 @@
         <div
           className={`absolute inset-0 h-full rounded-full transition-all duration-500 ease-in-out
             ${isCompleted 
-              ? 'bg-gradient-to-r from-green-400 to-green-500 w-full' 
+              ? 'bg-accent w-full' 
               : isActive 
-                ? 'bg-gradient-to-r from-blue-400 to-blue-500 w-1/2'
+                ? 'bg-accent/70 w-1/2'
                 : 'w-0'
             }`}
         />
@@ -146,7 +146,7 @@
                 value={examName}
                 onChange={(e) => setExamName(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg 
-                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                 placeholder="Enter exam name"
                 disabled={isLoading}
                 required
@@ -162,7 +162,7 @@
                 value={fullMarks}
                 onChange={(e) => setFullMarks(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg 
-                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                 placeholder="Enter total marks"
                 min="1"
                 disabled={isLoading}
@@ -190,8 +190,8 @@
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg 
-                  hover:bg-blue-700 transition-colors disabled:bg-blue-300
+                className="px-4 py-2 bg-accent text-white rounded-lg 
+                  hover:bg-accent transition-colors disabled:bg-accent/40
                   disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isLoading ? (
@@ -321,21 +321,21 @@
   
           <form onSubmit={handleSubmit}>
             <div
-              className={`mb-6 relative transition-all ${dragActive ? 'ring-2 ring-blue-500' : ''}`}
+              className={`mb-6 relative transition-all ${dragActive ? 'ring-2 ring-accent' : ''}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
               onDrop={handleDrop}
             >
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8
-                text-center hover:border-blue-500 transition-colors">
+                text-center hover:border-accent transition-colors">
                 <div className="mb-4">
                   <Upload className="w-10 h-10 text-gray-400 mx-auto mb-4" />
                   <p className="text-sm text-gray-600 mb-2">
                     Drag and drop your ZIP file here, or
                   </p>
-                  <label className="inline-block px-4 py-2 bg-blue-50 text-blue-600
-                    rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                  <label className="inline-block px-4 py-2 bg-accent/10 text-accent
+                    rounded-lg cursor-pointer hover:bg-accent/20 transition-colors">
                     Browse Files
                     <input
                       type="file"
@@ -372,8 +372,8 @@
               <button
                 type="submit"
                 disabled={isUploading || !file || !courseId}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg 
-                  hover:bg-blue-700 transition-colors disabled:bg-blue-300
+                className="px-4 py-2 bg-accent text-white rounded-lg 
+                  hover:bg-accent transition-colors disabled:bg-accent/40
                   disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isUploading ? (
@@ -455,7 +455,7 @@
             </button>
             <button
               onClick={() => onStartEvaluation(exam.id)}
-              className="px-4 py-2 text-white bg-green-600 hover:bg-green-700
+              className="px-4 py-2 text-white bg-accent hover:bg-accent
                 rounded-lg flex items-center gap-2 transition-colors shadow-sm transform hover:scale-105"
             >
               <PlayCircle className="w-4 h-4" />
@@ -481,7 +481,7 @@
           </div>
         </div>
   
-        <div className="px-6 sm:px-10 py-10 bg-gradient-to-b from-white to-gray-50">
+        <div className="px-6 sm:px-10 py-10 bg-white">
           <div className="flex flex-col items-center">
             <div className="flex items-center justify-center w-full max-w-3xl mx-auto mb-8">
               {steps.map((step, index) => (
@@ -507,8 +507,8 @@
             
             <div key={activeStep} className="text-center mb-4 transition-all duration-300">
               <div className="flex flex-col items-center gap-2">
-                <div className="p-3 bg-blue-50 rounded-full mb-2 transform transition-all">
-                  {React.createElement(steps[activeStep].icon, { className: "w-6 h-6 text-blue-600" })}
+                <div className="p-3 bg-accent/10 rounded-full mb-2 transform transition-all">
+                  {React.createElement(steps[activeStep].icon, { className: "w-6 h-6 text-accent" })}
                 </div>
                 <h4 className="text-lg font-semibold text-gray-800">
                   {steps[activeStep].label}
@@ -521,8 +521,8 @@
   
             <button
               onClick={steps[activeStep].action}
-              className="mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-full flex items-center gap-2
-                shadow-md hover:shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105"
+              className="mt-4 px-6 py-2.5 bg-accent text-white rounded-full flex items-center gap-2
+                shadow-md hover:shadow-lg hover:bg-accent transition-all duration-300 transform hover:scale-105"
             >
               {React.createElement(steps[activeStep].icon, { className: "w-4 h-4" })}
               <span>{steps[activeStep].label}</span>
@@ -532,7 +532,7 @@
               <button
                 onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
                 disabled={activeStep === 0}
-                className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
+                className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50
                   disabled:opacity-30 disabled:cursor-not-allowed transition-all transform hover:scale-110"
               >
                 <ChevronRight className="w-5 h-5 transform rotate-180" />
@@ -543,7 +543,7 @@
               <button
                 onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
                 disabled={activeStep === steps.length - 1}
-                className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100
+                className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50
                   disabled:opacity-30 disabled:cursor-not-allowed transition-all transform hover:scale-110"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -793,7 +793,7 @@
   
           {isLoading && (
             <div className="flex justify-center items-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
             </div>
           )}
   
@@ -805,16 +805,16 @@
   
           {!isLoading && Object.keys(statusCounts).length > 0 && (
             <div className="grid grid-cols-4 gap-2 mb-4">
-              <div className="bg-blue-50 p-3 rounded-lg text-center">
-                <div className="text-lg font-semibold text-blue-700">{statusCounts.not_uploaded || 0}</div>
+              <div className="bg-accent/10 p-3 rounded-lg text-center">
+                <div className="text-lg font-semibold text-accent">{statusCounts.not_uploaded || 0}</div>
                 <div className="text-xs text-gray-500">Not Uploaded</div>
               </div>
               <div className="bg-amber-50 p-3 rounded-lg text-center">
                 <div className="text-lg font-semibold text-amber-700">{statusCounts.uploaded || 0}</div>
                 <div className="text-xs text-gray-500">Uploaded</div>
               </div>
-              <div className="bg-green-50 p-3 rounded-lg text-center">
-                <div className="text-lg font-semibold text-green-700">{statusCounts.evaluated || 0}</div>
+              <div className="bg-accent/10 p-3 rounded-lg text-center">
+                <div className="text-lg font-semibold text-accent">{statusCounts.evaluated || 0}</div>
                 <div className="text-xs text-gray-500">Evaluated</div>
               </div>
               <div className="bg-purple-50 p-3 rounded-lg text-center">
@@ -841,7 +841,7 @@
                     placeholder="Search students..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all"
                     disabled={isLoading}
                   />
                 </div>
@@ -862,7 +862,7 @@
                       <div
                         key={student.id}
                         className={`flex items-center justify-between p-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 ${
-                          isEnrolled ? 'bg-blue-50/50' : ''
+                          isEnrolled ? 'bg-accent/5' : ''
                         }`}
                       >
                         <div className="flex items-center gap-4">
@@ -870,10 +870,10 @@
                             type="checkbox"
                             checked={isEnrolled}
                             onChange={() => handleToggleStudent(student.id)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-accent border-gray-300 rounded focus:ring-accent"
                           />
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-medium text-blue-600">
+                          <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-medium text-accent">
                               {student.name?.charAt(0) || '?'}
                             </span>
                           </div>
@@ -884,8 +884,7 @@
                               {student.email && <span className="truncate max-w-[200px]">{student.email}</span>}
                               {details.status && (
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  details.status === 'evaluated' ? 'bg-green-100 text-green-800' :
-                                  details.status === 'uploaded' ? 'bg-amber-100 text-amber-800' :
+                                  details.status === 'evaluated' ? 'bg-accent/10 text-accent' :
                                   'bg-gray-100 text-gray-800'
                                 }`}>
                                   {details.status}
@@ -919,7 +918,7 @@
             </button>
             <button
               onClick={handleSubmit}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 font-medium shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-5 py-2.5 bg-accent text-white rounded-lg hover:bg-accent disabled:bg-accent/40 font-medium shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -1381,7 +1380,7 @@
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl
-                  focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                  focus:ring-2 focus:ring-accent focus:border-transparent
                   transition-all duration-300 text-gray-700"
               />
             </div>
@@ -1389,9 +1388,9 @@
             <div className="flex items-center gap-3">                                    
               <button
                 onClick={onAdd}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white
-                  rounded-xl hover:bg-blue-700 transition-all duration-300 transform hover:scale-102
-                  shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white
+                  rounded-xl hover:bg-accent transition-all duration-300 transform hover:scale-102
+                  shadow-sm hover:shadow-md focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 <Plus className="w-5 h-5" />
                 Create Exam
@@ -1436,8 +1435,8 @@
                   {!searchQuery && (
                     <button
                       onClick={onAdd}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 
-                        text-white rounded-xl hover:bg-blue-700 transition-all duration-300
+                      className="flex items-center gap-2 px-4 py-2 bg-accent 
+                        text-white rounded-xl hover:bg-accent transition-all duration-300
                         shadow-sm hover:shadow-md transform hover:scale-105"
                     >
                       <Plus className="w-5 h-5" />
@@ -1561,7 +1560,7 @@
               <React.Suspense
                 fallback={
                   <div className="flex items-center justify-center h-screen">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
                   </div>
                 }
               >

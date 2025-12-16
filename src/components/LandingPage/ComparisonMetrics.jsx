@@ -43,12 +43,12 @@ const ComparisonMetrics = () => {
     <section id="comparison" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-teal-50 text-gray-800 text-sm mb-4">
+          <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm mb-4">
             <span className="mr-2">📊</span>
             <span>Performance Metrics</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-bold mb-4 text-gray-900">
-            Evaluation in <span className="text-teal-500">Minutes</span>, Not Days
+            Evaluation in <span className="text-accent">Minutes</span>, Not Days
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             SmartQnA revolutionizes answer script evaluation with unprecedented speed and accuracy
@@ -58,14 +58,14 @@ const ComparisonMetrics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center mr-3">
-                <HiOutlineClock className="w-5 h-5 text-teal-600" />
+              <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center mr-3">
+                <HiOutlineClock className="w-5 h-5 text-accent" />
               </div>
               <h3 className="text-xl font-bold text-gray-900">Evaluation Time Reduction</h3>
             </div>
 
             <p className="text-gray-600 mb-8">
-              SmartQnA reduces evaluation time from <span className="font-medium">5-6 days</span> to just <span className="font-medium text-teal-600">10-20 minutes</span>, saving over 100% of time spent on grading.
+              SmartQnA reduces evaluation time from <span className="font-medium">5-6 days</span> to just <span className="font-medium text-accent">10-20 minutes</span>, saving over 100% of time spent on grading.
             </p>
 
             <div className="flex flex-col relative h-64">
@@ -84,18 +84,18 @@ const ComparisonMetrics = () => {
                 </div>
 
                 <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-                  <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
                     <span className="text-sm text-gray-700">VS</span>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-center w-1/3">
                   <div className="text-center mb-3">
-                    <div className="text-3xl font-bold text-teal-500">15</div>
+                    <div className="text-3xl font-bold text-accent">15</div>
                     <div className="text-gray-600">Minutes</div>
 
                   </div>
-                  <div className="bg-gradient-to-r from-teal-400 to-blue-400 text-white text-xs font-medium px-3 py-1 rounded-full shadow-sm flex items-center">
+                  <div className="bg-accent text-white text-xs font-medium px-3 py-1 rounded-full shadow-sm flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
                     </svg>
@@ -112,14 +112,14 @@ const ComparisonMetrics = () => {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-3">
-                <HiOutlineCheckCircle className="w-5 h-5 text-blue-600" />
+              <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center mr-3">
+                <HiOutlineCheckCircle className="w-5 h-5 text-accent" />
               </div>
               <h3 className="text-xl font-bold text-gray-900">Exceptional Accuracy</h3>
             </div>
 
             <p className="text-gray-600 mb-8">
-              Achieve <span className="font-medium text-teal-600">90% accuracy</span> with our AI-powered evaluation system that understands complex answers and diagrams.
+              Achieve <span className="font-medium text-accent">90% accuracy</span> with our AI-powered evaluation system that understands complex answers and diagrams.
             </p>
 
             <div className="flex justify-center mb-8">
@@ -139,29 +139,22 @@ const ComparisonMetrics = () => {
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke="url(#accuracyGradient)"
+                    stroke="var(--accent-color)"
                     strokeLinecap="round"
                     strokeWidth="10"
                     strokeDasharray="283"
                     strokeDashoffset="28.3"
                     transform="rotate(-90 50 50)"
                   />
-
-                  <defs>
-                    <linearGradient id="accuracyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#4ade80" />
-                      <stop offset="100%" stopColor="#3b82f6" />
-                    </linearGradient>
-                  </defs>
                 </svg>
 
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                  <div className="text-4xl font-bold text-teal-500">90%</div>
+                  <div className="text-4xl font-bold text-accent">90%</div>
                   <div className="text-sm text-gray-500">Accuracy</div>
                 </div>
 
-                <div className="absolute top-5 right-5 bg-teal-50 rounded-full w-8 h-8 flex items-center justify-center">
-                  <span className="text-teal-500 text-lg">%</span>
+                <div className="absolute top-5 right-5 bg-accent/10 rounded-full w-8 h-8 flex items-center justify-center">
+                  <span className="text-accent text-lg">%</span>
                 </div>
               </div>
             </div>
@@ -187,14 +180,11 @@ const ComparisonMetrics = () => {
           viewport={{ once: true }}
         >
           <h3 className="text-2xl font-bold mb-6 text-center text-gray-900">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
-              SmartQnA
-            </span>{" "}
-            vs. Traditional Grading
+            <span className="text-accent">SmartQnA</span> vs. Traditional Grading
           </h3>
           <table className="min-w-full bg-white rounded-xl shadow-md overflow-hidden">
             <thead>
-              <tr className="bg-gradient-to-r from-teal-500 to-blue-500 text-white">
+              <tr className="bg-accent text-white">
                 <th className="py-4 px-6 text-left">Metric</th>
                 <th className="py-4 px-6 text-center">Traditional Grading</th>
                 <th className="py-4 px-6 text-center">SmartQnA</th>
@@ -217,7 +207,7 @@ const ComparisonMetrics = () => {
                   <td className="py-4 px-6 text-center text-gray-600">
                     {metric.traditional}
                   </td>
-                  <td className="py-4 px-6 text-center font-medium text-teal-600">
+                  <td className="py-4 px-6 text-center font-medium text-accent">
                     {metric.smartQnA}
                   </td>
                   <td className="py-4 px-6 text-center">
@@ -236,13 +226,13 @@ const ComparisonMetrics = () => {
           </div>
         </motion.div>
 
-        <div className="bg-teal-50 rounded-xl p-8 text-center max-w-4xl mx-auto">
+        <div className="bg-accent/10 rounded-xl p-8 text-center max-w-4xl mx-auto">
           <p className="text-gray-700 mb-6">
             SmartQnA's Vision-Language Models understand complex handwritten answers, diagrams, and equations with human-level comprehension but machine-level efficiency.
           </p>
 
           <motion.button
-            className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white font-medium py-2 px-5 rounded-full shadow-sm inline-flex items-center"
+            className="bg-accent hover:bg-accent text-white font-medium py-2 px-5 rounded-full shadow-sm inline-flex items-center"
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
             onClick={() => navigate('/auth')}

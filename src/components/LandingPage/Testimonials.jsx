@@ -24,7 +24,7 @@ const TestimonialCard = ({
     >
       <div className="flex items-start mb-4">
         <div className="mr-4">
-          <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-r from-teal-500 to-blue-500 p-0.5 shadow-md">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-accent p-0.5 shadow-md">
             <div className="bg-gray-50 w-full h-full rounded-full overflow-hidden">
               {avatar ? (
                 <img
@@ -47,14 +47,14 @@ const TestimonialCard = ({
         <div>
           <h4 className="font-semibold text-gray-900">{name}</h4>
           <p className="text-sm text-gray-600">{designation}</p>
-          <p className="text-sm text-teal-600 font-medium">{institute}</p>
+          <p className="text-sm text-accent font-medium">{institute}</p>
         </div>
       </div>
 
       <div className="relative">
-        <FaQuoteLeft className="absolute -top-2 -left-1 text-teal-300 text-xl" />
+        <FaQuoteLeft className="absolute -top-2 -left-1 text-accent/40 text-xl" />
         <p className="text-gray-700 pl-5 pr-5 py-2">{quote}</p>
-        <FaQuoteRight className="absolute -bottom-2 -right-1 text-teal-300 text-xl" />
+        <FaQuoteRight className="absolute -bottom-2 -right-1 text-accent/40 text-xl" />
       </div>
     </motion.div>
   );
@@ -107,16 +107,14 @@ const Testimonials = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">🧑‍🏫</span>
               <span>Trusted by Educators</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
             What{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
-              Professors Are Saying
-            </span>
+            <span className="text-accent">Professors Are Saying</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Hear from faculty members who've transformed their evaluation

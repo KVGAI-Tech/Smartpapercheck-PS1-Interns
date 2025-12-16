@@ -591,7 +591,7 @@ const ProfessorRecheckDetail = () => {
           className="text-center"
         >
           <div className="flex flex-col items-center justify-center">
-            <div className="w-20 h-20 border-4 border-t-blue-500 border-blue-200/30 rounded-full animate-spin mb-6"></div>
+            <div className="w-20 h-20 border-4 border-t-accent border-accent/20 rounded-full animate-spin mb-6"></div>
             <h3 className="text-2xl font-medium text-gray-900 mb-6">
               Loading request
             </h3>
@@ -624,7 +624,7 @@ const ProfessorRecheckDetail = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleGoBack}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all"
+            className="px-8 py-3 bg-accent text-white rounded-lg shadow-md hover:bg-accent transition-all"
           >
             Go Back
           </motion.button>
@@ -644,6 +644,7 @@ const ProfessorRecheckDetail = () => {
                 whileTap={{ scale: 0.9 }}
                 onClick={handleGoBack}
                 className="p-2 rounded-full hover:bg-gray-100"
+                aria-label="Go back"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </motion.button>
@@ -667,7 +668,7 @@ const ProfessorRecheckDetail = () => {
             animate={{ opacity: 1, y: 0 }}
             className="max-w-md bg-white rounded-2xl shadow-xl p-8 text-center"
           >
-            <div className="inline-block p-6 rounded-full bg-blue-50 mb-6">
+            <div className="inline-block p-6 rounded-full bg-accent/10 mb-6">
               {decision === "approved" || decision === "partial" ? (
                 <CheckCircle className="w-16 h-16 text-green-500" />
               ) : (
@@ -697,7 +698,7 @@ const ProfessorRecheckDetail = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleGoBack}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all w-full"
+              className="px-6 py-3 bg-accent text-white rounded-lg shadow-md hover:bg-accent transition-all w-full"
             >
               Return to Course
             </motion.button>
@@ -740,7 +741,7 @@ const ProfessorRecheckDetail = () => {
             <div className="flex items-center gap-2">
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium shadow-sm"
+                className="h-9 w-9 rounded-full bg-accent/10 flex items-center justify-center text-accent font-medium shadow-sm"
               >
                 {requestData?.studentName?.charAt(0) || "S"}
               </motion.div>
@@ -753,135 +754,40 @@ const ProfessorRecheckDetail = () => {
             </div>
 
             <div className="h-8 w-px bg-gray-200"></div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-200 shadow-sm"
-            >
-              Professor Mode
-            </motion.div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div
-          className="bg-white border-r border-gray-200 overflow-hidden flex flex-col shadow-md z-30"
-          style={{
-            width: `${sidebarWidth}px`,
-            minWidth: `${sidebarWidth}px`,
-            maxHeight: "calc(100vh - 73px)",
-            transition: resizing ? "none" : "width 0.3s ease-in-out",
-          }}
-        >
-          <SidebarTabs activeTab={sidebarTab} setActiveTab={setSidebarTab} />
-
-          <div className="overflow-y-auto flex-1 p-5">
-            {sidebarTab === "annotations" && (
-              <StudentAnnotationsList
-                annotations={annotations}
-                respondedIds={respondedAnnotationIds}
-                onSelectAnnotation={handleSelectAnnotation}
-                selectedAnnotationId={selectedAnnotationId}
-                questionResponses={questionResponses}
-              />
-            )}
-            {sidebarTab === "assessment" && (
-              <QuestionMarksEditor
-                questionMarks={questionMarks}
-                maxMarks={maxMarks}
-                onQuestionMarkChange={handleQuestionMarkChange}
-                totalOriginalMarks={totalOriginalMarks}
-                totalNewMarks={totalNewMarks}
-                addressedQuestions={addressedQuestions}
-                questionResponses={questionResponses}
-              />
-            )}
-          </div>
-
-          <div className="p-5 border-t border-gray-200 bg-gray-50">
-            <h3 className="text-base font-semibold text-gray-900 mb-3">Final Decision</h3>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setDecision("approved")}
-                className={`px-4 py-2.5 rounded-lg text-sm font-medium border-2 transition-all ${
-                  decision === "approved"
-                    ? "bg-green-500 text-white border-green-500 shadow-lg"
-                    : "bg-white text-gray-700 border-gray-300 hover:border-green-400"
-                }`}
-              >
-                Approve
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setDecision("rejected")}
-                className={`px-4 py-2.5 rounded-lg text-sm font-medium border-2 transition-all ${
-                  decision === "rejected"
-                    ? "bg-red-500 text-white border-red-500 shadow-lg"
-                    : "bg-white text-gray-700 border-gray-300 hover:border-red-400"
-                }`}
-              >
-                Reject
-              </motion.button>
-            </div>
-            <textarea
-              value={professorFeedback}
-              onChange={(e) => setProfessorFeedback(e.target.value)}
-              className="w-full p-3 border rounded-lg focus:ring-2 transition-all border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              rows={3}
-              placeholder="Add a final comment for the student..."
-            />
-            <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSubmitResponse}
-              disabled={isSubmitting}
-              className="w-full mt-3 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all font-semibold disabled:bg-gray-400"
-            >
-              {isSubmitting ? "Submitting..." : "Submit Final Decision"}
-            </motion.button>
-          </div>
-        </div>
-
-        <div
-          className="w-2 h-full bg-gray-300 cursor-ew-resize z-30 hidden md:block"
-          onMouseDown={startResize}
-        ></div>
-
-        <div className="flex-1 bg-gray-800 relative">
-          <PageViewer
-            presigned_url={pageUrls[pageNumber - 1]}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            zoomLevel={zoomLevel}
-            pageNumber={pageNumber}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
+      <div className="flex-1 bg-gray-800 relative">
+        <PageViewer
+          presigned_url={pageUrls[pageNumber - 1]}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          zoomLevel={zoomLevel}
+          pageNumber={pageNumber}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+        <AnnotationViewer
+          annotations={annotations}
+          currentPage={pageNumber}
+          onSelectAnnotation={handleSelectAnnotation}
+          selectedAnnotationId={selectedAnnotationId}
+          respondedAnnotationIds={respondedAnnotationIds}
+          zoomLevel={zoomLevel}
+        />
+        {showResponseForm && selectedAnnotation && (
+          <AnnotationResponseForm
+            selectedAnnotation={selectedAnnotation}
+            onClose={() => setShowResponseForm(false)}
+            onSubmit={handleAnnotationResponse}
+            maxMarks={maxMarks}
+            questionResponses={
+              questionResponses[selectedAnnotation.questionNumber] || []
+            }
           />
-          <AnnotationViewer
-            annotations={annotations}
-            currentPage={pageNumber}
-            onSelectAnnotation={handleSelectAnnotation}
-            selectedAnnotationId={selectedAnnotationId}
-            respondedAnnotationIds={respondedAnnotationIds}
-            zoomLevel={zoomLevel}
-          />
-          {showResponseForm && selectedAnnotation && (
-            <AnnotationResponseForm
-              selectedAnnotation={selectedAnnotation}
-              onClose={() => setShowResponseForm(false)}
-              onSubmit={handleAnnotationResponse}
-              maxMarks={maxMarks}
-              questionResponses={questionResponses[selectedAnnotation.questionNumber] || []}
-            />
-          )}
-        </div>
+        )}
       </div>
 
       <Toast

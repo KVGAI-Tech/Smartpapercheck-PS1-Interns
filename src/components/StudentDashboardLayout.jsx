@@ -4,8 +4,6 @@ import { API_BASE_URL } from "../BaseURL";
 import { useAuth } from "./AuthContext";
 import {
   Menu,
-  ChevronLeft,
-  ChevronRight,
   LayoutDashboard,
   FileText,
   LogOut,
@@ -120,7 +118,7 @@ const StudentDashboardLayout = ({ children }) => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
       </div>
     );
   }
@@ -151,7 +149,7 @@ const StudentDashboardLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex min-h-screen bg-white">
       {isMobile && isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30"
@@ -161,7 +159,7 @@ const StudentDashboardLayout = ({ children }) => {
 
       <aside
         className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300
-          ${isSidebarOpen ? "w-64" : "w-20"} 
+          ${isSidebarOpen ? "w-64" : "w-16"} 
           bg-white border-r border-gray-100 shadow-lg
           ${
             isMobile
@@ -181,19 +179,16 @@ const StudentDashboardLayout = ({ children }) => {
                 isSidebarOpen ? "w-40" : "w-0"
               }`}
             >
-              <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold text-accent">
                 Smart QnA
               </h1>
             </div>
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg hover:bg-green-50 group"
+              aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              className="p-2 rounded-lg hover:bg-accent/10 group"
             >
-              {isSidebarOpen ? (
-                <ChevronLeft className="w-5 h-5 text-gray-500 group-hover:text-green-600" />
-              ) : (
-                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-green-600" />
-              )}
+              <Menu className="w-5 h-5 text-gray-500 group-hover:text-accent" />
             </button>
           </div>
 
@@ -206,7 +201,7 @@ const StudentDashboardLayout = ({ children }) => {
                   transition-all duration-300 relative group
                   ${
                     isActive(item.to)
-                      ? "bg-green-50 text-green-600"
+                      ? "bg-accent/10 text-accent"
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                 onMouseEnter={() => setHoveredItem(item.label)}
@@ -214,7 +209,7 @@ const StudentDashboardLayout = ({ children }) => {
               >
                 <item.icon
                   className={`w-5 h-5 ${
-                    isActive(item.to) ? "text-green-600" : "text-gray-400"
+                    isActive(item.to) ? "text-accent" : "text-gray-400"
                   }`}
                 />
 
@@ -229,14 +224,14 @@ const StudentDashboardLayout = ({ children }) => {
                 </div>
 
                 {!isSidebarOpen && hoveredItem === item.label && (
-                  <div className="absolute left-14 bg-white px-3 py-2 rounded-md shadow-lg border border-gray-100 z-50 min-w-[200px]">
+                  <div className="absolute left-12 bg-white px-3 py-2 rounded-md shadow-lg border border-gray-100 z-50 min-w-[200px]">
                     <p className="font-medium text-gray-900">{item.label}</p>
                     <p className="text-sm text-gray-500">{item.description}</p>
                   </div>
                 )}
 
                 {isActive(item.to) && (
-                  <span className="absolute inset-y-0 left-0 w-1 bg-green-600 rounded-r-full" />
+                  <span className="absolute inset-y-0 left-0 w-1 bg-accent rounded-r-full" />
                 )}
               </Link>
             ))}
@@ -263,7 +258,7 @@ const StudentDashboardLayout = ({ children }) => {
 
       <div
         className={`flex-1 transition-all duration-300
-        ${isSidebarOpen ? "md:ml-64" : "md:ml-20"} ${isMobile ? "ml-0" : ""}`}
+        ${isSidebarOpen ? "md:ml-64" : "md:ml-16"} ${isMobile ? "ml-0" : ""}`}
       >
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 h-16">
@@ -271,6 +266,7 @@ const StudentDashboardLayout = ({ children }) => {
               {isMobile && (
                 <button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
                   className="p-2 rounded-lg hover:bg-gray-50"
                 >
                   <Menu className="w-5 h-5 text-gray-500" />
@@ -283,12 +279,12 @@ const StudentDashboardLayout = ({ children }) => {
               {/* <PaymentModal /> */}
               <button className="p-2 rounded-full hover:bg-gray-50 relative">
                 <Bell className="w-5 h-5 text-gray-500" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full"></span>
               </button>
               <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-green-600">
+                <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+                  <span className="text-sm font-medium text-accent">
                     {getUserInitial()}
                   </span>
                 </div>
@@ -300,7 +296,7 @@ const StudentDashboardLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] bg-gray-50">
+        <main className="min-h-[calc(100vh-4rem)] bg-white">
           <div className="p-4 md:p-6 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>

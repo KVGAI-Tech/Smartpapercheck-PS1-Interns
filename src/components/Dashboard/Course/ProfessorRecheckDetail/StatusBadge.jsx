@@ -6,19 +6,19 @@ const StatusBadge = ({ status }) => {
 
   switch (status?.toLowerCase()) {
     case "approved":
-      bgColor = "bg-gradient-to-r from-green-100 to-green-50";
-      textColor = "text-green-800";
+      bgColor = "bg-accent/10";
+      textColor = "text-accent";
       icon = <CheckCircle className="w-4 h-4" />;
       break;
     case "rejected":
-      bgColor = "bg-gradient-to-r from-red-100 to-red-50";
-      textColor = "text-red-800";
+      bgColor = "bg-accent/10";
+      textColor = "text-accent";
       icon = <XCircle className="w-4 h-4" />;
       break;
     case "pending":
     default:
-      bgColor = "bg-gradient-to-r from-yellow-100 to-yellow-50";
-      textColor = "text-yellow-800";
+      bgColor = "bg-accent/10";
+      textColor = "text-accent";
       icon = <AlertCircle className="w-4 h-4" />;
       break;
   }

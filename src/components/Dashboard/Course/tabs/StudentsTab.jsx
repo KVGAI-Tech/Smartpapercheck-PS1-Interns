@@ -206,7 +206,7 @@ const StudentsTab = ({
       return (
         <div className="bg-white rounded-lg shadow-sm p-8">
           <div className="flex justify-center items-center">
-            <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+            <Loader className="w-8 h-8 text-accent animate-spin" />
             <span className="ml-3 text-gray-600">Loading students...</span>
           </div>
         </div>
@@ -244,7 +244,7 @@ const StudentsTab = ({
             </p>
             <button
               onClick={handleOnAdd}
-              className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
             >
               <Plus size={20} />
               Add First Student
@@ -281,8 +281,8 @@ const StudentsTab = ({
               <tr key={student.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-sm font-medium text-blue-600">
+                    <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
+                      <span className="text-sm font-medium text-accent">
                         {student.user_name?.charAt(0) || '?'}
                       </span>
                     </div>
@@ -300,7 +300,7 @@ const StudentsTab = ({
                   {student.roll_number}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-accent/10 text-accent">
                     {student.tut_section || 'Unassigned'}
                   </span>
                 </td>
@@ -311,7 +311,7 @@ const StudentsTab = ({
                   <div className="flex items-center justify-end space-x-2">
                     <button
                       onClick={() => handleOnEdit(student)}
-                      className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-1.5 text-accent hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
                       title="Edit student"
                     >
                       <Edit2 size={16} />
@@ -343,7 +343,7 @@ const StudentsTab = ({
             placeholder="Search students..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
             disabled={loading}
           />
         </div>
@@ -352,7 +352,7 @@ const StudentsTab = ({
             <select
               value={selectedSection}
               onChange={(e) => onSectionChange(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
               disabled={loading}
             >
               <option value="All sections">All sections</option>
@@ -372,8 +372,8 @@ const StudentsTab = ({
           <button
             onClick={handleOnAdd}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg 
-              hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg 
+              hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
             <Plus size={20} />
             Add Student
           </button>

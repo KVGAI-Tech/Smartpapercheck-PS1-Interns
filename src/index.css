@@ -5,6 +5,8 @@
 :root {
   --bg-color: #ffffff;
   --text-color: #000000;
+  --accent-color: #166D70;
+  --accent-rgb: 22 109 112;
 }
 
 html,

@@ -101,7 +101,7 @@ const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
       animate="visible"
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-      className="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer"
+      className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:border-gray-200 transition-all duration-300 flex flex-col h-full cursor-pointer"
       onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
@@ -208,7 +208,7 @@ const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center group"
+              className="text-sm text-accent hover:text-accent font-medium flex items-center group"
             >
               View Details
               <motion.span
@@ -266,7 +266,7 @@ const CourseCardSkeleton = ({ index }) => (
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     transition={{ delay: index * 0.05 }}
-    className="bg-white rounded-xl p-6 shadow-sm h-full"
+    className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm h-full"
   >
     <div className="flex justify-between items-start mb-4">
       <div className="flex-1">
@@ -459,9 +459,9 @@ const Courses = () => {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1, rotate: [0, 10, 0] }}
         transition={{ delay: 0.2, type: "spring" }}
-        className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4"
+        className="mx-auto w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mb-4"
       >
-        <BookOpen className="h-10 w-10 text-blue-600" />
+        <BookOpen className="h-10 w-10 text-accent" />
       </motion.div>
       <h3 className="text-xl font-semibold text-gray-900 mb-2">
         No Courses Yet
@@ -475,7 +475,7 @@ const Courses = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-300"
+          className="inline-flex items-center px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent shadow-md hover:shadow-lg transition-all duration-300"
         >
           <Plus className="w-5 h-5 mr-2" />
           <span>Create First Course</span>
@@ -502,7 +502,7 @@ const Courses = () => {
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         onClick={() => setSearchQuery("")}
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent"
       >
         Clear Search
       </motion.button>
@@ -578,7 +578,7 @@ const Courses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -598,14 +598,14 @@ const Courses = () => {
             <motion.button
               whileHover={{
                 scale: 1.05,
-                boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.4)",
+                boxShadow: "0 10px 25px -5px rgba(22, 109, 112, 0.4)",
               }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setSelectedCourse(null);
                 setShowAddModal(true);
               }}
-              className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-300"
+              className="inline-flex items-center px-5 py-2.5 bg-accent text-white rounded-lg hover:bg-accent shadow-md hover:shadow-lg transition-all duration-300"
             >
               <Plus className="w-5 h-5 mr-2" />
               <span className="font-medium">Add Course</span>
@@ -631,7 +631,7 @@ const Courses = () => {
                 placeholder="Search courses by name or code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-200 bg-white shadow-sm"
               />
             </motion.div>
 

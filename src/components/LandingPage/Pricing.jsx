@@ -11,7 +11,7 @@ const PricingCard = ({ plan, isPopular, features, price, type, description, inde
     <motion.div
       className={`relative rounded-2xl overflow-hidden ${
         isPopular 
-          ? "bg-gradient-to-b from-teal-50 to-blue-50 border border-teal-200 shadow-lg" 
+          ? "bg-accent/5 border border-accent/20 shadow-lg" 
           : "bg-white border border-gray-100 shadow-md"
       }`}
       initial={{ opacity: 0, y: 30 }}
@@ -22,7 +22,7 @@ const PricingCard = ({ plan, isPopular, features, price, type, description, inde
     >
       {isPopular && (
         <div className="absolute top-0 right-0">
-          <div className="bg-gradient-to-r from-teal-500 to-blue-500 text-white text-xs font-bold px-4 py-1 rounded-bl-lg">
+          <div className="bg-accent text-white text-xs font-bold px-4 py-1 rounded-bl-lg">
             MOST POPULAR
           </div>
         </div>
@@ -32,7 +32,7 @@ const PricingCard = ({ plan, isPopular, features, price, type, description, inde
         <div className="flex justify-between items-start mb-6">
           <div>
             <h3 className={`text-xl font-bold mb-2 ${
-              isPopular ? "text-teal-600" : "text-gray-800"
+              isPopular ? "text-accent" : "text-gray-800"
             }`}>
               {plan}
             </h3>
@@ -53,7 +53,7 @@ const PricingCard = ({ plan, isPopular, features, price, type, description, inde
             <div key={idx} className="flex items-start">
               <span className="flex-shrink-0 mr-3 mt-1">
                 <HiOutlineCheck className={`w-5 h-5 ${
-                  isPopular ? "text-teal-600" : "text-blue-600"
+                  isPopular ? "text-accent" : "text-accent"
                 }`} />
               </span>
               <span className="text-gray-700">{feature}</span>
@@ -64,7 +64,7 @@ const PricingCard = ({ plan, isPopular, features, price, type, description, inde
         <motion.button
           className={`w-full py-3 px-6 rounded-lg flex items-center justify-center space-x-2 ${
             isPopular 
-              ? "bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-md" 
+              ? "bg-accent text-white shadow-md" 
               : "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
           }`}
           whileHover={{ scale: 1.03 }}
@@ -85,7 +85,7 @@ const PricingToggle = ({ activeType, setActiveType }) => {
       <button
         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
           activeType === 'b2c' 
-            ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-sm' 
+            ? 'bg-accent text-white shadow-sm' 
             : 'text-gray-700 hover:text-gray-900'
         }`}
         onClick={() => setActiveType('b2c')}
@@ -95,7 +95,7 @@ const PricingToggle = ({ activeType, setActiveType }) => {
       <button
         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
           activeType === 'b2b' 
-            ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-sm' 
+            ? 'bg-accent text-white shadow-sm' 
             : 'text-gray-700 hover:text-gray-900'
         }`}
         onClick={() => setActiveType('b2b')}
@@ -206,7 +206,7 @@ const Pricing = () => {
   const plans = pricingType === 'b2c' ? b2cPlans : b2bPlans;
 
   return (
-    <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+    <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -216,13 +216,13 @@ const Pricing = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">💸</span>
               <span>Pricing</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            Simple & <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Scalable</span> Pricing
+            Simple & <span className="text-accent">Scalable</span> Pricing
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
             Flexible pricing plans designed to fit institutions of all sizes—pay for what you need, scale as you grow.
@@ -255,9 +255,9 @@ const Pricing = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <div className="inline-block py-4 px-6 rounded-lg bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-100 shadow-sm">
+          <div className="inline-block py-4 px-6 rounded-lg bg-accent/5 border border-accent/10 shadow-sm">
             <p className="text-gray-700">
-              Need a custom plan? <span className="text-teal-600 font-medium">Contact us</span> for a tailored solution that fits your specific requirements.
+              Need a custom plan? <span className="text-accent font-medium">Contact us</span> for a tailored solution that fits your specific requirements.
             </p>
           </div>
         </motion.div>

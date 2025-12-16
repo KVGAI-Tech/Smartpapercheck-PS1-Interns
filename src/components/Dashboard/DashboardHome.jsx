@@ -12,31 +12,31 @@ import {
   Filter,
 } from 'lucide-react';
 
-const StatCard = ({ title, value, icon: Icon, trend, trendValue, className }) => (
-  <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+const StatCard = ({ title, value, icon: Icon, trend, trendValue }) => (
+  <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300 transform hover:-translate-y-1">
     <div className="flex items-start justify-between">
       <div>
         <p className="text-gray-500 text-sm font-medium mb-1">{title}</p>
         <h3 className="text-2xl font-bold text-gray-900 mb-2">{value}</h3>
         {trend && (
-          <p className={`text-sm ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+          <p className={`text-sm ${trend === 'up' ? 'text-accent' : 'text-red-500'}`}>
             {trend === 'up' ? '↑' : '↓'} {trendValue}% from last week
           </p>
         )}
       </div>
-      <div className={`p-3 rounded-lg ${className || 'bg-blue-50'}`}>
-        <Icon className={`w-6 h-6 ${className ? 'text-white' : 'text-blue-500'}`} />
+      <div className="p-3 rounded-lg bg-accent/10">
+        <Icon className="w-6 h-6 text-accent" />
       </div>
     </div>
   </div>
 );
 
 const EvaluationCard = ({ course, total, evaluated, timeLeft }) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
+  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300">
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center space-x-3">
-        <div className="p-2 bg-blue-50 rounded-lg">
-          <FileCheck className="w-5 h-5 text-blue-500" />
+        <div className="p-2 bg-accent/10 rounded-lg">
+          <FileCheck className="w-5 h-5 text-accent" />
         </div>
         <div>
           <h4 className="font-semibold text-gray-900">{course}</h4>
@@ -52,11 +52,11 @@ const EvaluationCard = ({ course, total, evaluated, timeLeft }) => (
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-gray-600">Evaluation Progress</span>
-          <span className="font-medium text-blue-600">{Math.round((evaluated/total) * 100)}%</span>
+          <span className="font-medium text-accent">{Math.round((evaluated/total) * 100)}%</span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2">
           <div 
-            className="bg-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
+            className="bg-accent h-2 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${(evaluated/total) * 100}%` }}
           />
         </div>
@@ -121,7 +121,7 @@ const Dashboard = () => {
   const userName = userData?.name || 'Guest User';
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-white p-6">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Welcome {userName}!</h1>
@@ -132,7 +132,7 @@ const Dashboard = () => {
             <input
               type="text"
               placeholder="Search courses..."
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-all duration-300"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all duration-300"
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
             />
@@ -150,7 +150,6 @@ const Dashboard = () => {
           icon={FileCheck}
           trend="up"
           trendValue="15.3"
-          className="bg-blue-500"
         />
         <StatCard
           title="Evaluated Today"
@@ -158,7 +157,6 @@ const Dashboard = () => {
           icon={CheckCircle}
           trend="up"
           trendValue="8.2"
-          className="bg-green-500"
         />
         <StatCard
           title="Active TAs"
@@ -166,7 +164,6 @@ const Dashboard = () => {
           icon={Users}
           trend="up"
           trendValue="2.5"
-          className="bg-purple-500"
         />
         <StatCard
           title="Pending Reviews"
@@ -174,7 +171,6 @@ const Dashboard = () => {
           icon={Clock}
           trend="down"
           trendValue="5.8"
-          className="bg-orange-500"
         />
       </div>
 

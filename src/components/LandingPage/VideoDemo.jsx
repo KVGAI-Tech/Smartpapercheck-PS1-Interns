@@ -9,7 +9,7 @@ const VideoDemo = () => {
   const videoId = "3egoZx6St5Y";
   
   return (
-    <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
+    <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-6xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -19,13 +19,13 @@ const VideoDemo = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">🎥</span>
               <span>Product Demo</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            See <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">SmartQnA</span> in Action
+            See <span className="text-accent">SmartQnA</span> in Action
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Watch how SmartQnA transforms handwritten copies into fully graded evaluations with feedback in minutes.
@@ -40,12 +40,12 @@ const VideoDemo = () => {
           viewport={{ once: true }}
         >
           {!videoPlaying ? (
-            <div className="absolute inset-0 bg-gradient-to-r from-teal-100/50 to-blue-100/50">
+            <div className="absolute inset-0 bg-accent/10">
               <div className="absolute inset-0 bg-[url('https://img.youtube.com/vi/3egoZx6St5Y/maxresdefault.jpg')] bg-cover bg-center opacity-80" />
               
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <motion.button
-                  className="w-20 h-20 rounded-full bg-gradient-to-r from-teal-500 to-blue-500 flex items-center justify-center shadow-lg"
+                  className="w-20 h-20 rounded-full bg-accent flex items-center justify-center shadow-lg"
                   onClick={() => setVideoPlaying(true)}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -78,7 +78,7 @@ const VideoDemo = () => {
           viewport={{ once: true }}
         >
           <div className="bg-white shadow-md border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-            <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
               <span className="text-2xl">⚡</span>
             </div>
             <h3 className="text-xl font-medium mb-2 text-gray-900">Lightning Fast</h3>
@@ -88,7 +88,7 @@ const VideoDemo = () => {
           </div>
           
           <div className="bg-white shadow-md border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
               <span className="text-2xl">🔍</span>
             </div>
             <h3 className="text-xl font-medium mb-2 text-gray-900">Highly Accurate</h3>
@@ -98,7 +98,7 @@ const VideoDemo = () => {
           </div>
           
           <div className="bg-white shadow-md border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
               <span className="text-2xl">📊</span>
             </div>
             <h3 className="text-xl font-medium mb-2 text-gray-900">Detailed Insights</h3>

@@ -22,7 +22,7 @@ const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3 }}
         >
-          <HiChevronDown className="w-5 h-5 text-teal-600" />
+          <HiChevronDown className="w-5 h-5 text-accent" />
         </motion.div>
       </motion.button>
       <AnimatePresence>
@@ -84,13 +84,13 @@ const FAQ = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">❓</span>
               <span>FAQ</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            Frequently Asked <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Questions</span>
+            Frequently Asked <span className="text-accent">Questions</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Find answers to common questions about SmartQnA's capabilities and features
@@ -118,7 +118,7 @@ const FAQ = () => {
           viewport={{ once: true }}
         >
           <p className="text-gray-600">
-            Still have questions? <a href="#contact" className="text-teal-600 font-medium hover:text-teal-700 transition-colors duration-200">Contact us</a> for more information
+            Still have questions? <a href="#contact" className="text-accent font-medium hover:text-accent transition-colors duration-200">Contact us</a> for more information
           </p>
         </motion.div>
       </div>

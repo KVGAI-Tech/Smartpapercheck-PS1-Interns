@@ -22,28 +22,28 @@ const Hero = ({ scrollToDemo }) => {
   const backgroundShapes = [
     {
       size: "h-32 w-32",
-      color: "bg-teal-500/10",
+      color: "bg-accent/10",
       top: "10%",
       left: "5%",
       animationDelay: 0,
     },
     {
       size: "h-48 w-48",
-      color: "bg-blue-500/10",
+      color: "bg-accent/10",
       top: "15%",
       right: "8%",
       animationDelay: 1,
     },
     {
       size: "h-64 w-64",
-      color: "bg-indigo-500/5",
+      color: "bg-accent/5",
       bottom: "10%",
       left: "15%",
       animationDelay: 2,
     },
     {
       size: "h-24 w-24",
-      color: "bg-teal-500/10",
+      color: "bg-accent/10",
       bottom: "25%",
       right: "20%",
       animationDelay: 1.5,
@@ -51,7 +51,7 @@ const Hero = ({ scrollToDemo }) => {
   ];
 
   return (
-    <section className="min-h-screen pt-24 lg:pt-28 px-4 md:px-8 relative overflow-hidden bg-gradient-to-b from-white to-gray-50">
+    <section className="min-h-screen pt-24 lg:pt-28 px-4 md:px-8 relative overflow-hidden bg-white">
       {backgroundShapes.map((shape, index) => (
         <motion.div
           key={index}
@@ -83,13 +83,13 @@ const Hero = ({ scrollToDemo }) => {
 
       <div className="container mx-auto max-w-6xl relative z-10 flex flex-col items-center justify-center pt-12 md:pt-20 text-center">
         <motion.div
-          className="inline-flex items-center gap-2 mb-6 bg-gradient-to-r from-teal-200 to-blue-100 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium"
+          className="inline-flex items-center gap-2 mb-6 bg-accent/10 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium"
           custom={0}
           initial="hidden"
           animate="visible"
           variants={fadeIn}
         >
-          <div className="bg-gradient-to-r from-teal-400 to-blue-500 rounded-full w-2 h-2 animate-pulse"></div>
+          <div className="bg-accent rounded-full w-2 h-2 animate-pulse"></div>
           <span className="text-gray-700">
             Built with Explainable AI · Powered by LLMs · Trusted by
             Institutions
@@ -97,7 +97,7 @@ const Hero = ({ scrollToDemo }) => {
         </motion.div>
 
         <motion.h1
-          className="text-3xl sm:text-5xl lg:text-6xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-teal-800 to-gray-900 leading-tight"
+          className="text-3xl sm:text-5xl lg:text-6xl font-bold text-center mb-6 text-gray-900 leading-tight"
           custom={1}
           initial="hidden"
           animate="visible"
@@ -131,13 +131,13 @@ const Hero = ({ scrollToDemo }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <FaPlay className="text-teal-600 group-hover:text-teal-700 transition-colors duration-300" />
+            <FaPlay className="text-accent group-hover:text-accent transition-colors duration-300" />
             <span>Watch Demo</span>
           </motion.button>
 
           <motion.button
             onClick={() => navigate("/auth")}
-            className="group flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-6 py-3 sm:px-8 sm:py-4 rounded-full text-white font-medium text-sm sm:text-base transition-all duration-300 shadow-md"
+            className="group flex items-center justify-center gap-2 bg-accent hover:bg-accent px-6 py-3 sm:px-8 sm:py-4 rounded-full text-white font-medium text-sm sm:text-base transition-all duration-300 shadow-md"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -159,9 +159,9 @@ const Hero = ({ scrollToDemo }) => {
               </h3>
               <ul className="space-y-3">
                 <li className="flex items-start">
-                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                  <span className="bg-accent/10 p-1 rounded-full mr-2 mt-1">
                     <svg
-                      className="w-4 h-4 text-teal-600"
+                      className="w-4 h-4 text-accent"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -179,9 +179,9 @@ const Hero = ({ scrollToDemo }) => {
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                  <span className="bg-accent/10 p-1 rounded-full mr-2 mt-1">
                     <svg
-                      className="w-4 h-4 text-teal-600"
+                      className="w-4 h-4 text-accent"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -199,9 +199,9 @@ const Hero = ({ scrollToDemo }) => {
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                  <span className="bg-accent/10 p-1 rounded-full mr-2 mt-1">
                     <svg
-                      className="w-4 h-4 text-teal-600"
+                      className="w-4 h-4 text-accent"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -219,9 +219,9 @@ const Hero = ({ scrollToDemo }) => {
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <span className="bg-teal-100 p-1 rounded-full mr-2 mt-1">
+                  <span className="bg-accent/10 p-1 rounded-full mr-2 mt-1">
                     <svg
-                      className="w-4 h-4 text-teal-600"
+                      className="w-4 h-4 text-accent"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -249,9 +249,9 @@ const Hero = ({ scrollToDemo }) => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
           >
-            <div className="relative">
+            <div className="relative pt-6 pb-6">
               <motion.div
-                className="absolute -top-5 -right-5 bg-yellow-100 px-3 py-1 rounded-lg text-yellow-700 text-sm font-medium shadow-sm"
+                className="absolute top-2 right-2 bg-accent/10 px-3 py-1 rounded-lg text-accent text-sm font-medium shadow-sm"
                 initial={{ opacity: 0, y: 10, zIndex: 2 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.2 }}
@@ -259,7 +259,7 @@ const Hero = ({ scrollToDemo }) => {
                 AI-Powered
               </motion.div>
               <motion.div
-                className="bg-gradient-to-r from-gray-100 to-white p-2 rounded-2xl shadow-xl border border-gray-200 overflow-hidden"
+                className="bg-white p-2 rounded-2xl shadow-xl border border-gray-200 overflow-hidden"
                 whileHover={{ y: -5, zIndex: 1 }}
                 transition={{ duration: 0.2 }}
               >
@@ -270,7 +270,7 @@ const Hero = ({ scrollToDemo }) => {
                 />
               </motion.div>
               <motion.div
-                className="absolute -bottom-5 -left-5 bg-blue-100 px-3 py-1 rounded-lg text-blue-700 text-sm font-medium shadow-sm"
+                className="absolute bottom-2 left-2 bg-accent/10 px-3 py-1 rounded-lg text-accent text-sm font-medium shadow-sm"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.4 }}
@@ -283,7 +283,7 @@ const Hero = ({ scrollToDemo }) => {
       </div>
 
       {}
-      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-50 to-transparent z-10" />
+      <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" />
     </section>
   );
 };

@@ -5,7 +5,7 @@ const Modal = ({ isOpen, onClose, title, children, type = "info" }) => {
   const modalRef = useRef(null);
   
   const bgColors = {
-    info: "bg-blue-50 border-blue-200",
+    info: "bg-accent/5 border-accent/20",
     success: "bg-green-50 border-green-200",
     warning: "bg-yellow-50 border-yellow-200",
     error: "bg-red-50 border-red-200",
@@ -103,7 +103,7 @@ const Modal = ({ isOpen, onClose, title, children, type = "info" }) => {
       default:
         return (
           <motion.svg 
-            className="w-12 h-12 text-blue-500 mx-auto"
+            className="w-12 h-12 text-accent mx-auto"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, type: "spring" }}

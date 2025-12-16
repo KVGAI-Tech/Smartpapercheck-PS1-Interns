@@ -366,7 +366,7 @@ const CourseDetails = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading course details...</p>
                 </div>
             </div>
@@ -386,7 +386,7 @@ const CourseDetails = () => {
                     </p>
                     <Link
                         to="/courses"
-                        className="inline-flex items-center text-blue-600 hover:text-blue-700"
+                        className="inline-flex items-center text-accent hover:text-accent"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to Courses
@@ -479,41 +479,49 @@ const CourseDetails = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <Link to="/courses" className="text-gray-400 hover:text-gray-600">
+                            <div className="flex items-center gap-3 mb-1">
+                                <Link
+                                    to="/courses"
+                                    className="p-2 -ml-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                                    aria-label="Back to courses"
+                                >
                                     <ArrowLeft className="w-5 h-5" />
                                 </Link>
-                                <h1 className="text-2xl font-bold text-gray-900">
-                                    {courseDetails.course_name}
-                                </h1>
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+                                        {courseDetails.course_name}
+                                    </h1>
+                                    <p className="text-sm text-gray-500">{courseDetails.course_code}</p>
+                                </div>
                             </div>
-                            <p className="text-sm text-gray-500">{courseDetails.course_code}</p>
                         </div>
                     </div>
 
-                    <div className="flex space-x-6 mt-6">
-                        {[
-                            { id: 'students', label: 'Students' },
-                            { id: 'instructors', label: 'Instructors' },
-                            { id: 'tas', label: 'Teaching Assistants' },
-                            { id: 'exams', label: 'Exams' },
-                            { id: 'grading', label: 'Grading' }
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => {
-                                    setActiveTab(tab.id);
-                                    setSearchQuery('');
-                                    setSelectedSection('All sections');
-                                }}
-                                className={`pb-4 text-sm font-medium transition-colors relative
-                                    ${activeTab === tab.id
-                                        ? 'text-blue-600 border-b-2 border-blue-600'
-                                        : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
+                    <div className="mt-6 -mb-px">
+                        <div className="flex flex-wrap gap-2 border-b border-gray-200">
+                            {[
+                                { id: 'students', label: 'Students' },
+                                { id: 'instructors', label: 'Instructors' },
+                                { id: 'tas', label: 'Teaching Assistants' },
+                                { id: 'exams', label: 'Exams' },
+                                { id: 'grading', label: 'Grading' }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => {
+                                        setActiveTab(tab.id);
+                                        setSearchQuery('');
+                                        setSelectedSection('All sections');
+                                    }}
+                                    className={`relative -mb-px px-3 py-2 text-sm font-medium rounded-t-lg transition-colors
+                                        ${activeTab === tab.id
+                                            ? 'text-accent border-b-2 border-accent bg-accent/5'
+                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

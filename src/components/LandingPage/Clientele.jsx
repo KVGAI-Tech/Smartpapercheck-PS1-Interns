@@ -61,7 +61,7 @@ const Clientele = () => {
   };
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -71,13 +71,13 @@ const Clientele = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">🏛️</span>
               <span>Leading Institutions</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            Trusted by <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Global Leaders</span> in Education
+            Trusted by <span className="text-accent">Global Leaders</span> in Education
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Leading academic institutions and organizations use SmartQnA to streamline assessments.
@@ -109,7 +109,7 @@ const Clientele = () => {
                   variants={logoAnimation}
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-16 w-36 rounded bg-gradient-to-r from-teal-50 to-blue-50" />
+                    <div className="h-16 w-36 rounded bg-accent/5" />
                   </div>
                   <img
                     src={client.logo}
@@ -123,7 +123,7 @@ const Clientele = () => {
               </motion.div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-gray-800">{client.name}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
                   {client.type === 'institution' ? 'Institution' : 
                    client.type === 'incubator' ? 'Incubator' : 'Award'}
                 </span>
@@ -139,7 +139,7 @@ const Clientele = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-teal-50 to-blue-50 border border-blue-100 shadow-sm">
+          <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-accent/5 border border-accent/20 shadow-sm">
             <p className="text-gray-700 text-sm">
               Join our growing list of partners and transform your evaluation process
             </p>

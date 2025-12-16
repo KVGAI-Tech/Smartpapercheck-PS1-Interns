@@ -34,7 +34,7 @@ const FeatureCard = ({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
     >
-      <div className="w-12 h-12 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 flex items-center justify-center mb-4">
+      <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
         {icon}
       </div>
       <h3 className="text-xl font-medium mb-2 text-gray-900">{title}</h3>
@@ -86,7 +86,7 @@ const Features = ({
   const navigate = useNavigate();
   const benefits = [
     {
-      icon: <HiOutlineClock className="w-6 h-6 text-teal-600" />,
+      icon: <HiOutlineClock className="w-6 h-6 text-accent" />,
       title: "Saves 80%+ Time",
       description:
         "Drastically reduce evaluation time with AI-powered grading that maintains accuracy and consistency.",
@@ -94,7 +94,7 @@ const Features = ({
       hoverImageSrc: timeImage,
     },
     {
-      icon: <HiOutlineScale className="w-6 h-6 text-blue-600" />,
+      icon: <HiOutlineScale className="w-6 h-6 text-accent" />,
       title: "Unbiased Evaluation",
       description:
         "Ensure fair and consistent grading with explainable AI that follows precise rubrics for every answer.",
@@ -102,7 +102,7 @@ const Features = ({
       hoverImageSrc: unbiasedImage,
     },
     {
-      icon: <HiOutlineChatAlt2 className="w-6 h-6 text-purple-600" />,
+      icon: <HiOutlineChatAlt2 className="w-6 h-6 text-accent" />,
       title: "Auto-Feedback",
       description:
         "Generate detailed, personalized feedback for students automatically with each evaluation.",
@@ -110,7 +110,7 @@ const Features = ({
       hoverImageSrc: feedbackImage,
     },
     {
-      icon: <HiOutlineChartBar className="w-6 h-6 text-teal-600" />,
+      icon: <HiOutlineChartBar className="w-6 h-6 text-accent" />,
       title: "Comprehensive Analytics",
       description:
         "Gain valuable insights into student performance, identify trends, and track progress over time.",
@@ -121,7 +121,7 @@ const Features = ({
 
   const features = [
     {
-      icon: <HiOutlineDocumentText className="w-6 h-6 text-teal-600" />,
+      icon: <HiOutlineDocumentText className="w-6 h-6 text-accent" />,
       title: "VLM Grading",
       description:
         "Vision-Language Models understand both text and visual elements in handwritten answers.",
@@ -129,7 +129,7 @@ const Features = ({
       hoverImageSrc: VLMImage,
     },
     {
-      icon: <HiOutlineDatabase className="w-6 h-6 text-blue-600" />,
+      icon: <HiOutlineDatabase className="w-6 h-6 text-accent" />,
       title: "Auto Rubric Generation",
       description:
         "AI creates detailed grading rubrics from your question papers or model answers.",
@@ -137,7 +137,7 @@ const Features = ({
       hoverImageSrc: rubrikImage,
     },
     {
-      icon: <HiOutlinePhotograph className="w-6 h-6 text-purple-600" />,
+      icon: <HiOutlinePhotograph className="w-6 h-6 text-accent" />,
       title: "Diagram Recognition",
       description:
         "Advanced image recognition evaluates diagrams, tables, and equations in student responses.",
@@ -145,7 +145,7 @@ const Features = ({
       hoverImageSrc: diagramImage,
     },
     {
-      icon: <HiOutlineUpload className="w-6 h-6 text-teal-600" />,
+      icon: <HiOutlineUpload className="w-6 h-6 text-accent" />,
       title: "Batch PDF Processing",
       description:
         "Upload multiple answer scripts in PDF format for efficient bulk processing.",
@@ -153,7 +153,7 @@ const Features = ({
       hoverImageSrc: batchPDFImage,
     },
     {
-      icon: <HiOutlineTranslate className="w-6 h-6 text-blue-600" />,
+      icon: <HiOutlineTranslate className="w-6 h-6 text-accent" />,
       title: "Multilingual Support",
       description:
         "Coming soon: Evaluate answers written in multiple languages with equal accuracy.",
@@ -163,7 +163,7 @@ const Features = ({
   ];
 
   return (
-    <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
+    <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <motion.div
           className="text-center mb-16"
@@ -173,14 +173,14 @@ const Features = ({
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">🧰</span>
               <span>Features & Benefits</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
             Why{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
+            <span className="text-accent">
               SmartQnA
             </span>
             ?
@@ -199,7 +199,7 @@ const Features = ({
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
+            <span className="text-accent">
               Benefits
             </span>
           </motion.h3>
@@ -226,7 +226,7 @@ const Features = ({
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
+            <span className="text-accent">
               Features
             </span>
           </motion.h3>
@@ -246,14 +246,14 @@ const Features = ({
         </div>
 
         <motion.div
-          className="mt-20 relative py-16 px-8 bg-gradient-to-r from-teal-50 to-blue-50 rounded-2xl overflow-hidden border border-teal-100 shadow-lg"
+          className="mt-20 relative py-16 px-8 bg-accent/5 rounded-2xl overflow-hidden border border-accent/10 shadow-lg"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
           viewport={{ once: true }}
         >
-          <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-teal-100 blur-xl"></div>
-          <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-blue-100 blur-xl"></div>
+          <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-accent/10 blur-xl"></div>
+          <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-accent/10 blur-xl"></div>
 
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between">
             <div className="mb-6 md:mb-0 md:mr-8">
@@ -266,7 +266,7 @@ const Features = ({
               </p>
             </div>
             <motion.button
-              className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-3 rounded-full text-white font-medium transition-all duration-300 shadow-md"
+              className="bg-accent hover:bg-accent px-8 py-3 rounded-full text-white font-medium transition-all duration-300 shadow-md"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {

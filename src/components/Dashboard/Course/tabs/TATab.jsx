@@ -176,7 +176,7 @@ const TATab = ({ courseId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
       </div>
     );
   }
@@ -202,7 +202,7 @@ const TATab = ({ courseId }) => {
             placeholder="Search teaching assistants..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
           />
         </div>
         
@@ -220,7 +220,7 @@ const TATab = ({ courseId }) => {
               setSelectedTA(null);
               setShowAddModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
           >
             <Plus size={20} />
             Add TA
@@ -252,8 +252,8 @@ const TATab = ({ courseId }) => {
                 <tr key={ta.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">
+                      <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
+                        <span className="text-sm font-medium text-accent">
                           {ta.user_name?.charAt(0)?.toUpperCase() || 'T'}
                         </span>
                       </div>
@@ -287,7 +287,7 @@ const TATab = ({ courseId }) => {
                           setSelectedTA(ta);
                           setShowAddModal(true);
                         }}
-                        className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-accent hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
                         title="Edit TA"
                       >
                         <Edit2 size={16} />
@@ -320,7 +320,7 @@ const TATab = ({ courseId }) => {
                 setSelectedTA(null);
                 setShowAddModal(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
             >
               <Plus size={20} />
               Add First TA

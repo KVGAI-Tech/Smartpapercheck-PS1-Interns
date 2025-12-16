@@ -79,16 +79,16 @@ export default function PaymentModal() {
   return (
     <div className="flex items-center">
       <div className="flex items-center mr-3">
-        <div className="bg-indigo-100 rounded-full p-2 mr-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="bg-accent/10 rounded-full p-2 mr-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
             <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
             <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
           </svg>
         </div>
         <div>
-          <span className="text-xs font-medium text-indigo-600 block leading-tight">Available Credits</span>
-          <span className="text-xl font-bold text-indigo-700">{credits.toLocaleString()}</span>
+          <span className="text-xs font-medium text-accent block leading-tight">Available Credits</span>
+          <span className="text-xl font-bold text-accent">{credits.toLocaleString()}</span>
         </div>
       </div>
       
@@ -98,7 +98,7 @@ export default function PaymentModal() {
         onClick={handleOpen}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-all"
+        className="flex items-center justify-center px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg shadow-sm transition-all"
       >
         <span className="font-medium flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -137,7 +137,7 @@ export default function PaymentModal() {
               className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5">
+              <div className="bg-accent p-5">
                 <div className="flex justify-between items-center">
                   <motion.h3 
                     initial={{ x: -10, opacity: 0 }}
@@ -188,7 +188,7 @@ export default function PaymentModal() {
                       id="amount"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="block w-full pl-8 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+                      className="block w-full pl-8 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-accent focus:border-accent text-base"
                       placeholder="0.00"
                       min="1"
                     />
@@ -196,7 +196,7 @@ export default function PaymentModal() {
                       <span className="text-gray-500 sm:text-xs">INR</span>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-indigo-600 flex items-center">
+                  <p className="mt-2 text-xs text-accent flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
                       <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
@@ -215,7 +215,7 @@ export default function PaymentModal() {
                       className="mb-4 p-3 bg-red-50 border-l-2 border-red-500 text-red-700 rounded-md"
                     >
                       <div className="flex items-center text-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                         <span>{error}</span>
@@ -228,10 +228,10 @@ export default function PaymentModal() {
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="bg-indigo-50 p-3 rounded-lg mb-5 border border-indigo-100"
+                  className="bg-accent/5 p-3 rounded-lg mb-5 border border-accent/10"
                 >
-                  <h4 className="text-xs font-medium text-indigo-800 mb-2 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <h4 className="text-xs font-medium text-accent mb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10" />
                       <path d="M12 16v-4" />
                       <path d="M12 8h.01" />
@@ -240,19 +240,19 @@ export default function PaymentModal() {
                   </h4>
                   <ul className="space-y-2 text-xs">
                     <li className="flex items-start">
-                      <svg className="h-3.5 w-3.5 text-indigo-500 mt-0.5 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-3.5 w-3.5 text-accent mt-0.5 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                       <span className="text-gray-700">Unlock premium features and advanced evaluation tools</span>
                     </li>
                     <li className="flex items-start">
-                      <svg className="h-3.5 w-3.5 text-indigo-500 mt-0.5 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-3.5 w-3.5 text-accent mt-0.5 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                       <span className="text-gray-700">Enhanced analytics and detailed reporting</span>
                     </li>
                     <li className="flex items-start">
-                      <svg className="h-3.5 w-3.5 text-indigo-500 mt-0.5 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-3.5 w-3.5 text-accent mt-0.5 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                       <span className="text-gray-700">Priority support and assistance</span>
@@ -279,7 +279,7 @@ export default function PaymentModal() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="button"
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-1 disabled:opacity-70"
+                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-sm font-medium shadow-sm hover:bg-accent transition-colors flex items-center gap-1 disabled:opacity-70"
                   onClick={handlePayment}
                   disabled={loading}
                 >

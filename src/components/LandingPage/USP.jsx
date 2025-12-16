@@ -29,7 +29,7 @@ const USP = () => {
   ];
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -39,13 +39,13 @@ const USP = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-gray-800 text-sm shadow-sm">
+            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
               <span className="mr-2">🌟</span>
               <span>Comparison</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Edge</span> Over Others
+            Our <span className="text-accent">Edge</span> Over Others
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             See how SmartQnA stands out from traditional evaluation platforms with our cutting-edge AI technologies
@@ -68,7 +68,7 @@ const USP = () => {
                     key={idx} 
                     className={`px-6 py-5 text-center text-sm font-semibold ${
                       competitor.highlight 
-                        ? "text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600" 
+                        ? "text-accent" 
                         : "text-gray-800"
                     }`}
                   >
@@ -90,12 +90,12 @@ const USP = () => {
                         <div className="flex justify-center">
                           <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
                             competitor.highlight 
-                              ? "bg-gradient-to-r from-teal-100 to-blue-100 shadow-sm" 
+                              ? "bg-accent/10 shadow-sm" 
                               : "bg-gray-100"
                           }`}>
                             <HiOutlineCheck className={`w-5 h-5 ${
                               competitor.highlight 
-                                ? "text-teal-600" 
+                                ? "text-accent" 
                                 : "text-gray-600"
                             }`} />
                           </span>
@@ -122,7 +122,7 @@ const USP = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <div className="inline-block py-4 px-6 rounded-lg bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-100 shadow-sm">
+          <div className="inline-block py-4 px-6 rounded-lg bg-accent/5 border border-accent/20 shadow-sm">
             <p className="text-gray-700">
               SmartQnA combines the power of LLMs and Vision-Language Models to deliver a comprehensive evaluation experience that traditional platforms simply can't match.
             </p>

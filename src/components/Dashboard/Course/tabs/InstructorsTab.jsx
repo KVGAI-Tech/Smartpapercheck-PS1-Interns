@@ -102,7 +102,7 @@ const InstructorsTab = ({
             placeholder="Search instructors..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
           />
         </div>
         
@@ -117,7 +117,7 @@ const InstructorsTab = ({
           
           <button
             onClick={onAdd}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
           >
             <Plus size={20} />
             Add Instructor
@@ -131,8 +131,8 @@ const InstructorsTab = ({
             <div key={instructor.id} className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-lg font-medium text-blue-600">
+                  <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+                    <span className="text-lg font-medium text-accent">
                       {instructor.name?.charAt(0) || '?'}
                     </span>
                   </div>
@@ -144,7 +144,7 @@ const InstructorsTab = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onEdit(instructor)}
-                    className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-1.5 text-accent hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
                     title="Edit instructor"
                   >
                     <Edit2 size={16} />
@@ -196,7 +196,7 @@ const InstructorsTab = ({
             <p className="text-sm text-gray-500 mb-6">Get started by adding instructors to this course</p>
             <button
               onClick={onAdd}
-              className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
             >
               <Plus size={20} />
               Add First Instructor

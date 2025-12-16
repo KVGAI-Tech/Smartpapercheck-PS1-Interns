@@ -19,7 +19,7 @@ import LandingHighlights from "./LandingPage/LandingHighlights";
 
 const LoadingAnimation = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+    <div className="flex flex-col items-center justify-center h-screen w-screen bg-white p-4">
       <div className="relative">
         {/* Logo Container */}
         <motion.div
@@ -32,7 +32,7 @@ const LoadingAnimation = () => {
             <div className="relative">
               <div className="font-medium text-3xl sm:text-4xl md:text-5xl text-gray-900 text-center">
                 Smart
-                <span className="font-light italic text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-blue-500">
+                <span className="font-light italic text-accent">
                   QnA
                 </span>
               </div>
@@ -42,7 +42,7 @@ const LoadingAnimation = () => {
 
         {/* Pulse Circle */}
         <motion.div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-teal-200/20 to-blue-200/20"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/10"
           initial={{ width: 20, height: 20 }}
           animate={{
             width: ["20px", "200px", "20px"],
@@ -58,7 +58,7 @@ const LoadingAnimation = () => {
 
         {/* Secondary Pulse Circle */}
         <motion.div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-200/20 to-teal-200/20"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/10"
           initial={{ width: 20, height: 20 }}
           animate={{
             width: ["20px", "200px", "20px"],
@@ -85,7 +85,7 @@ const LoadingAnimation = () => {
           {/* Animating Dots */}
           <div className="text-gray-600 text-base font-medium">Loading</div>
           <motion.span
-            className="text-teal-500 flex space-x-1"
+            className="text-accent flex space-x-1"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
@@ -125,13 +125,13 @@ const LoadingAnimation = () => {
         />
 
         <motion.div
-          className="relative w-14 h-18 rounded-md bg-gradient-to-r from-teal-50 to-blue-50 shadow-md border border-gray-100 flex items-center justify-center"
+          className="relative w-14 h-18 rounded-md bg-accent/5 shadow-md border border-gray-100 flex items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <motion.div
-            className="w-8 h-2 bg-gradient-to-r from-teal-400 to-blue-400 rounded-full"
+            className="w-8 h-2 bg-accent rounded-full"
             initial={{ width: "20%" }}
             animate={{ width: "70%" }}
             transition={{
@@ -147,7 +147,7 @@ const LoadingAnimation = () => {
       {/* Progress Bar */}
       <div className="mt-10 w-56 sm:w-64 bg-gray-200 rounded-full h-1 overflow-hidden">
         <motion.div
-          className="h-1 rounded-full bg-gradient-to-r from-teal-500 to-blue-500"
+          className="h-1 rounded-full bg-accent"
           initial={{ width: "0%" }}
           animate={{ width: "100%" }}
           transition={{
@@ -196,7 +196,7 @@ const LandingPage = () => {
   const vlmGrading = prependHelper("vlmGrading");
 
   useEffect(() => {
-    document.body.style.backgroundColor = "#f8f9fa";
+    document.body.style.backgroundColor = "#ffffff";
     document.body.style.color = "#212529";
 
     const preloadImages = [
@@ -250,7 +250,7 @@ const LandingPage = () => {
 
   return (
     <div
-      className="landing-page overflow-x-hidden bg-[#f8f9fa] text-[#212529]"
+      className="landing-page overflow-x-hidden bg-white text-[#212529]"
       ref={homeRef}
     >
       <div className="relative">

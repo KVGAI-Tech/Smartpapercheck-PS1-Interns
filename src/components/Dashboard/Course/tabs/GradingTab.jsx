@@ -1058,7 +1058,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
             
             <motion.button
               onClick={() => setHelpModalOpen(true)}
-              className="p-2 text-blue-500 hover:text-blue-700 transition-colors"
+              className="p-2 text-accent hover:text-accent transition-colors"
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.4 }}
@@ -1078,13 +1078,13 @@ const GradingTab = ({ maxMarks = 100 }) => {
           transition={{ delay: 0.4, duration: 0.5 }}
         >
           <motion.div 
-            className="bg-white rounded-xl shadow-md overflow-hidden border border-blue-100"
+            className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100"
             whileHover={{ y: -5, boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1)' }}
             transition={{ duration: 0.3 }}
           >
             <div className="p-4 flex items-center">
-              <div className="rounded-full bg-blue-50 p-3 mr-4">
-                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <div className="rounded-full bg-accent/10 p-3 mr-4">
+                <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                 </svg>
               </div>
@@ -1094,7 +1094,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
               </div>
               <button
                 onClick={handleFileSelect}
-                className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                className="ml-2 bg-accent hover:bg-accent text-white px-4 py-2 rounded-lg shadow transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50"
                 disabled={isUploading}
               >
                 {isUploading ? 'Uploading...' : 'Import'}
@@ -1168,7 +1168,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
           transition={{ delay: 0.5, duration: 0.5 }}
         >
           <motion.div 
-            className="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-500"
+            className="bg-white rounded-xl shadow-md p-4 border-l-4 border-accent"
             whileHover={{ y: -3, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
           >
             <h3 className="text-sm md:text-base text-gray-500 font-medium mb-1">Total Students</h3>
@@ -1249,7 +1249,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
                 </button>
                 <button
                   onClick={() => setGradeSummaryModalOpen(true)}
-                  className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  className="flex items-center text-accent hover:text-accent text-sm font-medium"
                 >
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1476,7 +1476,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
               {selectedStudents.length > 0 ? (
                 <div className="flex items-center">
                   <span>Selected: </span>
-                  <span className="font-medium text-blue-700 ml-1">{selectedStudents.length} students</span>
+                  <span className="font-medium text-accent ml-1">{selectedStudents.length} students</span>
                   <button 
                     onClick={clearSelectedStudents}
                     className="ml-2 text-gray-400 hover:text-gray-600"
@@ -1504,7 +1504,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
                 placeholder="Search by name or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors"
               />
               {searchTerm && (
                 <button
@@ -1535,7 +1535,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
                     {filteredStudents.map((student, index) => (
                       <motion.tr 
                         key={student.id} 
-                        className={`cursor-pointer transition-colors duration-200 ${selectedStudents.some(s => s.id === student.id) ? 'bg-blue-100' : 'hover:bg-gray-50'}`}
+                        className={`cursor-pointer transition-colors duration-200 ${selectedStudents.some(s => s.id === student.id) ? 'bg-accent/10' : 'hover:bg-gray-50'}`}
                         onClick={() => toggleStudentSelection(student)}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -1589,7 +1589,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
         <div className="flex justify-center space-x-4">
           <button 
             onClick={() => fileInputRef.current.click()} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-colors duration-200 font-medium"
+            className="bg-accent hover:bg-accent text-white px-4 py-2 rounded-lg shadow transition-colors duration-200 font-medium"
           >
             Choose File
           </button>
@@ -1662,7 +1662,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
         <p className="text-gray-600 mb-4">Download a template Excel file with the correct format for student data.</p>
         <button 
           onClick={downloadTemplate} 
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow transition-colors duration-200 font-medium"
+          className="bg-accent hover:bg-accent text-white px-6 py-2 rounded-lg shadow transition-colors duration-200 font-medium"
         >
           Download
         </button>
@@ -1696,7 +1696,7 @@ const GradingTab = ({ maxMarks = 100 }) => {
           </button>
           <button 
             onClick={saveGradeBoundaries} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-colors duration-200 font-medium"
+            className="bg-accent hover:bg-accent text-white px-4 py-2 rounded-lg shadow transition-colors duration-200 font-medium"
           >
             Save
           </button>

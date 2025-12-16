@@ -101,7 +101,7 @@ const UploadModal = ({ isOpen, onClose, onUpload, title = "Upload Question Paper
             onDrop={handleDrop}
             className={`relative border-2 border-dashed rounded-2xl transition-all duration-200 
               ${dragActive 
-                ? 'border-blue-500 bg-blue-50' 
+                ? 'border-accent bg-accent/5' 
                 : selectedFile 
                   ? 'border-green-500 bg-green-50'
                   : 'border-gray-300 hover:border-gray-400'
@@ -177,10 +177,10 @@ const UploadModal = ({ isOpen, onClose, onUpload, title = "Upload Question Paper
               <button
                 onClick={() => downloadTemplate('word')}
                 className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 
-                  hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                  hover:border-accent hover:bg-accent/5 transition-all group"
               >
-                <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100">
-                  <FileText className="w-5 h-5 text-blue-600" />
+                <div className="p-2 bg-accent/5 rounded-lg group-hover:bg-accent/10">
+                  <FileText className="w-5 h-5 text-accent" />
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-medium text-gray-900">Word Template</p>
@@ -191,10 +191,10 @@ const UploadModal = ({ isOpen, onClose, onUpload, title = "Upload Question Paper
               <button
                 onClick={() => downloadTemplate('pdf')}
                 className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 
-                  hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                  hover:border-accent hover:bg-accent/5 transition-all group"
               >
-                <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100">
-                  <File className="w-5 h-5 text-blue-600" />
+                <div className="p-2 bg-accent/5 rounded-lg group-hover:bg-accent/10">
+                  <File className="w-5 h-5 text-accent" />
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-medium text-gray-900">PDF Template</p>
@@ -220,7 +220,7 @@ const UploadModal = ({ isOpen, onClose, onUpload, title = "Upload Question Paper
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
               transition-all duration-200 ${
               selectedFile && !isUploading
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-accent text-white hover:bg-accent'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
