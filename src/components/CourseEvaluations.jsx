@@ -12,6 +12,7 @@ import {
   Loader
 } from 'lucide-react';
 import { examsApi } from './Student_api';
+import Breadcrumbs from './ui/breadcrumbs';
 
 const ExamCard = ({ 
   id, 
@@ -264,6 +265,13 @@ const CourseEvaluations = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
       <div>
+        <Breadcrumbs
+          items={[
+            { label: 'My Evaluations', to: '/student/evaluations' },
+            { label: 'Course', to: courseId ? `/student/evaluations/${courseId}` : '/student/evaluations' },
+            { label: 'Exams' },
+          ]}
+        />
         <button 
           onClick={() => navigate('/student/evaluations')}
           className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"

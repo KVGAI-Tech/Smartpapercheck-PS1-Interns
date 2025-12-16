@@ -73,15 +73,14 @@ const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
   }, []);
 
   const formatDate = (dateString) => {
-    try {
-      return new Date(dateString).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch (e) {
-      return dateString;
-    }
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const handleCardClick = (e) => {

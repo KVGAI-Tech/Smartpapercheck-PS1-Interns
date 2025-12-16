@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+
 import ReactDOM from 'react-dom'; 
 import { 
   X, Plus, Upload, Trash2, 
@@ -8,9 +9,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions = [] }) => {
+const UploadQnAModal = ({
+  isOpen, onClose, examId, onSubmit, existingQuestions = [] }) => {
+
   const [questions, setQuestions] = useState([{
     id: 1,
+    questionType: 'image',
+    answerType: 'image',
     question: null,
     questionPreview: '',
     questionUrl: '',
@@ -18,9 +23,11 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     answerPreview: '',
     answerUrl: '',
     marks: '',
-    questionText: '',
-    answerText: 'answer',
-    domain: '',
+    questionText: 'test-question',
+    questionBody: '',
+    answerText: 'test-answer',
+    answerBody: '',
+    domain: 'General',
     isExisting: false
   }]);
 
@@ -31,6 +38,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const activePasteTargetRef = useRef(null);
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const modalRef = useRef(null);
   const questionRefs = useRef({});
@@ -38,6 +47,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   const modalRootRef = useRef(null);
 
   useEffect(() => {
+
     if (isOpen) {
       if (!modalRootRef.current) {
         const modalRoot = document.createElement('div');
@@ -86,9 +96,11 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   }, [isOpen]);
 
   useEffect(() => {
-    if (Array.isArray(existingQuestions) && existingQuestions.length > 0) {
+    if (existingQuestions && existingQuestions.length > 0) {
       const formattedQuestions = existingQuestions.map((q, index) => ({
         id: index + 1,
+        questionType: q.question_type || q.question_format || (q.question_file_url ? 'image' : 'text'),
+        answerType: q.answer_type || (q.answer_file_url ? 'image' : 'text'),
         question: null,
         questionPreview: '',
         questionUrl: q.question_file_url || '',
@@ -96,9 +108,11 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         answerPreview: '',
         answerUrl: q.answer_file_url || '',
         marks: q.max_marks || '',
-        questionText: q.question_text || '',
-        answerText: q.answer_text || 'answer',
-        domain: q.domain || '',
+        questionText: q.question_text || 'test-question',
+        questionBody: q.question_body || '',
+        answerText: q.answer_text || 'test-answer',
+        answerBody: q.answer_body || '',
+        domain: q.domain || 'General',
         isExisting: true, 
         questionNumber: q.question_number
       }));
@@ -106,6 +120,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     } else {
       setQuestions([{
         id: 1,
+        questionType: 'image',
+        answerType: 'image',
         question: null,
         questionPreview: '',
         questionUrl: '',
@@ -113,9 +129,11 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         answerPreview: '',
         answerUrl: '',
         marks: '',
-        questionText: '',
-        answerText: 'answer',
-        domain: '',
+        questionText: 'test-question',
+        questionBody: '',
+        answerText: 'test-answer',
+        answerBody: '',
+        domain: 'General',
         isExisting: false
       }]);
     }
@@ -133,6 +151,30 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       document.removeEventListener('keydown', handleEscKey);
     };
   }, [isFullscreen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleGlobalPaste = (e) => {
+      const target = activePasteTargetRef.current;
+      if (!target) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageItem = Array.from(items).find((it) => it.type?.startsWith('image/'));
+      if (!imageItem) return;
+
+      e.preventDefault();
+      const pastedFile = imageItem.getAsFile();
+      if (!pastedFile) return;
+
+      handleFileChange(target.questionId, target.type, pastedFile);
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [isOpen]);
 
   const handleFileChange = (questionId, type, file) => {
     if (file) {
@@ -174,6 +216,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       ...prev,
       {
         id: newId,
+        questionType: 'image',
+        answerType: 'image',
         question: null,
         questionPreview: '',
         questionUrl: '',
@@ -181,9 +225,11 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         answerPreview: '',
         answerUrl: '',
         marks: '',
-        questionText: '',
-        answerText: 'answer',
-        domain: '',
+        questionText: 'test-question',
+        questionBody: '',
+        answerText: 'test-answer',
+        answerBody: '',
+        domain: 'General',
         isExisting: false
       }
     ]);
@@ -247,15 +293,16 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       return true;
     }
 
-    
-    const questionsToValidate = questions.filter(q => !q.isExisting || 
-      (!q.questionUrl && !q.question) || 
-      (!q.answerUrl && !q.answer));
-    
-    const invalidQuestions = questionsToValidate.filter(q => {
+    const invalidQuestions = questions.filter(q => {
       const hasQuestionFile = q.question || q.questionUrl;
       const hasAnswerFile = q.answer || q.answerUrl;
-      return !hasQuestionFile || !hasAnswerFile || !q.marks || !q.questionText || !q.domain;
+
+      const missingQuestionImage = ['image', 'both'].includes(q.questionType || 'image') ? !hasQuestionFile : false;
+      const missingQuestionText = ['text', 'both'].includes(q.questionType || 'image') ? !q.questionBody : false;
+      const missingAnswerImage = ['image', 'both'].includes(q.answerType || 'image') ? !hasAnswerFile : false;
+      const missingAnswerText = ['text', 'both'].includes(q.answerType || 'image') ? !q.answerBody : false;
+
+      return missingQuestionImage || missingQuestionText || missingAnswerImage || missingAnswerText || !q.marks;
     });
     
     if (invalidQuestions.length > 0) {
@@ -277,48 +324,60 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
     
     try {
       if (uploadMode === 'golden-pdf') {
-        
+        const pdfFormData = new FormData();
+        if (questionPdfFile) {
+          pdfFormData.append('question_pdf', questionPdfFile);
+        }
+        if (goldenPdfFile) {
+          pdfFormData.append('golden_pdf', goldenPdfFile);
+        }
+
+        await onSubmit(examId, pdfFormData);
       } else {
-        
-        const newOrModifiedQuestions = questions.filter(q => 
-          !q.isExisting || (q.question || q.answer) 
-        );
-        
-        for (let i = 0; i < newOrModifiedQuestions.length; i++) {
-          const q = newOrModifiedQuestions[i];
-          
-          
-          const originalIndex = questions.findIndex(originalQ => originalQ.id === q.id);
-          
-          
-          const questionNumber = q.isExisting ? q.questionNumber : (originalIndex + 1);
-          
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+
+          const questionNumber = q.questionNumber || i + 1;
+          const hasQuestionFile = q.question || q.questionUrl;
+          const hasAnswerFile = q.answer || q.answerUrl;
+
+          const shouldSendQuestion = (q.questionType && q.questionType !== 'image') || q.question || (!q.questionUrl && ['image', 'both'].includes(q.questionType || 'image'));
+          const shouldSendAnswer = (q.answerType && q.answerType !== 'image') || q.answer || (!q.answerUrl && ['image', 'both'].includes(q.answerType || 'image'));
+
           try {
-            
-            if (q.question) {
+            if (shouldSendQuestion) {
               const questionFormData = new FormData();
               questionFormData.append('question_number', questionNumber.toString());
               questionFormData.append('file_type', 'question');
-              questionFormData.append('file', q.question);
-              questionFormData.append('answer_text', q.answerText || 'answer');
               questionFormData.append('max_marks', q.marks);
-              questionFormData.append('question_text', q.questionText);
-              questionFormData.append('domain', q.domain);
-              
+              questionFormData.append('question_type', q.questionType || 'image');
+              questionFormData.append('question_body', q.questionBody || '');
+              questionFormData.append('question_text', 'test-question');
+              questionFormData.append('domain', 'General');
+              questionFormData.append('answer_text', 'test-answer');
+              if (['image', 'both'].includes(q.questionType || 'image') && q.question) {
+                questionFormData.append('file', q.question);
+              } else if (['image', 'both'].includes(q.questionType || 'image') && !hasQuestionFile) {
+                throw new Error('Question image is required');
+              }
               await onSubmit(examId, questionFormData);
             }
-            
-            
-            if (q.answer) {
+
+            if (shouldSendAnswer) {
               const answerFormData = new FormData();
               answerFormData.append('question_number', questionNumber.toString());
               answerFormData.append('file_type', 'answer');
-              answerFormData.append('file', q.answer);
-              answerFormData.append('answer_text', q.answerText || 'answer');
+              answerFormData.append('answer_type', q.answerType || 'image');
+              answerFormData.append('answer_body', q.answerBody || '');
+              answerFormData.append('answer_text', 'test-answer');
+              answerFormData.append('question_text', 'test-question');
               answerFormData.append('max_marks', q.marks);
-              answerFormData.append('question_text', q.questionText);
-              answerFormData.append('domain', q.domain);
-              
+              answerFormData.append('domain', 'General');
+              if (['image', 'both'].includes(q.answerType || 'image') && q.answer) {
+                answerFormData.append('file', q.answer);
+              } else if (['image', 'both'].includes(q.answerType || 'image') && !hasAnswerFile) {
+                throw new Error('Answer image is required');
+              }
               await onSubmit(examId, answerFormData);
             }
           } catch (error) {
@@ -340,24 +399,14 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
   
   const QuestionDisplay = ({ type, data, onFileChange, questionId }) => {
     const [isDragActive, setIsDragActive] = useState(false);
+    const [isActive, setIsActive] = useState(false);
     const preview = data[`${type}Preview`];
     const url = data[`${type}Url`];
     const title = type === 'question' ? 'Question' : 'Answer';
     const dropZoneId = `${type}-${questionId}`;
     
     const dropZoneRef = useRef(null);
-    
-    useEffect(() => {
-      if (dropZoneRef.current) {
-        dropZoneRefs.current[dropZoneId] = dropZoneRef.current;
-      }
-      
-      return () => {
-        if (dropZoneRefs.current[dropZoneId]) {
-          delete dropZoneRefs.current[dropZoneId];
-        }
-      };
-    }, [dropZoneId]);
+    const fileInputRef = useRef(null);
 
     const handleDragEnter = (e) => {
       e.preventDefault();
@@ -396,12 +445,27 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       }
     };
 
-    if (url) {
+    const handlePaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageItem = Array.from(items).find((it) => it.type?.startsWith('image/'));
+      if (!imageItem) return;
+
+      e.preventDefault();
+      const pastedFile = imageItem.getAsFile();
+      if (pastedFile) {
+        onFileChange(questionId, type, pastedFile);
+      }
+    };
+    
+    if (url || preview) {
+      const src = preview || url;
       return (
         <div className="relative group h-full min-h-[200px] border border-gray-200 rounded-lg overflow-hidden bg-white transition-all duration-200 hover:shadow-sm">
           <img
-            src={url}
-            alt={`${title} from server`}
+            src={src}
+            alt={`${title} preview`}
             className="w-full h-full object-contain"
           />
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -421,57 +485,67 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
       );
     }
 
-    return preview ? (
-      <div className="relative group h-full min-h-[200px] border border-gray-200 rounded-lg overflow-hidden bg-white transition-all duration-200 hover:shadow-sm">
-        <img
-          src={preview}
-          alt={`${title} preview`}
-          className="w-full h-full object-contain"
-        />
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+    return (
+      <div className="space-y-3">
+        <div 
+          ref={dropZoneRef}
+          className={`w-full min-h-[200px] border ${isDragActive || isActive ? 'border-blue-500 bg-blue-50/30' : 'border-dashed border-gray-300 bg-gray-50'} 
+            rounded-lg hover:border-blue-500 hover:bg-blue-50/10 transition-all duration-300 
+            flex flex-col items-center justify-center cursor-pointer relative outline-none`}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onPaste={handlePaste}
+          onClick={() => {
+            setIsActive(true);
+            activePasteTargetRef.current = { questionId, type };
+            setTimeout(() => dropZoneRef.current?.focus(), 0);
+          }}
+          onBlur={() => setIsActive(false)}
+          tabIndex={0}
+          role="button"
+        >
+          <Upload className={`w-8 h-8 ${isDragActive || isActive ? 'text-blue-500' : 'text-gray-400'} mb-2`} />
+          <span className={`text-sm ${isDragActive || isActive ? 'text-blue-600 font-medium' : 'text-gray-500'} text-center`}>
+            {isDragActive ? `Drop ${title.toLowerCase()} here` : `Click to focus, then paste (Ctrl+V) or use Upload button`}
+          </span>
+
           <button
+            type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onFileChange(questionId, type, null);
+              setIsActive(true);
+              activePasteTargetRef.current = { questionId, type };
+              setTimeout(() => dropZoneRef.current?.focus(), 0);
+              fileInputRef.current?.click();
             }}
-            className="p-2 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-red-600 hover:scale-110 transition-all"
-            aria-label={`Remove ${title} image`}
+            className="mt-3 h-[40px] w-[110px] px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 transition-colors"
           >
-            <Trash2 className="w-5 h-5" />
+            Upload
           </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                onFileChange(questionId, type, e.target.files[0]);
+              }
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+            }}
+            aria-label={`Upload ${title} image`}
+          />
+
+          <span className="text-xs text-gray-400 mt-3">
+            JPG, PNG or GIF recommended
+          </span>
         </div>
-      </div>
-    ) : (
-      <div 
-        ref={dropZoneRef}
-        className={`w-full min-h-[200px] border ${isDragActive ? 'border-blue-500 bg-blue-50/30' : 'border-dashed border-gray-300 bg-gray-50'} 
-          rounded-lg hover:border-blue-500 hover:bg-blue-50/10 transition-all duration-300 
-          flex flex-col items-center justify-center cursor-pointer relative`}
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <Upload className={`w-8 h-8 ${isDragActive ? 'text-blue-500' : 'text-gray-400'} mb-2 ${isDragActive ? '' : 'animate-pulse group-hover:animate-none'}`} />
-        <span className={`text-sm ${isDragActive ? 'text-blue-600 font-medium' : 'text-gray-500'} text-center`}>
-          {isDragActive ? `Drop ${title.toLowerCase()} here` : `Drag & drop ${title.toLowerCase()} or click to upload`}
-        </span>
-        <span className="text-xs text-gray-400 mt-2">
-          JPG, PNG or GIF recommended
-        </span>
-        <input
-          type="file"
-          accept="image/*"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          onClick={e => e.stopPropagation()}
-          onChange={(e) => {
-            if (e.target.files[0]) {
-              onFileChange(questionId, type, e.target.files[0]);
-            }
-          }}
-          aria-label={`Upload ${title} image`}
-        />
       </div>
     );
   };
@@ -713,7 +787,7 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
         </div>
       )}
 
-<div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
         {uploadMode === 'golden-pdf' ? (
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="space-y-6">
@@ -773,6 +847,33 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
                       )}
                     </h3>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">Question Type:</span>
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                      <button
+                        onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, questionType: 'image' } : q))}
+                        className={`px-3 py-1 text-sm transition-colors ${question.questionType === 'image' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                        type="button"
+                      >
+                        Image
+                      </button>
+                      <button
+                        onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, questionType: 'text', question: null, questionPreview: '', questionUrl: '' } : q))}
+                        className={`px-3 py-1 text-sm transition-colors ${question.questionType === 'text' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                        type="button"
+                      >
+                        Text
+                      </button>
+                      <button
+                        onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, questionType: 'both' } : q))}
+                        className={`px-3 py-1 text-sm transition-colors ${question.questionType === 'both' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                        type="button"
+                      >
+                        Both
+                      </button>
+                    </div>
+                  </div>
+
                   {questions.length > 1 && (
                     <button
                       onClick={() => removeQuestion(question.id)}
@@ -784,8 +885,8 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <div className="space-y-2">
+                {['image', 'both'].includes(question.questionType || 'image') && (
+                  <div className="space-y-2 mb-6">
                     <label className="block text-sm font-medium text-gray-600">
                       Question Image <span className="text-red-500">*</span>
                     </label>
@@ -796,8 +897,58 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
                       questionId={question.id}
                     />
                   </div>
+                )}
 
-                  <div className="space-y-2">
+                {['text', 'both'].includes(question.questionType || 'image') && (
+                  <div className="mb-6 space-y-2">
+                    <label className="block text-sm font-medium text-gray-600">
+                      Question Body <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={question.questionBody}
+                      onChange={(e) => {
+                        setQuestions(prev => prev.map(q => 
+                          q.id === question.id 
+                            ? { ...q, questionBody: e.target.value }
+                            : q
+                        ));
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-all duration-200"
+                      rows={4}
+                      placeholder="Enter question text"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs text-gray-500">Answer Type:</span>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                    <button
+                      onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, answerType: 'image' } : q))}
+                      className={`px-3 py-1 text-sm transition-colors ${question.answerType === 'image' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                      type="button"
+                    >
+                      Image
+                    </button>
+                    <button
+                      onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, answerType: 'text', answer: null, answerPreview: '', answerUrl: '' } : q))}
+                      className={`px-3 py-1 text-sm transition-colors ${question.answerType === 'text' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                      type="button"
+                    >
+                      Text
+                    </button>
+                    <button
+                      onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, answerType: 'both' } : q))}
+                      className={`px-3 py-1 text-sm transition-colors ${question.answerType === 'both' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                      type="button"
+                    >
+                      Both
+                    </button>
+                  </div>
+                </div>
+
+                {['image', 'both'].includes(question.answerType || 'image') && (
+                  <div className="space-y-2 mb-6">
                     <label className="block text-sm font-medium text-gray-600">
                       Answer Image <span className="text-red-500">*</span>
                     </label>
@@ -808,66 +959,30 @@ const UploadQnAModal = ({ isOpen, onClose, examId, onSubmit, existingQuestions =
                       questionId={question.id}
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Question Text <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={question.questionText}
-                      onChange={(e) => {
-                        setQuestions(prev => prev.map(q => 
-                          q.id === question.id 
-                            ? { ...q, questionText: e.target.value }
-                            : q
-                        ));
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                      placeholder="Enter question text"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Domain <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={question.domain}
-                      onChange={(e) => {
-                        setQuestions(prev => prev.map(q => 
-                          q.id === question.id 
-                            ? { ...q, domain: e.target.value }
-                            : q
-                        ));
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                      placeholder="Enter domain (e.g., Algebra, Geometry)"
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2 space-y-2">
                     <label className="block text-sm font-medium text-gray-600">
-                      Answer Text
+                      Answer Body
                     </label>
-                    <textarea
-                      value={question.answerText}
-                      onChange={(e) => {
-                        setQuestions(prev => prev.map(q => 
-                          q.id === question.id 
-                            ? { ...q, answerText: e.target.value }
-                            : q
-                        ));
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-all duration-200"
-                      rows={3}
-                      placeholder="Enter answer text (optional)"
-                    />
+                    {['text', 'both'].includes(question.answerType || 'image') ? (
+                      <textarea
+                        value={question.answerBody}
+                        onChange={(e) => {
+                          setQuestions(prev => prev.map(q => 
+                            q.id === question.id 
+                              ? { ...q, answerBody: e.target.value }
+                              : q
+                          ));
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-all duration-200"
+                        rows={3}
+                        placeholder="Enter answer text"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-500">Answer text is optional for image-only answers.</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, Clock, Shield } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../BaseURL";
+import Breadcrumbs from "./ui/breadcrumbs";
 import AnnotationTool from "./StudentExamDetails/AnnotationTool";
 import examsApi from "./StudentExamDetails/examsApi";
 import PDFViewer from "./StudentExamDetails/PDFViewer";
@@ -535,6 +536,13 @@ const StudentExamDetails = ({ isHistory = false }) => {
             </motion.button>
 
             <div>
+              <Breadcrumbs
+                items={[
+                  { label: 'My Evaluations', to: '/student/evaluations' },
+                  { label: 'Course', to: courseId ? `/student/evaluations/${courseId}` : '/student/evaluations' },
+                  { label: isHistory ? 'History' : 'Exam' },
+                ]}
+              />
               <h1 className="text-xl font-bold text-gray-900">
                 {examData.student && (
                   <span>

@@ -5,6 +5,7 @@
     Users, PlayCircle, X, AlertCircle, CheckCircle,
     Check, History
   } from 'lucide-react';
+  import Breadcrumbs from '../../../ui/breadcrumbs';
   import UploadQnAModal from '../modals/UploadQnAModal';
   import RubricModal from '../modals/RubricModal';
   import { API_BASE_URL } from '../../../../BaseURL';
@@ -1364,17 +1365,12 @@
     return (
       <>
         <div className="space-y-6 opacity-100 transition-opacity duration-1000">
-          <nav className="flex items-center gap-2 text-sm">
-            <button className="text-gray-500 hover:text-gray-700 transition-colors transform hover:scale-105">
-              Courses
-            </button>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <button className="text-gray-500 hover:text-gray-700 transition-colors transform hover:scale-105">
-              CS F111
-            </button>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <span className="text-blue-600 font-medium">Exams</span>
-          </nav>
+          <Breadcrumbs
+            items={[
+              { label: 'Courses', to: '/courses' },
+              { label: 'Exams' },
+            ]}
+          />
   
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-xl">

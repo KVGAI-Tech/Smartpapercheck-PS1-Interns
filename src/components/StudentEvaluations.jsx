@@ -157,7 +157,11 @@ const StudentEvaluations = () => {
       case "Recent":
       default:
         // Sort by start date in descending order (newest first)
-        return new Date(b.start_date || 0) - new Date(a.start_date || 0);
+        let dateA = new Date(a.start_date || 0);
+        let dateB = new Date(b.start_date || 0);
+        if (Number.isNaN(dateA.getTime())) dateA = new Date(0);
+        if (Number.isNaN(dateB.getTime())) dateB = new Date(0);
+        return dateB.getTime() - dateA.getTime();
     }
   });
 
