@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'reac
 import {
   Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader,
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
-  BarChart, RefreshCw, List, BarChart2, Star
+  BarChart, RefreshCw, List, BarChart2, Star, History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
 import { Link } from 'react-router-dom';
 
 const StudentEvaluationLoader = React.lazy(() => import('./StudentEvaluationLoader'));
+const RubricModal = React.lazy(() => import('./RubricModal'));
+const EvaluationHistoryModal = React.lazy(() => import('./EvaluationHistoryModal'));
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -221,6 +223,10 @@ const ExamEvaluation = ({ examId, onClose }) => {
   const [retryCount, setRetryCount] = useState(0);
   const [evaluationError, setEvaluationError] = useState({});
   const [evaluationProgress, setEvaluationProgress] = useState({ completed: 0, total: 0, inProgress: [], errors: 0 });
+  const [showRubricModal, setShowRubricModal] = useState(false);
+  const [examQuestions, setExamQuestions] = useState([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyEnrollmentId, setHistoryEnrollmentId] = useState(null);
   
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
@@ -363,7 +369,9 @@ const ExamEvaluation = ({ examId, onClose }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}`, {
+      const url = `${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}?force_reevaluate=true`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -1146,6 +1154,37 @@ const ExamEvaluation = ({ examId, onClose }) => {
                   </div>
 
                   <NavButton
+                    icon={RefreshCw}
+                    label="Edit Rubrics"
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
+                          headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                          }
+                        });
+                        
+                        if (response.ok) {
+                          const data = await response.json();
+                          if (data.code === 200 && data.data) {
+                            const questions = data.data.questions || [data.data];
+                            setExamQuestions(questions);
+                            setShowRubricModal(true);
+                          }
+                        } else {
+                          showToast('Failed to load questions', 'error');
+                        }
+                      } catch (error) {
+                        showToast('Error loading questions: ' + error.message, 'error');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    variant="secondary"
+                  />
+
+                  <NavButton
                     icon={batchEvaluating ? Loader : PlayCircle}
                     label={getProgressIndicator()}
                     onClick={handleEvaluateAll}
@@ -1326,6 +1365,32 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                             <Eye className="w-4 h-4 mr-1.5" />
                                             View Results
                                           </motion.button>
+                                          <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleEvaluate(student)}
+                                            disabled={isInProgress || batchEvaluating}
+                                            className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md w-full sm:w-auto ${
+                                              isInProgress || batchEvaluating
+                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
+                                            }`}
+                                          >
+                                            <RefreshCw className="w-4 h-4 mr-1.5" />
+                                            Re-evaluate
+                                          </motion.button>
+                                          <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => {
+                                              setHistoryEnrollmentId(student.enrollment_id);
+                                              setShowHistoryModal(true);
+                                            }}
+                                            className="inline-flex items-center px-3 py-1.5 border border-purple-300 text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                          >
+                                            <History className="w-4 h-4 mr-1.5" />
+                                            View History
+                                          </motion.button>
                                         </div>
                                       ) : student.status !== 'not_uploaded' ? (
                                         <motion.button
@@ -1443,6 +1508,52 @@ const ExamEvaluation = ({ examId, onClose }) => {
         type={toast.type}
         onClose={hideToast}
       />
+      
+      {showRubricModal && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg">
+              <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          </div>
+        }>
+          <RubricModal
+            isOpen={showRubricModal}
+            onClose={() => {
+              setShowRubricModal(false);
+              setExamQuestions([]);
+            }}
+            examId={examId}
+            questions={examQuestions}
+            onSave={async (data) => {
+              showToast('Rubrics updated successfully! You can now re-evaluate students.', 'success');
+              setShowRubricModal(false);
+              setExamQuestions([]);
+              return data;
+            }}
+          />
+        </Suspense>
+      )}
+
+      {showHistoryModal && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg">
+              <Loader className="w-8 h-8 animate-spin text-purple-600" />
+            </div>
+          </div>
+        }>
+          <EvaluationHistoryModal
+            isOpen={showHistoryModal}
+            onClose={() => {
+              setShowHistoryModal(false);
+              setHistoryEnrollmentId(null);
+            }}
+            examId={examId}
+            enrollmentId={historyEnrollmentId}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

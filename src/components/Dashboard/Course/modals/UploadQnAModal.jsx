@@ -28,7 +28,9 @@ const UploadQnAModal = ({
     answerText: 'test-answer',
     answerBody: '',
     domain: 'General',
-    isExisting: false
+    isExisting: false,
+    num_rubric_items: 3,
+    professorInstructions: ''
   }]);
 
   const [goldenPdfFile, setGoldenPdfFile] = useState(null);
@@ -114,7 +116,9 @@ const UploadQnAModal = ({
         answerBody: q.answer_body || '',
         domain: q.domain || 'General',
         isExisting: true, 
-        questionNumber: q.question_number
+        questionNumber: q.question_number,
+        num_rubric_items: q.num_rubric_items || 3,
+        professorInstructions: q.professor_instructions || ''
       }));
       setQuestions(formattedQuestions);
     } else {
@@ -134,7 +138,9 @@ const UploadQnAModal = ({
         answerText: 'test-answer',
         answerBody: '',
         domain: 'General',
-        isExisting: false
+        isExisting: false,
+        num_rubric_items: 3,
+        professorInstructions: ''
       }]);
     }
   }, [existingQuestions]);
@@ -230,7 +236,9 @@ const UploadQnAModal = ({
         answerText: 'test-answer',
         answerBody: '',
         domain: 'General',
-        isExisting: false
+        isExisting: false,
+        num_rubric_items: 3,
+        professorInstructions: ''
       }
     ]);
     
@@ -355,6 +363,13 @@ const UploadQnAModal = ({
               questionFormData.append('question_text', 'test-question');
               questionFormData.append('domain', 'General');
               questionFormData.append('answer_text', 'test-answer');
+              
+              // Add rubric configuration fields
+              questionFormData.append('num_rubric_items', (q.num_rubric_items || 3).toString());
+              if (q.professorInstructions && q.professorInstructions.trim()) {
+                questionFormData.append('professor_instructions', q.professorInstructions.trim());
+              }
+              
               if (['image', 'both'].includes(q.questionType || 'image') && q.question) {
                 questionFormData.append('file', q.question);
               } else if (['image', 'both'].includes(q.questionType || 'image') && !hasQuestionFile) {
@@ -1002,6 +1017,62 @@ const UploadQnAModal = ({
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200"
                       placeholder="Enter marks"
                     />
+                  </div>
+                </div>
+
+                {/* Rubric Configuration Section */}
+                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <h4 className="text-sm font-semibold text-gray-900">Rubric Configuration</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Number of Rubric Items
+                      </label>
+                      <input
+                        type="number"
+                        min="2"
+                        max="10"
+                        value={question.num_rubric_items}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 3;
+                          const clampedValue = Math.min(Math.max(value, 2), 10);
+                          setQuestions(prev => prev.map(q => 
+                            q.id === question.id 
+                              ? { ...q, num_rubric_items: clampedValue }
+                              : q
+                          ));
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200"
+                      />
+                      <p className="text-xs text-gray-500">Choose between 2-10 rubric items (default: 3)</p>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Professor Instructions (Optional)
+                      </label>
+                      <textarea
+                        value={question.professorInstructions}
+                        onChange={(e) => {
+                          setQuestions(prev => prev.map(q => 
+                            q.id === question.id 
+                              ? { ...q, professorInstructions: e.target.value }
+                              : q
+                          ));
+                        }}
+                        maxLength={2000}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-all duration-200"
+                        rows={3}
+                        placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Weight mathematical rigor higher')"
+                      />
+                      <p className="text-xs text-gray-500">
+                        {question.professorInstructions?.length || 0}/2000 characters
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

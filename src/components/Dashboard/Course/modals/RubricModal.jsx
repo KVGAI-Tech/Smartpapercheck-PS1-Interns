@@ -553,6 +553,10 @@ const RubricModal = ({
     const [generatedQuestionsCount, setGeneratedQuestionsCount] = useState(0);
     const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, index: null, itemDescription: '' });
+    const [numRubricItems, setNumRubricItems] = useState(3);
+    const [profInstructions, setProfInstructions] = useState('');
+    const [showRubricSettings, setShowRubricSettings] = useState(false);
+    const [isRegenerating, setIsRegenerating] = useState(false);
     const previousHeight = useRef(null);
     const modalContentRef = useRef(null);
     const modalRootRef = useRef(null);
@@ -702,12 +706,17 @@ const RubricModal = ({
                     setFeedback(currentQuestion.problem_feedback || '');
                 }
 
+                // Load rubric settings
+                setNumRubricItems(currentQuestion.num_rubric_items || rubricItems.length || 3);
+                setProfInstructions(currentQuestion.professor_instructions || '');
+
                 const hasRubricItems =
                     (currentQuestion.rubric && currentQuestion.rubric.rubric_items &&
                         currentQuestion.rubric.rubric_items.length > 0) ||
                     (currentQuestion.rubric_items && currentQuestion.rubric_items.length > 0);
 
                 setShowRubricEditor(hasRubricItems);
+                setShowRubricSettings(hasRubricItems);
             }
         }
     }, [selectedQuestion, questions]);
@@ -1027,6 +1036,55 @@ const RubricModal = ({
             toast.error('Failed to generate rubric. Please create a rubric manually.');
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleUpdateRubricSettings = async (regenerate = false) => {
+        if (!selectedQuestion) {
+            toast.error('No question selected');
+            return;
+        }
+
+        setIsRegenerating(true);
+        const loadingToast = toast.loading(regenerate ? 'Regenerating rubric with new settings...' : 'Updating rubric settings...');
+
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/exams/${examId}/questions/${selectedQuestion}/rubric-settings`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        num_rubric_items: numRubricItems,
+                        professor_instructions: profInstructions.trim() || undefined,
+                        regenerate_rubric: regenerate
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.code === 200) {
+                if (regenerate && data.data.rubric) {
+                    setRubricItems(data.data.rubric.rubric_items || []);
+                    setFeedback(data.data.rubric.problem_feedback || '');
+                    setShowRubricEditor(true);
+                }
+                toast.success(regenerate ? 'Rubric regenerated successfully!' : 'Settings updated successfully!', { id: loadingToast });
+            } else {
+                throw new Error(data.message || 'Failed to update settings');
+            }
+        } catch (err) {
+            console.error("Error updating rubric settings:", err);
+            toast.error('Failed to update settings: ' + (err.message || 'Unknown error'), { id: loadingToast });
+        } finally {
+            setIsRegenerating(false);
         }
     };
 
@@ -1377,6 +1435,95 @@ const RubricModal = ({
                                                     exit={{ opacity: 0 }}
                                                     className="space-y-6"
                                                 >
+                                                    {/* Rubric Settings Section */}
+                                                    {showRubricSettings && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: -20 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6"
+                                                        >
+                                                            <div className="flex items-center gap-2 mb-4">
+                                                                <Settings className="w-5 h-5 text-purple-600" />
+                                                                <h4 className="text-lg font-semibold text-gray-900">Rubric Configuration</h4>
+                                                            </div>
+                                                            
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-gray-700">
+                                                                        Number of Rubric Items
+                                                                    </label>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="2"
+                                                                        max="10"
+                                                                        value={numRubricItems}
+                                                                        onChange={(e) => {
+                                                                            const value = parseInt(e.target.value) || 3;
+                                                                            const clampedValue = Math.min(Math.max(value, 2), 10);
+                                                                            setNumRubricItems(clampedValue);
+                                                                        }}
+                                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+                                                                    />
+                                                                    <p className="text-xs text-gray-500">Choose between 2-10 rubric items (default: 3)</p>
+                                                                </div>
+
+                                                                <div className="space-y-2 md:col-span-2">
+                                                                    <label className="block text-sm font-medium text-gray-700">
+                                                                        Professor Instructions (Optional)
+                                                                    </label>
+                                                                    <textarea
+                                                                        value={profInstructions}
+                                                                        onChange={(e) => setProfInstructions(e.target.value)}
+                                                                        maxLength={2000}
+                                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none transition-all duration-200"
+                                                                        rows={3}
+                                                                        placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Weight mathematical rigor higher')"
+                                                                    />
+                                                                    <p className="text-xs text-gray-500">
+                                                                        {profInstructions?.length || 0}/2000 characters
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-purple-200">
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={() => handleUpdateRubricSettings(false)}
+                                                                    disabled={isRegenerating}
+                                                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                >
+                                                                    <Save className="w-4 h-4" />
+                                                                    Update Settings
+                                                                </motion.button>
+
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={() => handleUpdateRubricSettings(true)}
+                                                                    disabled={isRegenerating}
+                                                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:shadow-md transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                >
+                                                                    {isRegenerating ? (
+                                                                        <>
+                                                                            <motion.div 
+                                                                                animate={{ rotate: 360 }}
+                                                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                                                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
+                                                                            />
+                                                                            Regenerating...
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <Sparkles className="w-4 h-4" />
+                                                                            Regenerate with New Settings
+                                                                        </>
+                                                                    )}
+                                                                </motion.button>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <h3 className="text-lg font-medium text-gray-900">Rubric Items</h3>
