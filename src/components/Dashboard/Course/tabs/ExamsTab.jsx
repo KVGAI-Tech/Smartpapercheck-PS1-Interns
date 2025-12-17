@@ -8,6 +8,7 @@
   import Breadcrumbs from '../../../ui/breadcrumbs';
   import UploadQnAModal from '../modals/UploadQnAModal';
   import RubricModal from '../modals/RubricModal';
+  import UploadAnswersModal from '../modals/UploadAnswersModal';
   import { API_BASE_URL } from '../../../../BaseURL';
   const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
   
@@ -1528,7 +1529,7 @@
             onSave={handleRubricSave}
           />
   
-          <AnswerUploadModal
+          <UploadAnswersModal
             isOpen={showAnswerUploadModal}
             onClose={() => {
               setShowAnswerUploadModal(false);
@@ -1536,9 +1537,11 @@
             }}
             examId={selectedExamId}
             courseId={courseId}
-            onUpload={async (data) => {
+            onUploadSuccess={(data) => {
               showToast('Answer sheets uploaded successfully', 'success');
-              return data;
+              if (onRefresh) {
+                onRefresh();
+              }
             }}
           />
   
