@@ -18,6 +18,10 @@ const DashboardLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const handleNavClick = () => {
+    if (isMobile) setIsSidebarOpen(false);
+  };
+
   const fetchUserProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -155,6 +159,7 @@ const DashboardLayout = ({ children }) => {
                     }`}
                   onMouseEnter={() => setHoveredItem(item.label)}
                   onMouseLeave={() => setHoveredItem(null)}
+                  onClick={handleNavClick}
                 >
                   <item.icon
                     className={`w-5 h-5 transition-all duration-300 transform group-hover:scale-110
@@ -200,6 +205,7 @@ const DashboardLayout = ({ children }) => {
                               ? "text-accent bg-accent/10"
                               : "text-gray-600 hover:bg-gray-50"
                           }`}
+                        onClick={handleNavClick}
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full mr-3 transition-all duration-300 transform group-hover:scale-110

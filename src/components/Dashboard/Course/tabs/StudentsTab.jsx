@@ -256,79 +256,86 @@ const StudentsTab = ({
 
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Student Details
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Roll Number
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Section
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th scope="col" className="relative px-6 py-3 w-20">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredStudents.map((student) => (
-              <tr key={student.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
-                      <span className="text-sm font-medium text-accent">
-                        {student.user_name?.charAt(0) || '?'}
-                      </span>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {student.user_name || 'Unknown'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Batch: {student.batch}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {student.roll_number}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-accent/10 text-accent">
-                    {student.tut_section || 'Unassigned'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {student.user_email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center justify-end space-x-2">
-                    <button
-                      onClick={() => handleOnEdit(student)}
-                      className="p-1.5 text-accent hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
-                      title="Edit student"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleRemoveStudent(student)}
-                      className="p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Remove student"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full sm:min-w-[720px] w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Student Details
+                </th>
+
+                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Roll Number
+                </th>
+                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Section
+                </th>
+                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th scope="col" className="relative px-2 sm:px-6 py-3 w-16 sm:w-20">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredStudents.map((student) => (
+                <tr key={student.id} className="hover:bg-gray-50">
+                  <td className="px-2 sm:px-6 py-4 whitespace-normal sm:whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="hidden sm:flex h-10 w-10 rounded-full bg-accent/10 items-center justify-center">
+                        <span className="text-sm font-medium text-accent">
+                          {student.user_name?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                      <div className="sm:ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {student.user_name || 'Unknown'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Batch: {student.batch}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {student.roll_number}
+                  </td>
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-accent/10 text-accent">
+                      {student.tut_section || 'Unassigned'}
+                    </span>
+                  </td>
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-normal sm:whitespace-nowrap break-all sm:break-normal text-sm text-gray-500">
+                    {student.user_email}
+                  </td>
+                  <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end space-x-0.5 sm:space-x-2">
+                      <button
+                        onClick={() => handleOnEdit(student)}
+
+                        className="p-1 sm:p-1.5 text-accent hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
+                        title="Edit student"
+                      >
+                        <Edit2 size={14} className="sm:hidden" />
+                        <Edit2 size={16} className="hidden sm:block" />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveStudent(student)}
+                        className="p-1 sm:p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Remove student"
+                      >
+                        <Trash2 size={14} className="sm:hidden" />
+                        <Trash2 size={16} className="hidden sm:block" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
@@ -336,7 +343,7 @@ const StudentsTab = ({
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
           <input
             type="text"
@@ -347,12 +354,12 @@ const StudentsTab = ({
             disabled={loading}
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-end sm:w-auto">
           {sections.length > 0 && (
             <select
               value={selectedSection}
               onChange={(e) => onSectionChange(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
+              className="w-full sm:w-auto px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
               disabled={loading}
             >
               <option value="All sections">All sections</option>
@@ -364,7 +371,7 @@ const StudentsTab = ({
           <button
             onClick={() => setShowImportModal(true)}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
               rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
             <Upload size={20} />
             Import
@@ -372,14 +379,14 @@ const StudentsTab = ({
           <button
             onClick={handleOnAdd}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg 
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white bg-accent rounded-lg 
               hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
             <Plus size={20} />
             Add Student
           </button>
         </div>
       </div>
-      
+
       {renderContent()}
 
       <StudentImportModal 

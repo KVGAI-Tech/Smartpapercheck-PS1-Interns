@@ -77,16 +77,16 @@ export default function PaymentModal() {
   };
 
   return (
-    <div className="flex items-center">
-      <div className="flex items-center mr-3">
-        <div className="bg-accent/10 rounded-full p-2 mr-2">
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="bg-accent/10 rounded-full p-2 shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
             <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
             <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
           </svg>
         </div>
-        <div>
+        <div className="min-w-0">
           <span className="text-xs font-medium text-accent block leading-tight">Available Credits</span>
           <span className="text-xl font-bold text-accent">{credits.toLocaleString()}</span>
         </div>
@@ -98,7 +98,7 @@ export default function PaymentModal() {
         onClick={handleOpen}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="flex items-center justify-center px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg shadow-sm transition-all"
+        className="shrink-0 flex items-center justify-center px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg shadow-sm transition-all"
       >
         <span className="font-medium flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

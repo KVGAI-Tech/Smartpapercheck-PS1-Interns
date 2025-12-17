@@ -7,23 +7,23 @@ import ForgotPasswordModal from './ForgotPasswordModal';
 const MinimalBackground = React.memo(() => {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50"></div>
+      <div className="absolute inset-0 bg-white"></div>
+      <div className="absolute inset-0 bg-accent/5"></div>
     </div>
   );
 });
 
-
 const TabNavigation = React.memo(({ activeTab, setActiveTab }) => {
   const handleLoginClick = useCallback(() => setActiveTab('login'), [setActiveTab]);
   const handleSignupClick = useCallback(() => setActiveTab('signup'), [setActiveTab]);
-  
+
   return (
     <div className="flex border-b border-gray-200 mb-6">
       <button
         onClick={handleLoginClick}
         className={`pb-3 px-4 text-sm font-medium transition-colors relative ${
           activeTab === 'login' 
-            ? 'text-blue-600 border-b-2 border-blue-500 -mb-px' 
+            ? 'text-accent border-b-2 border-accent -mb-px' 
             : 'text-gray-500 hover:text-gray-700'
         }`}
       >
@@ -33,7 +33,7 @@ const TabNavigation = React.memo(({ activeTab, setActiveTab }) => {
         onClick={handleSignupClick}
         className={`pb-3 px-4 text-sm font-medium transition-colors relative ${
           activeTab === 'signup' 
-            ? 'text-blue-600 border-b-2 border-blue-500 -mb-px' 
+            ? 'text-accent border-b-2 border-accent -mb-px' 
             : 'text-gray-500 hover:text-gray-700'
         }`}
       >
@@ -42,7 +42,6 @@ const TabNavigation = React.memo(({ activeTab, setActiveTab }) => {
     </div>
   );
 });
-
 
 const PasswordRequirements = React.memo(({ password }) => {
   const passwordChecks = useMemo(() => ({
@@ -54,10 +53,10 @@ const PasswordRequirements = React.memo(({ password }) => {
   }), [password]);
 
   return (
-    <div className="bg-blue-50 p-3 rounded-lg text-sm">
+    <div className="bg-accent/10 p-3 rounded-lg text-sm">
       <div className="flex items-center mb-1">
-        <CheckCircle className="text-blue-500 h-4 w-4 mr-1.5" />
-        <span className="font-medium text-blue-700">Password Requirements</span>
+        <CheckCircle className="text-accent h-4 w-4 mr-1.5" />
+        <span className="font-medium text-accent">Password Requirements</span>
       </div>
       <div className="grid grid-cols-2 gap-1 mt-1">
         <div className="flex items-center">
@@ -80,7 +79,6 @@ const PasswordRequirements = React.memo(({ password }) => {
           <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks.hasSymbol ? 'bg-green-500' : 'bg-red-300'} mr-1.5`}></div>
           <span className={`text-xs ${passwordChecks.hasSymbol ? 'text-green-600' : 'text-red-500'}`}>One special character</span>
         </div>
-
       </div>
     </div>
   );
@@ -101,7 +99,6 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
-  
   const passwordChecks = useMemo(() => ({
     minLength: formData.password.length >= 8,
     hasUppercase: /[A-Z]/.test(formData.password),
@@ -109,7 +106,6 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
     hasNumber: /\d/.test(formData.password),
   }), [formData.password]);
 
-  
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -118,7 +114,6 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
     }));
   }, []);
 
-  
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword(prev => !prev);
   }, []);
@@ -165,69 +160,28 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
     setIsForgotPasswordOpen(false);
   }, []);
 
-const handleSubmit = useCallback(async (e) => {
-  e.preventDefault();
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
 
-  if (activeTab === 'login' && !isLoginFormValid) return;
-  if (activeTab === 'signup' && !isSignupFormValid) return;
+    if (activeTab === 'login' && !isLoginFormValid) return;
+    if (activeTab === 'signup' && !isSignupFormValid) return;
 
-  setIsLoading(true);
-  setError('');
+    setIsLoading(true);
+    setError('');
 
-  const getFriendlyError = (status, detail) => {
-    if (detail?.includes('User role does not match')) {
-      return 'You are not authorized to log in from this portal. Please use the correct login page.';
-    }
-    if (status === 401) return 'Incorrect email or password. Please try again.';
-    if (status === 409) return 'An account with this email already exists.';
-    if (status === 500) return 'Server error. Please try again later.';
-    return detail || 'Something went wrong. Please try again.';
-  };
-
-  try {
-    if (activeTab === 'login') {
-      const response = await fetch(`${API_BASE_URL}/professors/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: formData.email, 
-          password: formData.password 
-        }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        const friendlyMessage = getFriendlyError(response.status, data.message || data.detail);
-        throw new Error(friendlyMessage);
+    const getFriendlyError = (status, detail) => {
+      if (detail?.includes('User role does not match')) {
+        return 'You are not authorized to log in from this portal. Please use the correct login page.';
       }
+      if (status === 401) return 'Incorrect email or password. Please try again.';
+      if (status === 409) return 'An account with this email already exists.';
+      if (status === 500) return 'Server error. Please try again later.';
+      return detail || 'Something went wrong. Please try again.';
+    };
 
-      if (data.code === 200 && data.data?.access_token) {
-        const { access_token } = data.data;
-        onLoginSuccess(access_token, 'professor');
-      } else {
-        throw new Error(data.message || 'Login failed');
-      }
-    } else {
-      const response = await fetch(`${API_BASE_URL}/professors/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        const friendlyMessage = getFriendlyError(response.status, data.message || data.detail);
-        throw new Error(friendlyMessage);
-      }
-
-      if (data.code === 201) {
-        const loginResponse = await fetch(`${API_BASE_URL}/professors/login`, {
+    try {
+      if (activeTab === 'login') {
+        const response = await fetch(`${API_BASE_URL}/professors/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -236,29 +190,71 @@ const handleSubmit = useCallback(async (e) => {
           }),
         });
 
-        const loginData = await loginResponse.json().catch(() => ({}));
+        const data = await response.json().catch(() => ({}));
 
-        if (!loginResponse.ok) {
-          const friendlyMessage = getFriendlyError(loginResponse.status, loginData.message || loginData.detail);
+        if (!response.ok) {
+          const friendlyMessage = getFriendlyError(response.status, data.message || data.detail);
           throw new Error(friendlyMessage);
         }
 
-        if (loginData.code === 200 && loginData.data?.access_token) {
-          const { access_token } = loginData.data;
+        if (data.code === 200 && data.data?.access_token) {
+          const { access_token } = data.data;
           onLoginSuccess(access_token, 'professor');
         } else {
-          throw new Error(loginData.message || 'Login failed after signup');
+          throw new Error(data.message || 'Login failed');
         }
       } else {
-        throw new Error(data.message || 'Signup failed');
+        const response = await fetch(`${API_BASE_URL}/professors/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const friendlyMessage = getFriendlyError(response.status, data.message || data.detail);
+          throw new Error(friendlyMessage);
+        }
+
+        if (data.code === 201) {
+          const loginResponse = await fetch(`${API_BASE_URL}/professors/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              email: formData.email, 
+              password: formData.password 
+            }),
+          });
+
+          const loginData = await loginResponse.json().catch(() => ({}));
+
+          if (!loginResponse.ok) {
+            const friendlyMessage = getFriendlyError(loginResponse.status, loginData.message || loginData.detail);
+            throw new Error(friendlyMessage);
+          }
+
+          if (loginData.code === 200 && loginData.data?.access_token) {
+            const { access_token } = loginData.data;
+            onLoginSuccess(access_token, 'professor');
+          } else {
+            throw new Error(loginData.message || 'Login failed after signup');
+          }
+        } else {
+          throw new Error(data.message || 'Signup failed');
+        }
       }
+    } catch (error) {
+      setError(error.message || 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    setError(error.message || 'An unexpected error occurred');
-  } finally {
-    setIsLoading(false);
-  }
-}, [activeTab, isLoginFormValid, isSignupFormValid, formData, onLoginSuccess]);
+  }, [activeTab, isLoginFormValid, isSignupFormValid, formData, onLoginSuccess]);
+
   const renderLoginForm = () => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -280,7 +276,7 @@ const handleSubmit = useCallback(async (e) => {
               required
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+              className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
               placeholder="Enter your email"
             />
           </div>
@@ -299,7 +295,7 @@ const handleSubmit = useCallback(async (e) => {
               required
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+              className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
               placeholder="Enter your password"
             />
             <button
@@ -318,7 +314,7 @@ const handleSubmit = useCallback(async (e) => {
               id="remember"
               name="remember"
               type="checkbox"
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
             />
             <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
               Remember me
@@ -328,7 +324,7 @@ const handleSubmit = useCallback(async (e) => {
           <button
             type="button"
             onClick={handleOpenForgotPassword}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            className="text-sm font-medium text-accent hover:text-accent"
           >
             Forgot Password?
           </button>
@@ -337,8 +333,8 @@ const handleSubmit = useCallback(async (e) => {
         <button
           type="submit"
           disabled={!isLoginFormValid || isLoading}
-          className={`w-full py-3 rounded-lg font-medium text-white bg-blue-600 
-            ${isLoginFormValid && !isLoading ? 'hover:bg-blue-700' : 'opacity-70 cursor-not-allowed'}
+          className={`w-full py-3 rounded-lg font-medium text-white bg-accent 
+            ${isLoginFormValid && !isLoading ? 'hover:bg-accent' : 'opacity-70 cursor-not-allowed'}
             flex items-center justify-center transition-all duration-300`}
         >
           {isLoading ? (
@@ -357,7 +353,6 @@ const handleSubmit = useCallback(async (e) => {
     </motion.div>
   );
 
-  
   const renderSignupForm = () => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -379,7 +374,7 @@ const handleSubmit = useCallback(async (e) => {
               required
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full pl-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+              className="w-full pl-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
               placeholder="Enter your full name"
             />
           </div>
@@ -398,7 +393,7 @@ const handleSubmit = useCallback(async (e) => {
               required
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full pl-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+              className="w-full pl-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
               placeholder="Enter your email"
             />
           </div>
@@ -417,7 +412,7 @@ const handleSubmit = useCallback(async (e) => {
               required
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
               placeholder="Create a password"
             />
             <button
@@ -443,7 +438,7 @@ const handleSubmit = useCallback(async (e) => {
               required
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
               placeholder="Confirm your password"
             />
             <button
@@ -470,12 +465,12 @@ const handleSubmit = useCallback(async (e) => {
               checked={termsAccepted}
               onChange={toggleTermsAccepted}
               required
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
             />
           </div>
           <div className="ml-3 text-sm">
             <label htmlFor="terms" className="text-gray-600">
-              I agree to the <a href="#" className="text-blue-600 hover:text-blue-800">Terms of Service</a> and <a href="#" className="text-blue-600 hover:text-blue-800">Privacy Policy</a>
+              I agree to the <a href="#" className="text-accent hover:text-accent">Terms of Service</a> and <a href="#" className="text-accent hover:text-accent">Privacy Policy</a>
             </label>
           </div>
         </div>
@@ -483,8 +478,8 @@ const handleSubmit = useCallback(async (e) => {
         <button
           type="submit"
           disabled={!isSignupFormValid || isLoading}
-          className={`w-full py-3 rounded-lg font-medium text-white bg-blue-600 
-            ${isSignupFormValid && !isLoading ? 'hover:bg-blue-700' : 'opacity-70 cursor-not-allowed'}
+          className={`w-full py-3 rounded-lg font-medium text-white bg-accent 
+            ${isSignupFormValid && !isLoading ? 'hover:bg-accent' : 'opacity-70 cursor-not-allowed'}
             flex items-center justify-center gap-2 transition-all`}
         >
           {isLoading ? (
@@ -515,7 +510,7 @@ const handleSubmit = useCallback(async (e) => {
           <div className="mb-4">
             <button
               onClick={onBack}
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors text-sm"
+              className="flex items-center text-gray-600 hover:text-accent transition-colors text-sm"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to role selection
@@ -524,8 +519,8 @@ const handleSubmit = useCallback(async (e) => {
           
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                <User className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center mr-3">
+                <User className="h-5 w-5 text-accent" />
               </div>
               <h2 className="text-xl font-bold text-gray-900">
                 {activeTab === 'login' ? 'Professor Login' : 'Create Professor Account'}

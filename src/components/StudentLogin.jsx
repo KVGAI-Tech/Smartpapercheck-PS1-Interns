@@ -18,7 +18,7 @@ const ParticleAnimation = () => {
       {particles.map(particle => (
         <motion.div
           key={particle.id}
-          className="absolute rounded-full bg-green-400/30"
+          className="absolute rounded-full bg-accent/20"
           style={{
             width: `${particle.size}px`,
             height: `${particle.size}px`,
@@ -140,11 +140,11 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
   return (
     <>
       <div className={`bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md mx-auto border border-gray-200/50 relative overflow-hidden ${isForgotPasswordOpen ? 'filter blur-sm' : ''}`}>
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-500 to-emerald-600"></div>
+        <div className="absolute top-0 left-0 right-0 h-2 bg-accent"></div>
         <ParticleAnimation />
         
-        <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-green-500/10 blur-xl"></div>
-        <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-emerald-500/10 blur-xl"></div>
+        <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-accent/10 blur-xl"></div>
+        <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-accent/10 blur-xl"></div>
         
         <div className="relative z-10">
           <div className="mb-6">
@@ -152,7 +152,7 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
               whileHover={{ x: -3 }}
               whileTap={{ scale: 0.95 }}
               onClick={onBack}
-              className="flex items-center text-gray-600 hover:text-green-600 transition-colors group"
+              className="flex items-center text-gray-600 hover:text-accent transition-colors group"
             >
               <ArrowLeft className="w-4 h-4 mr-2 group-hover:mr-3 transition-all" />
               <span className="text-sm font-medium">Back to role selection</span>
@@ -172,7 +172,7 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
-              className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/20"
+              className="h-12 w-12 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20"
             >
               <BookOpen className="h-6 w-6 text-white" />
             </motion.div>
@@ -214,7 +214,7 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
                   onChange={handleInputChange}
                   onFocus={() => setCurrentFocus('email')}
                   onBlur={() => setCurrentFocus(null)}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-gray-900"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
                   placeholder="Enter your email"
                 />
               </motion.div>
@@ -244,7 +244,7 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
                   onChange={handleInputChange}
                   onFocus={() => setCurrentFocus('password')}
                   onBlur={() => setCurrentFocus(null)}
-                  className="w-full pl-11 pr-11 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-gray-900"
+                  className="w-full pl-11 pr-11 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent transition-all text-gray-900"
                   placeholder="Enter your password"
                 />
                 <motion.button
@@ -267,7 +267,7 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
               <button
                 type="button"
                 onClick={handleOpenForgotPassword}
-                className="text-sm font-medium text-green-600 hover:text-green-700"
+                className="text-sm font-medium text-accent hover:text-accent"
               >
                 Forgot Password?
               </button>
@@ -281,8 +281,8 @@ const StudentLogin = ({ onBack, onLoginSuccess }) => {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={!isFormValid() || isLoading}
-              className={`w-full py-3.5 rounded-xl font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 
-                ${isFormValid() && !isLoading ? 'hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-500/20' : 'opacity-70 cursor-not-allowed'}
+              className={`w-full py-3.5 rounded-xl font-medium text-white bg-accent 
+                ${isFormValid() && !isLoading ? 'hover:bg-accent shadow-lg shadow-accent/20' : 'opacity-70 cursor-not-allowed'}
                 flex items-center justify-center transition-all duration-300`}
             >
               {isLoading ? (

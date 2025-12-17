@@ -194,8 +194,8 @@ const TATab = ({ courseId }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md min-w-0">
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
           <input
             type="text"
@@ -206,10 +206,10 @@ const TATab = ({ courseId }) => {
           />
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-end sm:w-auto">
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <Upload size={20} />
             Import
@@ -220,7 +220,7 @@ const TATab = ({ courseId }) => {
               setSelectedTA(null);
               setShowAddModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
           >
             <Plus size={20} />
             Add TA

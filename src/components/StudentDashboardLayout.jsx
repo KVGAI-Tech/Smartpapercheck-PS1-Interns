@@ -22,6 +22,10 @@ const StudentDashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
+  const handleNavClick = () => {
+    if (isMobile) setIsSidebarOpen(false);
+  };
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -206,6 +210,7 @@ const StudentDashboardLayout = ({ children }) => {
                   }`}
                 onMouseEnter={() => setHoveredItem(item.label)}
                 onMouseLeave={() => setHoveredItem(null)}
+                onClick={handleNavClick}
               >
                 <item.icon
                   className={`w-5 h-5 ${

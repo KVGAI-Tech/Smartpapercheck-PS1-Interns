@@ -15,25 +15,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
   const [error, setError] = useState('');
   const [otpTimer, setOtpTimer] = useState(0);
 
-  const themeColors = userType === 'professor' 
-    ? {
-        primary: 'blue-600',
-        primaryHover: 'blue-700',
-        primaryLight: 'blue-100',
-        secondary: 'indigo-600',
-        focus: 'ring-blue-500 focus:border-blue-500',
-        success: 'green-500',
-        successText: 'green-600'
-      }
-    : {
-        primary: 'green-600',
-        primaryHover: 'green-700',
-        primaryLight: 'green-100',
-        secondary: 'emerald-600',
-        focus: 'ring-green-500 focus:border-green-500',
-        success: 'green-500',
-        successText: 'green-600'
-      };
+  const focusClasses = 'focus:ring-accent focus:border-accent';
 
   const resetForm = useCallback(() => {
     setStep(1);
@@ -135,7 +117,6 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
     }
     setError('');
     setStep(3);
-    
   }, [otp]);
 
   const handleResetPassword = useCallback(async () => {
@@ -206,7 +187,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:${themeColors.focus} transition-all text-gray-900`}
+            className={`w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 ${focusClasses} transition-all text-gray-900`}
             placeholder="Enter your email"
           />
         </div>
@@ -222,7 +203,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
         <button
           onClick={handleSendOtp}
           disabled={!validateEmail(email) || isLoading}
-          className={`px-6 py-2 rounded-lg font-medium text-white bg-${themeColors.primary} hover:bg-${themeColors.primaryHover} ${!validateEmail(email) || isLoading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors`}
+          className={`px-6 py-2 rounded-lg font-medium text-white bg-accent hover:bg-accent ${!validateEmail(email) || isLoading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors`}
         >
           {isLoading ? (
             <>
@@ -279,7 +260,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
             const value = e.target.value.replace(/[^0-9]/g, '');
             setOtp(value);
           }}
-          className={`w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:${themeColors.focus} transition-all text-gray-900 tracking-wider text-center font-mono text-lg`}
+          className={`w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 ${focusClasses} transition-all text-gray-900 tracking-wider text-center font-mono text-lg`}
           placeholder="000000"
         />
       </div>
@@ -289,7 +270,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
           onClick={handleResendOtp}
           disabled={otpTimer > 0 || isLoading}
           className={`flex items-center ${
-            otpTimer > 0 ? 'text-gray-400 cursor-not-allowed' : `text-${themeColors.primary} hover:text-${themeColors.primaryHover}`
+            otpTimer > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-accent hover:text-accent'
           } transition-colors`}
         >
           <RefreshCw className="h-4 w-4 mr-1.5" />
@@ -307,7 +288,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
         <button
           onClick={handleVerifyOtp}
           disabled={otp.length !== 6 || isLoading}
-          className={`px-6 py-2 rounded-lg font-medium text-white bg-${themeColors.primary} hover:bg-${themeColors.primaryHover} ${otp.length !== 6 || isLoading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors`}
+          className={`px-6 py-2 rounded-lg font-medium text-white bg-accent hover:bg-accent ${otp.length !== 6 || isLoading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors`}
         >
           Continue
         </button>
@@ -352,7 +333,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
               type={showPassword ? 'text' : 'password'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className={`w-full pl-11 pr-11 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:${themeColors.focus} transition-all text-gray-900`}
+              className={`w-full pl-11 pr-11 py-3 rounded-xl border border-gray-300 focus:ring-2 ${focusClasses} transition-all text-gray-900`}
               placeholder="Create a strong password"
             />
             <button
@@ -366,7 +347,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
         </div>
         
         {newPassword && (
-          <div className={`bg-${themeColors.primaryLight}/30 p-3 rounded-lg space-y-2`}>
+          <div className="bg-accent/10 p-3 rounded-lg space-y-2">
             <div className="text-sm font-medium text-gray-700">Password Requirements:</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="flex items-center">
@@ -414,7 +395,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`w-full pl-11 pr-11 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:${themeColors.focus} transition-all text-gray-900`}
+              className={`w-full pl-11 pr-11 py-3 rounded-xl border border-gray-300 focus:ring-2 ${focusClasses} transition-all text-gray-900`}
               placeholder="Confirm your password"
             />
             <button
@@ -440,7 +421,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
           <button
             onClick={handleResetPassword}
             disabled={!passwordValidation.isValid || newPassword !== confirmPassword || isLoading}
-            className={`px-6 py-2 rounded-lg font-medium text-white bg-${themeColors.primary} hover:bg-${themeColors.primaryHover} ${!passwordValidation.isValid || newPassword !== confirmPassword || isLoading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors`}
+            className={`px-6 py-2 rounded-lg font-medium text-white bg-accent hover:bg-accent ${!passwordValidation.isValid || newPassword !== confirmPassword || isLoading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors`}
           >
             {isLoading ? (
               <>
@@ -463,7 +444,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
 
   const renderSuccessStep = () => (
     <div className="space-y-5 text-center py-6">
-      <div className={`h-20 w-20 mx-auto rounded-full flex items-center justify-center bg-${themeColors.primaryLight} text-${themeColors.primary}`}>
+      <div className="h-20 w-20 mx-auto rounded-full flex items-center justify-center bg-accent/10 text-accent">
         <CheckCircle className="h-10 w-10" />
       </div>
       
@@ -476,7 +457,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, userType }) => {
       <div className="pt-4">
         <button
           onClick={handleClose}
-          className={`px-6 py-3 rounded-lg font-medium text-white bg-${themeColors.primary} hover:bg-${themeColors.primaryHover} transition-colors`}
+          className="px-6 py-3 rounded-lg font-medium text-white bg-accent hover:bg-accent transition-colors"
         >
           Back to Login
         </button>

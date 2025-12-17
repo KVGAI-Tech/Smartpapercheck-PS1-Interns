@@ -498,7 +498,7 @@ const CourseDetails = () => {
                     </div>
 
                     <div className="mt-6 -mb-px">
-                        <div className="flex flex-wrap gap-2 border-b border-gray-200">
+                        <div className="flex flex-wrap gap-2 border-b border-gray-200 max-w-full px-4 sm:px-0 sm:flex-nowrap sm:overflow-x-auto sm:whitespace-nowrap">
                             {[
                                 { id: 'students', label: 'Students' },
                                 { id: 'instructors', label: 'Instructors' },
@@ -513,7 +513,7 @@ const CourseDetails = () => {
                                         setSearchQuery('');
                                         setSelectedSection('All sections');
                                     }}
-                                    className={`relative -mb-px px-3 py-2 text-sm font-medium rounded-t-lg transition-colors
+                                    className={`relative -mb-px px-3 py-2 text-sm font-medium rounded-t-lg transition-colors flex-1 basis-1/3 sm:flex-none sm:basis-auto sm:shrink-0
                                         ${activeTab === tab.id
                                             ? 'text-accent border-b-2 border-accent bg-accent/5'
                                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}

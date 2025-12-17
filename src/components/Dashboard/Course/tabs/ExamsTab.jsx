@@ -432,10 +432,12 @@
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden
         transition-all duration-300 hover:shadow-lg">
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-50">
-          <div className="flex items-center gap-6">
-            <h3 className="text-xl font-semibold text-gray-900">{exam.exam_name}</h3>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 min-w-0">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words min-w-0">
+              {exam.exam_name}
+            </h3>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 {new Date(exam.date || Date.now()).toLocaleDateString()}
@@ -445,36 +447,37 @@
             </div>
           </div>
   
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => onGetEnrollments(exam.id)}
-              className="px-4 py-2 text-gray-700 bg-gray-50 hover:bg-gray-100 
-                rounded-lg flex items-center gap-2 transition-colors transform hover:scale-105"
+              className="w-full sm:w-auto px-3 sm:px-4 py-2 text-gray-700 bg-gray-50 hover:bg-gray-100 
+                rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               <Users className="w-4 h-4" />
-              <span>Manage Enrollments</span>
+              <span className="sm:hidden">Enroll</span>
+              <span className="hidden sm:inline">Manage Enrollments</span>
             </button>
             <button
               onClick={() => onStartEvaluation(exam.id)}
-              className="px-4 py-2 text-white bg-accent hover:bg-accent
-                rounded-lg flex items-center gap-2 transition-colors shadow-sm transform hover:scale-105"
+              className="w-full sm:w-auto px-3 sm:px-4 py-2 text-white bg-accent hover:bg-accent
+                rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
             >
               <PlayCircle className="w-4 h-4" />
               <span>Evaluate</span>
             </button>
   
-            <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center justify-end gap-2 sm:ml-2">
               <button
                 onClick={() => onEdit(exam)}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-lg
-                  hover:bg-gray-50 transition-all transform hover:scale-110"
+                  hover:bg-gray-50 transition-all"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onDelete(exam)}
                 className="p-2 text-gray-400 hover:text-red-600 rounded-lg
-                  hover:bg-red-50 transition-all transform hover:scale-110"
+                  hover:bg-red-50 transition-all"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -1372,8 +1375,8 @@
             ]}
           />
   
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="relative flex-1 max-w-xl min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
@@ -1386,11 +1389,11 @@
               />
             </div>
   
-            <div className="flex items-center gap-3">                                    
+            <div className="flex items-center gap-3 w-full sm:w-auto">                                    
               <button
                 onClick={onAdd}
-                className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white
-                  rounded-xl hover:bg-accent transition-all duration-300 transform hover:scale-102
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white
+                  rounded-xl hover:bg-accent transition-all duration-300
                   shadow-sm hover:shadow-md focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 <Plus className="w-5 h-5" />

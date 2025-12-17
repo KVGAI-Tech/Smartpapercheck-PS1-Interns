@@ -16,13 +16,12 @@ const BackButton = () => {
       transition={{ duration: 0.5 }}
       whileHover={{ 
         scale: 1.05,
-        boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.3)"
+        boxShadow: "0 10px 25px -5px rgba(22, 109, 112, 0.25)"
       }}
       whileTap={{ scale: 0.95 }}
       className="group fixed top-4 left-4 md:top-6 md:left-6 z-50 flex items-center gap-2 
                 px-5 py-3 rounded-full font-medium text-white shadow-lg
-                bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                hover:from-indigo-600 hover:via-purple-600 hover:to-blue-600"
+                bg-accent"
     >
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
@@ -40,7 +39,8 @@ const BackButton = () => {
 const AnimatedBackground = () => {
   return (
     <div className="absolute inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-purple-900/20 to-indigo-900/30"></div>
+      <div className="absolute inset-0 bg-white"></div>
+      <div className="absolute inset-0 bg-accent/5"></div>
 
       {[...Array(8)].map((_, i) => (
         <motion.div
@@ -48,13 +48,7 @@ const AnimatedBackground = () => {
           className="absolute rounded-full blur-3xl opacity-20"
           style={{
             background: `radial-gradient(circle, ${
-              i % 4 === 0
-                ? "rgba(79, 70, 229, 0.8)"
-                : i % 4 === 1
-                ? "rgba(147, 51, 234, 0.8)"
-                : i % 4 === 2
-                ? "rgba(59, 130, 246, 0.8)"
-                : "rgba(236, 72, 153, 0.8)"
+              "rgba(22, 109, 112, 0.7)"
             }, transparent)`,
             width: `${Math.random() * 30 + 15}rem`,
             height: `${Math.random() * 30 + 15}rem`,
@@ -73,8 +67,6 @@ const AnimatedBackground = () => {
           }}
         />
       ))}
-
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIG9wYWNpdHk9IjAuMDYiPjxjaXJjbGUgY3g9IjMwIiBjeT0iMzAiIHI9IjIwIi8+PC9nPjwvc3ZnPg==')] opacity-30"></div>
     </div>
   );
 };
@@ -84,7 +76,7 @@ const FloatingShapes = () => {
     {
       type: "rect",
       className:
-        "w-8 h-8 rounded-lg bg-blue-400/30 backdrop-blur-sm border border-blue-400/50",
+        "w-8 h-8 rounded-lg bg-accent/10 backdrop-blur-sm border border-accent/20",
       animate: {
         y: [-10, 10, -10],
         rotate: [0, 10, 0],
@@ -94,7 +86,7 @@ const FloatingShapes = () => {
     {
       type: "circle",
       className:
-        "w-10 h-10 rounded-full bg-purple-400/30 backdrop-blur-sm border border-purple-400/50",
+        "w-10 h-10 rounded-full bg-accent/10 backdrop-blur-sm border border-accent/20",
       animate: {
         y: [10, -10, 10],
         x: [-5, 5, -5],
@@ -104,7 +96,7 @@ const FloatingShapes = () => {
     {
       type: "triangle",
       className:
-        "w-0 h-0 border-l-[12px] border-r-[12px] border-b-[20px] border-l-transparent border-r-transparent border-b-green-400/50",
+        "w-0 h-0 border-l-[12px] border-r-[12px] border-b-[20px] border-l-transparent border-r-transparent border-b-accent/40",
       animate: {
         y: [0, -15, 0],
         rotate: [0, -10, 0],
@@ -114,7 +106,7 @@ const FloatingShapes = () => {
     {
       type: "rect",
       className:
-        "w-6 h-14 rounded-lg bg-indigo-400/30 backdrop-blur-sm border border-indigo-400/50",
+        "w-6 h-14 rounded-lg bg-accent/10 backdrop-blur-sm border border-accent/20",
       animate: {
         x: [-8, 8, -8],
         rotate: [0, -5, 0],
@@ -124,7 +116,7 @@ const FloatingShapes = () => {
     {
       type: "diamond",
       className:
-        "w-12 h-12 bg-pink-400/30 backdrop-blur-sm border border-pink-400/50",
+        "w-12 h-12 bg-accent/10 backdrop-blur-sm border border-accent/20",
       style: { transform: "rotate(45deg)" },
       animate: {
         y: [-12, 12, -12],
@@ -136,7 +128,7 @@ const FloatingShapes = () => {
     {
       type: "hexagon",
       className:
-        "w-14 h-12 bg-amber-400/30 backdrop-blur-sm border border-amber-400/50",
+        "w-14 h-12 bg-accent/10 backdrop-blur-sm border border-accent/20",
       style: {
         clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
       },
@@ -150,7 +142,7 @@ const FloatingShapes = () => {
     {
       type: "star",
       className:
-        "w-10 h-10 bg-cyan-400/30 backdrop-blur-sm border border-cyan-400/50",
+        "w-10 h-10 bg-accent/10 backdrop-blur-sm border border-accent/20",
       style: {
         clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
       },
@@ -163,7 +155,7 @@ const FloatingShapes = () => {
     {
       type: "wave",
       className:
-        "w-16 h-8 bg-emerald-400/30 backdrop-blur-sm border border-emerald-400/50",
+        "w-16 h-8 bg-accent/10 backdrop-blur-sm border border-accent/20",
       style: {
         borderRadius: "50% 50% 50% 50% / 60% 60% 40% 40%",
       },
@@ -195,25 +187,6 @@ const FloatingShapes = () => {
           }}
         />
       ))}
-
-      {shapes.map((shape, index) => (
-        <motion.div
-          key={`right-${index}`}
-          className={`absolute ${shape.className}`}
-          style={{
-            ...shape.style,
-            top: `${20 + index * 10}%`,
-            right: index % 2 === 0 ? "18%" : "5%",
-          }}
-          animate={shape.animate}
-          transition={{
-            duration: 5 + index,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: index * 0.5,
-          }}
-        />
-      ))}
     </div>
   );
 };
@@ -225,11 +198,9 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
     {
       id: "professor",
       name: "Professor",
-      color: "from-blue-600 to-indigo-700",
-      hoverColor: "hover:from-blue-700 hover:to-indigo-800",
-      textColor: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-500",
+      textColor: "text-accent",
+      bgColor: "bg-accent/10",
+      borderColor: "border-accent",
       description:
         "Create exams, manage courses, and evaluate student performance",
       icon: (
@@ -248,11 +219,9 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
     {
       id: "student",
       name: "Student",
-      color: "from-green-500 to-emerald-600",
-      hoverColor: "hover:from-green-600 hover:to-emerald-700",
-      textColor: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-500",
+      textColor: "text-accent",
+      bgColor: "bg-accent/10",
+      borderColor: "border-accent",
       description: "View enrolled courses, track results, and submit rechecks",
       icon: (
         <svg
@@ -302,7 +271,7 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
           >
             {(hoveredRole === role.id || selectedRole === role.id) && (
               <motion.div
-                className={`absolute inset-0 bg-gradient-to-r ${role.color} opacity-0`}
+                className="absolute inset-0 bg-accent opacity-0"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.05 }}
                 exit={{ opacity: 0 }}
@@ -314,7 +283,7 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
               className={`p-3 rounded-xl flex items-center justify-center
               ${
                 selectedRole === role.id
-                  ? `bg-gradient-to-br ${role.color} text-white`
+                  ? "bg-accent text-white"
                   : `bg-gray-100/80 ${role.textColor}`
               }`}
             >
@@ -336,10 +305,7 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className={`w-3 h-3 rounded-full ${role.textColor.replace(
-                    "text",
-                    "bg"
-                  )}`}
+                  className="w-3 h-3 rounded-full bg-accent"
                 />
               )}
             </div>
@@ -361,10 +327,7 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
                 "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
             }}
             whileTap={{ scale: 0.98 }}
-            className={`px-10 py-3.5 rounded-xl font-medium bg-gradient-to-r 
-              ${roles.find((r) => r.id === selectedRole)?.color}
-              ${roles.find((r) => r.id === selectedRole)?.hoverColor}
-              text-white shadow-lg shadow-current/20`}
+            className="px-10 py-3.5 rounded-xl font-medium bg-accent text-white shadow-lg"
             onClick={() => onRoleSelect(selectedRole, true)}
           >
             Continue as {roles.find((r) => r.id === selectedRole)?.name}
@@ -453,7 +416,7 @@ const RoleAuth = () => {
         return (
           <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md mx-auto border border-gray-200/50 relative overflow-hidden">
             <div className="flex items-center justify-center py-10">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent"></div>
             </div>
           </div>
         );
@@ -525,7 +488,7 @@ const RoleAuth = () => {
             transition={{ duration: 0.6 }}
             className="inline-block mb-2 bg-white/20 backdrop-blur-md rounded-full px-5 py-1.5 border border-white/30"
           >
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 font-medium">
+            <span className="text-accent font-medium">
               Next-Gen Evaluation Platform
             </span>
           </motion.div>
@@ -537,7 +500,7 @@ const RoleAuth = () => {
             className="text-4xl md:text-5xl font-bold mb-3 text-gray-900 drop-shadow-sm"
           >
             Welcome to{" "}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+            <span className="text-accent">
               Smart QnA
             </span>
           </motion.h1>
