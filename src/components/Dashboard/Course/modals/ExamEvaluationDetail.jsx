@@ -25,8 +25,8 @@ const AnimatedButton = ({
     const baseStyle = "rounded-lg transition-all flex items-center justify-center gap-2 font-medium";
     
     const colorStyles = {
-      primary: `bg-blue-600 hover:bg-blue-700 text-white ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:shadow-blue-500/20'}`,
-      success: `bg-green-600 hover:bg-green-700 text-white ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:shadow-green-500/20'}`,
+      primary: `bg-accent hover:bg-accent/90 text-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
+      success: `bg-accent hover:bg-accent/90 text-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
       danger: `bg-red-600 hover:bg-red-700 text-white ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:shadow-red-500/20'}`,
       secondary: `bg-gray-200 hover:bg-gray-300 text-gray-800 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm hover:shadow-gray-200/50'}`,
       ghost: `bg-transparent hover:bg-gray-100 text-gray-700 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
@@ -82,7 +82,7 @@ const AnimatedCard = ({
 }) => {
   return (
     <motion.div
-      className={`bg-white border border-gray-200 rounded-xl ${highlight ? 'ring-2 ring-blue-500 ring-opacity-50' : ''} ${hoverEffect ? 'hover:shadow-md hover:border-blue-100' : ''} transition-all duration-200 ${className}`}
+      className={`bg-white border border-gray-200 rounded-xl ${highlight ? 'ring-2 ring-accent ring-opacity-50' : ''} ${hoverEffect ? 'hover:shadow-md hover:border-accent/20' : ''} transition-all duration-200 ${className}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -106,10 +106,9 @@ const ScoreIndicator = ({ value, maxValue, size = "md", animated = true }) => {
   };
   
   const getColorClass = () => {
-    if (percentage >= 80) return "bg-green-500";
-    if (percentage >= 60) return "bg-blue-500";
-    if (percentage >= 40) return "bg-yellow-500";
-    if (percentage >= 20) return "bg-orange-500";
+    if (percentage >= 60) return "bg-accent/80";
+    if (percentage >= 40) return "bg-amber-500/80";
+    if (percentage >= 20) return "bg-amber-600/80";
     return "bg-red-500";
   };
   
@@ -153,7 +152,7 @@ const QuestionNavigation = ({
         <div className="relative">
           <div className="h-2 bg-gray-100 rounded-full w-full overflow-hidden">
             <div 
-              className="h-full bg-blue-500 rounded-full transition-all duration-500"
+              className="h-full bg-accent/80 rounded-full transition-all duration-500"
               style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
             />
           </div>
@@ -162,7 +161,7 @@ const QuestionNavigation = ({
             {Array.from({ length: totalQuestions }).map((_, idx) => (
               <div 
                 key={idx} 
-                className={`relative cursor-pointer group ${idx <= currentIndex ? 'text-blue-600' : 'text-gray-400'}`}
+                className={`relative cursor-pointer group ${idx <= currentIndex ? 'text-accent' : 'text-gray-400'}`}
               >
                 <div className={`
                   absolute -top-7 left-1/2 transform -translate-x-1/2 translate-y-2 opacity-0 
@@ -174,9 +173,9 @@ const QuestionNavigation = ({
                 <div 
                   className={`
                     h-5 w-5 rounded-full flex items-center justify-center text-xs
-                    ${idx === currentIndex ? 'bg-blue-600 text-white' : 
-                      idx < currentIndex ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}
-                    ${questionScores[idx]?.score === questionScores[idx]?.max ? 'ring-2 ring-green-500' : ''}
+                    ${idx === currentIndex ? 'bg-accent text-white' : 
+                      idx < currentIndex ? 'bg-accent/10 text-accent' : 'bg-gray-100 text-gray-500'}
+                    ${questionScores[idx]?.score === questionScores[idx]?.max ? 'ring-2 ring-accent/40' : ''}
                     transition-all duration-300
                   `}
                 >
@@ -211,15 +210,15 @@ const ToastNotification = ({ type, message, show, onClose }) => {
   const getToastStyles = () => {
     switch (type) {
       case 'success':
-        return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
+        return 'bg-accent text-white';
       case 'error':
-        return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
+        return 'bg-red-600 text-white';
       case 'warning':
-        return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black';
+        return 'bg-amber-500 text-black';
       case 'info':
-        return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
+        return 'bg-accent text-white';
       default:
-        return 'bg-gradient-to-r from-gray-700 to-gray-800 text-white';
+        return 'bg-gray-800 text-white';
     }
   };
   
@@ -277,7 +276,7 @@ const RubricScoreSelector = ({
   disabled = false
 }) => {
   const steps = Math.ceil(maxValue * 2) + 1;
-  const activeColor = 'bg-gradient-to-r from-blue-500 to-blue-600';
+  const activeColor = 'bg-accent/80';
   const inactiveColor = 'bg-gray-200';
   
   const getValueForStep = (step) => step / 2;
@@ -323,7 +322,7 @@ const GradientBorderWrapper = ({
   return (
     <div className={`relative rounded-xl overflow-hidden ${className}`}>
       <motion.div 
-        className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-500 to-blue-500"
+        className="absolute inset-0 bg-accent"
         animate={{ 
           opacity: active ? 1 : 0,
           rotate: active ? 360 : 0
@@ -348,11 +347,11 @@ const StatusBadge = ({ status, className = "" }) => {
   const getStatusColor = () => {
     switch (status) {
       case 'completed':
-        return 'bg-green-500';
+        return 'bg-accent/80';
       case 'pending':
-        return 'bg-yellow-500';
+        return 'bg-amber-500';
       case 'processing':
-        return 'bg-blue-500';
+        return 'bg-accent/80';
       case 'failed':
         return 'bg-red-500';
       default:

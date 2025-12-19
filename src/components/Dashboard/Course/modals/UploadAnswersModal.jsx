@@ -118,156 +118,158 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
       <div
-        className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col m-4"
+        className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col m-4"
         onClick={(e) => e.stopPropagation()}
       >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <FileArchive className="w-6 h-6 text-blue-600" />
+      <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-gray-200 bg-white">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="p-2.5 bg-accent/10 rounded-xl flex-shrink-0">
+            <FileArchive className="w-6 h-6 text-accent" />
           </div>
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Upload Student Answer Sheets</h2>
-            <p className="text-sm text-gray-500">Upload a ZIP file with question-wise answers</p>
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-gray-900 truncate">Upload Answer Sheets</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Upload a single <span className="font-medium text-gray-700">.zip</span> with student folders and per-question images.
+            </p>
           </div>
         </div>
-        <button
-          onClick={handleClose}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label="Close"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleClose}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {!uploadResults ? (
-          <div className="space-y-6">
-            {/* Structure Guide */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <FolderOpen className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    📦 Required ZIP Structure
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Your ZIP file must follow this exact folder structure for proper processing:
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 font-mono text-sm border border-blue-100">
-                <div className="space-y-1 text-gray-700">
-                  <div className="flex items-center gap-2">
-                    <FileArchive className="w-4 h-4 text-blue-500" />
-                    <span className="font-semibold">answers.zip</span>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+                <div className="flex items-start gap-3">
+                  <FolderOpen className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900">ZIP structure (required)</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Keep the folder names consistent so the system can match student IDs and question numbers.
+                    </p>
                   </div>
-                  <div className="ml-4 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Folder className="w-4 h-4 text-yellow-500" />
-                      <span>├── student_id-1/</span>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-gray-200 overflow-hidden">
+                  <div className="px-4 py-3 bg-gradient-to-r from-accent/10 to-white border-b border-gray-200">
+                    <div className="flex items-center gap-2 text-xs font-medium text-gray-700">
+                      <FileArchive className="w-4 h-4 text-accent" />
+                      <span>Example</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white/70 border border-gray-200 text-gray-600">zip tree</span>
                     </div>
-                    <div className="ml-8 space-y-1">
+                  </div>
+
+                  <div className="bg-white p-4 font-mono text-xs overflow-auto">
+                    <div className="space-y-1 text-gray-700">
                       <div className="flex items-center gap-2">
-                        <Folder className="w-4 h-4 text-yellow-500" />
-                        <span>│   ├── Ans1/</span>
+                        <FileArchive className="w-4 h-4 text-accent" />
+                        <span className="font-semibold">answers.zip</span>
                       </div>
-                      <div className="ml-12 space-y-1">
+                      <div className="ml-4 space-y-1">
                         <div className="flex items-center gap-2">
-                          <Image className="w-3 h-3 text-green-500" />
-                          <span className="text-xs">│   │   ├── Ans1-1.png</span>
-                          <span className="text-xs text-gray-400">← Q1, Page 1</span>
+                          <Folder className="w-4 h-4 text-amber-600" />
+                          <span className="font-medium text-gray-800">├── student_id-1/</span>
+                        </div>
+                        <div className="ml-8 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Folder className="w-4 h-4 text-amber-500" />
+                            <span>│   ├── Ans1/</span>
+                          </div>
+                          <div className="ml-12 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Image className="w-3 h-3 text-emerald-600" />
+                              <span>│   │   ├── Ans1-1.png</span>
+                              <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Q1 • page 1</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Image className="w-3 h-3 text-emerald-600" />
+                              <span>│   │   └── Ans1-2.png</span>
+                              <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Q1 • page 2</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Folder className="w-4 h-4 text-amber-500" />
+                            <span>│   ├── Ans2/</span>
+                          </div>
+                          <div className="ml-12">
+                            <div className="flex items-center gap-2">
+                              <Image className="w-3 h-3 text-emerald-600" />
+                              <span>│   │   └── Ans2-1.png</span>
+                              <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Q2 • page 1</span>
+                            </div>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Image className="w-3 h-3 text-green-500" />
-                          <span className="text-xs">│   │   └── Ans1-2.png</span>
-                          <span className="text-xs text-gray-400">← Q1, Page 2</span>
+                          <Folder className="w-4 h-4 text-amber-600" />
+                          <span className="font-medium text-gray-800">└── student_id-2/</span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Folder className="w-4 h-4 text-yellow-500" />
-                        <span>│   ├── Ans2/</span>
-                      </div>
-                      <div className="ml-12">
-                        <div className="flex items-center gap-2">
-                          <Image className="w-3 h-3 text-green-500" />
-                          <span className="text-xs">│   │   └── Ans2-1.png</span>
-                          <span className="text-xs text-gray-400">← Q2, Page 1</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Folder className="w-4 h-4 text-yellow-500" />
-                        <span>│   └── Ans3/</span>
-                      </div>
-                      <div className="ml-12">
-                        <div className="flex items-center gap-2">
-                          <Image className="w-3 h-3 text-green-500" />
-                          <span className="text-xs">│       └── Ans3-1.png</span>
-                          <span className="text-xs text-gray-400">← Q3, Page 1</span>
+                        <div className="ml-8">
+                          <span className="text-gray-400">...</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Folder className="w-4 h-4 text-yellow-500" />
-                      <span>└── student_id-2/</span>
-                    </div>
-                    <div className="ml-8">
-                      <span className="text-gray-400">...</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold text-gray-900">Rules</h4>
+                      <ul className="mt-2 space-y-2 text-sm text-gray-700">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span>Folder: <code className="bg-white px-2 py-0.5 rounded text-xs">student_id-{'{number}'}</code></span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span>Question folder: <code className="bg-white px-2 py-0.5 rounded text-xs">Ans1</code>, <code className="bg-white px-2 py-0.5 rounded text-xs">Ans2</code>…</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span>File name: <code className="bg-white px-2 py-0.5 rounded text-xs">Ans1-1.png</code>, <code className="bg-white px-2 py-0.5 rounded text-xs">Ans2-1.jpg</code></span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span>Supported: PNG, JPG, JPEG</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-red-700">Missing question folder = Question unattempted</span>
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Rules */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">⚠️ Important Rules:</h4>
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span>Folder name: <code className="bg-white px-2 py-0.5 rounded text-xs">student_id-{'{number}'}</code> (e.g., student_id-1, student_id-101)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span>Question folder: <code className="bg-white px-2 py-0.5 rounded text-xs">Ans1</code>, <code className="bg-white px-2 py-0.5 rounded text-xs">Ans2</code>, etc.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span>Image name: <code className="bg-white px-2 py-0.5 rounded text-xs">Ans1-1.png</code>, <code className="bg-white px-2 py-0.5 rounded text-xs">Ans2-1.jpg</code></span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span>Supported formats: PNG, JPG, JPEG</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-red-600">Missing question folder = Question not attempted (0 marks)</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Upload Area */}
-            <div
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-xl p-8 transition-all duration-300 ${
-                isDragging
-                  ? 'border-blue-500 bg-blue-50'
-                  : zipFile
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50'
-              }`}
-            >
+            <div className="lg:col-span-3">
+              <div
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-2xl p-8 transition-all duration-300 ${
+                  isDragging
+                    ? 'border-accent bg-accent/5'
+                    : zipFile
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 bg-white hover:border-accent/40 hover:bg-accent/5'
+                }`}
+              >
               <input
                 ref={fileInputRef}
                 type="file"
@@ -298,7 +300,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
                 </div>
               ) : (
                 <div className="text-center">
-                  <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+                  <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-accent' : 'text-gray-400'}`} />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     {isDragging ? 'Drop ZIP file here' : 'Upload Answer Sheets ZIP'}
                   </h3>
@@ -307,12 +309,13 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
                   </p>
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    className="px-6 py-2.5 bg-accent text-white rounded-xl hover:bg-accent transition-colors font-medium shadow-sm hover:shadow-md"
                   >
                     Choose ZIP File
                   </button>
                 </div>
               )}
+            </div>
             </div>
           </div>
         ) : (
@@ -415,7 +418,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
 
             <button
               onClick={() => setUploadResults(null)}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="w-full px-6 py-3 bg-accent text-white rounded-xl hover:bg-accent transition-colors font-medium shadow-sm hover:shadow-md"
             >
               Upload Another File
             </button>
@@ -425,18 +428,18 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
 
       {/* Footer */}
       {!uploadResults && (
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
           <button
             onClick={handleClose}
             disabled={isUploading}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium disabled:opacity-50"
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors font-medium disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleUpload}
             disabled={!zipFile || isUploading}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2 bg-accent text-white rounded-xl hover:bg-accent transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? (
               <>

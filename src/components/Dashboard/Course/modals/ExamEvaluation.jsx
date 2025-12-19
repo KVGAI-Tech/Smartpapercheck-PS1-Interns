@@ -24,35 +24,27 @@ const fadeInUp = {
 const StatusBadge = ({ status }) => {
   const statusConfig = {
     pending: {
-      bgColor: 'bg-amber-100',
-      textColor: 'text-amber-800',
-      borderColor: 'border-amber-200',
-      gradientFrom: 'from-amber-50',
-      gradientTo: 'to-amber-100',
+      bgColor: 'bg-accent/5',
+      textColor: 'text-accent',
+      borderColor: 'border-accent/20',
       icon: <Clock className="w-3 h-3 mr-1.5" />
     },
     completed: {
-      bgColor: 'bg-emerald-100',
-      textColor: 'text-emerald-800',
-      borderColor: 'border-emerald-200',
-      gradientFrom: 'from-emerald-50',
-      gradientTo: 'to-emerald-100',
+      bgColor: 'bg-accent/10',
+      textColor: 'text-accent',
+      borderColor: 'border-accent/20',
       icon: <CheckCircle className="w-3 h-3 mr-1.5" />
     },
     inProgress: {
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-800',
-      borderColor: 'border-blue-200',
-      gradientFrom: 'from-blue-50',
-      gradientTo: 'to-blue-100',
+      bgColor: 'bg-accent/10',
+      textColor: 'text-accent',
+      borderColor: 'border-accent/20',
       icon: <Loader className="w-3 h-3 mr-1.5 animate-spin" />
     },
     failed: {
       bgColor: 'bg-rose-100',
       textColor: 'text-rose-800',
       borderColor: 'border-rose-200',
-      gradientFrom: 'from-rose-50',
-      gradientTo: 'to-rose-100',
       icon: <XCircle className="w-3 h-3 mr-1.5" />
     }
   };
@@ -61,7 +53,7 @@ const StatusBadge = ({ status }) => {
 
   return (
     <span className={`px-2.5 py-1 rounded-full text-xs font-medium inline-flex items-center border shadow-sm
-      bg-gradient-to-r ${config.gradientFrom} ${config.gradientTo} ${config.textColor} ${config.borderColor}`}>
+      ${config.bgColor} ${config.textColor} ${config.borderColor}`}>
       {config.icon}
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
@@ -84,22 +76,22 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
     switch (type) {
       case 'success':
         return {
-          bg: 'bg-gradient-to-r from-emerald-500 to-green-500',
+          bg: 'bg-accent',
           icon: <CheckCircle className="w-5 h-5" />
         };
       case 'error':
         return {
-          bg: 'bg-gradient-to-r from-rose-500 to-red-500',
+          bg: 'bg-red-600',
           icon: <XCircle className="w-5 h-5" />
         };
       case 'warning':
         return {
-          bg: 'bg-gradient-to-r from-amber-400 to-yellow-500',
+          bg: 'bg-amber-500',
           icon: <AlertTriangle className="w-5 h-5" />
         };
       default:
         return {
-          bg: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+          bg: 'bg-accent',
           icon: <Loader className="w-5 h-5" />
         };
     }
@@ -148,15 +140,15 @@ const ProgressBar = ({ value, max, color = 'blue' }) => {
   const percentage = max > 0 ? Math.min(100, (value / max) * 100) : 0;
 
   const colorStyles = {
-    blue: "bg-gradient-to-r from-blue-500 to-indigo-500",
-    green: "bg-gradient-to-r from-emerald-500 to-green-500",
-    amber: "bg-gradient-to-r from-amber-400 to-yellow-500",
-    red: "bg-gradient-to-r from-rose-500 to-red-500",
-    purple: "bg-gradient-to-r from-purple-500 to-indigo-500"
+    blue: "bg-accent/80",
+    green: "bg-accent/80",
+    amber: "bg-accent/40",
+    red: "bg-red-600/80",
+    purple: "bg-accent/80"
   };
 
   return (
-    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${percentage}%` }}
@@ -169,34 +161,34 @@ const ProgressBar = ({ value, max, color = 'blue' }) => {
 
 const BatchProcessingIndicator = ({ completed, total }) => {
   return (
-    <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg overflow-hidden">
+    <div className="mt-4 bg-accent/5 border border-accent/10 rounded-lg overflow-hidden">
       <div className="p-4 flex items-start gap-3">
         <div className="flex-shrink-0 mt-1">
           <div className="relative w-6 h-6">
             <motion.div
-              className="w-6 h-6 rounded-full border-2 border-blue-200"
+              className="w-6 h-6 rounded-full border-2 border-accent/30"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             />
             <motion.div
-              className="absolute inset-0 border-t-2 border-blue-500 rounded-full"
+              className="absolute inset-0 border-t-2 border-accent rounded-full"
               animate={{ rotate: 360 }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
             />
           </div>
         </div>
         <div className="flex-1">
-          <h3 className="text-blue-700 font-medium mb-2">AI Evaluation in Progress</h3>
-          <p className="text-sm text-blue-600 mb-3">Processing student submissions. This may take several minutes as our AI analyzes answers in detail.</p>
-          <div className="relative w-full h-2 bg-blue-100 rounded-full overflow-hidden">
+          <h3 className="text-accent font-medium mb-2">AI Evaluation in Progress</h3>
+          <p className="text-sm text-gray-600 mb-3">Processing student submissions. This may take several minutes as our AI analyzes answers in detail.</p>
+          <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
-              className="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
+              className="absolute top-0 left-0 h-full bg-accent/80 rounded-full"
               initial={{ width: '0%' }}
               animate={{ width: total > 0 ? `${(completed / total) * 100}%` : '0%' }}
               transition={{ duration: 0.3 }}
             />
           </div>
-          <div className="mt-2 text-xs text-blue-700 font-medium flex justify-between">
+          <div className="mt-2 text-xs text-accent font-medium flex justify-between">
             <span>{completed} of {total} completed</span>
             <span>{Math.round((completed / total) * 100)}%</span>
           </div>
@@ -685,7 +677,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onRetry}
-        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 mx-auto"
+        className="px-6 py-3 bg-accent text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 mx-auto"
       >
         <RefreshCw className="w-5 h-5" />
         Retry
@@ -700,10 +692,10 @@ const ExamEvaluation = ({ examId, onClose }) => {
       className="text-center py-16 bg-white rounded-xl shadow-sm"
     >
       <motion.div
-        className="w-20 h-20 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"
+        className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"
         whileHover={{ scale: 1.1 }}
       >
-        <Users className="w-10 h-10 text-blue-400" />
+        <Users className="w-10 h-10 text-accent" />
       </motion.div>
       <h3 className="text-xl font-medium text-gray-900 mb-3">No Students Enrolled</h3>
       <p className="text-gray-500 max-w-md mx-auto px-6">
@@ -732,7 +724,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
       >
         <div className="p-6 flex-1">
           <div className="flex items-center justify-between mb-4">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-medium text-lg shadow-md">
+            <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white font-medium text-lg shadow-md">
               {student.student_name?.charAt(0) || '?'}
             </div>
             <StatusBadge status={status} />
@@ -743,7 +735,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
           <p className="text-xs text-gray-400 mb-3">{getUploadedBy(student)}</p>
 
           {student.recheck_requested && (
-            <div className="mb-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded flex items-center">
+            <div className="mb-2 px-2 py-1 bg-accent/10 text-accent text-xs rounded flex items-center">
               <AlertTriangle className="w-3 h-3 mr-1" />
               Recheck requested
             </div>
@@ -764,12 +756,12 @@ const ExamEvaluation = ({ examId, onClose }) => {
           ) : (
             <div className="h-7 mb-4">
               {isInProgress ? (
-                <p className="text-xs text-blue-600 flex items-center">
+                <p className="text-xs text-accent flex items-center">
                   <Loader className="w-3 h-3 mr-1 animate-spin" />
                   Evaluation in progress...
                 </p>
               ) : batchEvaluating ? (
-                <p className="text-xs text-blue-600 flex items-center">
+                <p className="text-xs text-accent flex items-center">
                   <Clock className="w-3 h-3 mr-1" />
                   Waiting for batch evaluation...
                 </p>
@@ -790,7 +782,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+                  className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
                 >
                   <Eye className="w-4 h-4" />
                   <span className="font-medium">View Recheck</span>
@@ -801,7 +793,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => handleViewResults(student)}
-                className="w-full py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+                className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
               >
                 <Eye className="w-4 h-4" />
                 <span className="font-medium">View Results</span>
@@ -815,14 +807,14 @@ const ExamEvaluation = ({ examId, onClose }) => {
               disabled={!canEvaluate}
               className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all 
                 ${isInProgress
-                  ? 'bg-blue-200 text-blue-700 cursor-wait'
+                  ? 'bg-accent/10 text-accent cursor-wait'
                   : batchEvaluating
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : !canEvaluate
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : hasError
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-md'
-                        : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-md'
+                        ? 'bg-amber-500 text-white hover:shadow-md'
+                        : 'bg-accent text-white hover:shadow-md'
                 }`}
             >
               {isInProgress ? (
@@ -870,7 +862,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
           return {
             base: `${disabled
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg'}`,
+              : 'bg-accent text-white hover:shadow-lg'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
           };
@@ -886,7 +878,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
           return {
             base: `${disabled
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:shadow-lg'}`,
+              : 'bg-accent text-white hover:shadow-lg'}`,
             hover: !disabled && 'hover:scale-105',
             tap: !disabled && 'active:scale-95'
           };
@@ -917,17 +909,17 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
   const StatCard = ({ icon: Icon, label, value, color, percentage }) => {
     const gradients = {
-      blue: "from-blue-50 to-indigo-50 border-blue-100",
-      green: "from-emerald-50 to-green-50 border-emerald-100",
-      yellow: "from-amber-50 to-yellow-50 border-amber-100",
-      purple: "from-purple-50 to-indigo-50 border-purple-100"
+      blue: "bg-white border-gray-200",
+      green: "bg-white border-gray-200",
+      yellow: "bg-white border-gray-200",
+      purple: "bg-white border-gray-200"
     };
 
     const iconColors = {
-      blue: "bg-gradient-to-br from-blue-500 to-indigo-500",
-      green: "bg-gradient-to-br from-emerald-500 to-green-500",
-      yellow: "bg-gradient-to-br from-amber-500 to-yellow-500",
-      purple: "bg-gradient-to-br from-purple-500 to-indigo-500"
+      blue: "bg-accent",
+      green: "bg-accent",
+      yellow: "bg-accent/70",
+      purple: "bg-accent"
     };
 
     return (
@@ -936,7 +928,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
         initial="hidden"
         animate="visible"
         whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-        className={`bg-gradient-to-br ${gradients[color]} rounded-xl p-6 flex items-center justify-between shadow-sm border`}
+        className={`${gradients[color]} rounded-xl p-6 flex items-center justify-between shadow-sm border`}
       >
         <div>
           <p className="text-sm text-gray-600 mb-1">{label}</p>
@@ -975,12 +967,12 @@ const ExamEvaluation = ({ examId, onClose }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex flex-col h-full min-h-0 min-w-0 bg-white overflow-x-hidden">
       {showDetailView ? (
         <Suspense fallback={
-          <div className="flex flex-col items-center justify-center h-screen">
+          <div className="flex flex-col items-center justify-center h-full">
             <motion.div
-              className="w-16 h-16 border-4 border-t-blue-600 border-blue-200 rounded-full"
+              className="w-16 h-16 border-4 border-t-accent border-accent/20 rounded-full"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             />
@@ -1035,12 +1027,12 @@ const ExamEvaluation = ({ examId, onClose }) => {
           />
         </Suspense>
       ) : (
-        <div className="flex flex-col h-full p-4 md:p-6">
+        <div className="flex flex-col h-full min-h-0 min-w-0">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: pageLoaded ? 1 : 0 }}
             transition={{ duration: 0.5 }}
-            className="max-w-7xl mx-auto w-full flex flex-col h-full"
+            className="w-full flex flex-col h-full min-h-0 min-w-0"
           >
             <div className="flex flex-col gap-2">
               <motion.button
@@ -1067,7 +1059,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5, type: "spring" }}
-                    className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                    className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-accent/10 text-accent rounded-full"
                   >
                     <Star className="w-3 h-3 mr-1" />
                     <span>AI Powered</span>
@@ -1077,7 +1069,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
               </motion.div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-3">
               <StatCard
                 icon={Users}
                 label="Total Students"
@@ -1110,7 +1102,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.4 }}
-              className="bg-white rounded-xl shadow-sm p-4 md:p-6 mt-6"
+              className="bg-white rounded-xl shadow-sm p-4 md:p-5 mt-4"
             >
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="relative flex-1">
@@ -1120,7 +1112,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                     placeholder="Search by name or student ID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
                   />
                 </div>
 
@@ -1129,7 +1121,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                      className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
                     >
                       <option value="all">All Status</option>
                       <option value="pending">Pending</option>
@@ -1141,13 +1133,13 @@ const ExamEvaluation = ({ examId, onClose }) => {
                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                     <button
                       onClick={() => setViewMode('list')}
-                      className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                      className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-accent text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
                       <List className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => setViewMode('grid')}
-                      className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                      className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-accent text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
                       <BarChart2 className="w-5 h-5" />
                     </button>
@@ -1203,7 +1195,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
               
             </motion.div>
 
-            <div className="flex-1 overflow-auto mt-6 pb-6">
+            <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden mt-4 pb-2">
               {loading ? (
                 <LoadingView />
               ) : error ? (
@@ -1221,9 +1213,9 @@ const ExamEvaluation = ({ examId, onClose }) => {
                       initial="hidden"
                       animate="visible"
                       transition={{ delay: 0.5 }}
-                      className="bg-white rounded-xl shadow-sm overflow-hidden"
+                      className="bg-white rounded-xl shadow-sm overflow-hidden min-w-0"
                     >
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto max-w-full">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50 sticky top-0 z-10">
                             <tr>
@@ -1239,7 +1231,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                   key={column.key}
                                   onClick={() => column.key !== 'actions' && handleSort(column.key)}
                                   className={`px-6 py-3.5 text-left text-xs font-medium uppercase tracking-wider cursor-pointer select-none
-                                    ${column.key === sortConfig.key ? 'text-blue-600' : 'text-gray-500'}`}
+                                    ${column.key === sortConfig.key ? 'text-accent' : 'text-gray-500'}`}
                                 >
                                   <div className="flex items-center space-x-1">
                                     <span>{column.label}</span>
@@ -1271,18 +1263,18 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                   >
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
-                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-medium shadow-sm group-hover:shadow-md transition-shadow mr-3">
+                                        <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-white font-medium shadow-sm group-hover:shadow-md transition-shadow mr-3">
                                           {student.student_name?.charAt(0) || '?'}
                                         </div>
                                         <div>
-                                          <div className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                                          <div className="text-sm font-medium text-gray-900 group-hover:text-accent transition-colors">
                                             {student.student_name}
                                           </div>
                                           {student.email && (
                                             <div className="text-xs text-gray-500">{student.email}</div>
                                           )}
                                           {student.recheck_requested && (
-                                            <div className="text-xs text-purple-600 font-medium flex items-center mt-1">
+                                            <div className="text-xs text-amber-700 font-medium flex items-center mt-1">
                                               <AlertTriangle className="w-3 h-3 mr-1" />
                                               Recheck requested
                                             </div>
@@ -1308,9 +1300,8 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                               initial={{ width: 0 }}
                                               animate={{ width: `${(student.marks_obtained / (student.max_marks || 100)) * 100}%` }}
                                               transition={{ duration: 1, delay: 0.2 + (index * 0.05) }}
-                                              className={`h-2 rounded-full ${student.marks_obtained >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
-                                                student.marks_obtained >= 60 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
-                                                  'bg-gradient-to-r from-amber-500 to-yellow-500'
+                                              className={`h-2 rounded-full ${student.marks_obtained >= 60 ? 'bg-accent/80' :
+                                                'bg-accent/40'
                                                 }`}
                                             />
                                           </div>
@@ -1319,12 +1310,12 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                       ) : (
                                         <span className="text-sm text-gray-500 italic">
                                           {isInProgress ? (
-                                            <span className="text-blue-600 flex items-center">
+                                            <span className="text-accent flex items-center">
                                               <Loader className="w-3 h-3 mr-1 animate-spin" />
                                               Processing
                                             </span>
                                           ) : batchEvaluating ? (
-                                            <span className="text-blue-600 flex items-center">
+                                            <span className="text-accent flex items-center">
                                               <Clock className="w-3 h-3 mr-1" />
                                               Batch processing
                                             </span>
@@ -1350,7 +1341,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                               whileHover={{ scale: 1.05 }}
                                               whileTap={{ scale: 0.95 }}
                                               onClick={() => handleViewRecheckRequest(student)}
-                                              className="inline-flex items-center px-3 py-1.5 border border-purple-300 text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                              className="inline-flex items-center px-3 py-1.5 border border-amber-300 text-amber-800 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
                                             >
                                               <Eye className="w-4 h-4 mr-1.5" />
                                               View Recheck
@@ -1360,7 +1351,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => handleViewResults(student)}
-                                            className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                            className="inline-flex items-center px-3 py-1.5 border border-accent/20 text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
                                           >
                                             <Eye className="w-4 h-4 mr-1.5" />
                                             View Results
@@ -1373,7 +1364,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                             className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md w-full sm:w-auto ${
                                               isInProgress || batchEvaluating
                                                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
+                                                : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
                                             }`}
                                           >
                                             <RefreshCw className="w-4 h-4 mr-1.5" />
@@ -1386,7 +1377,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                               setHistoryEnrollmentId(student.enrollment_id);
                                               setShowHistoryModal(true);
                                             }}
-                                            className="inline-flex items-center px-3 py-1.5 border border-purple-300 text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                            className="inline-flex items-center px-3 py-1.5 border border-accent/20 text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
                                           >
                                             <History className="w-4 h-4 mr-1.5" />
                                             View History
@@ -1400,14 +1391,14 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                           disabled={!canEvaluate}
                                           className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md
                                             ${isInProgress
-                                              ? 'bg-blue-100 text-blue-700 cursor-wait'
+                                              ? 'bg-accent/10 text-accent cursor-wait'
                                               : batchEvaluating
                                                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                                 : !canEvaluate
                                                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                                   : hasError
-                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
-                                                    : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                                                    ? 'bg-amber-500/80 text-white hover:bg-amber-600/80'
+                                                    : 'bg-accent text-white hover:bg-accent/90'
                                             }`}
                                         >
                                           {isInProgress ? (
@@ -1513,7 +1504,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg">
-              <Loader className="w-8 h-8 animate-spin text-blue-600" />
+              <Loader className="w-8 h-8 animate-spin text-accent" />
             </div>
           </div>
         }>
@@ -1539,7 +1530,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg">
-              <Loader className="w-8 h-8 animate-spin text-purple-600" />
+              <Loader className="w-8 h-8 animate-spin text-accent" />
             </div>
           </div>
         }>

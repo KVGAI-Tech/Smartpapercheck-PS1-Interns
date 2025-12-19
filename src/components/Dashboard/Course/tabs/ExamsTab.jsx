@@ -1,4 +1,5 @@
   import React, { useState, useEffect, useCallback, useMemo } from 'react';
+  import { useNavigate } from 'react-router-dom';
   import {
     Search, Plus, Edit2, Trash2,
     ChevronRight, Calendar, Upload,
@@ -10,7 +11,6 @@
   import RubricModal from '../modals/RubricModal';
   import UploadAnswersModal from '../modals/UploadAnswersModal';
   import { API_BASE_URL } from '../../../../BaseURL';
-  const ExamEvaluation = React.lazy(() => import('../modals/ExamEvaluation'));
   
   const Toast = ({ message, type, show, onClose }) => {
     useEffect(() => {
@@ -821,8 +821,8 @@
                 <div className="text-lg font-semibold text-accent">{statusCounts.evaluated || 0}</div>
                 <div className="text-xs text-gray-500">Evaluated</div>
               </div>
-              <div className="bg-purple-50 p-3 rounded-lg text-center">
-                <div className="text-lg font-semibold text-purple-700">{statusCounts.recheck_requested || 0}</div>
+              <div className="bg-accent/10 p-3 rounded-lg text-center">
+                <div className="text-lg font-semibold text-accent">{statusCounts.recheck_requested || 0}</div>
                 <div className="text-xs text-gray-500">Recheck Requested</div>
               </div>
             </div>
@@ -951,6 +951,7 @@
     onRefresh = () => { },
     students = [],
   }) => {
+    const navigate = useNavigate();
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
     const [selectedExamId, setSelectedExamId] = useState(null);
@@ -959,8 +960,6 @@
     const [currentExamQuestions, setCurrentExamQuestions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-    const [showEvaluation, setShowEvaluation] = useState(false);
-    const [selectedExamForEvaluation, setSelectedExamForEvaluation] = useState(null);
     const [questionsHaveRubrics, setQuestionsHaveRubrics] = useState({});
     const [showRecheckRequests, setShowRecheckRequests] = useState(false);
     const [selectedExamForRecheck, setSelectedExamForRecheck] = useState(null);
@@ -1151,8 +1150,9 @@
         
         showToast('Preparing evaluation...', 'success');
         
-        setSelectedExamForEvaluation(examId);
-        setShowEvaluation(true);
+        navigate(`/courses/${courseId}/exams/${examId}/evaluations`, {
+          state: { from: 'exams' }
+        });
         
       } catch (error) {
         console.error('Error starting evaluation:', error);
@@ -1560,65 +1560,6 @@
           />
         </div>
   
-        {showEvaluation && (
-          <div className="fixed inset-0 z-50 bg-white">
-            <div className="min-h-screen p-6">
-              <React.Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-screen">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
-                  </div>
-                }
-              >
-                <ExamEvaluation
-                  examId={selectedExamForEvaluation}
-                  courseId={courseId}
-                  onClose={() => {
-                    setShowEvaluation(false);
-                    setSelectedExamForEvaluation(null);
-                  }}
-                  onEvaluateSubmission={async (examId, enrollmentId) => {
-                    try {
-                      if (!examId || !enrollmentId) {
-                        showToast('Error: Missing parameters for evaluation', 'error');
-                        return { status: 'failed', message: 'Missing parameters' };
-                      }
-                      
-                      const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluate/${enrollmentId}`, {
-                        method: 'GET',
-                        headers: {
-                          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({}) 
-                      });
-  
-                      if (!response.ok) {
-                        throw new Error(`API call failed with status ${response.status}`);
-                      } 
-                      
-                      const data = await response.json();
-                      if (data.code === 200) {
-                        showToast('Evaluation completed successfully', 'success');
-                        return data.data;
-                      } else {
-                        throw new Error(data.message || 'Evaluation failed');
-                      }
-                    } catch (error) {
-                      console.error('Error evaluating submission:', error);
-                      showToast(error.message || 'Failed to evaluate submission', 'error');
-                      
-                      return { 
-                        status: 'failed', 
-                        message: error.message || 'Failed to evaluate submission'
-                      };
-                    }
-                  }}
-                />
-              </React.Suspense>
-            </div>
-          </div>
-        )}
       </>
     );
   };

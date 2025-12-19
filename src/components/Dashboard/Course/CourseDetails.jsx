@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import StudentsTab from './tabs/StudentsTab';
 import InstructorsTab from './tabs/InstructorsTab';
@@ -84,10 +85,12 @@ const MOCK_COURSE = {
 
 const CourseDetails = () => {
     const { courseId } = useParams();
+    const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [courseDetails, setCourseDetails] = useState(null);
     const [activeTab, setActiveTab] = useState('students');
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSection, setSelectedSection] = useState('All sections');
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -104,6 +107,13 @@ const CourseDetails = () => {
     const [teachingAssistants, setTeachingAssistants] = useState([]);
     const [exams, setExams] = useState([]);
     const [uploadStatus, setUploadStatus] = useState(null);
+
+    useEffect(() => {
+        const nextTab = location?.state?.activeTab;
+        if (typeof nextTab === 'string' && nextTab.length > 0) {
+            setActiveTab(nextTab);
+        }
+    }, [location?.state]);
 
     const handleCreateExam = async (formData) => {
         try {

@@ -17,7 +17,6 @@ import {
   MessageSquare,
   PieChart,
   Share,
-  ThumbsUp,
   User,
   ZoomIn,
 } from "lucide-react";
@@ -32,15 +31,14 @@ const ScoreDisplay = ({ marks, maxMarks }) => {
   const percentage = Math.round((marks / maxMarks) * 100) || 0;
 
   const getColor = () => {
-    if (percentage >= 80) return "from-green-500 to-green-600 text-white";
-    if (percentage >= 60) return "from-blue-500 to-blue-600 text-white";
-    if (percentage >= 40) return "from-yellow-500 to-yellow-600 text-white";
-    return "from-red-500 to-red-600 text-white";
+    if (percentage >= 60) return "bg-accent text-white";
+    if (percentage >= 40) return "bg-amber-500 text-white";
+    return "bg-red-600 text-white";
   };
 
   return (
     <div
-      className={`flex items-center gap-1 px-3 py-2 bg-gradient-to-r ${getColor()} rounded-lg shadow-sm`}
+      className={`flex items-center gap-1 px-3 py-2 ${getColor()} rounded-lg shadow-sm`}
     >
       <Award className="w-4 h-4" />
       <span className="font-medium">{marks}</span>
@@ -84,6 +82,8 @@ const StudentEvaluationLoader = ({
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
   const [zoomImageTitle, setZoomImageTitle] = useState("");
 
+  const [mobilePane, setMobilePane] = useState("sheet");
+
   const getTotalMarks = () => {
     if (!studentData || !studentData.evaluations) return 0;
 
@@ -92,7 +92,7 @@ const StudentEvaluationLoader = ({
       0
     );
   };
-  
+
   const getMaxMarks = () => {
     return questions.reduce(
       (sum, question) => sum + (Math.abs(question.max_marks) || 0),
@@ -108,7 +108,7 @@ const StudentEvaluationLoader = ({
 
   useEffect(() => {
     console.log("🚀 StudentEvaluationLoader useEffect - examId:", examId, "enrollmentId:", enrollmentId);
-    
+
     if (examId && enrollmentId) {
       console.log("✅ Parameters valid, fetching student evaluation...");
       fetchStudentEvaluation(
@@ -167,7 +167,7 @@ const StudentEvaluationLoader = ({
       return null;
     }
     const question = questions[currentQuestionIndex];
-    console.log("📝 Current question:", question?.question_number, question?.question_text?.substring(0, 50));
+    console.log("📝 Current question:", question?.question_number);
     return question;
   };
 
@@ -185,7 +185,7 @@ const StudentEvaluationLoader = ({
     const evaluationKey = `question_${currentQuestion.question_number}`;
     const evaluation = studentData.evaluations[evaluationKey];
     console.log("📊 Current evaluation for", evaluationKey, ":", !!evaluation);
-    
+
     return evaluation || null;
   };
 
@@ -257,16 +257,17 @@ const StudentEvaluationLoader = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="fixed inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 z-50 flex items-center justify-center"
+        className="fixed inset-0 bg-white z-50 flex items-center justify-center"
       >
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="absolute inset-0 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <div className="absolute inset-4 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin animation-delay-150"></div>
+            <div className="absolute inset-0 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
+            <div className="absolute inset-4 border-4 border-accent/10 border-t-accent/70 rounded-full animate-spin animation-delay-150"></div>
           </div>
           <h3 className="text-xl font-medium text-gray-900 mb-2">
             Loading evaluation
           </h3>
+
           <p className="text-gray-500">
             Please wait while we fetch the student's work...
           </p>
@@ -301,7 +302,7 @@ const StudentEvaluationLoader = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onClose}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+            className="px-6 py-3 bg-accent text-white rounded-lg shadow-md hover:shadow-lg transition-all"
           >
             Go Back
           </motion.button>
@@ -371,7 +372,7 @@ const StudentEvaluationLoader = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onClose}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+            className="px-6 py-3 bg-accent text-white rounded-lg shadow-md hover:shadow-lg transition-all"
           >
             Go Back
           </motion.button>
@@ -384,7 +385,7 @@ const StudentEvaluationLoader = ({
 
   return (
     <div
-      className={`fixed inset-0 bg-gray-50 z-50 flex flex-col overflow-hidden ${
+      className={`fixed inset-0 bg-gradient-to-b from-slate-50 via-white to-slate-50 z-50 flex flex-col overflow-hidden ${
         isFullscreen ? "fullscreen-mode" : ""
       }`}
     >
@@ -392,110 +393,145 @@ const StudentEvaluationLoader = ({
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm"
+        className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur px-4 md:px-6 py-4 shadow-sm"
       >
-        <div className="flex items-start">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onClose}
-            className="p-2 -ml-2 mr-2 hover:bg-gray-100 rounded-lg transition-colors self-start"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-500" />
-          </motion.button>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onClose}
+              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors"
+              title="Back"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </motion.button>
 
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              Student Evaluation
-              <span className="text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                {studentData?.evaluation_status || "Pending"}
-              </span>
-            </h1>
-            {studentData?.student && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1"
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg md:text-xl font-semibold text-gray-900">
+                  Results
+                </h1>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-900/5 text-slate-700 border border-slate-200">
+                  {studentData?.evaluation_status || "Pending"}
+                </span>
+              </div>
+
+              {studentData?.student && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                  className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <User className="w-4 h-4 text-slate-400" />
+                    <span className="font-medium text-slate-800 truncate">
+                      {studentData.student.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Hash className="w-4 h-4 text-slate-400" />
+                    <span className="truncate">{studentData.student.roll_number}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Mail className="w-4 h-4 text-slate-400" />
+                    <span className="truncate">{studentData.student.email}</span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 justify-between lg:justify-end">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.25 }}
+              className="flex items-center gap-3"
+            >
+              <div className="hidden sm:block text-xs text-gray-500">Total</div>
+              <ScoreDisplay marks={totalMarks} maxMarks={maxTotalMarks} />
+            </motion.div>
+
+            <motion.div
+              className="flex items-center gap-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {}}
+                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+                title="Download"
               >
-                <div className="flex items-center gap-1 text-sm text-gray-600">
-                  <User className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium">
-                    {studentData.student.name}
-                  </span>
-                </div>
-                <div className="hidden sm:block text-gray-300">•</div>
-                <div className="flex items-center gap-1 text-sm text-gray-600">
-                  <Hash className="w-4 h-4 text-gray-400" />
-                  <span>{studentData.student.roll_number}</span>
-                </div>
-                <div className="hidden sm:block text-gray-300">•</div>
-                <div className="flex items-center gap-1 text-sm text-gray-600">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <span>{studentData.student.email}</span>
-                </div>
-              </motion.div>
-            )}
+                <Download className="w-5 h-5" />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {}}
+                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+                title="Share"
+              >
+                <Share className="w-5 h-5" />
+              </motion.button>
+            </motion.div>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col items-end"
-          >
-            <div className="text-xs text-gray-500 mb-1">Total Score</div>
-            <ScoreDisplay marks={totalMarks} maxMarks={maxTotalMarks} />
-          </motion.div>
-
-          <motion.div
-            className="flex items-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => {}}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Download evaluation"
-            >
-              <Download className="w-5 h-5" />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => {}}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Share evaluation"
-            >
-              <Share className="w-5 h-5" />
-            </motion.button>
-          </motion.div>
-        </div>
       </motion.div>
+
+      {!isFullscreen && (
+        <div className="px-4 md:px-6 pt-4 sm:hidden">
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setMobilePane("sheet")}
+              className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors ${
+                mobilePane === "sheet"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600"
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Answer Sheet</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobilePane("details")}
+              className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors ${
+                mobilePane === "details"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600"
+              }`}
+            >
+              <BarChart className="w-4 h-4" />
+              <span>Details</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className={`w-full md:w-1/2 h-full flex flex-col overflow-hidden border-r border-gray-200 ${
+          className={`w-full md:w-1/2 h-full flex flex-col overflow-hidden border-r border-slate-200 ${
             isFullscreen ? "md:w-full" : ""
-          }`}
+          } ${!isFullscreen ? (mobilePane === "details" ? "hidden md:flex" : "") : ""}`}
           onMouseEnter={() => setShowPDFControls(true)}
           onMouseLeave={() => setShowPDFControls(false)}
         >
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 flex items-center justify-between border-b border-gray-700">
+          <div className="bg-slate-100 text-slate-600 p-3 flex items-center justify-between border-b border-slate-200">
             <h2 className="text-sm font-medium flex items-center">
               <FileText className="w-4 h-4 mr-2" />
               Student Answer Sheet
               {answerScriptPages.length > 1 && (
-                <span className="ml-2 text-gray-400 text-xs">
+                <span className="ml-2 text-slate-400 text-xs">
                   Page {currentPageIndex + 1} of {answerScriptPages.length}
                 </span>
               )}
@@ -511,7 +547,7 @@ const StudentEvaluationLoader = ({
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPageIndex === 0}
-                    className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Previous page"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -519,7 +555,7 @@ const StudentEvaluationLoader = ({
                   <button
                     onClick={handleNextPage}
                     disabled={currentPageIndex >= answerScriptPages.length - 1}
-                    className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Next page"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -528,7 +564,7 @@ const StudentEvaluationLoader = ({
               )}
               <button
                 onClick={toggleFullscreen}
-                className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700 rounded transition-colors"
                 title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
               >
                 {isFullscreen ? (
@@ -542,7 +578,7 @@ const StudentEvaluationLoader = ({
 
           <div
             ref={answerSheetRef}
-            className="flex-1 overflow-auto bg-gradient-to-b from-gray-800 to-gray-900"
+            className="flex-1 overflow-auto bg-slate-100"
             onScroll={handleScroll}
           >
             {currentPage && currentPage.imageUrl ? (
@@ -555,8 +591,8 @@ const StudentEvaluationLoader = ({
               />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <div className="text-center p-8 text-gray-400">
-                  <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <div className="text-center p-8 text-slate-400">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                   <p className="text-lg font-medium">
                     No answer sheet available
                   </p>
@@ -574,64 +610,60 @@ const StudentEvaluationLoader = ({
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className={`w-full md:w-1/2 h-full flex flex-col overflow-hidden bg-white ${
+          className={`w-full md:w-1/2 h-full flex flex-col overflow-hidden bg-white/80 backdrop-blur ${
             isFullscreen ? "hidden md:hidden" : ""
-          }`}
+          } ${mobilePane === "sheet" ? "hidden md:flex" : ""}`}
         >
-          <div className="flex border-b border-gray-200">
-            {[
-              {
-                id: "question",
-                label: "Question",
-                icon: <FileText className="w-4 h-4" />,
-              },
-              {
-                id: "feedback",
-                label: "Feedback",
-                icon: <MessageSquare className="w-4 h-4" />,
-              },
-              {
-                id: "stats",
-                label: "Statistics",
-                icon: <BarChart className="w-4 h-4" />,
-              },
-            ].map((tab) => (
-              <motion.button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-                whileHover={{
-                  backgroundColor:
-                    tab.id === activeTab ? "" : "rgba(0,0,0,0.02)",
-                }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <div className="flex items-center justify-center gap-2">
+          <div className="px-4 pt-4">
+            <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+              {[
+                {
+                  id: "question",
+                  label: "Question",
+                  icon: <FileText className="w-4 h-4" />,
+                },
+                {
+                  id: "feedback",
+                  label: "Feedback",
+                  icon: <MessageSquare className="w-4 h-4" />,
+                },
+                {
+                  id: "stats",
+                  label: "Statistics",
+                  icon: <BarChart className="w-4 h-4" />,
+                },
+              ].map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  whileTap={{ scale: 0.97 }}
+                >
                   {tab.icon}
                   <span>{tab.label}</span>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handlePrevQuestion}
               disabled={currentQuestionIndex === 0}
               className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed
-                text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                text-slate-500 hover:text-slate-900 hover:bg-white transition-colors"
               title="Previous question"
             >
               <ChevronLeft className="w-5 h-5" />
             </motion.button>
 
-            <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
               <span>
                 Question {currentQuestionIndex + 1} of {questions.length}
               </span>
@@ -643,7 +675,7 @@ const StudentEvaluationLoader = ({
               onClick={handleNextQuestion}
               disabled={currentQuestionIndex >= questions.length - 1}
               className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed
-                text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                text-slate-500 hover:text-slate-900 hover:bg-white transition-colors"
               title="Next question"
             >
               <ChevronRight className="w-5 h-5" />
@@ -662,19 +694,40 @@ const StudentEvaluationLoader = ({
                   className="space-y-6"
                 >
                   <div className="space-y-3">
-                    <h3 className="text-lg font-medium text-gray-900 flex items-center gap-3">
-                      <span>Question {questionNumber}</span>
-                      <span className="text-sm text-gray-500 font-normal rounded-full bg-gray-100 px-2 py-0.5">
-                        {currentQuestion?.domain || "General"}
-                      </span>
-                    </h3>
-
-                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100">
-                      <p className="text-gray-700">
-                        {currentQuestion?.question_text ||
-                          "No question text available"}
-                      </p>
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-lg font-semibold text-slate-900">
+                        Question {questionNumber}
+                      </h3>
+                      <div className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-1">
+                        {currentQuestionIndex + 1} / {questions.length}
+                      </div>
                     </div>
+
+                    {(String(currentQuestion?.question_type || "").toLowerCase() === "text" ||
+                      String(currentQuestion?.question_type || "").toLowerCase() === "both") &&
+                      (currentQuestion?.question_body || "").trim() && (
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                          <div className="text-xs font-medium text-slate-500 mb-2">
+                            Question Body
+                          </div>
+                          <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                            {currentQuestion.question_body}
+                          </p>
+                        </div>
+                      )}
+
+                    {(String(currentQuestion?.answer_type || "").toLowerCase() === "text" ||
+                      String(currentQuestion?.answer_type || "").toLowerCase() === "both") &&
+                      (currentQuestion?.answer_body || "").trim() && (
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                          <div className="text-xs font-medium text-slate-500 mb-2">
+                            Answer Body
+                          </div>
+                          <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                            {currentQuestion.answer_body}
+                          </p>
+                        </div>
+                      )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -708,7 +761,7 @@ const StudentEvaluationLoader = ({
                               }}
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 flex items-center justify-center opacity-0 hover:opacity-100 transition-all rounded">
-                              <div className="bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center">
+                              <div className="bg-accent text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center">
                                 <ZoomIn className="w-3.5 h-3.5 mr-1" />
                                 Zoom
                               </div>
@@ -753,7 +806,7 @@ const StudentEvaluationLoader = ({
                               }}
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 flex items-center justify-center opacity-0 hover:opacity-100 transition-all rounded">
-                              <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center">
+                              <div className="bg-accent text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center">
                                 <ZoomIn className="w-3.5 h-3.5 mr-1" />
                                 Zoom
                               </div>
@@ -774,18 +827,18 @@ const StudentEvaluationLoader = ({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
-                      className="space-y-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100"
+                      className="space-y-3 bg-accent/5 p-5 rounded-lg border border-accent/10"
                     >
                       <div className="flex justify-between items-center">
                         <h4 className="text-sm font-medium text-gray-800">
                           Scoring Summary
                         </h4>
                         <div className="flex items-center gap-2">
-                          <div className="font-medium text-blue-600">
+                          <div className="font-medium text-accent">
                             {currentEvaluation.total_marks} /{" "}
                             {Math.abs(currentQuestion?.max_marks) || 10}
                           </div>
-                          <div className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                          <div className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
                             {formatPercentage(
                               currentEvaluation.total_marks,
                               Math.abs(currentQuestion?.max_marks) || 10
@@ -796,10 +849,10 @@ const StudentEvaluationLoader = ({
 
                       {currentEvaluation.overall_feedback && (
                         <div>
-                          <h5 className="text-xs uppercase text-blue-600 font-medium mb-1">
+                          <h5 className="text-xs uppercase text-accent font-medium mb-1">
                             Overall Feedback
                           </h5>
-                          <div className="text-sm text-gray-700 p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
+                          <div className="text-sm text-gray-700 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
                             {currentEvaluation.overall_feedback}
                           </div>
                         </div>
@@ -860,7 +913,7 @@ const StudentEvaluationLoader = ({
                         >
                           <div className="flex items-center justify-between">
                             <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-blue-500" />
+                              <CheckCircle className="w-4 h-4 text-accent" />
                               Assessment Criteria
                             </h4>
                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
@@ -879,15 +932,16 @@ const StudentEvaluationLoader = ({
                             >
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-1 mr-2">
-                                  <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white flex items-center justify-center shadow-sm flex-shrink-0">
+                                  <div className="w-7 h-7 rounded-full bg-accent text-white flex items-center justify-center shadow-sm flex-shrink-0">
                                     {item.item_number}
                                   </div>
                                   <h5 className="text-sm font-medium text-gray-900 line-clamp-1">
-  {currentQuestion?.rubric_items?.[index]?.description || 'No description available'}
-</h5>
+                                    {currentQuestion?.rubric_items?.[index]
+                                      ?.description || "No description available"}
+                                  </h5>
                                 </div>
-                                <div className="flex items-center gap-1 text-sm px-3 py-1.5 bg-blue-50 rounded-lg shadow-sm whitespace-nowrap">
-                                  <span className="font-medium text-blue-600">
+                                <div className="flex items-center gap-1 text-sm px-3 py-1.5 bg-accent/5 rounded-lg shadow-sm whitespace-nowrap">
+                                  <span className="font-medium text-accent">
                                     {item.marks_awarded}
                                   </span>
                                   <span className="text-gray-400">Marks</span>
@@ -904,7 +958,7 @@ const StudentEvaluationLoader = ({
 
                                 <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
                                   <div
-                                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
+                                    className="h-full bg-accent rounded-full"
                                     style={{
                                       width: `${
                                         (item.marks_awarded / (item.max_marks || 1)) *
@@ -916,67 +970,13 @@ const StudentEvaluationLoader = ({
                               </div>
                             </motion.div>
                           ))}
-
-                          {(!currentEvaluation.item_grades ||
-                            currentEvaluation.item_grades.length === 0) && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: 0.3 }}
-                              className="text-center py-8 bg-gray-50 rounded-lg"
-                            >
-                              <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                                <AlertCircle className="w-8 h-8 text-gray-400" />
-                              </div>
-                              <p className="text-gray-500">
-                                No assessment criteria available
-                              </p>
-                            </motion.div>
-                          )}
                         </motion.div>
-
-                        {currentEvaluation.improvement_suggestions && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="space-y-2"
-                          >
-                            <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                              <ThumbsUp className="w-4 h-4 text-yellow-500" />
-                              Improvement Suggestions
-                            </h4>
-                            <div className="p-4 bg-yellow-50 text-yellow-800 text-sm rounded-lg border border-yellow-100">
-                              {currentEvaluation.improvement_suggestions}
-                            </div>
-                          </motion.div>
-                        )}
                       </div>
                     </>
                   ) : (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="text-center py-10"
-                    >
-                      <div className="w-20 h-20 mx-auto bg-gradient-to-r from-gray-100 to-gray-50 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                        <MessageSquare className="w-10 h-10 text-gray-400" />
-                      </div>
-                      <h3 className="text-xl font-medium text-gray-900 mb-2">
-                        No Feedback Available
-                      </h3>
-                      <p className="text-gray-500 max-w-md mx-auto px-4">
-                        There is no feedback available for this question yet.
-                      </p>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="mt-6 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
-                        onClick={() => setUseExamDetail(true)}
-                      >
-                        Add Feedback
-                      </motion.button>
-                    </motion.div>
+                    <p className="text-gray-500 max-w-md mx-auto px-4">
+                      Evaluation will be available after submission is complete.
+                    </p>
                   )}
                 </motion.div>
               )}
@@ -995,7 +995,7 @@ const StudentEvaluationLoader = ({
                     animate={{ opacity: 1, y: 0 }}
                     className="text-lg font-medium text-gray-900 flex items-center gap-2"
                   >
-                    <BarChart className="w-5 h-5 text-blue-500" />
+                    <BarChart className="w-5 h-5 text-accent" />
                     <span>Performance Statistics</span>
                     {currentEvaluation && (
                       <ScoreDisplay
@@ -1018,8 +1018,8 @@ const StudentEvaluationLoader = ({
                             label: "Score",
                             value: currentEvaluation.total_marks,
                             max: Math.abs(currentQuestion?.max_marks) || 10,
-                            color: "from-blue-500 to-blue-600",
-                            icon: <Award className="w-5 h-5 text-blue-50" />,
+                            color: "bg-accent",
+                            icon: <Award className="w-5 h-5 text-white" />,
                           },
                           {
                             label: "Percentage",
@@ -1028,16 +1028,16 @@ const StudentEvaluationLoader = ({
                                 (Math.abs(currentQuestion?.max_marks) || 10)) *
                                 100
                             )}%`,
-                            color: "from-green-500 to-green-600",
+                            color: "bg-accent",
                             icon: (
-                              <CheckCircle className="w-5 h-5 text-green-50" />
+                              <CheckCircle className="w-5 h-5 text-white" />
                             ),
                           },
                           {
                             label: "Criteria",
                             value: currentEvaluation.item_grades?.length || 0,
-                            color: "from-purple-500 to-purple-600",
-                            icon: <Filter className="w-5 h-5 text-purple-50" />,
+                            color: "bg-accent",
+                            icon: <Filter className="w-5 h-5 text-white" />,
                           },
                         ].map((stat, i) => (
                           <motion.div
@@ -1049,11 +1049,12 @@ const StudentEvaluationLoader = ({
                           >
                             <div className="flex justify-center mb-2">
                               <div
-                                className={`w-10 h-10 rounded-full bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-md`}
+                                className={`w-10 h-10 rounded-full ${stat.color} flex items-center justify-center shadow-md`}
                               >
                                 {stat.icon}
                               </div>
                             </div>
+
                             <div className="text-sm text-gray-500">
                               {stat.label}
                             </div>
@@ -1078,7 +1079,7 @@ const StudentEvaluationLoader = ({
                         className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm"
                       >
                         <h4 className="text-md font-medium text-gray-800 mb-4 flex items-center gap-2">
-                          <PieChart className="w-4 h-4 text-blue-500" />
+                          <PieChart className="w-4 h-4 text-accent" />
                           Criteria Breakdown
                         </h4>
 
@@ -1087,7 +1088,7 @@ const StudentEvaluationLoader = ({
                             <div key={index} className="space-y-1">
                               <div className="flex justify-between items-center">
                                 <div className="text-sm text-gray-700 flex items-center gap-1.5">
-                                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-medium">
+                                  <div className="w-5 h-5 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-medium">
                                     {index + 1}
                                   </div>
                                   <span className="line-clamp-1">
@@ -1096,7 +1097,7 @@ const StudentEvaluationLoader = ({
                                   </span>
                                 </div>
                                 <div className="text-sm font-medium">
-                                  <span className="text-blue-600">
+                                  <span className="text-accent">
                                     {item.marks_awarded}
                                   </span>
                                   <span className="text-gray-400">/</span>
@@ -1112,14 +1113,14 @@ const StudentEvaluationLoader = ({
                                   animate={{
                                     width: `${
                                       (item.marks_awarded / (item.max_marks || 1)) *
-                                      100
+                                        100
                                     }%`,
                                   }}
                                   transition={{
                                     duration: 0.8,
                                     delay: 0.1 * index,
                                   }}
-                                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                                  className="h-full bg-accent rounded-full"
                                 />
                               </div>
                             </div>
@@ -1133,54 +1134,54 @@ const StudentEvaluationLoader = ({
                       animate={{ opacity: 1, scale: 1 }}
                       className="text-center py-10"
                     >
-                      <div className="w-20 h-20 mx-auto bg-gradient-to-r from-gray-100 to-gray-50 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                      <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 shadow-inner">
                         <BarChart className="w-10 h-10 text-gray-400" />
                       </div>
                       <h3 className="text-xl font-medium text-gray-900 mb-2">
                         No Statistics Available
                       </h3>
                       <p className="text-gray-500 max-w-md mx-auto px-4">
-                        Statistics will be available after evaluation is
-                        complete.
+                        Statistics will be available after evaluation is complete.
                       </p>
                     </motion.div>
                   )}
                 </motion.div>
               )}
-            </AnimatePresence>
+
+              </AnimatePresence>
           </div>
-        </motion.div>
+
+              <AnimatePresence>
+                {showToast.visible && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 50 }}
+                    transition={{ duration: 0.3 }}
+                    className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
+                      showToast.type === "success"
+                        ? "bg-accent text-white"
+                        : "bg-red-600 text-white"
+                    }`}
+                  >
+                    {showToast.type === "success" ? (
+                      <CheckCircle className="w-5 h-5" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5" />
+                    )}
+                    <span>{showToast.message}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <ImageZoomModal
+                isOpen={zoomModalOpen}
+                onClose={() => setZoomModalOpen(false)}
+                imageUrl={zoomImageUrl}
+                title={zoomImageTitle}
+              />
+            </motion.div>
       </div>
-
-      <AnimatePresence>
-        {showToast.visible && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            transition={{ duration: 0.3 }}
-            className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
-              showToast.type === "success"
-                ? "bg-green-500 text-white"
-                : "bg-red-500 text-white"
-            }`}
-          >
-            {showToast.type === "success" ? (
-              <CheckCircle className="w-5 h-5" />
-            ) : (
-              <AlertCircle className="w-5 h-5" />
-            )}
-            <span>{showToast.message}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <ImageZoomModal
-        isOpen={zoomModalOpen}
-        onClose={() => setZoomModalOpen(false)}
-        imageUrl={zoomImageUrl}
-        title={zoomImageTitle}
-      />
     </div>
   );
 };

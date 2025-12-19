@@ -107,7 +107,7 @@ const DashboardLayout = ({ children }) => {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-white overflow-x-hidden">
       {isMobile && isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-500"
@@ -257,7 +257,7 @@ const DashboardLayout = ({ children }) => {
       </aside>
 
       <div
-        className={`flex-1 transition-all duration-300 ease-in-out relative
+        className={`flex-1 min-w-0 overflow-x-hidden transition-all duration-300 ease-in-out relative
         ${isSidebarOpen ? "md:ml-64" : "md:ml-16"} ml-0`}
       >
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
@@ -293,8 +293,8 @@ const DashboardLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] bg-white p-4 md:p-6">
-          <div className="max-w-7xl mx-auto">{children}</div>
+        <main className="min-h-[calc(100vh-4rem)] bg-white p-4 md:p-6 min-w-0 overflow-x-hidden">
+          <div className="max-w-7xl mx-auto min-w-0">{children}</div>
         </main>
       </div>
     </div>

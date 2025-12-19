@@ -22,9 +22,9 @@ const GenerateLoader = () => (
         className="flex flex-col items-center justify-center py-12 space-y-6"
     >
         <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-400 via-blue-500 to-purple-600 p-1 animate-[spin_8s_linear_infinite]">
+            <div className="w-24 h-24 rounded-full bg-accent/20 p-1 animate-[spin_8s_linear_infinite]">
                 <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 animate-pulse" />
+                    <div className="w-20 h-20 rounded-full bg-accent/20 animate-pulse" />
                 </div>
             </div>
 
@@ -35,9 +35,9 @@ const GenerateLoader = () => (
             >
                 <motion.div 
                     whileHover={{ scale: 1.2 }}
-                    className="absolute -top-2 left-1/2 -translate-x-1/2 p-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg shadow-lg"
+                    className="absolute -top-2 left-1/2 -translate-x-1/2 p-2 bg-accent/10 rounded-lg shadow-lg"
                 >
-                    <Bot className="w-5 h-5 text-blue-600" />
+                    <Bot className="w-5 h-5 text-accent" />
                 </motion.div>
             </motion.div>
             
@@ -48,9 +48,9 @@ const GenerateLoader = () => (
             >
                 <motion.div
                     whileHover={{ scale: 1.2 }}
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-purple-100 to-purple-200 rounded-lg shadow-lg"
+                    className="absolute -right-2 top-1/2 -translate-y-1/2 p-2 bg-accent/10 rounded-lg shadow-lg"
                 >
-                    <BrainCircuit className="w-5 h-5 text-purple-600" />
+                    <BrainCircuit className="w-5 h-5 text-accent" />
                 </motion.div>
             </motion.div>
             
@@ -85,7 +85,7 @@ const GenerateLoader = () => (
             <motion.h3 
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600"
+                className="text-lg font-medium text-gray-900"
             >
                 Generating Smart Rubrics
             </motion.h3>
@@ -110,16 +110,16 @@ const GenerateLoader = () => (
                         }}
                         transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
                     >
-                        <Zap className="w-4 h-4 text-blue-500" />
+                        <Zap className="w-4 h-4 text-accent" />
                     </motion.div>
                     <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
                         <motion.div
                             initial={{ width: "0%" }}
                             animate={{ width: `${Math.min(100, (index + 1) * 33)}%` }}
                             transition={{ duration: 1, delay: index * 0.2 }}
-                            className="h-full bg-gradient-to-r from-blue-400 to-purple-600 rounded-full"
+                            className="h-full bg-accent rounded-full"
                             style={{
-                                boxShadow: "0 0 10px rgba(66, 153, 225, 0.5)"
+                                boxShadow: "0 0 10px rgba(var(--accent-rgb), 0.35)"
                             }}
                         />
                     </div>
@@ -147,7 +147,7 @@ const AutoGrowTextarea = ({ value, onChange, placeholder, rows, className, ...pr
             onChange={onChange}
             placeholder={placeholder}
             rows={rows}
-            className={`w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm min-h-[80px] ${className || ''}`}
+            className={`w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-300 shadow-sm min-h-[80px] ${className || ''}`}
             style={{ resize: "none", overflowY: "hidden" }}
             {...props}
         />
@@ -264,9 +264,9 @@ const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) 
             layout
         >
             <Card className={`group hover:shadow-xl transition-all duration-300 border-l-4 overflow-hidden relative ${
-                hasErrors ? 'border-l-red-400 bg-red-50/30' : 'border-l-blue-400'
+                hasErrors ? 'border-l-red-400 bg-red-50/30' : 'border-l-accent'
             }`}>
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <motion.div 
                     whileHover={{ scale: 1.01 }}
                     className="relative z-10"
@@ -280,7 +280,7 @@ const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) 
                                             whileHover={{ scale: 1.2, rotate: 180 }}
                                             transition={{ duration: 0.3 }}
                                         >
-                                            <Circle className={`w-4 h-4 ${hasErrors ? 'text-red-500' : 'text-blue-500'} fill-current`} />
+                                            <Circle className={`w-4 h-4 ${hasErrors ? 'text-red-500' : 'text-accent'} fill-current`} />
                                         </motion.div>
                                         <h4 className="font-medium text-gray-900">Rubric Item {index + 1}</h4>
                                         {hasErrors && (
@@ -332,7 +332,7 @@ const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) 
                                             value={item.description || ''}
                                             onChange={(e) => onUpdate(index, { ...item, description: e.target.value })}
                                             placeholder="Enter criteria description..."
-                                            className={`w-full px-4 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm ${
+                                            className={`w-full px-4 py-2.5 bg-white border rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-300 shadow-sm ${
                                                 validationErrors.some(error => error.includes('description')) 
                                                     ? 'border-red-300 bg-red-50' 
                                                     : 'border-gray-200'
@@ -353,7 +353,7 @@ const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) 
                                                 step="0.01"
                                                 min="0"
                                                 max="1"
-                                                className={`w-full px-4 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm ${
+                                                className={`w-full px-4 py-2.5 bg-white border rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-300 shadow-sm ${
                                                     validationErrors.some(error => error.includes('weight')) 
                                                         ? 'border-red-300 bg-red-50' 
                                                         : 'border-gray-200'
@@ -371,7 +371,7 @@ const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) 
                                                 onChange={(e) => onUpdate(index, { ...item, max_marks: parseFloat(e.target.value) || 0 })}
                                                 min="0"
                                                 step="0.01"
-                                                className={`w-full px-4 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm ${
+                                                className={`w-full px-4 py-2.5 bg-white border rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-300 shadow-sm ${
                                                     validationErrors.some(error => error.includes('marks')) 
                                                         ? 'border-red-300 bg-red-50' 
                                                         : 'border-gray-200'
@@ -433,8 +433,8 @@ const QuestionCard = ({
         className={`
             w-full rounded-lg transition-all duration-300 overflow-hidden
             ${isSelected
-                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm'
-                : 'hover:bg-gray-50 border border-transparent'
+                ? 'bg-accent/10 border border-accent/20 shadow-sm'
+                : 'hover:bg-gray-50 border border-gray-200'
             }
         `}
     >
@@ -450,7 +450,7 @@ const QuestionCard = ({
                         className={`
                             w-8 h-8 rounded-lg flex items-center justify-center
                             ${isSelected 
-                                ? 'bg-gradient-to-r from-blue-400 to-indigo-500 text-white' 
+                                ? 'bg-accent text-white' 
                                 : 'bg-gray-100 text-gray-600'
                             }
                         `}
@@ -459,7 +459,7 @@ const QuestionCard = ({
                     </motion.div>
                     <div className="flex-1">
                         <div className="flex items-center gap-2">
-                            <h4 className={`font-medium ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+                            <h4 className={`font-medium ${isSelected ? 'text-accent' : 'text-gray-700'}`}>
                                 Question {question.question_number}
                             </h4>
                         </div>
@@ -493,8 +493,8 @@ const QuestionCard = ({
                             ${isSelected
                                 ? hasRubric
                                     ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white hover:shadow-md'
-                                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-md'
-                                : 'text-gray-500 hover:bg-gray-100'
+                                    : 'bg-accent text-white hover:shadow-md'
+                                : 'text-gray-600 hover:bg-gray-100'
                             }
                             ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}
                         `}
@@ -639,9 +639,7 @@ const RubricModal = ({
     });
     
     const headerSpring = useSpring({
-        background: isMaximized 
-            ? 'linear-gradient(to right, #f8fafc, #eff6ff)' 
-            : 'linear-gradient(to right, #ffffff, #ffffff)',
+        background: 'linear-gradient(to right, #ffffff, #ffffff)',
         config: { duration: 300 }
     });
 
@@ -1199,7 +1197,7 @@ const RubricModal = ({
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={onClose}
-                                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all duration-300"
+                                    className="px-4 py-2 bg-accent text-white rounded-xl hover:shadow-lg transition-all duration-300"
                                 >
                                     Close
                                 </motion.button>
@@ -1233,21 +1231,21 @@ const RubricModal = ({
                     <animated.div
                         style={modalSpring}
                         className={`
-                            bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden
+                            bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden
                             ${isMaximized
                                 ? 'fixed inset-0 w-full h-full max-w-none max-h-none rounded-none'
-                                : 'w-full max-w-[1400px] h-[90vh] max-h-[900px]'}
+                                : 'w-full max-w-6xl h-[92vh] max-h-[920px]'}
                         `}
                     >
                         <animated.div 
                             style={headerSpring}
-                            className="flex items-center justify-between px-6 py-4 border-b"
+                            className="flex items-center justify-between px-6 py-4 border-b border-gray-200"
                         >
                             <div className="flex-1 overflow-hidden">
                                 <motion.h2 
                                     initial={{ x: -20, opacity: 0 }}
                                     animate={{ x: 0, opacity: 1 }}
-                                    className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 truncate"
+                                    className="text-xl font-semibold text-gray-900 truncate"
                                 >
                                     Question Rubric Generator
                                 </motion.h2>
@@ -1295,14 +1293,14 @@ const RubricModal = ({
                             <motion.div 
                                 initial={{ x: -20, opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
-                                className="w-80 xl:w-96 border-r bg-white flex flex-col overflow-hidden"
+                                className="w-80 xl:w-96 border-r border-gray-200 bg-white flex flex-col overflow-hidden"
                             >
                                 <div className="p-4 h-full flex flex-col">
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-sm font-medium text-gray-900">Questions</h3>
                                         <motion.span 
                                             whileHover={{ scale: 1.1 }}
-                                            className="px-2 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 rounded text-xs text-blue-600 font-medium"
+                                            className="px-2 py-1 bg-accent/10 rounded-lg text-xs text-accent font-medium"
                                         >
                                             {questions.length} Questions
                                         </motion.span>
@@ -1317,7 +1315,7 @@ const RubricModal = ({
                                             w-full mb-4 py-2 px-3 flex items-center justify-center gap-2 rounded-lg text-sm font-medium
                                             ${(isGenerating || !anyQuestionsNeedRubrics) 
                                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                                                : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm hover:shadow-md transition-all duration-300'
+                                                : 'bg-accent text-white shadow-sm hover:shadow-md transition-all duration-300'
                                             }
                                         `}
                                     >
@@ -1326,7 +1324,7 @@ const RubricModal = ({
                                                 <motion.div 
                                                     animate={{ rotate: 360 }}
                                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                    className="w-4 h-4 border-2 border-blue-300 border-t-transparent rounded-full" 
+                                                    className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full" 
                                                 />
                                                 <span>Generating All ({generatedQuestionsCount}/{totalQuestionsCount})</span>
                                             </>
@@ -1380,7 +1378,7 @@ const RubricModal = ({
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
-                                className="flex-1 bg-gradient-to-br from-gray-50 to-white flex flex-col overflow-hidden"
+                                className="flex-1 bg-gray-50 flex flex-col overflow-hidden"
                             >
                                 <div className="flex-1 overflow-y-auto">
                                     <div className="max-w-4xl mx-auto p-6">
@@ -1394,26 +1392,6 @@ const RubricModal = ({
                                                 >
                                                     <AlertCircle className="w-5 h-5 flex-shrink-0" />
                                                     <p>{error}</p>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        <AnimatePresence>
-                                            {selectedQuestionData && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 20 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: 20 }}
-                                                    className="mb-6 bg-white border border-gray-200 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
-                                                >
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <FileText className="w-5 h-5 text-blue-500" />
-                                                        <h3 className="font-medium text-gray-900">Question Details</h3>
-                                                        <span className="text-sm text-gray-500">
-                                                            (Max Marks: {Math.abs(selectedQuestionData.max_marks || 10)})
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-gray-700">{selectedQuestionData.question_text}</p>
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
@@ -1440,10 +1418,10 @@ const RubricModal = ({
                                                         <motion.div
                                                             initial={{ opacity: 0, y: -20 }}
                                                             animate={{ opacity: 1, y: 0 }}
-                                                            className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6"
+                                                            className="bg-accent/5 border border-accent/15 rounded-2xl p-6"
                                                         >
                                                             <div className="flex items-center gap-2 mb-4">
-                                                                <Settings className="w-5 h-5 text-purple-600" />
+                                                                <Settings className="w-5 h-5 text-accent" />
                                                                 <h4 className="text-lg font-semibold text-gray-900">Rubric Configuration</h4>
                                                             </div>
                                                             
@@ -1462,7 +1440,7 @@ const RubricModal = ({
                                                                             const clampedValue = Math.min(Math.max(value, 2), 10);
                                                                             setNumRubricItems(clampedValue);
                                                                         }}
-                                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+                                                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-200"
                                                                     />
                                                                     <p className="text-xs text-gray-500">Choose between 2-10 rubric items (default: 3)</p>
                                                                 </div>
@@ -1475,7 +1453,7 @@ const RubricModal = ({
                                                                         value={profInstructions}
                                                                         onChange={(e) => setProfInstructions(e.target.value)}
                                                                         maxLength={2000}
-                                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none transition-all duration-200"
+                                                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent resize-none transition-all duration-200"
                                                                         rows={3}
                                                                         placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Weight mathematical rigor higher')"
                                                                     />
@@ -1485,13 +1463,13 @@ const RubricModal = ({
                                                                 </div>
                                                             </div>
 
-                                                            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-purple-200">
+                                                            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
                                                                 <motion.button
                                                                     whileHover={{ scale: 1.05 }}
                                                                     whileTap={{ scale: 0.95 }}
                                                                     onClick={() => handleUpdateRubricSettings(false)}
                                                                     disabled={isRegenerating}
-                                                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 >
                                                                     <Save className="w-4 h-4" />
                                                                     Update Settings
@@ -1502,7 +1480,7 @@ const RubricModal = ({
                                                                     whileTap={{ scale: 0.95 }}
                                                                     onClick={() => handleUpdateRubricSettings(true)}
                                                                     disabled={isRegenerating}
-                                                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:shadow-md transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-xl hover:shadow-md transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 >
                                                                     {isRegenerating ? (
                                                                         <>
@@ -1530,7 +1508,7 @@ const RubricModal = ({
                                                             <motion.span 
                                                                 initial={{ scale: 0 }}
                                                                 animate={{ scale: 1 }}
-                                                                className="px-2 py-1 bg-blue-100 text-blue-600 text-sm rounded-lg font-medium"
+                                                                className="px-2 py-1 bg-accent/10 text-accent text-sm rounded-xl font-medium"
                                                             >
                                                                 {rubricItems.length} items
                                                             </motion.span>
@@ -1539,7 +1517,7 @@ const RubricModal = ({
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             onClick={handleAddRubricItem}
-                                                            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:shadow-md transition-all duration-300"
+                                                            className="flex items-center gap-2 px-3 py-1.5 bg-accent text-white rounded-xl hover:shadow-md transition-all duration-300"
                                                         >
                                                             <Plus className="w-4 h-4" />
                                                             Add Item
@@ -1567,10 +1545,10 @@ const RubricModal = ({
                                                         transition={{ delay: 0.3 }}
                                                         whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
                                                     >
-                                                        <Card className="overflow-hidden border-t-4 border-t-blue-500">
+                                                        <Card className="overflow-hidden border-t-4 border-t-accent">
                                                             <CardContent className="p-6 space-y-4">
                                                                 <div className="flex items-center gap-2">
-                                                                    <Edit2 className="w-4 h-4 text-blue-500" />
+                                                                    <Edit2 className="w-4 h-4 text-accent" />
                                                                     <h4 className="font-medium text-gray-900">Problem Feedback</h4>
                                                                 </div>
                                                                 <AutoGrowTextarea
@@ -1609,15 +1587,15 @@ const RubricModal = ({
                                                             }}
                                                             className="relative w-16 h-16 mx-auto"
                                                         >
-                                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-xl rotate-6 opacity-40"></div>
-                                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-xl -rotate-3 opacity-60"></div>
+                                                            <div className="absolute inset-0 bg-accent/30 rounded-xl rotate-6"></div>
+                                                            <div className="absolute inset-0 bg-accent/20 rounded-xl -rotate-3"></div>
                                                             <div className="relative bg-white rounded-xl p-4 flex items-center justify-center">
-                                                                <Sparkles className="w-8 h-8 text-indigo-500" />
+                                                                <Sparkles className="w-8 h-8 text-accent" />
                                                             </div>
                                                         </motion.div>
 
                                                         <div>
-                                                            <h3 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-2">
+                                                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
                                                                 Generate Smart Rubric
                                                             </h3>
                                                             <p className="text-sm text-gray-500 max-w-sm mx-auto">
@@ -1634,8 +1612,8 @@ const RubricModal = ({
                                                                 className={`inline-flex items-center gap-2 px-6 py-3 ${
                                                                     !selectedQuestion || hasRubric(selectedQuestion) 
                                                                     ? 'bg-gray-100 text-gray-500' 
-                                                                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg'
-                                                                } rounded-lg transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+                                                                    : 'bg-accent text-white shadow-md hover:shadow-lg'
+                                                                } rounded-xl transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
                                                             >
                                                                 <Sparkles className="w-4 h-4" />
                                                                 Generate Rubric
@@ -1663,23 +1641,19 @@ const RubricModal = ({
                                     <motion.div 
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="border-t bg-gradient-to-r from-gray-50 to-white p-4 shadow-lg"
+                                        className="border-t border-gray-200 bg-white p-4 shadow-lg"
                                     >
                                         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-                                            <div className="flex items-center gap-4 text-sm">
-                                                <div className="flex items-center gap-2 text-gray-500">
-                                                    <motion.div
-                                                        animate={{ 
-                                                            scale: [1, 1.1, 1],
-                                                        }}
-                                                        transition={{ duration: 2, repeat: Infinity }}
-                                                    >
-                                                        <Circle className="w-4 h-4 text-blue-500" />
-                                                    </motion.div>
-                                                    <span>Total Items: {rubricItems.length}</span>
+                                            <div className="flex items-center gap-3 text-sm flex-wrap">
+                                                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200">
+                                                    <Circle className="w-4 h-4 text-accent" />
+                                                    <div className="leading-tight">
+                                                        <div className="text-xs text-gray-500">Items</div>
+                                                        <div className="font-semibold text-gray-900">{rubricItems.length}</div>
+                                                    </div>
                                                 </div>
-                                                
-                                                <div className={`flex items-center gap-2 ${
+
+                                                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 ${
                                                     Math.abs(validation.totalWeight - 1.0) > 0.001 ? 'text-red-600' : 'text-green-600'
                                                 }`}>
                                                     {Math.abs(validation.totalWeight - 1.0) > 0.001 ? (
@@ -1687,10 +1661,16 @@ const RubricModal = ({
                                                     ) : (
                                                         <CheckCircle className="w-4 h-4" />
                                                     )}
-                                                    <span>Total Weight: {validation.totalWeight?.toFixed(3) || '0.000'}/1.000</span>
+                                                    <div className="leading-tight">
+                                                        <div className="text-xs text-gray-500">Total Weight</div>
+                                                        <div className="font-semibold">
+                                                            {validation.totalWeight?.toFixed(3) || '0.000'}
+                                                            <span className="text-xs text-gray-500 font-medium"> (Target 1.000)</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                
-                                                <div className={`flex items-center gap-2 ${
+
+                                                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 ${
                                                     Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? 'text-red-600' : 'text-green-600'
                                                 }`}>
                                                     {Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? (
@@ -1698,16 +1678,22 @@ const RubricModal = ({
                                                     ) : (
                                                         <CheckCircle className="w-4 h-4" />
                                                     )}
-                                                    <span>Total Marks: {validation.totalMaxMarks?.toFixed(2) || '0.00'}/{selectedQuestionData?.max_marks || 10}</span>
+                                                    <div className="leading-tight">
+                                                        <div className="text-xs text-gray-500">Total Marks</div>
+                                                        <div className="font-semibold">
+                                                            {validation.totalMaxMarks?.toFixed(2) || '0.00'}
+                                                            <span className="text-xs text-gray-500 font-medium"> (Target {selectedQuestionData?.max_marks || 10})</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3 flex-shrink-0">
                                                 <motion.button
                                                     whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={onClose}
-                                                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
                                                     disabled={isLoading}
                                                 >
                                                     Cancel
@@ -1715,15 +1701,15 @@ const RubricModal = ({
                                                 <motion.button
                                                     whileHover={{ 
                                                         scale: validation.isValid ? 1.05 : 1, 
-                                                        boxShadow: validation.isValid ? "0 4px 12px rgba(59, 130, 246, 0.5)" : "" 
+                                                        boxShadow: validation.isValid ? "0 4px 12px rgba(var(--accent-rgb), 0.35)" : "" 
                                                     }}
                                                     whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
                                                     onClick={handleSave}
                                                     disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
-                                                    className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-all duration-300 font-medium shadow-md ${
+                                                    className={`inline-flex items-center gap-2 px-6 py-2 rounded-xl transition-all duration-300 font-medium shadow-md whitespace-nowrap ${
                                                         isLoading || rubricItems.length === 0 || !validation.isValid
                                                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                            : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg'
+                                                            : 'bg-accent text-white hover:shadow-lg'
                                                     }`}
                                                 >
                                                     {isLoading ? (
@@ -1794,8 +1780,8 @@ const injectStyles = () => {
       }
       
       @keyframes glow {
-        0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
-        50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        0%, 100% { box-shadow: 0 0 5px rgba(var(--accent-rgb), 0.35); }
+        50% { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.55); }
       }
 
       .animate-fadeIn {
@@ -1821,7 +1807,7 @@ const injectStyles = () => {
       }
 
       .gradient-animate {
-        background: linear-gradient(-45deg, #4f46e5, #3b82f6, #0ea5e9, #4f46e5);
+        background: linear-gradient(-45deg, rgba(var(--accent-rgb), 0.9), rgba(var(--accent-rgb), 0.6), rgba(var(--accent-rgb), 0.8), rgba(var(--accent-rgb), 0.9));
         background-size: 400% 400%;
         animation: gradient 15s ease infinite;
       }
@@ -1830,7 +1816,7 @@ const injectStyles = () => {
         background-clip: text;
         -webkit-background-clip: text;
         color: transparent;
-        background-image: linear-gradient(to right, #3b82f6, #4f46e5);
+        background-image: linear-gradient(to right, rgba(var(--accent-rgb), 0.95), rgba(var(--accent-rgb), 0.65));
       }
       
       .glass {
@@ -1854,7 +1840,7 @@ const injectStyles = () => {
       
       .card-hover:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2);
+        box-shadow: 0 10px 25px -5px rgba(var(--accent-rgb), 0.2);
       }
       
       .button-glow {

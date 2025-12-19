@@ -18,6 +18,7 @@ import StudentEvaluations from "./components/StudentEvaluations";
 import CourseEvaluations from "./components/CourseEvaluations";
 import StudentExamDetails from "./components/StudentExamDetails";
 import ProfessorRecheckDetail from "./components/Dashboard/Course/ProfessorRecheckDetail";
+import ProfessorExamEvaluationsPage from "./components/Dashboard/Course/ProfessorExamEvaluationsPage";
 import PoliciesPage from "./components/PoliciesPage";
 
 function App() {
@@ -75,6 +76,16 @@ function App() {
               <RoleRoute requiredRole="professor">
                 <DashboardLayout>
                   <CourseDetails />
+                </DashboardLayout>
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/courses/:courseId/exams/:examId/evaluations"
+            element={
+              <RoleRoute requiredRole="professor">
+                <DashboardLayout>
+                  <ProfessorExamEvaluationsPage />
                 </DashboardLayout>
               </RoleRoute>
             }

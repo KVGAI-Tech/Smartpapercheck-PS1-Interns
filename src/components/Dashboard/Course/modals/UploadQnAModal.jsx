@@ -504,8 +504,8 @@ const UploadQnAModal = ({
       <div className="space-y-3">
         <div 
           ref={dropZoneRef}
-          className={`w-full min-h-[200px] border ${isDragActive || isActive ? 'border-blue-500 bg-blue-50/30' : 'border-dashed border-gray-300 bg-gray-50'} 
-            rounded-lg hover:border-blue-500 hover:bg-blue-50/10 transition-all duration-300 
+          className={`w-full min-h-[200px] border ${isDragActive || isActive ? 'border-accent bg-accent/10' : 'border-dashed border-gray-300 bg-gray-50'} 
+            rounded-lg hover:border-accent hover:bg-accent/5 transition-all duration-300 
             flex flex-col items-center justify-center cursor-pointer relative outline-none`}
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
@@ -521,8 +521,8 @@ const UploadQnAModal = ({
           tabIndex={0}
           role="button"
         >
-          <Upload className={`w-8 h-8 ${isDragActive || isActive ? 'text-blue-500' : 'text-gray-400'} mb-2`} />
-          <span className={`text-sm ${isDragActive || isActive ? 'text-blue-600 font-medium' : 'text-gray-500'} text-center`}>
+          <Upload className={`w-8 h-8 ${isDragActive || isActive ? 'text-accent' : 'text-gray-400'} mb-2`} />
+          <span className={`text-sm ${isDragActive || isActive ? 'text-accent font-medium' : 'text-gray-500'} text-center`}>
             {isDragActive ? `Drop ${title.toLowerCase()} here` : `Click to focus, then paste (Ctrl+V) or use Upload button`}
           </span>
 
@@ -536,7 +536,7 @@ const UploadQnAModal = ({
               setTimeout(() => dropZoneRef.current?.focus(), 0);
               fileInputRef.current?.click();
             }}
-            className="mt-3 h-[40px] w-[110px] px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 transition-colors"
+            className="mt-3 h-[40px] w-[110px] px-3 py-2 text-sm font-medium bg-accent text-white rounded-md shadow-sm hover:bg-accent transition-colors"
           >
             Upload
           </button>
@@ -613,8 +613,8 @@ const UploadQnAModal = ({
         {file ? (
           <div className="relative border border-gray-200 rounded-lg bg-white p-4 group transition-all duration-200 hover:shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <File className="w-6 h-6 text-blue-600" />
+              <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                <File className="w-6 h-6 text-accent" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900 truncate max-w-[250px]">
@@ -636,16 +636,16 @@ const UploadQnAModal = ({
         ) : (
           <div
             ref={dropZoneRef}
-            className={`w-full h-32 border ${isDragActive ? 'border-blue-500 bg-blue-50/30' : 'border-dashed border-gray-300 bg-gray-50'} 
-              rounded-lg hover:border-blue-500 hover:bg-blue-50/10 cursor-pointer transition-all duration-300 
+            className={`w-full h-32 border ${isDragActive ? 'border-accent bg-accent/10' : 'border-dashed border-gray-300 bg-gray-50'} 
+              rounded-lg hover:border-accent hover:bg-accent/5 cursor-pointer transition-all duration-300 
               flex flex-col items-center justify-center relative`}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Icon className={`w-8 h-8 ${isDragActive ? 'text-blue-500' : 'text-gray-400'} mb-2 ${isDragActive ? '' : 'animate-pulse'}`} />
-            <span className={`text-sm ${isDragActive ? 'text-blue-600 font-medium' : 'text-gray-500'} text-center`}>
+            <Icon className={`w-8 h-8 ${isDragActive ? 'text-accent' : 'text-gray-400'} mb-2 ${isDragActive ? '' : 'animate-pulse'}`} />
+            <span className={`text-sm ${isDragActive ? 'text-accent font-medium' : 'text-gray-500'} text-center`}>
               {isDragActive ? `Drop PDF here` : `Drag & drop ${title} or click to upload`}
             </span>
             <span className="text-xs text-gray-400 mt-2">
@@ -674,20 +674,27 @@ const UploadQnAModal = ({
 
   if (!isOpen) return null;
 
+  const activeQuestion = questions[currentQuestionIndex];
+
   const ModalContent = (
     <div 
-      className={`relative bg-white shadow-xl max-h-[90vh] w-full flex flex-col
+      className={`relative bg-white shadow-xl max-h-[92vh] w-full flex flex-col
         transform transition-all duration-300 ease-in-out 
         ${isFullscreen 
           ? 'max-w-full h-screen rounded-none' 
-          : 'max-w-5xl h-auto rounded-lg m-4'}`}
+          : 'max-w-6xl min-h-[70vh] h-auto rounded-2xl m-4 sm:m-6'}`}
       style={{ zIndex: 10000 }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between py-4 px-6 border-b border-gray-200 bg-white sticky top-0 z-20">
-        <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-medium text-gray-900">Upload Questions & Solutions</h2>
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center">
+            <FileText className="w-5 h-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Upload Questions & Solutions</h2>
+            <p className="text-sm text-gray-500">Upload question images/text, answers, marks, and rubric configuration.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -708,31 +715,42 @@ const UploadQnAModal = ({
       </div>
 
       <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="text-sm font-medium text-gray-700">Upload Method:</div>
-          <div className="flex gap-4">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="text-sm font-medium text-gray-700">Upload Method:</div>
+            <div className="flex gap-4">
             <button
               onClick={() => setUploadMode('standard')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors
                 ${uploadMode === 'standard' 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                  ? 'bg-accent/10 text-accent border border-accent/20' 
                   : 'bg-gray-100 text-gray-700 border border-transparent hover:bg-gray-200'
                 }`}
             >
               <UploadIcon className="w-4 h-4" />
               <span>Question by Question</span>
             </button>
-            <button
+            {/* <button
               onClick={() => setUploadMode('golden-pdf')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors
                 ${uploadMode === 'golden-pdf' 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                  ? 'bg-accent/10 text-accent border border-accent/20' 
                   : 'bg-gray-100 text-gray-700 border border-transparent hover:bg-gray-200'
                 }`}
             >
               <FilePlus className="w-4 h-4" />
               <span>Golden PDF</span>
-            </button>
+            </button> */}
+            </div>
+          </div>
+
+          <div className="w-full lg:w-auto">
+            <div className="bg-accent/10 text-gray-800 text-sm p-3 rounded-xl flex items-start border border-accent/15">
+              <span className="text-accent mr-2">💡</span>
+              <span>
+                <strong>Tip:</strong> Upload clear images of questions and model answers.
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -774,21 +792,11 @@ const UploadQnAModal = ({
             </div>
             <button
               onClick={addQuestion}
-              className="flex items-center gap-1 py-1 px-3 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              className="flex items-center gap-1 py-1 px-3 text-sm text-accent hover:bg-accent/10 rounded-md transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Add Question</span>
             </button>
-          </div>
-          
-          <div className="px-6 pt-4 pb-2">
-            <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-md flex items-start animate-fadeIn">
-              <span className="text-blue-500 mr-2">💡</span>
-              <span>
-                <strong>Tip:</strong> Upload clear images of questions and model answers. 
-                Add detailed domain information to improve automated grading.
-              </span>
-            </div>
           </div>
         </>
       )}
@@ -807,12 +815,12 @@ const UploadQnAModal = ({
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-4">
-                <FilePlus className="w-5 h-5 text-blue-600" />
+                <FilePlus className="w-5 h-5 text-accent" />
                 <h3 className="text-lg font-medium text-gray-900">PDF Upload Mode</h3>
               </div>
 
-              <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-md flex items-start animate-fadeIn">
-                <span className="text-blue-500 mr-2">💡</span>
+              <div className="bg-accent/10 text-gray-800 text-sm p-4 rounded-xl flex items-start animate-fadeIn border border-accent/15">
+                <span className="text-accent mr-2">💡</span>
                 <span>
                   <strong>Tip:</strong> Upload a complete PDF question paper and a corresponding 
                   golden answer script. The system will use these PDFs for automated grading.
@@ -837,196 +845,256 @@ const UploadQnAModal = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {questions.map((question, index) => (
-              <div
-                key={question.id}
-                id={`question-${question.id}`}
-                ref={el => questionRefs.current[question.id] = el}
-                className={`p-6 rounded-lg transition-all duration-300 animate-fadeIn
-                  ${index === currentQuestionIndex 
-                    ? 'bg-white border border-gray-200 shadow-sm' 
-                    : 'bg-white border border-gray-100'}`}
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-50 text-blue-600 font-medium text-sm">
-                      {index + 1}
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Question {index + 1}
-                      {question.isExisting && (
-                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                          Existing
-                        </span>
-                      )}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-500">Question Type:</span>
-                    <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                      <button
-                        onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, questionType: 'image' } : q))}
-                        className={`px-3 py-1 text-sm transition-colors ${question.questionType === 'image' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-                        type="button"
-                      >
-                        Image
-                      </button>
-                      <button
-                        onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, questionType: 'text', question: null, questionPreview: '', questionUrl: '' } : q))}
-                        className={`px-3 py-1 text-sm transition-colors ${question.questionType === 'text' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-                        type="button"
-                      >
-                        Text
-                      </button>
-                      <button
-                        onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, questionType: 'both' } : q))}
-                        className={`px-3 py-1 text-sm transition-colors ${question.questionType === 'both' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-                        type="button"
-                      >
-                        Both
-                      </button>
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Questions</p>
+                  <p className="text-xs text-gray-500">Select a question to edit</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addQuestion}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </button>
+              </div>
 
+              <div className="max-h-[52vh] lg:max-h-[62vh] overflow-y-auto p-2">
+                <div className="space-y-2">
+                  {questions.map((q, idx) => (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => setCurrentQuestionIndex(idx)}
+                      className={`w-full text-left rounded-xl border transition-colors px-3 py-3 flex items-start gap-3
+                        ${idx === currentQuestionIndex ? 'border-accent bg-accent/10' : 'border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold
+                        ${idx === currentQuestionIndex ? 'bg-accent text-white' : 'bg-gray-100 text-gray-700'}`}
+                      >
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900 truncate">Question {idx + 1}</p>
+                          {q.isExisting && (
+                            <span className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Existing</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">
+                          {q.marks ? `${q.marks} marks` : 'Marks not set'}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-500">Editing</p>
+                  <h3 className="text-lg font-semibold text-gray-900 truncate">Question {currentQuestionIndex + 1}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => navigateQuestion('prev')}
+                    disabled={currentQuestionIndex === 0}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${currentQuestionIndex === 0 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                    type="button"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => navigateQuestion('next')}
+                    disabled={currentQuestionIndex === questions.length - 1}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${currentQuestionIndex === questions.length - 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                    type="button"
+                  >
+                    Next
+                  </button>
                   {questions.length > 1 && (
                     <button
-                      onClick={() => removeQuestion(question.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 rounded-md transition-colors"
+                      onClick={() => removeQuestion(activeQuestion.id)}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm font-medium hover:bg-red-50 transition-colors"
+                      type="button"
                       aria-label="Remove question"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4" />
+                      Remove
                     </button>
                   )}
                 </div>
+              </div>
 
-                {['image', 'both'].includes(question.questionType || 'image') && (
-                  <div className="space-y-2 mb-6">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Question Image <span className="text-red-500">*</span>
-                    </label>
-                    <QuestionDisplay 
-                      type="question"
-                      data={question}
-                      onFileChange={handleFileChange}
-                      questionId={question.id}
-                    />
-                  </div>
-                )}
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Question Type
+                      </label>
+                      <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'image' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.questionType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Image
+                        </button>
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'text', question: null, questionPreview: '', questionUrl: '' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.questionType === 'text' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Text
+                        </button>
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'both' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.questionType === 'both' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Both
+                        </button>
+                      </div>
+                    </div>
 
-                {['text', 'both'].includes(question.questionType || 'image') && (
-                  <div className="mb-6 space-y-2">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Question Body <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={question.questionBody}
-                      onChange={(e) => {
-                        setQuestions(prev => prev.map(q => 
-                          q.id === question.id 
-                            ? { ...q, questionBody: e.target.value }
-                            : q
-                        ));
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-all duration-200"
-                      rows={4}
-                      placeholder="Enter question text"
-                    />
-                  </div>
-                )}
+                    {['image', 'both'].includes(activeQuestion.questionType || 'image') && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-600">
+                          Question Image <span className="text-red-500">*</span>
+                        </label>
+                        <QuestionDisplay
+                          type="question"
+                          data={activeQuestion}
+                          onFileChange={handleFileChange}
+                          questionId={activeQuestion.id}
+                        />
+                      </div>
+                    )}
 
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs text-gray-500">Answer Type:</span>
-                  <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                    <button
-                      onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, answerType: 'image' } : q))}
-                      className={`px-3 py-1 text-sm transition-colors ${question.answerType === 'image' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-                      type="button"
-                    >
-                      Image
-                    </button>
-                    <button
-                      onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, answerType: 'text', answer: null, answerPreview: '', answerUrl: '' } : q))}
-                      className={`px-3 py-1 text-sm transition-colors ${question.answerType === 'text' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-                      type="button"
-                    >
-                      Text
-                    </button>
-                    <button
-                      onClick={() => setQuestions(prev => prev.map(q => q.id === question.id ? { ...q, answerType: 'both' } : q))}
-                      className={`px-3 py-1 text-sm transition-colors ${question.answerType === 'both' ? 'bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-                      type="button"
-                    >
-                      Both
-                    </button>
-                  </div>
-                </div>
-
-                {['image', 'both'].includes(question.answerType || 'image') && (
-                  <div className="space-y-2 mb-6">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Answer Image <span className="text-red-500">*</span>
-                    </label>
-                    <QuestionDisplay 
-                      type="answer"
-                      data={question}
-                      onFileChange={handleFileChange}
-                      questionId={question.id}
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Answer Body
-                    </label>
-                    {['text', 'both'].includes(question.answerType || 'image') ? (
-                      <textarea
-                        value={question.answerBody}
-                        onChange={(e) => {
-                          setQuestions(prev => prev.map(q => 
-                            q.id === question.id 
-                              ? { ...q, answerBody: e.target.value }
-                              : q
-                          ));
-                        }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-all duration-200"
-                        rows={3}
-                        placeholder="Enter answer text"
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-500">Answer text is optional for image-only answers.</p>
+                    {['text', 'both'].includes(activeQuestion.questionType || 'image') && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-600">
+                          Question Body <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          value={activeQuestion.questionBody}
+                          onChange={(e) => {
+                            setQuestions(prev => prev.map(q =>
+                              q.id === activeQuestion.id
+                                ? { ...q, questionBody: e.target.value }
+                                : q
+                            ));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
+                          rows={6}
+                          placeholder="Enter question text"
+                        />
+                      </div>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Marks <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={question.marks}
-                      onChange={(e) => {
-                        setQuestions(prev => prev.map(q => 
-                          q.id === question.id 
-                            ? { ...q, marks: e.target.value }
-                            : q
-                        ));
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200"
-                      placeholder="Enter marks"
-                    />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Answer Type
+                      </label>
+                      <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'image' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.answerType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Image
+                        </button>
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'text', answer: null, answerPreview: '', answerUrl: '' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.answerType === 'text' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Text
+                        </button>
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'both' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.answerType === 'both' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Both
+                        </button>
+                      </div>
+                    </div>
+
+                    {['image', 'both'].includes(activeQuestion.answerType || 'image') && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-600">
+                          Answer Image <span className="text-red-500">*</span>
+                        </label>
+                        <QuestionDisplay
+                          type="answer"
+                          data={activeQuestion}
+                          onFileChange={handleFileChange}
+                          questionId={activeQuestion.id}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-600">
+                          Answer Body
+                        </label>
+                        {['text', 'both'].includes(activeQuestion.answerType || 'image') ? (
+                          <textarea
+                            value={activeQuestion.answerBody}
+                            onChange={(e) => {
+                              setQuestions(prev => prev.map(q =>
+                                q.id === activeQuestion.id
+                                  ? { ...q, answerBody: e.target.value }
+                                  : q
+                              ));
+                            }}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
+                            rows={4}
+                            placeholder="Enter answer text"
+                          />
+                        ) : (
+                          <p className="text-sm text-gray-500">Answer text is optional for image-only answers.</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Rubric Configuration Section */}
-                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                <div className="grid grid-cols-1 gap-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Max Marks <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={activeQuestion.marks}
+                    onChange={(e) => {
+                      setQuestions(prev => prev.map(q =>
+                        q.id === activeQuestion.id
+                          ? { ...q, marks: e.target.value }
+                          : q
+                      ));
+                    }}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
+                    placeholder="Enter max marks"
+                  />
+                </div>
+
+                <div className="p-5 bg-accent/5 rounded-2xl border border-accent/15">
                   <div className="flex items-center gap-2 mb-4">
-                    <FileText className="w-4 h-4 text-blue-600" />
+                    <FileText className="w-4 h-4 text-accent" />
                     <h4 className="text-sm font-semibold text-gray-900">Rubric Configuration</h4>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
@@ -1036,17 +1104,17 @@ const UploadQnAModal = ({
                         type="number"
                         min="2"
                         max="10"
-                        value={question.num_rubric_items}
+                        value={activeQuestion.num_rubric_items}
                         onChange={(e) => {
                           const value = parseInt(e.target.value) || 3;
                           const clampedValue = Math.min(Math.max(value, 2), 10);
-                          setQuestions(prev => prev.map(q => 
-                            q.id === question.id 
+                          setQuestions(prev => prev.map(q =>
+                            q.id === activeQuestion.id
                               ? { ...q, num_rubric_items: clampedValue }
                               : q
                           ));
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
                       />
                       <p className="text-xs text-gray-500">Choose between 2-10 rubric items (default: 3)</p>
                     </div>
@@ -1056,40 +1124,27 @@ const UploadQnAModal = ({
                         Professor Instructions (Optional)
                       </label>
                       <textarea
-                        value={question.professorInstructions}
+                        value={activeQuestion.professorInstructions}
                         onChange={(e) => {
-                          setQuestions(prev => prev.map(q => 
-                            q.id === question.id 
+                          setQuestions(prev => prev.map(q =>
+                            q.id === activeQuestion.id
                               ? { ...q, professorInstructions: e.target.value }
                               : q
                           ));
                         }}
                         maxLength={2000}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-all duration-200"
-                        rows={3}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
+                        rows={4}
                         placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Weight mathematical rigor higher')"
                       />
                       <p className="text-xs text-gray-500">
-                        {question.professorInstructions?.length || 0}/2000 characters
+                        {activeQuestion.professorInstructions?.length || 0}/2000 characters
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
-
-            <button
-              onClick={addQuestion}
-              className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg 
-                hover:border-blue-500 hover:bg-blue-50/10 transition-colors duration-300 
-                flex items-center justify-center gap-2 group"
-              aria-label="Add another question"
-            >
-              <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
-                <Plus className="w-4 h-4" />
-              </div>
-              <span className="text-blue-600 font-medium">Add Another Question</span>
-            </button>
+            </div>
           </div>
         )}
       </div>
@@ -1116,7 +1171,7 @@ const UploadQnAModal = ({
             className={`flex items-center gap-2 px-5 py-2 rounded-md font-medium transition-all duration-300
               ${isSubmitting 
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow'}`}
+                : 'bg-accent text-white hover:bg-accent shadow-sm hover:shadow'}`}
             type="button"
           >
             {isSubmitting ? (
