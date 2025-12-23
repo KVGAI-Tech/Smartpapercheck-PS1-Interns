@@ -207,6 +207,8 @@ const ExamEvaluation = ({ examId, onClose }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'student_name', direction: 'asc' });
   const [evaluatingStudent, setEvaluatingStudent] = useState(null);
   const [batchEvaluating, setBatchEvaluating] = useState(false);
+  const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState(new Set());
+  const [publishing, setPublishing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [showDetailView, setShowDetailView] = useState(false);
   const [detailEnrollmentId, setDetailEnrollmentId] = useState(null);
@@ -236,6 +238,22 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
   const hideToast = useCallback(() => {
     setToast({ show: false, message: '', type: 'success' });
+  }, []);
+
+  const toggleSelectedEnrollment = useCallback((enrollmentId) => {
+    setSelectedEnrollmentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(enrollmentId)) {
+        next.delete(enrollmentId);
+      } else {
+        next.add(enrollmentId);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedEnrollmentIds(new Set());
   }, []);
 
   const fetchEnrollments = useCallback(async () => {
@@ -350,6 +368,85 @@ const ExamEvaluation = ({ examId, onClose }) => {
 
     return result;
   }, [searchQuery, statusFilter, students, sortConfig]);
+
+  const selectedCount = useMemo(() => selectedEnrollmentIds.size, [selectedEnrollmentIds]);
+
+  const allFilteredSelected = useMemo(() => {
+    if (filteredStudents.length === 0) return false;
+    return filteredStudents.every(s => selectedEnrollmentIds.has(s.enrollment_id));
+  }, [filteredStudents, selectedEnrollmentIds]);
+
+  const toggleSelectAllFiltered = useCallback(() => {
+    setSelectedEnrollmentIds(prev => {
+      const next = new Set(prev);
+      if (filteredStudents.length === 0) return next;
+
+      if (filteredStudents.every(s => next.has(s.enrollment_id))) {
+        filteredStudents.forEach(s => next.delete(s.enrollment_id));
+      } else {
+        filteredStudents.forEach(s => next.add(s.enrollment_id));
+      }
+      return next;
+    });
+  }, [filteredStudents]);
+
+  const handlePublishSelected = useCallback(async () => {
+    try {
+      if (!examId) {
+        throw new Error('Exam ID is missing');
+      }
+
+      if (selectedEnrollmentIds.size === 0) {
+        showToast('Please select at least one student', 'warning');
+        return;
+      }
+
+      setPublishing(true);
+      showToast('Publishing results... This will re-evaluate selected students and send emails.', 'info', 5000);
+
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluations/publish`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          enrollment_ids: Array.from(selectedEnrollmentIds),
+          force_reevaluate: true
+        }),
+        mode: 'cors'
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`API error (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data || data.code !== 200) {
+        throw new Error(data?.message || 'Failed to publish results');
+      }
+
+      const published = data?.data?.published ?? 0;
+      const failed = Array.isArray(data?.data?.failed) ? data.data.failed.length : 0;
+      const emailsSent = data?.data?.emails_sent ?? 0;
+
+      if (failed > 0) {
+        showToast(`Published ${published}. Failed ${failed}. Emails sent: ${emailsSent}.`, 'warning', 6000);
+      } else {
+        showToast(`Published ${published} results. Emails sent: ${emailsSent}.`, 'success', 6000);
+      }
+
+      clearSelection();
+      await fetchEnrollments();
+    } catch (e) {
+      console.error('Publish error:', e);
+      showToast(e.message || 'Failed to publish results', 'error', 6000);
+    } finally {
+      setPublishing(false);
+    }
+  }, [examId, selectedEnrollmentIds, showToast, clearSelection, fetchEnrollments]);
 
   const evaluateStudentWithRetry = async (student, retryCount = 0) => {
     try {
@@ -478,68 +575,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
   };
 
   const handleEvaluateAll = async () => {
-    try {
-      const pendingStudents = students.filter(s => s.marks_obtained === null && s.status === 'uploaded');
-
-      if (pendingStudents.length === 0) {
-        showToast('No pending submissions to evaluate', 'info');
-        return;
-      }
-
-      setBatchEvaluating(true);
-      setEvaluationProgress({ 
-        completed: 0, 
-        total: pendingStudents.length, 
-        inProgress: [], 
-        errors: 0 
-      });
-      
-      showToast(`Starting evaluation of ${pendingStudents.length} submissions simultaneously...`, 'info', 5000);
-
-      const evaluationPromises = pendingStudents.map(student => evaluateStudentWithRetry(student));
-      const results = await Promise.allSettled(evaluationPromises);
-      
-      const successfulResults = results
-        .filter(result => result.status === 'fulfilled' && result.value.success)
-        .map(result => result.value);
-      
-      const updatedStudents = students.map(student => {
-        const result = successfulResults.find(r => r.student.enrollment_id === student.enrollment_id);
-        
-        if (result) {
-          return {
-            ...student,
-            marks_obtained: result.data.total_marks || 0,
-            feedback: Array.isArray(result.data.overall_feedback)
-              ? result.data.overall_feedback.join('\n')
-              : (result.data.overall_feedback || ''),
-            evaluation_status: 'completed'
-          };
-        }
-        
-        return student;
-      });
-      
-      setStudents(updatedStudents);
-      
-      const successCount = successfulResults.length;
-      const failCount = pendingStudents.length - successCount;
-      
-      if (successCount === pendingStudents.length) {
-        showToast('All evaluations completed successfully', 'success');
-      } else if (successCount > 0) {
-        showToast(`Completed ${successCount} of ${pendingStudents.length} evaluations. ${failCount} failed.`,
-          failCount > successCount ? 'warning' : 'success');
-      } else {
-        showToast('Failed to complete any evaluations. AI evaluation may be temporarily unavailable.', 'error');
-      }
-    } catch (error) {
-      console.error("Batch evaluation error:", error);
-      showToast('Error during batch evaluation: ' + error.message, 'error');
-    } finally {
-      setBatchEvaluating(false);
-      setEvaluationProgress({ completed: 0, total: 0, inProgress: [], errors: 0 });
-    }
+    showToast('Select students and click Publish to re-evaluate and publish results.', 'info', 4000);
   };
 
   const hasEvaluationResults = (student) => {
@@ -780,8 +816,8 @@ const ExamEvaluation = ({ examId, onClose }) => {
             student.recheck_requested ? (
               <Link to={`/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`}>
                 <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
                 >
                   <Eye className="w-4 h-4" />
@@ -790,8 +826,8 @@ const ExamEvaluation = ({ examId, onClose }) => {
               </Link>
             ) : (
               <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => handleViewResults(student)}
                 className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
               >
@@ -803,7 +839,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
             <motion.button
               whileHover={canEvaluate ? { scale: 1.03 } : {}}
               whileTap={canEvaluate ? { scale: 0.97 } : {}}
-              onClick={() => canEvaluate && handleEvaluate(student)}
+              onClick={() => canEvaluate && toggleSelectedEnrollment(student.enrollment_id)}
               disabled={!canEvaluate}
               className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all 
                 ${isInProgress
@@ -814,7 +850,9 @@ const ExamEvaluation = ({ examId, onClose }) => {
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : hasError
                         ? 'bg-amber-500 text-white hover:shadow-md'
-                        : 'bg-accent text-white hover:shadow-md'
+                        : selectedEnrollmentIds.has(student.enrollment_id)
+                          ? 'bg-accent text-white'
+                          : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
                 }`}
             >
               {isInProgress ? (
@@ -836,6 +874,11 @@ const ExamEvaluation = ({ examId, onClose }) => {
                 <>
                   <RefreshCw className="w-4 h-4" />
                   <span className="font-medium">Retry</span>
+                </>
+              ) : selectedEnrollmentIds.has(student.enrollment_id) ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="font-medium">Selected</span>
                 </>
               ) : (
                 <>
@@ -948,6 +991,12 @@ const ExamEvaluation = ({ examId, onClose }) => {
         </div>
       </motion.div>
     );
+  };
+
+  const getPublishIndicator = () => {
+    if (publishing) return 'Publishing...';
+    if (selectedCount === 0) return 'Publish';
+    return `Publish (${selectedCount})`;
   };
 
   const getProgressIndicator = () => {
@@ -1183,6 +1232,34 @@ const ExamEvaluation = ({ examId, onClose }) => {
                     disabled={batchEvaluating || stats.pending === 0}
                     variant="success"
                   />
+
+                  <NavButton
+                    icon={publishing ? Loader : CheckCircle}
+                    label={getPublishIndicator()}
+                    onClick={handlePublishSelected}
+                    disabled={publishing || selectedCount === 0}
+                    variant="primary"
+                  />
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={toggleSelectAllFiltered}
+                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-gray-300 hover:text-gray-900 transition-all"
+                    disabled={publishing || loading}
+                  >
+                    {allFilteredSelected ? 'Unselect Filtered' : 'Select Filtered'}
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={clearSelection}
+                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-gray-300 hover:text-gray-900 transition-all"
+                    disabled={publishing || selectedCount === 0}
+                  >
+                    Clear Selection
+                  </motion.button>
                 </div>
               </div>
               
@@ -1359,16 +1436,18 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                           <motion.button
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
-                                            onClick={() => handleEvaluate(student)}
-                                            disabled={isInProgress || batchEvaluating}
+                                            onClick={() => toggleSelectedEnrollment(student.enrollment_id)}
+                                            disabled={isInProgress || batchEvaluating || publishing}
                                             className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md w-full sm:w-auto ${
                                               isInProgress || batchEvaluating
                                                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
+                                                : selectedEnrollmentIds.has(student.enrollment_id)
+                                                  ? 'bg-accent text-white'
+                                                  : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
                                             }`}
                                           >
                                             <RefreshCw className="w-4 h-4 mr-1.5" />
-                                            Re-evaluate
+                                            {selectedEnrollmentIds.has(student.enrollment_id) ? 'Selected' : 'Select'}
                                           </motion.button>
                                           <motion.button
                                             whileHover={{ scale: 1.05 }}

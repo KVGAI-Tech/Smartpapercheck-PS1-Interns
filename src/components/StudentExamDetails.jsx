@@ -19,6 +19,30 @@ import {
 import Toast from "./StudentExamDetails/Toast";
 import QuestionOverview from "./StudentExamDetails/QuestionOverview";
 
+const StatusBadge = ({ status }) => {
+  const isEvaluated = status === "evaluated";
+
+  return (
+    <span
+      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border shadow-sm ${
+        isEvaluated
+          ? "bg-accent/10 text-accent border-accent/20"
+          : "bg-amber-50 text-amber-700 border-amber-200"
+      }`}
+    >
+      {isEvaluated ? (
+        <>
+          <CheckCircle className="w-4 h-4 mr-1.5" /> Evaluated
+        </>
+      ) : (
+        <>
+          <Clock className="w-4 h-4 mr-1.5" /> Pending
+        </>
+      )}
+    </span>
+  );
+};
+
 const StudentExamDetails = ({ isHistory = false }) => {
   const { courseId, id: examId } = useParams();
   const [searchParams] = useSearchParams();
@@ -523,14 +547,14 @@ const StudentExamDetails = ({ isHistory = false }) => {
         studentInfo={examData.student}
       />
 
-      <header className="bg-white shadow-sm p-4 border-b">
-        <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <header className="bg-white shadow-sm border-b">
+        <div className="w-full px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleGoBack}
-              className="p-2 rounded-full hover:bg-gray-100"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </motion.button>
@@ -543,7 +567,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                   { label: isHistory ? 'History' : 'Exam' },
                 ]}
               />
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-gray-900 leading-tight">
                 {examData.student && (
                   <span>
                     {examData.student.name} ({examData.student.roll_number})
@@ -551,6 +575,8 @@ const StudentExamDetails = ({ isHistory = false }) => {
                 )}
               </h1>
               <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>{examData.title}</span>
+                <span className="text-gray-300">|</span>
                 <span>{examData.date}</span>
               </div>
             </div>
@@ -561,28 +587,15 @@ const StudentExamDetails = ({ isHistory = false }) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                examData.status === "evaluated"
-                  ? "bg-green-50 text-green-700"
-                  : "bg-yellow-50 text-yellow-700"
-              }`}
             >
-              {examData.status === "evaluated" ? (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-1" /> Evaluated
-                </>
-              ) : (
-                <>
-                  <Clock className="w-4 h-4 mr-1" /> Pending
-                </>
-              )}
+              <StatusBadge status={examData.status} />
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700"
+              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent/10 text-accent border border-accent/20 shadow-sm"
             >
               <Shield className="w-4 h-4 mr-1" /> Secured
             </motion.div>
@@ -597,7 +610,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
                   className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
                     hasSubmittedRecheck
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-accent text-white hover:bg-accent/90 shadow-sm"
                   }`}
                 >
                   Request Recheck
@@ -613,20 +626,22 @@ const StudentExamDetails = ({ isHistory = false }) => {
         className="flex-1 flex flex-col md:flex-row overflow-hidden relative"
       >
         <div
-          className="w-full md:w-1/2 h-full overflow-y-auto bg-gray-100 p-4 relative"
+          className="w-full md:w-1/2 h-full overflow-hidden bg-gray-50 p-4 relative flex flex-col"
           style={{ width: `${splitPosition}%` }}
         >
-          <PDFViewer
-            file={pdfFile}
-            pageNumber={pageNumber}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            zoomLevel={zoomLevel}
-            onTotalPagesChange={handleTotalPagesChange}
-            pdfFallbackImage={pdfImageUrl}
-            selectedAnnotations={selectedAnnotations}
-            studentInfo={examData.student}
-          />
+          <div className="flex-1 min-h-0">
+            <PDFViewer
+              file={pdfFile}
+              pageNumber={pageNumber}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              zoomLevel={zoomLevel}
+              onTotalPagesChange={handleTotalPagesChange}
+              pdfFallbackImage={pdfImageUrl}
+              selectedAnnotations={selectedAnnotations}
+              studentInfo={examData.student}
+            />
+          </div>
           {showAnnotation && (
             <AnnotationTool
               onAnnotationChange={handleAnnotationChange}
@@ -643,85 +658,106 @@ const StudentExamDetails = ({ isHistory = false }) => {
         ></div>
 
         <div
-          className="w-full md:w-1/2 h-full overflow-y-auto bg-white p-6"
+          className="w-full md:w-1/2 h-full overflow-y-auto bg-gray-50 p-4 md:p-6"
           style={{ width: `${100 - splitPosition}%` }}
         >
-          <div className="flex border-b mb-4">
-            <button
-              onClick={() => setCurrentTab("overview")}
-              className={`px-4 py-2 text-sm font-medium ${
-                currentTab === "overview"
-                  ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-gray-500"
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setCurrentTab("recheck")}
-              className={`px-4 py-2 text-sm font-medium ${
-                currentTab === "recheck"
-                  ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-gray-500"
-              }`}
-            >
-              Recheck
-            </button>
-            <button
-              onClick={() => setCurrentTab("history")}
-              className={`px-4 py-2 text-sm font-medium ${
-                currentTab === "history"
-                  ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-gray-500"
-              }`}
-            >
-              History
-            </button>
-          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentTab("overview")}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    currentTab === "overview"
+                      ? "bg-accent text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Overview
+                </button>
+                <button
+                  onClick={() => setCurrentTab("recheck")}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    currentTab === "recheck"
+                      ? "bg-accent text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Recheck
+                </button>
+                <button
+                  onClick={() => setCurrentTab("history")}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    currentTab === "history"
+                      ? "bg-accent text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  History
+                </button>
+              </div>
+            </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {currentTab === "overview" && (
-                <QuestionOverview
-                  questions={examData.questions}
-                  detailedFeedback={detailedFeedback}
-                />
-              )}
-              {currentTab === "recheck" && (
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Recheck Request</h2>
-                  {hasSubmittedRecheck ? (
-                    <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 rounded-md" role="alert">
-                      <p className="font-bold">Recheck Request Submitted</p>
-                      <p>Your recheck request has been submitted and is awaiting review.</p>
-                      {requestStatus && (
-                        <div className="mt-2 text-sm">
-                          <p><strong>Status:</strong> {requestStatus.status}</p>
-                          <p><strong>Submitted On:</strong> {requestStatus.timestamp}</p>
+            <div className="p-5">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {currentTab === "overview" && (
+                    <QuestionOverview
+                      questions={examData.questions}
+                      detailedFeedback={detailedFeedback}
+                    />
+                  )}
+                  {currentTab === "recheck" && (
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 mb-4">
+                        Recheck Request
+                      </h2>
+                      {hasSubmittedRecheck ? (
+                        <div
+                          className="bg-accent/5 border border-accent/10 text-gray-800 p-4 rounded-xl"
+                          role="alert"
+                        >
+                          <p className="font-semibold text-accent">
+                            Recheck request submitted
+                          </p>
+                          <p className="text-gray-600">
+                            Your recheck request has been submitted and is awaiting review.
+                          </p>
+                          {requestStatus && (
+                            <div className="mt-3 text-sm text-gray-700">
+                              <p>
+                                <strong>Status:</strong> {requestStatus.status}
+                              </p>
+                              <p>
+                                <strong>Submitted On:</strong> {requestStatus.timestamp}
+                              </p>
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        <p className="text-gray-600">
+                          Click the "Request Recheck" button above to submit a recheck request for this exam.
+                        </p>
                       )}
                     </div>
-                  ) : (
-                    <p className="text-gray-600">Click the "Request Recheck" button above to submit a recheck request for this exam.</p>
                   )}
-                </div>
-              )}
-              {currentTab === "history" && (
-                <RecheckRequestHistory
-                  requests={recheckRequests}
-                  loading={loadingRecheckRequests}
-                  error={recheckRequestsError}
-                  onViewRequest={handleViewRecheckRequest}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+                  {currentTab === "history" && (
+                    <RecheckRequestHistory
+                      requests={recheckRequests}
+                      loading={loadingRecheckRequests}
+                      error={recheckRequestsError}
+                      onViewRequest={handleViewRecheckRequest}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
       </main>
 

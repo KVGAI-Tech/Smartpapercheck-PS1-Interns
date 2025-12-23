@@ -35,7 +35,7 @@ const AnnotationTool = ({
 
   // This effect will sync our annotation container with the PDF/image content
   useEffect(() => {
-    const contentElement = document.querySelector(".pdf-content-container");
+    const contentElement = document.querySelector(".pdf-annotation-target");
     if (!contentElement || !containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
@@ -188,11 +188,6 @@ const AnnotationTool = ({
     <div
       ref={containerRef}
       className="absolute pointer-events-none" // pointer-events-none on container
-      style={{
-        transform: `scale(${zoomLevel})`,
-        transformOrigin: "center",
-        transition: "transform 0.3s ease",
-      }}
     >
       <div
         ref={canvasRef}

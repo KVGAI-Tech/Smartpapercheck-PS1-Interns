@@ -40,6 +40,7 @@ const PDFViewer = ({
   const [error, setError] = useState(null);
   const [useFallbackMode, setUseFallbackMode] = useState(false);
   const [imageUrl, setImageUrl] = useState(null);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const contentRef = useRef(null);
   const pdfContainerRef = useRef(null);
 
@@ -56,6 +57,7 @@ const PDFViewer = ({
   useEffect(() => {
     if (pdfFallbackImage) {
       setImageUrl(pdfFallbackImage);
+      setImageLoadFailed(false);
       setUseFallbackMode(true);
       setIsLoading(false);
       if (totalPages === 1) {
@@ -69,6 +71,10 @@ const PDFViewer = ({
       setIsLoading(false);
     }
   }, [file, pdfFallbackImage, totalPages, onTotalPagesChange]);
+
+  useEffect(() => {
+    setImageLoadFailed(false);
+  }, [pageNumber, imageUrl]);
 
   function onDocumentLoadSuccess({ numPages }) {
     setIsLoading(false);
@@ -120,16 +126,11 @@ const PDFViewer = ({
   };
 
   return (
-    <div className="bg-white shadow-lg rounded-lg overflow-hidden w-full h-full">
-      <div className="relative w-full h-full" ref={pdfContainerRef}>
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden w-full h-full flex flex-col">
+      <div className="relative w-full flex-1 min-h-0" ref={pdfContainerRef}>
         <div
           ref={contentRef}
-          className="w-full h-full flex flex-col items-center justify-center pdf-content-container"
-          style={{
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: "center",
-            transition: "transform 0.3s ease",
-          }}
+          className="w-full h-full relative overflow-auto flex-1 min-h-0"
           data-zoom-level={zoomLevel}
         >
           {isLoading && (
@@ -149,65 +150,87 @@ const PDFViewer = ({
           )}
 
           {useFallbackMode ? (
-            <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md w-full max-w-4xl mx-auto">
-              {imageUrl ? (
-                <div className="relative w-full pdf-content-container">
-                  <img
-                    src={imageUrl}
-                    alt={`Answer sheet page ${pageNumber}`}
-                    className="w-full h-auto rounded-md shadow-sm object-contain"
-                    style={{ maxHeight: "800px" }}
-                  />
-                  <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-md text-sm">
-                    Page {pageNumber} of {totalPages || 1}
+            <div className="w-full h-full p-4 flex flex-col">
+              {imageUrl && !imageLoadFailed ? (
+                <div className="relative w-full flex-1 min-h-0 overflow-auto">
+                  <div
+                    className="relative w-full h-full pdf-annotation-target"
+                    style={{
+                      transform: `scale(${zoomLevel})`,
+                      transformOrigin: "top left",
+                      transition: "transform 0.3s ease",
+                    }}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`Answer sheet page ${pageNumber}`}
+                      onError={() => {
+                        setImageLoadFailed(true);
+                        setError("Failed to load answer sheet image");
+                      }}
+                      className="w-full h-full rounded-md shadow-sm object-contain"
+                    />
+                    <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-md text-sm">
+                      Page {pageNumber} of {totalPages || 1}
+                    </div>
+                    {renderSelectedAnnotations()}
                   </div>
-                  {renderSelectedAnnotations()}
                 </div>
               ) : (
-                <>
+                <div className="w-full h-full flex flex-col items-center justify-center text-center p-8">
                   <FileText size={80} className="mx-auto text-gray-300 mb-4" />
                   <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    PDF Content
+                    Answer sheet unavailable
                   </h3>
-                  <p className="text-gray-600 mb-4">
-                    PDF viewer is using fallback mode due to security
-                    restrictions.
+                  <p className="text-gray-600 mb-6 max-w-lg">
+                    The answer sheet image/PDF could not be loaded. Please try again later.
                   </p>
-                  <div className="bg-gray-100 rounded-lg p-8 w-full min-h-[600px] flex items-center justify-center">
+                  <div className="bg-gray-100 rounded-lg w-full flex-1 min-h-0 flex items-center justify-center">
                     <p className="text-center text-gray-500">
                       Page {pageNumber} of {totalPages || "?"}
                     </p>
                   </div>
-                </>
+                </div>
               )}
             </div>
           ) : file ? (
-            <mockDocument.Document
-              file={file}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              className="w-full h-full pdf-content-container"
-              options={{
-                cMapUrl:
-                  "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.6.172/cmaps/",
-                cMapPacked: true,
-                standardFontDataUrl:
-                  "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.6.172/standard_fonts/",
-              }}
-            >
-              <mockDocument.Page
-                pageNumber={pageNumber}
-                width={800}
-                className="shadow-md mx-auto"
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-              {renderSelectedAnnotations()}
-            </mockDocument.Document>
+            <div className="w-full h-full p-4 overflow-auto">
+              <div
+                className="relative w-full h-full pdf-annotation-target"
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  transformOrigin: "top left",
+                  transition: "transform 0.3s ease",
+                }}
+              >
+                <mockDocument.Document
+                  file={file}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  className="w-full h-full"
+                  options={{
+                    cMapUrl:
+                      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.6.172/cmaps/",
+                    cMapPacked: true,
+                    standardFontDataUrl:
+                      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.6.172/standard_fonts/",
+                  }}
+                >
+                  <mockDocument.Page
+                    pageNumber={pageNumber}
+                    width={800}
+                    className="shadow-md mx-auto"
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+                  {renderSelectedAnnotations()}
+                </mockDocument.Document>
+              </div>
+            </div>
           ) : (
-            <div className="text-center space-y-6 p-8">
-              <FileText size={80} className="mx-auto text-gray-300" />
-              <p className="text-gray-600">No PDF file selected or provided</p>
+            <div className="w-full h-full flex flex-col items-center justify-center text-center p-8">
+              <FileText size={80} className="mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-600">No answer sheet available</p>
             </div>
           )}
         </div>
