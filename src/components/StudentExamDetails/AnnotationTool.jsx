@@ -35,7 +35,11 @@ const AnnotationTool = ({
 
   // This effect will sync our annotation container with the PDF/image content
   useEffect(() => {
-    const contentElement = document.querySelector(".pdf-annotation-target");
+    // Use the actual image inside the pdf-annotation-target as the reference,
+    // so coordinates match what the professor view uses.
+    const contentElement =
+      document.querySelector(".pdf-annotation-target img") ||
+      document.querySelector(".pdf-annotation-target");
     if (!contentElement || !containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
@@ -251,7 +255,7 @@ const AnnotationTool = ({
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ type: "spring", damping: 20 }}
-            className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-20 w-80 border border-blue-100"
+            className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-20 w-80 border border-blue-100 pointer-events-auto"
           >
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-medium text-gray-900 flex items-center gap-2">
@@ -391,7 +395,7 @@ const AnnotationTool = ({
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ type: "spring", damping: 20 }}
-        className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 z-20 w-64 border border-blue-100"
+        className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 z-20 w-64 border border-blue-100 pointer-events-auto"
       >
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">

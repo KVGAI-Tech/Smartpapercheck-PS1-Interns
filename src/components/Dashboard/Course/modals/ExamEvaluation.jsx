@@ -286,6 +286,9 @@ const ExamEvaluation = ({ examId, onClose }) => {
       const data = await response.json();
 
       if (data && data.code === 200 && data.data && Array.isArray(data.data.enrollments)) {
+        // Get exam full_marks from response if available
+        const examFullMarks = data.data.exam?.full_marks || null;
+        
         const formattedStudents = data.data.enrollments.map(student => ({
           enrollment_id: student.id,
           student_id: student.student_id,
@@ -293,7 +296,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
           student_name: student.student_name,
           roll_number: student.roll_number,
           marks_obtained: student.marks_obtained,
-          max_marks: student.max_marks || 100,
+          max_marks: student.max_marks || examFullMarks || 0,
           feedback: student.feedback,
           status: student.status || 'not_uploaded',
           uploaded_by: student.uploaded_by || null,
@@ -781,11 +784,11 @@ const ExamEvaluation = ({ examId, onClose }) => {
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Score</span>
-                <span className="font-medium text-gray-900">{student.marks_obtained}/{student.max_marks || 100}</span>
+                <span className="font-medium text-gray-900">{student.marks_obtained}/{student.max_marks || 0}</span>
               </div>
               <ProgressBar
                 value={student.marks_obtained}
-                max={student.max_marks || 100}
+                max={student.max_marks || 0}
                 color={student.marks_obtained > 80 ? "green" : student.marks_obtained > 60 ? "blue" : "amber"}
               />
             </div>
@@ -1375,7 +1378,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                           <div className="w-24 bg-gray-200 rounded-full h-2 mr-3 overflow-hidden">
                                             <motion.div
                                               initial={{ width: 0 }}
-                                              animate={{ width: `${(student.marks_obtained / (student.max_marks || 100)) * 100}%` }}
+                                              animate={{ width: `${student.max_marks > 0 ? (student.marks_obtained / student.max_marks) * 100 : 0}%` }}
                                               transition={{ duration: 1, delay: 0.2 + (index * 0.05) }}
                                               className={`h-2 rounded-full ${student.marks_obtained >= 60 ? 'bg-accent/80' :
                                                 'bg-accent/40'

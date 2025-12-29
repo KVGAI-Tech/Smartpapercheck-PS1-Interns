@@ -152,28 +152,50 @@ const ProfessorRecheckDetail = () => {
         const studentData = answerSheetData.data.student || {};
         const annotationsData = request.annotations || [];
 
-        const transformedAnnotations = annotationsData.map((anno) => ({
-          id:
-            anno.annotation_id ||
-            `anno-${anno.questionNumber}-${anno.pageNumber}`,
-          annotation_id:
-            anno.annotation_id ||
-            `anno-${anno.questionNumber}-${anno.pageNumber}`,
-          pageNumber: anno.pageNumber,
-          questionNumber: anno.questionNumber,
-          grievance: anno.grievance,
-          coordinates: anno.coordinates,
-          currentMarks: anno.currentMarks,
-          expectedMarks: anno.expectedMarks,
-          status: anno.status || "pending",
-          professorFeedback: anno.professorFeedback || "",
-          marksAwarded: anno.marksAwarded || 0,
-        }));
+        const Y_OFFSET = 5; // finer vertical offset in percentage units
+
+        const transformedAnnotations = annotationsData.map((anno) => {
+          const coords = anno.coordinates || {};
+
+          const correctedCoords = {
+            ...coords,
+            startY:
+              typeof coords.startY === "number"
+                ? Math.max(0, coords.startY - Y_OFFSET)
+                : coords.startY,
+            endY:
+              typeof coords.endY === "number"
+                ? Math.max(0, coords.endY - Y_OFFSET)
+                : coords.endY,
+          };
+
+          return {
+            id:
+              anno.annotation_id ||
+              `anno-${anno.questionNumber}-${anno.pageNumber}`,
+            annotation_id:
+              anno.annotation_id ||
+              `anno-${anno.questionNumber}-${anno.pageNumber}`,
+            pageNumber: anno.pageNumber,
+            questionNumber: anno.questionNumber,
+            grievance: anno.grievance,
+            coordinates: correctedCoords,
+            currentMarks: anno.currentMarks,
+            expectedMarks: anno.expectedMarks,
+            status: anno.status || "pending",
+            professorFeedback: anno.professorFeedback || "",
+            marksAwarded: anno.marksAwarded || 0,
+          };
+        });
 
         const qMarks = {};
         const maxMarksByQuestion = { total: 0 };
         let origTotal = 0;
         let newTotal = 0;
+
+        // Get max_marks from questions data if available
+        const questionsData = answerSheetData.data.questions || {};
+        const examFullMarks = answerSheetData.data.full_marks || 0;
 
         const questionMap = {};
         transformedAnnotations.forEach((anno) => {
@@ -181,7 +203,16 @@ const ProfessorRecheckDetail = () => {
           if (!questionMap[qNum]) {
             questionMap[qNum] = [];
 
-            maxMarksByQuestion[qNum] = 10;
+            // Get max_marks from questions data, fallback to calculating from exam full_marks
+            const questionKey = `question_${qNum}`;
+            const questionInfo = questionsData[questionKey];
+            if (questionInfo && questionInfo.max_marks) {
+              maxMarksByQuestion[qNum] = questionInfo.max_marks;
+            } else {
+              // Fallback: if we have exam full_marks and can estimate, use it
+              // Otherwise default to 10 (but this should rarely happen)
+              maxMarksByQuestion[qNum] = 10;
+            }
           }
           questionMap[qNum].push(anno);
 

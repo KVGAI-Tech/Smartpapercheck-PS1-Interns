@@ -62,13 +62,13 @@ const EvaluationCard = ({
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-gray-600">Score</span>
-          <span className="font-medium text-green-600">
+          <span className="font-medium text-accent">
             {score}/{maxScore}
           </span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2">
           <div
-            className="bg-green-500 h-2 rounded-full transition-all duration-500"
+            className="bg-accent h-2 rounded-full transition-all duration-500"
             style={{ width: `${(score / maxScore) * 100}%` }}
           />
         </div>
@@ -108,7 +108,7 @@ const RecheckItem = ({ title, subject, reason, status, requestDate }) => (
         <History
           className={`w-5 h-5 ${
             status === "approved"
-              ? "text-green-500"
+              ? "text-accent"
               : status === "pending"
               ? "text-yellow-500"
               : "text-red-500"
@@ -213,25 +213,25 @@ const StudentDashboard = () => {
       title: "Total Evaluations",
       value: "8",
       icon: FileText,
-      className: "bg-green-500",
+      className: "bg-accent",
     },
     {
       title: "Evaluated",
       value: "5",
       icon: CheckCircle,
-      className: "bg-blue-500",
+      className: "bg-accent",
     },
     {
       title: "Under Review",
       value: "3",
       icon: Clock,
-      className: "bg-yellow-500",
+      className: "bg-accent",
     },
     {
       title: "Recheck Requests",
       value: "2",
       icon: AlertCircle,
-      className: "bg-purple-500",
+      className: "bg-accent",
     },
   ];
 
@@ -297,7 +297,7 @@ const StudentDashboard = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
       </div>
     );
   }
@@ -322,7 +322,7 @@ const StudentDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
           {getGreeting()}
@@ -332,14 +332,14 @@ const StudentDashboard = () => {
           </p>
         </div>
 
-        <div className="relative">
+        <div className="relative w-full md:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search evaluations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className="w-full md:w-64 lg:w-80 pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
           />
         </div>
       </div>
@@ -357,7 +357,7 @@ const StudentDashboard = () => {
               <h2 className="text-lg font-semibold text-gray-900">
                 Recent Evaluations
               </h2>
-              <button className="text-sm font-medium text-green-600 hover:text-green-700 flex items-center gap-1">
+              <button className="text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1">
                 View All <ExternalLink className="w-4 h-4" />
               </button>
             </div>
@@ -375,7 +375,7 @@ const StudentDashboard = () => {
             <h2 className="text-lg font-semibold text-gray-900">
               Recheck Requests
             </h2>
-            <button className="text-green-600 hover:text-green-700">
+            <button className="text-accent hover:text-accent/80">
               <Eye className="w-5 h-5" />
             </button>
           </div>
@@ -386,7 +386,7 @@ const StudentDashboard = () => {
             ))}
           </div>
 
-          <button className="mt-4 w-full py-2 bg-green-50 text-green-600 rounded-lg font-medium hover:bg-green-100 transition-colors flex items-center justify-center gap-2">
+          <button className="mt-4 w-full py-2 bg-accent/5 text-accent rounded-lg font-medium hover:bg-accent/10 transition-colors flex items-center justify-center gap-2">
             <Download className="w-4 h-4" />
             <span>Download Report</span>
           </button>
@@ -421,8 +421,8 @@ const StudentDashboard = () => {
               className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
             >
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <History className="w-4 h-4 text-green-600" />
+                <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center">
+                  <History className="w-4 h-4 text-accent" />
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">{activity.action}</p>

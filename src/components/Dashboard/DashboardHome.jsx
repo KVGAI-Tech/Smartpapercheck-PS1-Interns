@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../BaseURL';
 
@@ -76,6 +77,9 @@ const EvaluationCard = ({ course, total, evaluated, timeLeft }) => (
 const Dashboard = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
+  const [summaryError, setSummaryError] = useState(null);
   const navigate = useNavigate();
   
   const fetchUserProfile = useCallback(async () => {
@@ -117,8 +121,53 @@ const Dashboard = () => {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
+  useEffect(() => {
+    const fetchSummary = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/auth');
+        return;
+      }
+
+      try {
+        setIsLoadingSummary(true);
+        setSummaryError(null);
+        const res = await fetch(`${API_BASE_URL}/professors/dashboard/summary`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          method: 'GET',
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+
+        const data = await res.json();
+        setSummary(data?.data || null);
+      } catch (err) {
+        console.error('Error fetching summary', err);
+        setSummaryError(err.message || 'Failed to load dashboard');
+      } finally {
+        setIsLoadingSummary(false);
+      }
+    };
+
+    fetchSummary();
+  }, [navigate]);
+
   // Default user name if userData is not loaded yet
   const userName = userData?.name || 'Guest User';
+
+  const statValues = {
+    totalAnswerSheets: summary?.total_answer_sheets ?? 0,
+    evaluatedToday: summary?.evaluated_today ?? 0,
+    activeTAs: summary?.active_tas ?? 0,
+    pendingReviews: summary?.pending_reviews ?? 0,
+  };
+
+  const evaluationCards = summary?.current_evaluations || [];
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -138,36 +187,34 @@ const Dashboard = () => {
             />
             <Search className="absolute right-3 top-2.5 w-5 h-5 text-gray-400" />
           </div>
-          
         </div>
       </div>
-
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Total Answer Sheets"
-          value="2,845"
+          value={isLoadingSummary ? '—' : statValues.totalAnswerSheets.toLocaleString()}
           icon={FileCheck}
           trend="up"
           trendValue="15.3"
         />
         <StatCard
           title="Evaluated Today"
-          value="486"
+          value={isLoadingSummary ? '—' : statValues.evaluatedToday.toLocaleString()}
           icon={CheckCircle}
           trend="up"
           trendValue="8.2"
         />
         <StatCard
           title="Active TAs"
-          value="12"
+          value={isLoadingSummary ? '—' : statValues.activeTAs.toLocaleString()}
           icon={Users}
           trend="up"
           trendValue="2.5"
         />
         <StatCard
           title="Pending Reviews"
-          value="24"
+          value={isLoadingSummary ? '—' : statValues.pendingReviews.toLocaleString()}
           icon={Clock}
           trend="down"
           trendValue="5.8"
@@ -183,26 +230,34 @@ const Dashboard = () => {
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <EvaluationCard 
-            course="Computer Programming (CS F111)"
-            total={512}
-            evaluated={384}
-            timeLeft="2 days"
-          />
-          <EvaluationCard 
-            course="Data Structures (CS F212)"
-            total={428}
-            evaluated={257}
-            timeLeft="3 days"
-          />
-          <EvaluationCard 
-            course="Machine Learning (CS F320)"
-            total={356}
-            evaluated={142}
-            timeLeft="5 days"
-          />
-        </div>
+        {summaryError && (
+          <div className="text-red-500 text-sm mb-4">{summaryError}</div>
+        )}
+
+        {isLoadingSummary ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((key) => (
+              <div
+                key={key}
+                className="animate-pulse bg-gray-50 border border-gray-100 rounded-xl h-40"
+              />
+            ))}
+          </div>
+        ) : evaluationCards.length === 0 ? (
+          <div className="text-sm text-gray-500">No evaluations yet.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {evaluationCards.map((card) => (
+              <EvaluationCard
+                key={card.exam_id}
+                course={card.exam_name || card.course_name || 'Exam'}
+                total={card.total_answer_sheets || 0}
+                evaluated={card.evaluated || 0}
+                timeLeft={card.time_left || '—'}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm">

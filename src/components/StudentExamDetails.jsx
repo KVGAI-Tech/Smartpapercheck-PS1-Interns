@@ -199,7 +199,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
         }
 
         const response = await axios.get(
-          `${API_BASE_URL}/exams/${examId}/answer-sheets/${enrollmentId}`,
+          `${API_BASE_URL}/exams/${examId}/feedback/${enrollmentId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -215,6 +215,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
           const questions = [];
           const detailedFeedbackData = {};
 
+          // Get max_marks from questions data if available
+          const questionsData = apiData.questions || {};
+          
           if (apiData.evaluations) {
             Object.keys(apiData.evaluations).forEach((key) => {
               const questionData = apiData.evaluations[key];
@@ -229,13 +232,18 @@ const StudentExamDetails = ({ isHistory = false }) => {
               }
 
               const totalMarks = parseFloat(questionData.total_marks) || 0;
+              
+              // Get max_marks from questions data, fallback to 0 if not found
+              const questionInfo = questionsData[key] || {};
+              const maxMarks = questionInfo.max_marks || 0;
 
               questions.push({
                 question_number: questionNumber,
                 question_text:
                   apiData.problem_feedback?.[key] ||
+                  questionInfo.question_text ||
                   `Question ${questionNumber}`,
-                max_marks: 10,
+                max_marks: maxMarks,
                 marks_obtained: totalMarks,
                 feedback: questionData.overall_feedback || "",
               });
@@ -257,6 +265,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
           setDetailedFeedback(detailedFeedbackData);
 
+          // Calculate total max score from questions
+          const totalMaxScore = questions.reduce((sum, q) => sum + (q.max_marks || 0), 0);
+          
           const transformedData = {
             id: parseInt(examId),
             title: apiData.exam_name || "Exam",
@@ -269,7 +280,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
               day: "numeric",
             }),
             score: questions.reduce((sum, q) => sum + q.marks_obtained, 0),
-            maxScore: questions.length * 10,
+            maxScore: totalMaxScore || apiData.full_marks || 0,
             status: apiData.evaluation_status || "pending",
             questions: questions,
             student: apiData.student || null,

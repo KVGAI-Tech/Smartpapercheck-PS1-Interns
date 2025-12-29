@@ -405,8 +405,14 @@
     onUploadAnswers,
     onGetEnrollments,
     onStartEvaluation,
+    initialStep = 0,
+    onStepChange,
   }) => {
-    const [activeStep, setActiveStep] = useState(0);
+    const [activeStep, setActiveStep] = useState(initialStep || 0);
+
+    useEffect(() => {
+      setActiveStep(initialStep || 0);
+    }, [initialStep]);
       
     const steps = [
       { 
@@ -496,6 +502,9 @@
                     isCompleted={index < activeStep}
                     onClick={() => {
                       setActiveStep(index);
+                      if (onStepChange) {
+                        onStepChange(index);
+                      }
                       step.action();
                     }}
                   />
@@ -534,7 +543,13 @@
             
             <div className="flex items-center justify-center gap-4 mt-6">
               <button
-                onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+                onClick={() => {
+                  const nextStep = Math.max(0, activeStep - 1);
+                  setActiveStep(nextStep);
+                  if (onStepChange) {
+                    onStepChange(nextStep);
+                  }
+                }}
                 disabled={activeStep === 0}
                 className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50
                   disabled:opacity-30 disabled:cursor-not-allowed transition-all transform hover:scale-110"
@@ -545,7 +560,13 @@
                 Step {activeStep + 1} of {steps.length}
               </div>
               <button
-                onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
+                onClick={() => {
+                  const nextStep = Math.min(steps.length - 1, activeStep + 1);
+                  setActiveStep(nextStep);
+                  if (onStepChange) {
+                    onStepChange(nextStep);
+                  }
+                }}
                 disabled={activeStep === steps.length - 1}
                 className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50
                   disabled:opacity-30 disabled:cursor-not-allowed transition-all transform hover:scale-110"
@@ -967,6 +988,7 @@
     const [selectedExamForEnrollments, setSelectedExamForEnrollments] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedExamForEdit, setSelectedExamForEdit] = useState(null);
+    const [examSteps, setExamSteps] = useState({});
   
     useEffect(() => {
       if (!courseId) {
@@ -976,6 +998,35 @@
         console.log(`ExamsTab initialized with courseId: ${courseId}`);
       }
     }, [courseId]);
+
+    useEffect(() => {
+      if (!Array.isArray(exams)) return;
+
+      setExamSteps((prev) => {
+        const updated = { ...prev };
+
+        exams.forEach((exam) => {
+          if (!exam || !exam.id) return;
+
+          const hasQnA = !!(exam.question_pdf_s3_url || exam.golden_pdf_s3_url);
+          const hasRubrics = !!questionsHaveRubrics[exam.id];
+
+          let derivedStep = 0;
+          if (hasQnA) {
+            derivedStep = 1;
+          }
+          if (hasRubrics) {
+            derivedStep = 2;
+          }
+
+          if (prev[exam.id] === undefined) {
+            updated[exam.id] = derivedStep;
+          }
+        });
+
+        return updated;
+      });
+    }, [exams, questionsHaveRubrics]);
   
     const filteredExams = exams.filter(exam =>
       exam.exam_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1135,6 +1186,12 @@
           ...prev,
           [selectedExamId]: true
         }));
+        if (selectedExamId) {
+          setExamSteps(prev => ({
+            ...prev,
+            [selectedExamId]: Math.max(prev[selectedExamId] ?? 0, 2),
+          }));
+        }
         return data;
       } catch (error) {
         showToast(error.message || 'Failed to save rubric', 'error');
@@ -1271,7 +1328,7 @@
             { 
               question_number: 1, 
               question_text: "Question 1 (API unavailable)", 
-              max_marks: 10,
+              max_marks: 0, // Will be set from actual exam data when available
               domain: "Math" 
             }
           ];
@@ -1329,6 +1386,10 @@
           }
           
           showToast('Question PDF uploaded successfully', 'success');
+          setExamSteps(prev => ({
+            ...prev,
+            [examId]: Math.max(prev[examId] ?? 0, 1),
+          }));
         }
         
         if (goldenPdf) {
@@ -1348,6 +1409,10 @@
           }
           
           showToast('Golden answer PDF uploaded successfully', 'success');
+          setExamSteps(prev => ({
+            ...prev,
+            [examId]: Math.max(prev[examId] ?? 0, 1),
+          }));
         }
         
         return true;
@@ -1414,6 +1479,14 @@
                   onUploadAnswers={handleAnswerUpload}
                   onGetEnrollments={handleGetEnrollments}
                   onStartEvaluation={handleStartEvaluation}
+                  initialStep={examSteps[exam.id] ?? 0}
+                  onStepChange={(step) => {
+                    if (!exam || !exam.id) return;
+                    setExamSteps(prev => ({
+                      ...prev,
+                      [exam.id]: step,
+                    }));
+                  }}
                   onViewRecheckRequests={handleViewRecheckRequests}
                 />
               </div>
@@ -1541,6 +1614,12 @@
             courseId={courseId}
             onUploadSuccess={(data) => {
               showToast('Answer sheets uploaded successfully', 'success');
+              if (selectedExamId) {
+                setExamSteps(prev => ({
+                  ...prev,
+                  [selectedExamId]: Math.max(prev[selectedExamId] ?? 0, 2),
+                }));
+              }
               if (onRefresh) {
                 onRefresh();
               }
