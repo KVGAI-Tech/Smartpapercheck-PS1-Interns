@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 
 import { ArrowLeft, AlertCircle } from 'lucide-react';
+import Breadcrumbs from '../../ui/breadcrumbs';
+
 import StudentsTab from './tabs/StudentsTab';
 import InstructorsTab from './tabs/InstructorsTab';
 import TATab from './tabs/TATab';
@@ -487,7 +489,14 @@ const CourseDetails = () => {
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <Breadcrumbs
+                        items={[
+                            { label: 'Courses', to: '/courses' },
+                            { label: courseDetails?.course_name || courseDetails?.course_code || 'Course' },
+                        ]}
+                    />
+
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mt-2">
                         <div>
                             <div className="flex items-center gap-3 mb-1">
                                 <Link

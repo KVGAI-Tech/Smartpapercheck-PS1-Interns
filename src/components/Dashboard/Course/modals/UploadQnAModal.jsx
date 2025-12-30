@@ -672,9 +672,10 @@ const UploadQnAModal = ({
     );
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || questions.length === 0) return null;
 
-  const activeQuestion = questions[currentQuestionIndex];
+  const safeIndex = Math.min(Math.max(currentQuestionIndex, 0), questions.length - 1);
+  const activeQuestion = questions[safeIndex];
 
   const ModalContent = (
     <div 

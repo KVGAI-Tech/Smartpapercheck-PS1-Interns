@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import {
   Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader,
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
@@ -7,6 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
 import { Link } from 'react-router-dom';
+import Breadcrumbs from '../../../ui/breadcrumbs';
 
 const StudentEvaluationLoader = React.lazy(() => import('./StudentEvaluationLoader'));
 const RubricModal = React.lazy(() => import('./RubricModal'));
@@ -198,7 +199,7 @@ const BatchProcessingIndicator = ({ completed, total }) => {
   );
 };
 
-const ExamEvaluation = ({ examId, onClose }) => {
+const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -221,6 +222,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
   const [examQuestions, setExamQuestions] = useState([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyEnrollmentId, setHistoryEnrollmentId] = useState(null);
+  const selectAllCheckboxRef = useRef(null);
   
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
@@ -372,26 +374,82 @@ const ExamEvaluation = ({ examId, onClose }) => {
     return result;
   }, [searchQuery, statusFilter, students, sortConfig]);
 
+  const isStudentSelectable = useCallback((student) => {
+    if (!student || student.status === 'not_uploaded') return false;
+    const hasResults = student.marks_obtained !== null;
+    const inProgress = evaluationProgress.inProgress.includes(student.enrollment_id) ||
+      evaluatingStudent?.enrollment_id === student.enrollment_id;
+
+    if (hasResults) {
+      return !(inProgress || batchEvaluating || publishing);
+    }
+
+    return student.status === 'uploaded' && !hasResults && !inProgress && !batchEvaluating && !publishing;
+  }, [evaluationProgress.inProgress, evaluatingStudent, batchEvaluating, publishing]);
+
   const selectedCount = useMemo(() => selectedEnrollmentIds.size, [selectedEnrollmentIds]);
 
+  const selectableFilteredStudents = useMemo(
+    () => filteredStudents.filter(isStudentSelectable),
+    [filteredStudents, isStudentSelectable]
+  );
+
+  const selectableStudents = useMemo(
+    () => students.filter(isStudentSelectable),
+    [students, isStudentSelectable]
+  );
+
   const allFilteredSelected = useMemo(() => {
-    if (filteredStudents.length === 0) return false;
-    return filteredStudents.every(s => selectedEnrollmentIds.has(s.enrollment_id));
-  }, [filteredStudents, selectedEnrollmentIds]);
+    if (selectableFilteredStudents.length === 0) return false;
+    return selectableFilteredStudents.every(s => selectedEnrollmentIds.has(s.enrollment_id));
+  }, [selectableFilteredStudents, selectedEnrollmentIds]);
+
+  const allStudentsSelected = useMemo(() => {
+    if (selectableStudents.length === 0) return false;
+    return selectableStudents.every(s => selectedEnrollmentIds.has(s.enrollment_id));
+  }, [selectableStudents, selectedEnrollmentIds]);
 
   const toggleSelectAllFiltered = useCallback(() => {
     setSelectedEnrollmentIds(prev => {
+      if (selectableFilteredStudents.length === 0) return prev;
       const next = new Set(prev);
-      if (filteredStudents.length === 0) return next;
+      const shouldUnselect = selectableFilteredStudents.every(s => next.has(s.enrollment_id));
 
-      if (filteredStudents.every(s => next.has(s.enrollment_id))) {
-        filteredStudents.forEach(s => next.delete(s.enrollment_id));
-      } else {
-        filteredStudents.forEach(s => next.add(s.enrollment_id));
-      }
+      selectableFilteredStudents.forEach(student => {
+        if (shouldUnselect) {
+          next.delete(student.enrollment_id);
+        } else {
+          next.add(student.enrollment_id);
+        }
+      });
+
       return next;
     });
-  }, [filteredStudents]);
+  }, [selectableFilteredStudents]);
+
+  const toggleSelectAllStudents = useCallback(() => {
+    setSelectedEnrollmentIds(prev => {
+      if (selectableStudents.length === 0) return prev;
+      const next = new Set(prev);
+      const shouldUnselect = selectableStudents.every(s => next.has(s.enrollment_id));
+
+      selectableStudents.forEach(student => {
+        if (shouldUnselect) {
+          next.delete(student.enrollment_id);
+        } else {
+          next.add(student.enrollment_id);
+        }
+      });
+
+      return next;
+    });
+  }, [selectableStudents]);
+
+  useEffect(() => {
+    if (!selectAllCheckboxRef.current) return;
+    const hasSomeSelected = selectableFilteredStudents.some(s => selectedEnrollmentIds.has(s.enrollment_id));
+    selectAllCheckboxRef.current.indeterminate = hasSomeSelected && !allFilteredSelected;
+  }, [selectableFilteredStudents, selectedEnrollmentIds, allFilteredSelected]);
 
   const handlePublishSelected = useCallback(async () => {
     try {
@@ -1041,6 +1099,7 @@ const ExamEvaluation = ({ examId, onClose }) => {
           <StudentEvaluationLoader
             examId={examId}
             enrollmentId={detailEnrollmentId}
+            courseId={courseId}
             onClose={() => {
               setShowDetailView(false);
               setDetailEnrollmentId(null);
@@ -1086,7 +1145,17 @@ const ExamEvaluation = ({ examId, onClose }) => {
             transition={{ duration: 0.5 }}
             className="w-full flex flex-col h-full min-h-0 min-w-0"
           >
-            <div className="flex flex-col gap-2">
+            <Breadcrumbs
+              items={[
+                { label: 'Courses', to: '/courses' },
+                courseId
+                  ? { label: 'Exams', to: `/courses/${courseId}`, state: { activeTab: 'exams' } }
+                  : { label: 'Exams' },
+                { label: 'Exam Evaluations' },
+              ]}
+            />
+
+            <div className="flex flex-col gap-2 mt-2">
               <motion.button
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1247,11 +1316,11 @@ const ExamEvaluation = ({ examId, onClose }) => {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={toggleSelectAllFiltered}
+                    onClick={toggleSelectAllStudents}
                     className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-gray-300 hover:text-gray-900 transition-all"
-                    disabled={publishing || loading}
+                    disabled={publishing || loading || selectableStudents.length === 0}
                   >
-                    {allFilteredSelected ? 'Unselect Filtered' : 'Select Filtered'}
+                    {allStudentsSelected ? 'Unselect All' : 'Select All'}
                   </motion.button>
 
                   <motion.button
@@ -1299,6 +1368,17 @@ const ExamEvaluation = ({ examId, onClose }) => {
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50 sticky top-0 z-10">
                             <tr>
+                              <th className="px-4 py-3.5 w-12">
+                                <input
+                                  type="checkbox"
+                                  ref={selectAllCheckboxRef}
+                                  checked={selectableFilteredStudents.length > 0 && allFilteredSelected}
+                                  onChange={toggleSelectAllFiltered}
+                                  disabled={selectableFilteredStudents.length === 0 || publishing || loading}
+                                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer disabled:cursor-not-allowed"
+                                  aria-label="Select all visible students"
+                                />
+                              </th>
                               {[
                                 { key: 'student_name', label: 'Student' },
                                 { key: 'roll_number', label: 'Roll Number' },
@@ -1341,6 +1421,16 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                     className="hover:bg-gray-50 group"
                                     whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.8)" }}
                                   >
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedEnrollmentIds.has(student.enrollment_id)}
+                                        onChange={() => toggleSelectedEnrollment(student.enrollment_id)}
+                                        disabled={!isStudentSelectable(student)}
+                                        className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent disabled:cursor-not-allowed"
+                                        aria-label={`Select ${student.student_name}`}
+                                      />
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
                                         <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-white font-medium shadow-sm group-hover:shadow-md transition-shadow mr-3">
@@ -1435,22 +1525,6 @@ const ExamEvaluation = ({ examId, onClose }) => {
                                           >
                                             <Eye className="w-4 h-4 mr-1.5" />
                                             View Results
-                                          </motion.button>
-                                          <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => toggleSelectedEnrollment(student.enrollment_id)}
-                                            disabled={isInProgress || batchEvaluating || publishing}
-                                            className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow-md w-full sm:w-auto ${
-                                              isInProgress || batchEvaluating
-                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                : selectedEnrollmentIds.has(student.enrollment_id)
-                                                  ? 'bg-accent text-white'
-                                                  : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
-                                            }`}
-                                          >
-                                            <RefreshCw className="w-4 h-4 mr-1.5" />
-                                            {selectedEnrollmentIds.has(student.enrollment_id) ? 'Selected' : 'Select'}
                                           </motion.button>
                                           <motion.button
                                             whileHover={{ scale: 1.05 }}

@@ -220,7 +220,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemDescription, 
                         <span className="font-medium">Item {itemIndex + 1}:</span> {itemDescription || 'Untitled rubric item'}
                     </p>
                     <p className="text-xs text-gray-500">
-                        Are you sure you want to delete this rubric item? This will affect your total weight and marks calculations.
+                        Are you sure you want to delete this rubric item? This will affect your total marks calculations.
                     </p>
                 </div>
 
@@ -252,7 +252,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemDescription, 
     );
 };
 
-const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) => {
+const RubricItemEditor = ({ item, index, onUpdate, onDelete, validationErrors = [] }) => {
     const hasErrors = validationErrors.length > 0;
     
     return (
@@ -341,25 +341,6 @@ const RubricItem = ({ item, index, onDelete, onUpdate, validationErrors = [] }) 
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                                <Settings className="w-4 h-4 text-gray-400" />
-                                                Weight
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={item.weight || 0}
-                                                onChange={(e) => onUpdate(index, { ...item, weight: parseFloat(e.target.value) || 0 })}
-                                                step="0.01"
-                                                min="0"
-                                                max="1"
-                                                className={`w-full px-4 py-2.5 bg-white border rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-300 shadow-sm ${
-                                                    validationErrors.some(error => error.includes('weight')) 
-                                                        ? 'border-red-300 bg-red-50' 
-                                                        : 'border-gray-200'
-                                                }`}
-                                            />
-                                        </div>
                                         <div className="space-y-2">
                                             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                                                 <Circle className="w-4 h-4 text-gray-400" />
@@ -570,19 +551,9 @@ const RubricModal = ({
             return { isValid: true, errors: [], itemErrors: {} };
         }
 
-        const totalWeight = rubricItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
         const totalMaxMarks = rubricItems.reduce((sum, item) => sum + (parseFloat(item.max_marks) || 0), 0);
         const selectedQuestionData = questions.find(q => q.question_number === selectedQuestion);
         const questionMaxMarks = Math.abs(selectedQuestionData?.max_marks || 10);
-
-        // STRICT: Total weight must be exactly 1.0
-        if (Math.abs(totalWeight - 1.0) > 0.001) {  // Using small epsilon for floating point comparison
-            if (totalWeight === 0) {
-                errors.push('Total weight cannot be 0. Please assign weights to rubric items.');
-            } else {
-                errors.push(`Total weight must be exactly 1.0 (currently ${totalWeight.toFixed(3)})`);
-            }
-        }
 
         // STRICT: Total max marks must exactly equal question max marks
         if (Math.abs(totalMaxMarks - questionMaxMarks) > 0.01) {
@@ -598,13 +569,6 @@ const RubricModal = ({
                 itemErrorsList.push('Description is required');
             }
             
-            // Check weight
-            if (!item.weight || item.weight <= 0) {
-                itemErrorsList.push('Weight must be greater than 0');
-            } else if (item.weight > 1) {
-                itemErrorsList.push('Weight cannot exceed 1.0');
-            }
-            
             // Check max marks
             if (!item.max_marks || item.max_marks <= 0) {
                 itemErrorsList.push('Max marks must be greater than 0.00');
@@ -618,7 +582,7 @@ const RubricModal = ({
 
         const isValid = errors.length === 0;
         
-        return { isValid, errors, itemErrors, totalWeight, totalMaxMarks };
+        return { isValid, errors, itemErrors, totalMaxMarks };
     }, [rubricItems, selectedQuestion, questions]);
     
     const hasRubric = (questionNumber) => {
@@ -744,19 +708,16 @@ const RubricModal = ({
         const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
         const maxMarks = Math.abs(currentQuestion?.max_marks || 10);
         const remainingItems = 4 - rubricItems.length;
-        const currentTotalWeight = rubricItems.reduce((sum, item) => sum + (parseFloat(item.weight) || 0), 0);
         const currentTotalMarks = rubricItems.reduce((sum, item) => sum + (parseFloat(item.max_marks) || 0), 0);
         
-        // Calculate suggested values to help reach exactly 1.0 weight and exact max marks
-        const suggestedWeight = remainingItems > 0 ? (1.0 - currentTotalWeight) / remainingItems : 0.25;
         const suggestedMarks = remainingItems > 0 ? parseFloat(((maxMarks - currentTotalMarks) / remainingItems).toFixed(2)) : parseFloat((maxMarks / 4).toFixed(2));
 
         setRubricItems(prev => [
             ...prev,
             {
                 description: '',
-                weight: Math.max(0, Math.min(1, suggestedWeight || 0.25)),
                 max_marks: Math.max(0.01, suggestedMarks || parseFloat((maxMarks / 4).toFixed(2))),
+                score_options: [],
                 reasoning: '',
                 grading_guidelines: ''
             }
@@ -772,6 +733,34 @@ const RubricModal = ({
             const newItems = [...items];
             newItems[index] = updatedItem;
             return newItems;
+        });
+    };
+
+    const buildScoreOptions = (questionMaxMarks, itemMaxMarks) => {
+        const qm = Math.abs(parseFloat(questionMaxMarks) || 0);
+        const mm = Math.abs(parseFloat(itemMaxMarks) || 0);
+        if (!mm) return [0];
+
+        if (qm <= 5) {
+            const partial = Math.max(0, mm - 0.5);
+            const opts = [mm, partial, 0];
+            return Array.from(new Set(opts.map(v => Number(v)))).sort((a, b) => b - a);
+        }
+
+        const q = (v) => Math.round(v * 2) / 2;
+        const opts = [mm, q(mm * 0.75), q(mm * 0.5), q(mm * 0.25), 0];
+        return Array.from(new Set(opts.map(v => Number(v)))).sort((a, b) => b - a);
+    };
+
+    const normalizeRubricItemsForSave = () => {
+        const selectedQuestionData = questions.find(q => q.question_number === selectedQuestion);
+        const questionMaxMarks = Math.abs(selectedQuestionData?.max_marks || 10);
+        return (rubricItems || []).map((item) => {
+            const cleaned = { ...item };
+            delete cleaned['wei' + 'ght'];
+            cleaned.max_marks = Math.abs(parseFloat(cleaned.max_marks) || 0);
+            cleaned.score_options = buildScoreOptions(questionMaxMarks, cleaned.max_marks);
+            return cleaned;
         });
     };
 
@@ -985,28 +974,35 @@ const RubricModal = ({
 
         const maxMarks = Math.abs(questionData.max_marks || 10);
         
-        // Create rubric items that sum to exactly 1.0 weight and exact max marks
+        const n = 3;
+        const step = maxMarks <= 5 ? 0.5 : (Number.isInteger(maxMarks) ? 1 : 0.5);
+        const totalUnits = Math.round(maxMarks / step);
+        const base = Math.floor(totalUnits / n);
+        const rem = totalUnits % n;
+        const units = Array.from({ length: n }).map((_, idx) => base + (idx < rem ? 1 : 0));
+        const marks = units.map((u) => u * step);
+
         const rubricItems = [
             {
                 description: "Correct setup of the problem",
-                weight: 0.3,
-                max_marks: parseFloat((maxMarks * 0.3).toFixed(2)),
+                max_marks: Number(marks[0]),
+                score_options: buildScoreOptions(maxMarks, marks[0]),
                 reasoning: "Students need to demonstrate understanding of the fundamental concepts",
-                grading_guidelines: "Check for proper identification of variables and initial setup"
+                grading_guidelines: ""
             },
             {
                 description: "Mathematical accuracy",
-                weight: 0.4,
-                max_marks: parseFloat((maxMarks * 0.4).toFixed(2)),
+                max_marks: Number(marks[1]),
+                score_options: buildScoreOptions(maxMarks, marks[1]),
                 reasoning: "Computational accuracy is essential for reaching the correct solution",
-                grading_guidelines: "Verify calculations and solution method"
+                grading_guidelines: ""
             },
             {
                 description: "Clear explanation and analysis",
-                weight: 0.3,
-                max_marks: parseFloat((maxMarks - parseFloat((maxMarks * 0.3).toFixed(2)) - parseFloat((maxMarks * 0.4).toFixed(2))).toFixed(2)), // Remaining marks
+                max_marks: Number(marks[2]),
+                score_options: buildScoreOptions(maxMarks, marks[2]),
                 reasoning: "Students should demonstrate ability to explain their reasoning",
-                grading_guidelines: "Look for well-structured explanations and appropriate justifications"
+                grading_guidelines: ""
             }
         ];
 
@@ -1105,6 +1101,7 @@ const RubricModal = ({
         const loadingToast = toast.loading('Saving rubric...');
 
         try {
+            const normalizedItems = normalizeRubricItemsForSave();
             const response = await fetch(
                 `${API_BASE_URL}/exams/${examId}/questions/${selectedQuestion}/rubric`,
                 {
@@ -1114,7 +1111,7 @@ const RubricModal = ({
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        rubric_items: rubricItems,
+                        rubric_items: normalizedItems,
                         problem_feedback: feedback
                     })
                 }
@@ -1455,7 +1452,7 @@ const RubricModal = ({
                                                                         maxLength={2000}
                                                                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent resize-none transition-all duration-200"
                                                                         rows={3}
-                                                                        placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Weight mathematical rigor higher')"
+                                                                        placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Emphasize mathematical rigor')"
                                                                     />
                                                                     <p className="text-xs text-gray-500">
                                                                         {profInstructions?.length || 0}/2000 characters
@@ -1527,7 +1524,7 @@ const RubricModal = ({
                                                     <AnimatePresence>
                                                         <motion.div className="space-y-4">
                                                             {rubricItems.map((item, index) => (
-                                                                <RubricItem
+                                                                <RubricItemEditor
                                                                     key={index}
                                                                     item={item}
                                                                     index={index}
@@ -1650,23 +1647,6 @@ const RubricModal = ({
                                                     <div className="leading-tight">
                                                         <div className="text-xs text-gray-500">Items</div>
                                                         <div className="font-semibold text-gray-900">{rubricItems.length}</div>
-                                                    </div>
-                                                </div>
-
-                                                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 ${
-                                                    Math.abs(validation.totalWeight - 1.0) > 0.001 ? 'text-red-600' : 'text-green-600'
-                                                }`}>
-                                                    {Math.abs(validation.totalWeight - 1.0) > 0.001 ? (
-                                                        <AlertTriangle className="w-4 h-4" />
-                                                    ) : (
-                                                        <CheckCircle className="w-4 h-4" />
-                                                    )}
-                                                    <div className="leading-tight">
-                                                        <div className="text-xs text-gray-500">Total Weight</div>
-                                                        <div className="font-semibold">
-                                                            {validation.totalWeight?.toFixed(3) || '0.000'}
-                                                            <span className="text-xs text-gray-500 font-medium"> (Target 1.000)</span>
-                                                        </div>
                                                     </div>
                                                 </div>
 

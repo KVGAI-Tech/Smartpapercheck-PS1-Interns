@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+
 import {
   AlertCircle,
   ArrowLeft,
@@ -26,6 +27,7 @@ import { getSafeImageUrl } from "../../../../lib/utils";
 import ExamEvaluationDetail from "./ExamEvaluationDetail";
 import ImageZoomModal from "./ImageZoomModal";
 import { PageViewer } from "./PageViewer/PageViewer";
+import Breadcrumbs from "../../../ui/breadcrumbs";
 
 const ScoreDisplay = ({ marks, maxMarks }) => {
   const percentage = Math.round((marks / maxMarks) * 100) || 0;
@@ -51,6 +53,7 @@ const ScoreDisplay = ({ marks, maxMarks }) => {
 const StudentEvaluationLoader = ({
   examId,
   enrollmentId,
+  courseId,
   onClose,
   onSaveFeedback = () => {},
   onError = () => {},
@@ -393,8 +396,22 @@ const StudentEvaluationLoader = ({
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur px-4 md:px-6 py-4 shadow-sm"
+        className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur px-4 md:px-6 py-4 shadow-sm space-y-3"
       >
+        <Breadcrumbs
+          items={[
+            { label: "Courses", to: "/courses" },
+            courseId
+              ? { label: "Exams", to: `/courses/${courseId}`, state: { activeTab: "exams" } }
+              : { label: "Exams" },
+            {
+              label: "Exam Evaluations",
+              onClick: onClose,
+            },
+            { label: "Results" },
+          ]}
+        />
+
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-start gap-3">
             <motion.button
@@ -614,7 +631,53 @@ const StudentEvaluationLoader = ({
             isFullscreen ? "hidden md:hidden" : ""
           } ${mobilePane === "sheet" ? "hidden md:flex" : ""}`}
         >
-          <div className="px-4 pt-4">
+          {/* Question content always visible at the top */}
+          <div className="hidden">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Question {questionNumber}
+              </h3>
+              <div className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-1">
+                {currentQuestionIndex + 1} / {questions.length}
+              </div>
+            </div>
+          </div>
+
+          {/* Question navigation (prev/next + counter) below header, above tabs */}
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handlePrevQuestion}
+              disabled={currentQuestionIndex === 0}
+              className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed
+                text-slate-500 hover:text-slate-900 hover:bg-white transition-colors"
+              title="Previous question"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </motion.button>
+
+            <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <span>
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </span>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleNextQuestion}
+              disabled={currentQuestionIndex >= questions.length - 1}
+              className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed
+                text-slate-500 hover:text-slate-900 hover:bg-white transition-colors"
+              title="Next question"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+          </div>
+
+          {/* Tabs below the question switcher */}
+          <div className="px-4 pt-3">
             <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200">
               {[
                 {
@@ -650,38 +713,6 @@ const StudentEvaluationLoader = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handlePrevQuestion}
-              disabled={currentQuestionIndex === 0}
-              className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed
-                text-slate-500 hover:text-slate-900 hover:bg-white transition-colors"
-              title="Previous question"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </motion.button>
-
-            <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <span>
-                Question {currentQuestionIndex + 1} of {questions.length}
-              </span>
-            </div>
-
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleNextQuestion}
-              disabled={currentQuestionIndex >= questions.length - 1}
-              className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed
-                text-slate-500 hover:text-slate-900 hover:bg-white transition-colors"
-              title="Next question"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </motion.button>
-          </div>
-
           <div className="flex-1 overflow-auto p-4">
             <AnimatePresence mode="wait">
               {activeTab === "question" && (
@@ -693,43 +724,6 @@ const StudentEvaluationLoader = ({
                   exit="exit"
                   className="space-y-6"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-lg font-semibold text-slate-900">
-                        Question {questionNumber}
-                      </h3>
-                      <div className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-1">
-                        {currentQuestionIndex + 1} / {questions.length}
-                      </div>
-                    </div>
-
-                    {(String(currentQuestion?.question_type || "").toLowerCase() === "text" ||
-                      String(currentQuestion?.question_type || "").toLowerCase() === "both") &&
-                      (currentQuestion?.question_body || "").trim() && (
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                          <div className="text-xs font-medium text-slate-500 mb-2">
-                            Question Body
-                          </div>
-                          <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                            {currentQuestion.question_body}
-                          </p>
-                        </div>
-                      )}
-
-                    {(String(currentQuestion?.answer_type || "").toLowerCase() === "text" ||
-                      String(currentQuestion?.answer_type || "").toLowerCase() === "both") &&
-                      (currentQuestion?.answer_body || "").trim() && (
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                          <div className="text-xs font-medium text-slate-500 mb-2">
-                            Answer Body
-                          </div>
-                          <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                            {currentQuestion.answer_body}
-                          </p>
-                        </div>
-                      )}
-                  </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}

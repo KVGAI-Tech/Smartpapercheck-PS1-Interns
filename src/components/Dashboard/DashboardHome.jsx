@@ -32,43 +32,48 @@ const StatCard = ({ title, value, icon: Icon, trend, trendValue }) => (
   </div>
 );
 
-const EvaluationCard = ({ course, total, evaluated, timeLeft }) => (
-  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center space-x-3">
-        <div className="p-2 bg-accent/10 rounded-lg">
-          <FileCheck className="w-5 h-5 text-accent" />
-        </div>
+const CourseOverviewCard = ({ courseId, courseName, examsCount, studentsCount, onViewDetails }) => (
+  <div className="min-w-[260px] max-w-xs bg-gradient-to-br from-accent/10 via-white to-indigo-50 rounded-2xl border border-accent/20 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <div className="p-5 flex flex-col h-full">
+      <div className="flex items-start justify-between mb-4">
         <div>
-          <h4 className="font-semibold text-gray-900">{course}</h4>
-          <p className="text-sm text-gray-500">{total} Answer Sheets</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent/80 mb-1">Course</p>
+          <h4 className="font-semibold text-gray-900 line-clamp-2 leading-snug">{courseName}</h4>
+        </div>
+        <div className="flex -space-x-2">
+          <div className="p-2 rounded-xl bg-white/80 shadow-sm border border-accent/10">
+            <FileCheck className="w-4 h-4 text-accent" />
+          </div>
+          <div className="p-2 rounded-xl bg-white/80 shadow-sm border border-accent/10">
+            <Users className="w-4 h-4 text-indigo-500" />
+          </div>
         </div>
       </div>
-      <button className="text-gray-400 hover:text-gray-600">
-        <MoreVertical className="w-5 h-5" />
-      </button>
-    </div>
-    
-    <div className="space-y-4">
-      <div>
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-600">Evaluation Progress</span>
-          <span className="font-medium text-accent">{Math.round((evaluated/total) * 100)}%</span>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-white/80 rounded-xl px-3 py-2 border border-gray-100 flex flex-col justify-between">
+          <span className="text-[11px] font-medium text-gray-500 mb-0.5">Exams</span>
+          <span className="text-lg font-semibold text-gray-900">{examsCount}</span>
         </div>
-        <div className="w-full bg-gray-100 rounded-full h-2">
-          <div 
-            className="bg-accent h-2 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${(evaluated/total) * 100}%` }}
-          />
+        <div className="bg-white/80 rounded-xl px-3 py-2 border border-gray-100 flex flex-col justify-between">
+          <span className="text-[11px] font-medium text-gray-500 mb-0.5">Students</span>
+          <span className="text-lg font-semibold text-gray-900">{studentsCount.toLocaleString()}</span>
         </div>
       </div>
-      
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-500">
-          <Clock className="w-4 h-4 inline mr-1" />
-          {timeLeft} remaining
+
+      <div className="mt-auto flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-dashed border-accent/20">
+        <span className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          Active evaluations
         </span>
-        <span className="text-gray-500">{evaluated}/{total} checked</span>
+        <button
+          type="button"
+          onClick={onViewDetails}
+          className="inline-flex items-center gap-1 text-accent hover:text-accent/80 font-medium"
+        >
+          <span className="text-xs">View details</span>
+          <MoreVertical className="w-3 h-3" />
+        </button>
       </div>
     </div>
   </div>
@@ -168,6 +173,7 @@ const Dashboard = () => {
   };
 
   const evaluationCards = summary?.current_evaluations || [];
+  const courseOverview = summary?.course_overview || [];
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -222,40 +228,41 @@ const Dashboard = () => {
       </div>
 
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Current Evaluations</h2>
-          <button className="flex items-center space-x-2 px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-300">
-            <Filter className="w-4 h-4" />
-            <span>Filter</span>
-          </button>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Courses Overview</h2>
         </div>
-        
+
         {summaryError && (
           <div className="text-red-500 text-sm mb-4">{summaryError}</div>
         )}
 
         {isLoadingSummary ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((key) => (
-              <div
-                key={key}
-                className="animate-pulse bg-gray-50 border border-gray-100 rounded-xl h-40"
-              />
-            ))}
+          <div className="overflow-x-auto">
+            <div className="flex gap-4 pb-2">
+              {[1, 2, 3].map((key) => (
+                <div
+                  key={key}
+                  className="min-w-[260px] max-w-xs animate-pulse bg-gray-50 border border-gray-100 rounded-2xl h-40"
+                />
+              ))}
+            </div>
           </div>
-        ) : evaluationCards.length === 0 ? (
-          <div className="text-sm text-gray-500">No evaluations yet.</div>
+        ) : courseOverview.length === 0 ? (
+          <div className="text-sm text-gray-500">No course data available yet.</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {evaluationCards.map((card) => (
-              <EvaluationCard
-                key={card.exam_id}
-                course={card.exam_name || card.course_name || 'Exam'}
-                total={card.total_answer_sheets || 0}
-                evaluated={card.evaluated || 0}
-                timeLeft={card.time_left || '—'}
-              />
-            ))}
+          <div className="overflow-x-auto">
+            <div className="flex gap-4 pb-2">
+              {courseOverview.map((course) => (
+                <CourseOverviewCard
+                  key={course.course_id}
+                  courseId={course.course_id}
+                  courseName={course.course_name}
+                  examsCount={course.exams_count}
+                  studentsCount={course.students_count}
+                  onViewDetails={() => navigate(`/courses/${course.course_id}`)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

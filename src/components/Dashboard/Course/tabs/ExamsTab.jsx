@@ -6,7 +6,6 @@
     Users, PlayCircle, X, AlertCircle, CheckCircle,
     Check, History
   } from 'lucide-react';
-  import Breadcrumbs from '../../../ui/breadcrumbs';
   import UploadQnAModal from '../modals/UploadQnAModal';
   import RubricModal from '../modals/RubricModal';
   import UploadAnswersModal from '../modals/UploadAnswersModal';
@@ -1433,13 +1432,6 @@
     return (
       <>
         <div className="space-y-6 opacity-100 transition-opacity duration-1000">
-          <Breadcrumbs
-            items={[
-              { label: 'Courses', to: '/courses' },
-              { label: 'Exams' },
-            ]}
-          />
-  
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="relative flex-1 max-w-xl min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
