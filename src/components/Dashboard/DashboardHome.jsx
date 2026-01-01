@@ -172,7 +172,7 @@ const Dashboard = () => {
     pendingReviews: summary?.pending_reviews ?? 0,
   };
 
-  const evaluationCards = summary?.current_evaluations || [];
+  const evaluationCards = (summary?.current_evaluations || []).slice(0, 3);
   const courseOverview = summary?.course_overview || [];
 
   return (
@@ -267,42 +267,77 @@ const Dashboard = () => {
         )}
       </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h2>
-        <div className="space-y-4">
-          {[
-            { 
-              action: "Evaluation completed", 
-              course: "Computer Programming Mid-Term", 
-              time: "2 hours ago",
-              detail: "512 answer sheets processed"
-            },
-            { 
-              action: "New Golden Key uploaded", 
-              course: "Data Structures Quiz 3", 
-              time: "4 hours ago",
-              detail: "Waiting for answer sheets"
-            },
-            { 
-              action: "Results exported", 
-              course: "Machine Learning Assignment 2", 
-              time: "1 day ago",
-              detail: "356 students evaluated"
-            },
-          ].map((activity, index) => (
-            <div 
-              key={index}
-              className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
-            >
-              <div>
-                <p className="font-medium text-gray-900">{activity.action}</p>
-                <p className="text-sm text-gray-500">{activity.course}</p>
-                <p className="text-xs text-gray-400">{activity.detail}</p>
-              </div>
-              <span className="text-sm text-gray-400">{activity.time}</span>
-            </div>
-          ))}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
+          <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+            Last {evaluationCards.length || 0} exams
+          </span>
         </div>
+        {isLoadingSummary ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((key) => (
+              <div
+                key={key}
+                className="h-16 bg-gray-50 rounded-xl animate-pulse"
+              />
+            ))}
+          </div>
+        ) : evaluationCards.length === 0 ? (
+          <p className="text-sm text-gray-500">No recent activity available yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {evaluationCards.map((exam) => (
+              <div
+                key={exam.exam_id}
+                className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50/60 px-4 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 truncate">
+                    {exam.exam_name || "Untitled Exam"}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {exam.course_name || "Unknown Course"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    <span className="font-medium text-gray-700">
+                      {exam.evaluated?.toLocaleString() ?? 0}
+                    </span>
+                    {" / "}
+                    <span className="text-gray-500">
+                      {exam.total_answer_sheets?.toLocaleString() ?? 0} evaluated
+                    </span>
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span className="text-xs font-medium text-gray-500">
+                    {exam.total_answer_sheets
+                      ? `${Math.min(
+                          100,
+                          (Math.max(exam.evaluated || 0, 0) /
+                            exam.total_answer_sheets) * 100
+                        ).toFixed(0)}% complete`
+                      : 'No sheets yet'}
+                  </span>
+                  <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent rounded-full"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          exam.total_answer_sheets
+                            ? (Math.max(exam.evaluated || 0, 0) /
+                              exam.total_answer_sheets) * 100
+                            : 0
+                        ).toFixed(0)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

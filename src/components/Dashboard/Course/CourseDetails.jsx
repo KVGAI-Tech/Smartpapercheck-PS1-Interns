@@ -520,8 +520,8 @@ const CourseDetails = () => {
                         <div className="flex flex-wrap gap-2 border-b border-gray-200 max-w-full px-4 sm:px-0 sm:flex-nowrap sm:overflow-x-auto sm:whitespace-nowrap">
                             {[
                                 { id: 'students', label: 'Students' },
-                                { id: 'instructors', label: 'Instructors' },
-                                { id: 'tas', label: 'Teaching Assistants' },
+                                // { id: 'instructors', label: 'Instructors' },
+                                // { id: 'tas', label: 'Teaching Assistants' },
                                 { id: 'exams', label: 'Exams' },
                                 { id: 'grading', label: 'Grading' }
                             ].map((tab) => (

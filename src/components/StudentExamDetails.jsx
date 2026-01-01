@@ -80,6 +80,8 @@ const StudentExamDetails = ({ isHistory = false }) => {
   const [selectedRecheckRequest, setSelectedRecheckRequest] = useState(null);
   const [selectedAnnotations, setSelectedAnnotations] = useState([]);
   const [hasSubmittedRecheck, setHasSubmittedRecheck] = useState(false);
+  const [canRequestRecheck, setCanRequestRecheck] = useState(true);
+  const [recheckDeadline, setRecheckDeadline] = useState(null);
 
   const mainContentRef = useRef(null);
 
@@ -350,6 +352,15 @@ const StudentExamDetails = ({ isHistory = false }) => {
             setProgressPercentage(
               (100 * exam.marks_obtained) / exam.full_marks
             );
+
+            // Use backend-calculated allow_recheck and recheck_deadline if available
+            if (typeof exam.allow_recheck === "boolean") {
+              setCanRequestRecheck(exam.allow_recheck && !exam.recheck_requested);
+            }
+
+            if (exam.recheck_deadline) {
+              setRecheckDeadline(exam.recheck_deadline);
+            }
           }
         }
       })
@@ -617,9 +628,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowRecheckModal(true)}
-                  disabled={hasSubmittedRecheck}
+                  disabled={hasSubmittedRecheck || !canRequestRecheck}
                   className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-                    hasSubmittedRecheck
+                    hasSubmittedRecheck || !canRequestRecheck
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                       : "bg-accent text-white hover:bg-accent/90 shadow-sm"
                   }`}
@@ -749,6 +760,25 @@ const StudentExamDetails = ({ isHistory = false }) => {
                               </p>
                             </div>
                           )}
+                        </div>
+                      ) : !canRequestRecheck ? (
+                        <div
+                          className="bg-gray-50 border border-gray-200 text-gray-700 p-4 rounded-xl"
+                          role="alert"
+                        >
+                          <p className="font-semibold text-gray-800">
+                            Recheck window closed
+                          </p>
+                          <p className="text-gray-600">
+                            The recheck window for this exam has expired, so new recheck
+                            requests can no longer be submitted.
+                            {recheckDeadline && (
+                              <>
+                                {" "}
+                                Last date: {new Date(recheckDeadline).toLocaleString()}
+                              </>
+                            )}
+                          </p>
                         </div>
                       ) : (
                         <p className="text-gray-600">

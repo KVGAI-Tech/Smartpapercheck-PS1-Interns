@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } fr
 import {
   Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader,
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
-  BarChart, RefreshCw, List, BarChart2, Star, History
+  BarChart, RefreshCw, List, BarChart2, Star, History, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
@@ -223,6 +223,9 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyEnrollmentId, setHistoryEnrollmentId] = useState(null);
   const selectAllCheckboxRef = useRef(null);
+  const [showRecheckWindowModal, setShowRecheckWindowModal] = useState(false);
+  const [recheckWindowHours, setRecheckWindowHours] = useState(24);
+  const [recheckWindowError, setRecheckWindowError] = useState('');
   
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
@@ -451,7 +454,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     selectAllCheckboxRef.current.indeterminate = hasSomeSelected && !allFilteredSelected;
   }, [selectableFilteredStudents, selectedEnrollmentIds, allFilteredSelected]);
 
-  const handlePublishSelected = useCallback(async () => {
+  const performPublishSelected = useCallback(async (windowHours) => {
     try {
       if (!examId) {
         throw new Error('Exam ID is missing');
@@ -473,7 +476,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         },
         body: JSON.stringify({
           enrollment_ids: Array.from(selectedEnrollmentIds),
-          force_reevaluate: true
+          force_reevaluate: true,
+          recheck_window_hours: windowHours
         }),
         mode: 'cors'
       });
@@ -508,6 +512,15 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       setPublishing(false);
     }
   }, [examId, selectedEnrollmentIds, showToast, clearSelection, fetchEnrollments]);
+
+  const handlePublishSelected = useCallback(() => {
+    if (selectedEnrollmentIds.size === 0) {
+      showToast('Please select at least one student', 'warning');
+      return;
+    }
+
+    setShowRecheckWindowModal(true);
+  }, [selectedEnrollmentIds, showToast]);
 
   const evaluateStudentWithRetry = async (student, retryCount = 0) => {
     try {
@@ -1655,6 +1668,124 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         type={toast.type}
         onClose={hideToast}
       />
+      
+      <AnimatePresence>
+        {showRecheckWindowModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              if (!publishing) {
+                setShowRecheckWindowModal(false);
+                setRecheckWindowError('');
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Set Recheck Window</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    After this time, students will no longer be able to submit recheck requests for the published results.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!publishing) {
+                      setShowRecheckWindowModal(false);
+                      setRecheckWindowError('');
+                    }
+                  }}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recheck window (in hours)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={recheckWindowHours}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        setRecheckWindowHours(isNaN(value) ? '' : value);
+                        setRecheckWindowError('');
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                    />
+                    <span className="text-sm text-gray-500 whitespace-nowrap">hours</span>
+                  </div>
+                  {recheckWindowError && (
+                    <div className="mt-1 flex items-center text-xs text-red-600">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      <span>{recheckWindowError}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
+                  <Clock className="w-4 h-4 mt-0.5" />
+                  <p>
+                    You can change this window later only by republishing. Make sure this gives students enough time to raise valid concerns.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!publishing) {
+                      setShowRecheckWindowModal(false);
+                      setRecheckWindowError('');
+                    }
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={publishing}
+                  onClick={async () => {
+                    const hours = typeof recheckWindowHours === 'number' ? recheckWindowHours : parseInt(recheckWindowHours, 10);
+                    if (!hours || hours <= 0) {
+                      setRecheckWindowError('Please enter a valid number of hours greater than 0.');
+                      return;
+                    }
+                    setRecheckWindowError('');
+                    setShowRecheckWindowModal(false);
+                    await performPublishSelected(hours);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg text-white flex items-center gap-2 ${
+                    publishing ? 'bg-accent/70 cursor-not-allowed' : 'bg-accent hover:bg-accent/90'
+                  }`}
+                >
+                  {publishing && <Loader className="w-4 h-4 animate-spin" />}
+                  <span>Confirm & Publish</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {showRubricModal && (
         <Suspense fallback={

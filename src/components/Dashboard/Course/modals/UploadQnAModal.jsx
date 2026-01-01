@@ -23,9 +23,9 @@ const UploadQnAModal = ({
     answerPreview: '',
     answerUrl: '',
     marks: '',
-    questionText: 'test-question',
+    questionText: '',
     questionBody: '',
-    answerText: 'test-answer',
+    answerText: '',
     answerBody: '',
     domain: 'General',
     isExisting: false,
@@ -110,9 +110,9 @@ const UploadQnAModal = ({
         answerPreview: '',
         answerUrl: q.answer_file_url || '',
         marks: q.max_marks || '',
-        questionText: q.question_text || 'test-question',
+        questionText: q.question_text || '',
         questionBody: q.question_body || '',
-        answerText: q.answer_text || 'test-answer',
+        answerText: q.answer_text || '',
         answerBody: q.answer_body || '',
         domain: q.domain || 'General',
         isExisting: true, 
@@ -133,9 +133,9 @@ const UploadQnAModal = ({
         answerPreview: '',
         answerUrl: '',
         marks: '',
-        questionText: 'test-question',
+        questionText: '',
         questionBody: '',
-        answerText: 'test-answer',
+        answerText: '',
         answerBody: '',
         domain: 'General',
         isExisting: false,
@@ -231,9 +231,9 @@ const UploadQnAModal = ({
         answerPreview: '',
         answerUrl: '',
         marks: '',
-        questionText: 'test-question',
+        questionText: '',
         questionBody: '',
-        answerText: 'test-answer',
+        answerText: '',
         answerBody: '',
         domain: 'General',
         isExisting: false,
@@ -360,9 +360,11 @@ const UploadQnAModal = ({
               questionFormData.append('max_marks', q.marks);
               questionFormData.append('question_type', q.questionType || 'image');
               questionFormData.append('question_body', q.questionBody || '');
-              questionFormData.append('question_text', 'test-question');
-              questionFormData.append('domain', 'General');
-              questionFormData.append('answer_text', 'test-answer');
+              // Optional short title/label for the question
+              questionFormData.append('question_text', q.questionText || '');
+              questionFormData.append('domain', q.domain || 'General');
+              // Optional short label for the answer
+              questionFormData.append('answer_text', q.answerText || '');
               
               // Add rubric configuration fields
               questionFormData.append('num_rubric_items', (q.num_rubric_items || 3).toString());
@@ -384,10 +386,10 @@ const UploadQnAModal = ({
               answerFormData.append('file_type', 'answer');
               answerFormData.append('answer_type', q.answerType || 'image');
               answerFormData.append('answer_body', q.answerBody || '');
-              answerFormData.append('answer_text', 'test-answer');
-              answerFormData.append('question_text', 'test-question');
+              answerFormData.append('answer_text', q.answerText || '');
+              answerFormData.append('question_text', q.questionText || '');
               answerFormData.append('max_marks', q.marks);
-              answerFormData.append('domain', 'General');
+              answerFormData.append('domain', q.domain || 'General');
               if (['image', 'both'].includes(q.answerType || 'image') && q.answer) {
                 answerFormData.append('file', q.answer);
               } else if (['image', 'both'].includes(q.answerType || 'image') && !hasAnswerFile) {
@@ -992,7 +994,7 @@ const UploadQnAModal = ({
                                 : q
                             ));
                           }}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200 min-h-[150px]"
                           rows={6}
                           placeholder="Enter question text"
                         />
@@ -1044,29 +1046,27 @@ const UploadQnAModal = ({
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-600">
-                          Answer Body
-                        </label>
-                        {['text', 'both'].includes(activeQuestion.answerType || 'image') ? (
-                          <textarea
-                            value={activeQuestion.answerBody}
-                            onChange={(e) => {
-                              setQuestions(prev => prev.map(q =>
-                                q.id === activeQuestion.id
-                                  ? { ...q, answerBody: e.target.value }
-                                  : q
-                              ));
-                            }}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
-                            rows={4}
-                            placeholder="Enter answer text"
-                          />
-                        ) : (
-                          <p className="text-sm text-gray-500">Answer text is optional for image-only answers.</p>
-                        )}
-                      </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-600">
+                        Answer Body
+                      </label>
+                      {['text', 'both'].includes(activeQuestion.answerType || 'image') ? (
+                        <textarea
+                          value={activeQuestion.answerBody}
+                          onChange={(e) => {
+                            setQuestions(prev => prev.map(q =>
+                              q.id === activeQuestion.id
+                                ? { ...q, answerBody: e.target.value }
+                                : q
+                            ));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200 min-h-[150px]"
+                          rows={6}
+                          placeholder="Enter answer text"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500">Answer text is optional for image-only answers.</p>
+                      )}
                     </div>
                   </div>
                 </div>
