@@ -88,6 +88,8 @@ const MOCK_COURSE = {
 const CourseDetails = () => {
     const { courseId } = useParams();
     const location = useLocation();
+    const navigate = useNavigate();
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [courseDetails, setCourseDetails] = useState(null);
@@ -116,6 +118,29 @@ const CourseDetails = () => {
             setActiveTab(nextTab);
         }
     }, [location?.state]);
+
+    // Ensure layout header always has the actual course name/code, even after refresh
+    useEffect(() => {
+        if (!courseDetails) return;
+
+        const currentState = location.state || {};
+
+        if (
+            currentState.courseName === courseDetails.course_name &&
+            currentState.courseCode === courseDetails.course_code
+        ) {
+            return;
+        }
+
+        navigate(location.pathname + location.search, {
+            replace: true,
+            state: {
+                ...currentState,
+                courseName: courseDetails.course_name,
+                courseCode: courseDetails.course_code,
+            },
+        });
+    }, [courseDetails, location.pathname, location.search, location.state, navigate]);
 
     const handleCreateExam = async (formData) => {
         try {
@@ -486,66 +511,56 @@ const CourseDetails = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <Breadcrumbs
-                        items={[
-                            { label: 'Courses', to: '/courses' },
-                            { label: courseDetails?.course_name || courseDetails?.course_code || 'Course' },
-                        ]}
-                    />
+        <div className="space-y-4">
+            <div className="w-full">
+                <div className="flex items-center gap-2 mt-1 mb-2">
+                    <Link
+                        to="/courses"
+                        className="p-2 -ml-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                        aria-label="Back to courses"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
 
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mt-2">
-                        <div>
-                            <div className="flex items-center gap-3 mb-1">
-                                <Link
-                                    to="/courses"
-                                    className="p-2 -ml-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                                    aria-label="Back to courses"
-                                >
-                                    <ArrowLeft className="w-5 h-5" />
-                                </Link>
-                                <div>
-                                    <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-                                        {courseDetails.course_name}
-                                    </h1>
-                                    <p className="text-sm text-gray-500">{courseDetails.course_code}</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="flex-1 min-w-0">
+                        <Breadcrumbs
+                            items={[
+                                { label: 'Courses', to: '/courses' },
+                                { label: courseDetails?.course_name || courseDetails?.course_code || 'Course' },
+                            ]}
+                        />
                     </div>
+                </div>
 
-                    <div className="mt-6 -mb-px">
-                        <div className="flex flex-wrap gap-2 border-b border-gray-200 max-w-full px-4 sm:px-0 sm:flex-nowrap sm:overflow-x-auto sm:whitespace-nowrap">
-                            {[
-                                { id: 'students', label: 'Students' },
-                                // { id: 'instructors', label: 'Instructors' },
-                                // { id: 'tas', label: 'Teaching Assistants' },
-                                { id: 'exams', label: 'Exams' },
-                                { id: 'grading', label: 'Grading' }
-                            ].map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => {
-                                        setActiveTab(tab.id);
-                                        setSearchQuery('');
-                                        setSelectedSection('All sections');
-                                    }}
-                                    className={`relative -mb-px px-3 py-2 text-sm font-medium rounded-t-lg transition-colors flex-1 basis-1/3 sm:flex-none sm:basis-auto sm:shrink-0
-                                        ${activeTab === tab.id
-                                            ? 'text-accent border-b-2 border-accent bg-accent/5'
-                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
+                <div className="mt-1 -mb-px border-b border-gray-200">
+                    <div className="flex flex-wrap gap-2 max-w-full">
+                        {[ 
+                            { id: 'students', label: 'Students' },
+                            // { id: 'instructors', label: 'Instructors' },
+                            // { id: 'tas', label: 'Teaching Assistants' },
+                            { id: 'exams', label: 'Exams' },
+                            { id: 'grading', label: 'Grading' }
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => {
+                                    setActiveTab(tab.id);
+                                    setSearchQuery('');
+                                    setSelectedSection('All sections');
+                                }}
+                                className={`relative -mb-px px-3 py-2 text-sm font-medium rounded-t-lg transition-colors flex-1 basis-1/3 sm:flex-none sm:basis-auto sm:shrink-0
+                                    ${activeTab === tab.id
+                                        ? 'text-accent border-b-2 border-accent bg-accent/5'
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="py-3">
                 {renderTabContent()}
             </div>
 

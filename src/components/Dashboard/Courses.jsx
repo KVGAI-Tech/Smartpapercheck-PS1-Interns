@@ -88,7 +88,12 @@ const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
       return;
     }
     if (userRole === "professor") {
-      navigate(`/courses/${course.id}`);
+      navigate(`/courses/${course.id}` , {
+        state: {
+          courseName: course.course_name,
+          courseCode: course.course_code,
+        },
+      });
     } else {
       navigate(`/student/evaluations/${course.id}`);
     }
@@ -578,42 +583,8 @@ const Courses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        >
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
-              Courses
-            </h1>
-            <p className="text-gray-500">
-              Manage your courses and teaching assistants
-            </p>
-          </div>
-
-          {userRole === "professor" && (
-            <motion.button
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 10px 25px -5px rgba(22, 109, 112, 0.4)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setSelectedCourse(null);
-                setShowAddModal(true);
-              }}
-              className="inline-flex items-center px-5 py-2.5 bg-accent text-white rounded-lg hover:bg-accent shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              <span className="font-medium">Add Course</span>
-            </motion.button>
-          )}
-        </motion.div>
-
-        <div className="mb-6">
+    <div className="space-y-6">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -666,38 +637,36 @@ const Courses = () => {
           </div>
         </div>
 
-        {renderContent()}
-      </div>
+        {userRole === "professor" && (
+          <CourseModal
+            isOpen={showAddModal}
+            onClose={() => {
+              setShowAddModal(false);
+              setSelectedCourse(null);
+            }}
+            course={selectedCourse}
+            onSubmit={selectedCourse ? handleUpdateCourse : handleAddCourse}
+            isEditing={!!selectedCourse}
+          />
+        )}
 
-      {userRole === "professor" && (
-        <CourseModal
-          isOpen={showAddModal}
+        <DeleteConfirmationModal
+          isOpen={deleteModalOpen}
           onClose={() => {
-            setShowAddModal(false);
-            setSelectedCourse(null);
+            setDeleteModalOpen(false);
+            setCourseToDelete(null);
           }}
-          course={selectedCourse}
-          onSubmit={selectedCourse ? handleUpdateCourse : handleAddCourse}
-          isEditing={!!selectedCourse}
+          onConfirm={confirmDeleteCourse}
+          courseName={courseToDelete?.course_name || "this course"}
         />
-      )}
 
-      <DeleteConfirmationModal
-        isOpen={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setCourseToDelete(null);
-        }}
-        onConfirm={confirmDeleteCourse}
-        courseName={courseToDelete?.course_name || "this course"}
-      />
-
-      <Toast
-        show={showToast.show}
-        message={showToast.message}
-        type={showToast.type}
-        onClose={() => setShowToast((prev) => ({ ...prev, show: false }))}
-      />
+        <Toast
+          show={showToast.show}
+          message={showToast.message}
+          type={showToast.type}
+          onClose={() => setShowToast((prev) => ({ ...prev, show: false }))}
+        />
+        {renderContent()}
     </div>
   );
 };

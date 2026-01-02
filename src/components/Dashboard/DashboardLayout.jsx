@@ -98,6 +98,34 @@ const DashboardLayout = ({ children }) => {
     return location.pathname === path;
   };
 
+  const getPageHeader = () => {
+    const path = location.pathname || "";
+    const state = location.state || {};
+
+    // Defaults
+    let title = "";
+    let subtitle = "";
+
+    if (path === "/" || path.startsWith("/dashboard")) {
+      title = "Dashboard";
+    } else if (path.includes("/evaluations")) {
+      title = state.examName || "Exam Evaluations";
+      subtitle = state.examSubtitle || "";
+    } else if (path.startsWith("/courses")) {
+      if (/^\/courses\//.test(path)) {
+        // Course details or nested exam pages
+        title = state.courseName || "Course";
+        subtitle = state.courseCode || "";
+      } else {
+        title = "Courses";
+      }
+    }
+
+    return { title, subtitle };
+  };
+
+  const { title: pageTitle, subtitle: pageSubtitle } = getPageHeader();
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -262,7 +290,7 @@ const DashboardLayout = ({ children }) => {
       >
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 md:px-6 h-16">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               {isMobile && (
                 <button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -271,6 +299,18 @@ const DashboardLayout = ({ children }) => {
                 >
                   <Menu className="w-5 h-5 text-gray-500 transform transition-transform hover:scale-110" />
                 </button>
+              )}
+              {pageTitle && (
+                <div className="flex flex-col leading-tight truncate max-w-[180px] md:max-w-xs">
+                  <span className="text-base md:text-lg font-semibold text-gray-900 truncate">
+                    {pageTitle}
+                  </span>
+                  {pageSubtitle && (
+                    <span className="text-xs md:text-sm text-gray-500 truncate">
+                      {pageSubtitle}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex items-center space-x-4">

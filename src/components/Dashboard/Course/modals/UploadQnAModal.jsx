@@ -310,14 +310,29 @@ const UploadQnAModal = ({
       const missingAnswerImage = ['image', 'both'].includes(q.answerType || 'image') ? !hasAnswerFile : false;
       const missingAnswerText = ['text', 'both'].includes(q.answerType || 'image') ? !q.answerBody : false;
 
-      return missingQuestionImage || missingQuestionText || missingAnswerImage || missingAnswerText || !q.marks;
+      // Validate rubric items count
+      const rubricCount = parseInt(q.num_rubric_items);
+      const invalidRubricCount = isNaN(rubricCount) || rubricCount < 3 || rubricCount > 10;
+
+      return missingQuestionImage || missingQuestionText || missingAnswerImage || missingAnswerText || !q.marks || invalidRubricCount;
     });
     
     if (invalidQuestions.length > 0) {
       const firstInvalidIndex = questions.findIndex(q => q.id === invalidQuestions[0].id);
+      const invalidQuestion = invalidQuestions[0];
+      
+      // Check if the issue is specifically with rubric count
+      const rubricCount = parseInt(invalidQuestion.num_rubric_items);
+      const invalidRubricCount = isNaN(rubricCount) || rubricCount < 3 || rubricCount > 10;
+      
+      if (invalidRubricCount) {
+        setError(`Number of rubric items must be between 3 and 10 (current: ${invalidQuestion.num_rubric_items || 'empty'})`);
+      } else {
+        setError('Please fill in all required fields for each question');
+      }
+      
       setCurrentQuestionIndex(firstInvalidIndex);
       scrollToQuestion(invalidQuestions[0].id);
-      setError('Please fill in all required fields for each question');
       return false;
     }
     
@@ -349,8 +364,10 @@ const UploadQnAModal = ({
           const hasQuestionFile = q.question || q.questionUrl;
           const hasAnswerFile = q.answer || q.answerUrl;
 
-          const shouldSendQuestion = (q.questionType && q.questionType !== 'image') || q.question || (!q.questionUrl && ['image', 'both'].includes(q.questionType || 'image'));
-          const shouldSendAnswer = (q.answerType && q.answerType !== 'image') || q.answer || (!q.answerUrl && ['image', 'both'].includes(q.answerType || 'image'));
+          // Always send metadata updates (e.g., max marks) when an existing file URL exists.
+          // Backend supports updating without re-uploading the file.
+          const shouldSendQuestion = (q.questionType && q.questionType !== 'image') || hasQuestionFile;
+          const shouldSendAnswer = (q.answerType && q.answerType !== 'image') || hasAnswerFile;
 
           try {
             if (shouldSendQuestion) {
@@ -1085,7 +1102,7 @@ const UploadQnAModal = ({
                           : q
                       ));
                     }}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
                     placeholder="Enter max marks"
                   />
                 </div>
@@ -1102,22 +1119,36 @@ const UploadQnAModal = ({
                         Number of Rubric Items
                       </label>
                       <input
-                        type="number"
-                        min="2"
-                        max="10"
+                        type="text"
                         value={activeQuestion.num_rubric_items}
                         onChange={(e) => {
-                          const value = parseInt(e.target.value) || 3;
-                          const clampedValue = Math.min(Math.max(value, 2), 10);
                           setQuestions(prev => prev.map(q =>
                             q.id === activeQuestion.id
-                              ? { ...q, num_rubric_items: clampedValue }
+                              ? { ...q, num_rubric_items: e.target.value }
                               : q
                           ));
                         }}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
                       />
-                      <p className="text-xs text-gray-500">Choose between 2-10 rubric items (default: 3)</p>
+                      <p className="text-xs text-gray-500">Enter number of rubric items (3-10, default: 3)</p>
+                      {(() => {
+                        const rubricCount = parseInt(activeQuestion.num_rubric_items);
+                        const isInvalid = isNaN(rubricCount) || rubricCount < 3 || rubricCount > 10;
+                        if (isInvalid && activeQuestion.num_rubric_items !== '') {
+                          return (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {isNaN(rubricCount) 
+                                ? 'Please enter a valid number' 
+                                : rubricCount < 3 
+                                  ? `Minimum 3 rubric items required (current: ${rubricCount})`
+                                  : `Maximum 10 rubric items allowed (current: ${rubricCount})`
+                              }
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
                     <div className="space-y-2 md:col-span-2">

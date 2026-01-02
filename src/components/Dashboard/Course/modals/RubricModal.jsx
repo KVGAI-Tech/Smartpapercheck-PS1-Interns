@@ -344,7 +344,7 @@ const RubricItemEditor = ({ item, index, onUpdate, onDelete, validationErrors = 
                                         <div className="space-y-2">
                                             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                                                 <Circle className="w-4 h-4 text-gray-400" />
-                                                Max Marks
+                                                Alloted Marks
                                             </label>
                                             <input
                                                 type="number"
@@ -741,14 +741,24 @@ const RubricModal = ({
         const mm = Math.abs(parseFloat(itemMaxMarks) || 0);
         if (!mm) return [0];
 
-        if (qm <= 5) {
-            const partial = Math.max(0, mm - 0.5);
-            const opts = [mm, partial, 0];
+        // Round to nearest 0.5 to avoid long decimals.
+        const q = (v) => Math.round(v * 2) / 2;
+
+        if (mm > 3) {
+            const opts = [mm, q(mm * 0.75), q(mm * 0.5), q(mm * 0.25), 0];
             return Array.from(new Set(opts.map(v => Number(v)))).sort((a, b) => b - a);
         }
 
-        const q = (v) => Math.round(v * 2) / 2;
-        const opts = [mm, q(mm * 0.75), q(mm * 0.5), q(mm * 0.25), 0];
+        const mmQ = q(mm);
+        if (mmQ < 1) {
+            return Array.from(new Set([mmQ, 0].map(v => Number(v)))).sort((a, b) => b - a);
+        }
+
+        const opts = [];
+        for (let v = mmQ; v >= 1 - 1e-9; v -= 0.5) {
+            opts.push(q(v));
+        }
+        opts.push(0);
         return Array.from(new Set(opts.map(v => Number(v)))).sort((a, b) => b - a);
     };
 

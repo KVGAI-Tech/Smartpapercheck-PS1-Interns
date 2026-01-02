@@ -652,6 +652,45 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     showToast('Select students and click Publish to re-evaluate and publish results.', 'info', 4000);
   };
 
+  const performReevaluateSelected = useCallback(async () => {
+    try {
+      if (!examId) {
+        throw new Error('Exam ID is missing');
+      }
+
+      if (selectedEnrollmentIds.size === 0) {
+        showToast('Please select at least one student', 'warning');
+        return;
+      }
+
+      const selected = students.filter(s => selectedEnrollmentIds.has(s.enrollment_id) && s.status !== 'not_uploaded');
+      if (selected.length === 0) {
+        showToast('No selectable students found in your selection', 'warning');
+        return;
+      }
+
+      setBatchEvaluating(true);
+      setEvaluationProgress({ completed: 0, total: selected.length, inProgress: [], errors: 0 });
+      showToast('Re-evaluating selected students with updated rubric...', 'info', 5000);
+
+      let successCount = 0;
+      for (const student of selected) {
+        const result = await evaluateStudentWithRetry(student);
+        if (result?.success) successCount += 1;
+      }
+
+      await fetchEnrollments();
+      clearSelection();
+
+      showToast(`Re-evaluation completed: ${successCount}/${selected.length} updated.`, successCount === selected.length ? 'success' : 'warning', 6000);
+    } catch (e) {
+      console.error('Re-evaluate selected error:', e);
+      showToast(e.message || 'Failed to re-evaluate selected students', 'error', 6000);
+    } finally {
+      setBatchEvaluating(false);
+    }
+  }, [examId, selectedEnrollmentIds, students, showToast, fetchEnrollments, clearSelection]);
+
   const hasEvaluationResults = (student) => {
     return student.marks_obtained !== null;
   };
@@ -822,6 +861,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     const hasError = evaluationError[student.enrollment_id];
     
     const canEvaluate = student.status === 'uploaded' && !hasResults && !isInProgress && !batchEvaluating;
+    const canReevaluate = hasResults && !isInProgress && !batchEvaluating && !publishing;
 
     return (
       <motion.div
@@ -899,15 +939,29 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                 </motion.button>
               </Link>
             ) : (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleViewResults(student)}
-                className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
-              >
-                <Eye className="w-4 h-4" />
-                <span className="font-medium">View Results</span>
-              </motion.button>
+              <div className="space-y-2">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleViewResults(student)}
+                  className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="font-medium">View Results</span>
+                </motion.button>
+
+                <motion.button
+                  whileHover={canReevaluate ? { scale: 1.05 } : {}}
+                  whileTap={canReevaluate ? { scale: 0.95 } : {}}
+                  onClick={() => canReevaluate && handleEvaluate(student)}
+                  disabled={!canReevaluate}
+                  className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all
+                    ${!canReevaluate ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'}`}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span className="font-medium">Re-evaluate</span>
+                </motion.button>
+              </div>
             )
           ) : student.status !== 'not_uploaded' ? (
             <motion.button
@@ -1073,6 +1127,12 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     return `Publish (${selectedCount})`;
   };
 
+  const getReevaluateIndicator = () => {
+    if (batchEvaluating) return 'Re-evaluating...';
+    if (selectedCount === 0) return 'Re-evaluate Selected';
+    return `Re-evaluate (${selectedCount})`;
+  };
+
   const getProgressIndicator = () => {
     if (!batchEvaluating) return 'Evaluate All';
     
@@ -1158,52 +1218,33 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             transition={{ duration: 0.5 }}
             className="w-full flex flex-col h-full min-h-0 min-w-0"
           >
-            <Breadcrumbs
-              items={[
-                { label: 'Courses', to: '/courses' },
-                courseId
-                  ? { label: 'Exams', to: `/courses/${courseId}`, state: { activeTab: 'exams' } }
-                  : { label: 'Exams' },
-                { label: 'Exam Evaluations' },
-              ]}
-            />
-
-            <div className="flex flex-col gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-1 mb-2">
               <motion.button
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                transition={{ delay: 0.15 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onClose}
-                className="p-2 -ml-2 hover:bg-white/50 rounded-lg transition-colors w-10 h-10 flex items-center justify-center"
+                className="p-2 -ml-2 hover:bg-white/60 rounded-lg transition-colors flex items-center justify-center"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-500" />
               </motion.button>
 
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="mb-2"
-              >
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <span>Exam Evaluations</span>
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5, type: "spring" }}
-                    className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-accent/10 text-accent rounded-full"
-                  >
-                    <Star className="w-3 h-3 mr-1" />
-                    <span>AI Powered</span>
-                  </motion.span>
-                </h1>
-                <p className="text-gray-500 mt-1">Review and evaluate student submissions with intelligent AI scoring</p>
-              </motion.div>
+              <div className="flex-1 min-w-0">
+                <Breadcrumbs
+                  items={[
+                    { label: 'Courses', to: '/courses' },
+                    courseId
+                      ? { label: 'Exams', to: `/courses/${courseId}`, state: { activeTab: 'exams' } }
+                      : { label: 'Exams' },
+                    { label: 'Exam Evaluations' },
+                  ]}
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-1">
               <StatCard
                 icon={Users}
                 label="Total Students"
@@ -1238,19 +1279,19 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
               transition={{ delay: 0.4 }}
               className="bg-white rounded-xl shadow-sm p-4 md:p-5 mt-4"
             >
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search by name or student ID..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+                {/* Left: search + status filter */}
+                <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3 min-w-0">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or student ID..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                    />
+                  </div>
                   <div className="relative">
                     <select
                       value={statusFilter}
@@ -1263,7 +1304,10 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                     </select>
                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   </div>
+                </div>
 
+                {/* Center: view mode + main actions */}
+                <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-center">
                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                     <button
                       onClick={() => setViewMode('list')}
@@ -1319,35 +1363,25 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                   />
 
                   <NavButton
+                    icon={batchEvaluating ? Loader : RefreshCw}
+                    label={getReevaluateIndicator()}
+                    onClick={performReevaluateSelected}
+                    disabled={publishing || batchEvaluating || selectedCount === 0}
+                    variant="secondary"
+                  />
+
+                  <NavButton
                     icon={publishing ? Loader : CheckCircle}
                     label={getPublishIndicator()}
                     onClick={handlePublishSelected}
                     disabled={publishing || selectedCount === 0}
                     variant="primary"
                   />
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={toggleSelectAllStudents}
-                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-gray-300 hover:text-gray-900 transition-all"
-                    disabled={publishing || loading || selectableStudents.length === 0}
-                  >
-                    {allStudentsSelected ? 'Unselect All' : 'Select All'}
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={clearSelection}
-                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-gray-300 hover:text-gray-900 transition-all"
-                    disabled={publishing || selectedCount === 0}
-                  >
-                    Clear Selection
-                  </motion.button>
                 </div>
+
+                {/* Right side intentionally empty for now (selection handled via table checkbox) */}
               </div>
-              
+
               {batchEvaluating && (
                 <BatchProcessingIndicator 
                   completed={evaluationProgress.completed} 
@@ -1423,6 +1457,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                                 const hasError = evaluationError[student.enrollment_id];
                                 
                                 const canEvaluate = student.status === 'uploaded' && !hasResults && !isInProgress && !batchEvaluating;
+                                const canReevaluate = hasResults && !isInProgress && !batchEvaluating && !publishing;
 
                                 return (
                                   <motion.tr
@@ -1539,6 +1574,19 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                                             <Eye className="w-4 h-4 mr-1.5" />
                                             View Results
                                           </motion.button>
+
+                                          <motion.button
+                                            whileHover={canReevaluate ? { scale: 1.05 } : {}}
+                                            whileTap={canReevaluate ? { scale: 0.95 } : {}}
+                                            onClick={() => canReevaluate && handleEvaluate(student)}
+                                            disabled={!canReevaluate}
+                                            className={`inline-flex items-center px-3 py-1.5 border rounded-lg transition-colors shadow-sm hover:shadow-md w-full sm:w-auto
+                                              ${!canReevaluate ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' : 'border-accent/20 text-accent bg-accent/10 hover:bg-accent/20'}`}
+                                          >
+                                            <RefreshCw className="w-4 h-4 mr-1.5" />
+                                            Re-evaluate
+                                          </motion.button>
+
                                           <motion.button
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}

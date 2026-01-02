@@ -463,7 +463,7 @@
               <span className="hidden sm:inline">Manage Enrollments</span>
             </button>
             <button
-              onClick={() => onStartEvaluation(exam.id)}
+              onClick={() => onStartEvaluation(exam)}
               className="w-full sm:w-auto px-3 sm:px-4 py-2 text-white bg-accent hover:bg-accent
                 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
             >
@@ -988,15 +988,34 @@
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedExamForEdit, setSelectedExamForEdit] = useState(null);
     const [examSteps, setExamSteps] = useState({});
+
+    const showToast = useCallback((message, type = 'success') => {
+      setToast({ show: true, message, type });
+      setTimeout(() => setToast({ show: false, message: '', type }), 3000);
+    }, []);
   
     useEffect(() => {
       if (!courseId) {
         console.error('CourseId is undefined in ExamsTab component');
         showToast('Error: Course ID is missing. Some features may not work correctly.', 'error');
-      } else {
-        console.log(`ExamsTab initialized with courseId: ${courseId}`);
+        return;
       }
-    }, [courseId]);
+
+      console.log(`ExamsTab initialized with courseId: ${courseId}`);
+
+      // Hydrate examSteps from localStorage so progress persists across reloads
+      try {
+        const stored = localStorage.getItem(`course_${courseId}_exam_steps`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === 'object') {
+            setExamSteps(parsed);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load exam steps from localStorage:', err);
+      }
+    }, [courseId, showToast]);
 
     useEffect(() => {
       if (!Array.isArray(exams)) return;
@@ -1007,8 +1026,21 @@
         exams.forEach((exam) => {
           if (!exam || !exam.id) return;
 
-          const hasQnA = !!(exam.question_pdf_s3_url || exam.golden_pdf_s3_url);
-          const hasRubrics = !!questionsHaveRubrics[exam.id];
+          // Backend may provide derived progress flags; fall back to existing fields
+          const backendHasQuestions = exam.has_questions;
+          const backendHasRubrics = exam.has_rubrics;
+          const backendHasAnswers = exam.has_answers;
+
+          const hasQnA = !!(
+            backendHasQuestions ||
+            exam.question_pdf_s3_url ||
+            exam.golden_pdf_s3_url
+          );
+
+          const hasRubrics = !!(
+            backendHasRubrics ||
+            questionsHaveRubrics[exam.id]
+          );
 
           let derivedStep = 0;
           if (hasQnA) {
@@ -1017,24 +1049,32 @@
           if (hasRubrics) {
             derivedStep = 2;
           }
-
-          if (prev[exam.id] === undefined) {
-            updated[exam.id] = derivedStep;
+          if (backendHasAnswers) {
+            // If backend says answers are uploaded, treat final step as reached
+            derivedStep = 2;
           }
+
+          const previousStep = prev[exam.id] ?? 0;
+          updated[exam.id] = Math.max(previousStep, derivedStep);
         });
 
         return updated;
       });
     }, [exams, questionsHaveRubrics]);
+
+    // Persist examSteps whenever they change so the UI progress stays in sync after reload
+    useEffect(() => {
+      if (!courseId) return;
+      try {
+        localStorage.setItem(`course_${courseId}_exam_steps`, JSON.stringify(examSteps));
+      } catch (err) {
+        console.warn('Failed to store exam steps in localStorage:', err);
+      }
+    }, [courseId, examSteps]);
   
     const filteredExams = exams.filter(exam =>
       exam.exam_name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  
-    const showToast = useCallback((message, type = 'success') => {
-      setToast({ show: true, message, type });
-      setTimeout(() => setToast({ show: false, message: '', type }), 3000);
-    }, []);
   
     
     const handleEditExam = (exam) => {
@@ -1198,16 +1238,20 @@
       }
     };
   
-    const handleStartEvaluation = async (examId) => {
+    const handleStartEvaluation = async (exam) => {
       try {
-        if (!examId) {
+        if (!exam || !exam.id) {
           throw new Error('Exam ID is missing');
         }
+        const examId = exam.id;
         
         showToast('Preparing evaluation...', 'success');
         
         navigate(`/courses/${courseId}/exams/${examId}/evaluations`, {
-          state: { from: 'exams' }
+          state: {
+            from: 'exams',
+            examName: exam.exam_name || 'Exam Evaluations',
+          }
         });
         
       } catch (error) {
