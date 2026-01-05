@@ -7,7 +7,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../BaseURL";
-import PaymentModal from "../Payments/PaymentModal";
+// import PaymentModal from "../Payments/PaymentModal"; // Temporarily disabled credits UI
 
 const DashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -314,7 +314,8 @@ const DashboardLayout = ({ children }) => {
               )}
             </div>
             <div className="flex items-center space-x-4">
-              <PaymentModal />
+              {/** Available Credits / Buy Credits temporarily disabled */}
+              {/* <PaymentModal /> */}
               <div className="h-8 w-px bg-gray-200 hidden sm:block" />
               <div className="flex items-center space-x-3">
                 <div className="relative">

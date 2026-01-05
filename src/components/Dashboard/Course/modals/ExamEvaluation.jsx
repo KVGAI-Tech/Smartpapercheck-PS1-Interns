@@ -950,17 +950,20 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                   <span className="font-medium">View Results</span>
                 </motion.button>
 
-                <motion.button
-                  whileHover={canReevaluate ? { scale: 1.05 } : {}}
-                  whileTap={canReevaluate ? { scale: 0.95 } : {}}
-                  onClick={() => canReevaluate && handleEvaluate(student)}
-                  disabled={!canReevaluate}
-                  className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all
-                    ${!canReevaluate ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'}`}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span className="font-medium">Re-evaluate</span>
-                </motion.button>
+                {/** Per-student Re-evaluate button hidden; use top toolbar Re-evaluate Selected instead */}
+                {false && (
+                  <motion.button
+                    whileHover={canReevaluate ? { scale: 1.05 } : {}}
+                    whileTap={canReevaluate ? { scale: 0.95 } : {}}
+                    onClick={() => canReevaluate && handleEvaluate(student)}
+                    disabled={!canReevaluate}
+                    className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all
+                      ${!canReevaluate ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'}`}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span className="font-medium">Re-evaluate</span>
+                  </motion.button>
+                )}
               </div>
             )
           ) : student.status !== 'not_uploaded' ? (
@@ -1575,17 +1578,20 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                                             View Results
                                           </motion.button>
 
-                                          <motion.button
-                                            whileHover={canReevaluate ? { scale: 1.05 } : {}}
-                                            whileTap={canReevaluate ? { scale: 0.95 } : {}}
-                                            onClick={() => canReevaluate && handleEvaluate(student)}
-                                            disabled={!canReevaluate}
-                                            className={`inline-flex items-center px-3 py-1.5 border rounded-lg transition-colors shadow-sm hover:shadow-md w-full sm:w-auto
-                                              ${!canReevaluate ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' : 'border-accent/20 text-accent bg-accent/10 hover:bg-accent/20'}`}
-                                          >
-                                            <RefreshCw className="w-4 h-4 mr-1.5" />
-                                            Re-evaluate
-                                          </motion.button>
+                                          {/** Per-row Re-evaluate button hidden; use top toolbar Re-evaluate Selected instead */}
+                                          {false && (
+                                            <motion.button
+                                              whileHover={canReevaluate ? { scale: 1.05 } : {}}
+                                              whileTap={canReevaluate ? { scale: 0.95 } : {}}
+                                              onClick={() => canReevaluate && handleEvaluate(student)}
+                                              disabled={!canReevaluate}
+                                              className={`inline-flex items-center px-3 py-1.5 border rounded-lg transition-colors shadow-sm hover:shadow-md w-full sm:w-auto
+                                                ${!canReevaluate ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' : 'border-accent/20 text-accent bg-accent/10 hover:bg-accent/20'}`}
+                                            >
+                                              <RefreshCw className="w-4 h-4 mr-1.5" />
+                                              Re-evaluate
+                                            </motion.button>
+                                          )}
 
                                           <motion.button
                                             whileHover={{ scale: 1.05 }}

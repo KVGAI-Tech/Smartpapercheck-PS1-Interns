@@ -6,8 +6,10 @@ import {
   FileText, ArrowUp, ArrowDown,
   CheckCircle, Maximize, Minimize,
   File, FilePlus, Upload as UploadIcon,
-  AlertCircle
+  AlertCircle, Loader2
 } from 'lucide-react';
+
+import { API_BASE_URL } from '../../../../BaseURL';
 
 const UploadQnAModal = ({
   isOpen, onClose, examId, onSubmit, existingQuestions = [] }) => {
@@ -30,7 +32,8 @@ const UploadQnAModal = ({
     domain: 'General',
     isExisting: false,
     num_rubric_items: 3,
-    professorInstructions: ''
+    professorInstructions: '',
+    aiCustomInstruction: ''
   }]);
 
   const [goldenPdfFile, setGoldenPdfFile] = useState(null);
@@ -40,6 +43,10 @@ const UploadQnAModal = ({
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showAiAnswerModal, setShowAiAnswerModal] = useState(false);
+  const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
+  const [aiGenerationError, setAiGenerationError] = useState('');
+  const [aiPreviewAnswer, setAiPreviewAnswer] = useState('');
   const activePasteTargetRef = useRef(null);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -47,6 +54,39 @@ const UploadQnAModal = ({
   const questionRefs = useRef({});
   const dropZoneRefs = useRef({});
   const modalRootRef = useRef(null);
+
+  const stripMarkdown = (text = '') => {
+    if (!text) return '';
+    let result = text;
+    // Remove code fences and inline backticks
+    result = result.replace(/```[\s\S]*?```/g, '');
+    result = result.replace(/`([^`]+)`/g, '$1');
+    // Remove common markdown heading/bullet prefixes while keeping content
+    result = result.replace(/^\s{0,3}#{1,6}\s+/gm, '');
+    result = result.replace(/^\s{0,3}[-*+]\s+/gm, '');
+    result = result.replace(/^\s{0,3}\d+\.\s+/gm, '');
+    // Remove horizontal rules (--- etc.)
+    result = result.replace(/^\s*-{3,}\s*$/gm, '');
+    // Unwrap lines that are just [ ... ] used as display wrappers
+    result = result.replace(/^\s*\[(.*?)\]\s*$/gm, '$1');
+    // Strip simple LaTeX inline and display math delimiters
+    result = result.replace(/\\\((.*?)\\\)/g, '$1');
+    result = result.replace(/\\\[(.*?)\\\]/g, '$1');
+    // Remove common TeX helpers like boxed{...}, begin{aligned}, end{aligned}
+    result = result.replace(/boxed\{/g, '');
+    result = result.replace(/begin\{aligned\}/g, '');
+    result = result.replace(/end\{aligned\}/g, '');
+    // Remove emphasis markers
+    result = result.replace(/\*\*(.*?)\*\*/g, '$1');
+    result = result.replace(/\*(.*?)\*/g, '$1');
+    result = result.replace(/__(.*?)__/g, '$1');
+    result = result.replace(/_(.*?)_/g, '$1');
+    // Remove remaining stray backslashes (e.g., from LaTeX commands)
+    result = result.replace(/\\/g, '');
+    // Normalize multiple blank lines
+    result = result.replace(/\n{3,}/g, '\n\n');
+    return result.trim();
+  };
 
   useEffect(() => {
 
@@ -89,6 +129,95 @@ const UploadQnAModal = ({
     }
   }, [isOpen]);
 
+  const handleOpenAiAnswerModal = () => {
+    setAiGenerationError('');
+    setAiPreviewAnswer('');
+    setShowAiAnswerModal(true);
+  };
+
+  const handleCloseAiAnswerModal = () => {
+    if (isGeneratingAnswer) return;
+    setAiGenerationError('');
+    setAiPreviewAnswer('');
+    setShowAiAnswerModal(false);
+  };
+
+  const handleGenerateAnswer = async () => {
+    setAiGenerationError('');
+
+    const questionImageUrl = activeQuestion.questionUrl || activeQuestion.questionPreview || '';
+    const questionBody = activeQuestion.questionBody || '';
+    const questionType = activeQuestion.questionType || 'image';
+
+    if (!questionImageUrl && !questionBody.trim()) {
+      setAiGenerationError('Please provide question text or upload a question image.');
+      return;
+    }
+
+    setIsGeneratingAnswer(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/generate-answer`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          domain: activeQuestion.domain || 'General',
+          question_type: questionType,
+          question_body: questionBody,
+          question_image_url: questionImageUrl || null,
+          max_marks: activeQuestion.marks ? Number(activeQuestion.marks) : null,
+          custom_instruction: activeQuestion.aiCustomInstruction || null,
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: `Request failed with status ${response.status}` }));
+        throw new Error(errorData.message || errorData.detail || `Request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.code !== 200) {
+        throw new Error(data.message || 'Failed to generate answer');
+      }
+
+      const generatedRaw = data?.data?.answer || '';
+      const generated = stripMarkdown(generatedRaw);
+      if (!generated.trim()) {
+        throw new Error('AI returned an empty answer');
+      }
+      setAiPreviewAnswer(generated);
+    } catch (e) {
+      setAiGenerationError(e?.message || 'Failed to generate answer');
+    } finally {
+      setIsGeneratingAnswer(false);
+    }
+  };
+
+  const handleApplyGeneratedAnswer = () => {
+    const cleaned = (aiPreviewAnswer || '').trim();
+    if (!cleaned) {
+      setAiGenerationError('Generated answer is empty. Please generate again.');
+      return;
+    }
+
+    setQuestions(prev => prev.map(q => {
+      if (q.id !== activeQuestion.id) return q;
+      const nextAnswerType = (q.answerType || 'image') === 'image' ? 'both' : (q.answerType || 'image');
+      return {
+        ...q,
+        answerType: nextAnswerType,
+        answerBody: cleaned,
+      };
+    }));
+
+    setAiPreviewAnswer('');
+    setAiGenerationError('');
+    setShowAiAnswerModal(false);
+  };
+
   useEffect(() => {
     if (!isOpen) {
       setGoldenPdfFile(null);
@@ -118,7 +247,8 @@ const UploadQnAModal = ({
         isExisting: true, 
         questionNumber: q.question_number,
         num_rubric_items: q.num_rubric_items || 3,
-        professorInstructions: q.professor_instructions || ''
+        professorInstructions: q.professor_instructions || '',
+        aiCustomInstruction: ''
       }));
       setQuestions(formattedQuestions);
     } else {
@@ -140,7 +270,8 @@ const UploadQnAModal = ({
         domain: 'General',
         isExisting: false,
         num_rubric_items: 3,
-        professorInstructions: ''
+        professorInstructions: '',
+        aiCustomInstruction: ''
       }]);
     }
   }, [existingQuestions]);
@@ -238,7 +369,8 @@ const UploadQnAModal = ({
         domain: 'General',
         isExisting: false,
         num_rubric_items: 3,
-        professorInstructions: ''
+        professorInstructions: '',
+        aiCustomInstruction: ''
       }
     ]);
     
@@ -1064,9 +1196,26 @@ const UploadQnAModal = ({
                     )}
 
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-600">
-                        Answer Body
-                      </label>
+                      <div className="flex items-center justify-between gap-3">
+                        <label className="block text-sm font-medium text-gray-600">
+                          Answer Body
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={handleOpenAiAnswerModal}
+                          disabled={isSubmitting}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors
+                            ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'} border-gray-200 bg-white text-gray-900`}
+                        >
+                          <img
+                            src="/artificial-intelligence.png"
+                            alt="AI"
+                            className="w-5 h-5"
+                          />
+                          <span className="text-sm font-medium">Generate with AI</span>
+                        </button>
+                      </div>
                       {['text', 'both'].includes(activeQuestion.answerType || 'image') ? (
                         <textarea
                           value={activeQuestion.answerBody}
@@ -1081,9 +1230,7 @@ const UploadQnAModal = ({
                           rows={6}
                           placeholder="Enter answer text"
                         />
-                      ) : (
-                        <p className="text-sm text-gray-500">Answer text is optional for image-only answers.</p>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1220,6 +1367,146 @@ const UploadQnAModal = ({
           </button>
         </div>
       </div>
+
+      {showAiAnswerModal && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-gray-200 bg-white">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="p-2.5 bg-accent/10 rounded-xl flex-shrink-0">
+                  <img src="/artificial-intelligence.png" alt="AI" className="w-6 h-6" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-semibold text-gray-900 truncate">Generate Answer with AI</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">Review the question and provide optional instructions.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCloseAiAnswerModal}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                aria-label="Close"
+                disabled={isGeneratingAnswer}
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900">Question Preview</h3>
+
+                  {(['image', 'both'].includes(activeQuestion.questionType || 'image')) && (activeQuestion.questionPreview || activeQuestion.questionUrl) && (
+                    <div className="rounded-2xl border border-gray-200 overflow-hidden bg-gray-50">
+                      <img
+                        src={activeQuestion.questionPreview || activeQuestion.questionUrl}
+                        alt="Question"
+                        className="w-full h-auto object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {(['text', 'both'].includes(activeQuestion.questionType || 'image')) && (activeQuestion.questionBody || '').trim() && (
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{activeQuestion.questionBody}</p>
+                    </div>
+                  )}
+
+                  {!((activeQuestion.questionPreview || activeQuestion.questionUrl) || (activeQuestion.questionBody || '').trim()) && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm text-amber-800">Please add a question image or question text before generating.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900">Custom Instruction (Optional)</h3>
+                  <textarea
+                    value={activeQuestion.aiCustomInstruction || ''}
+                    onChange={(e) => {
+                      setQuestions(prev => prev.map(q =>
+                        q.id === activeQuestion.id
+                          ? { ...q, aiCustomInstruction: e.target.value }
+                          : q
+                      ));
+                    }}
+                    maxLength={2000}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
+                    rows={8}
+                    placeholder="Optional: e.g., 'Answer in bullet points', 'Show step-by-step working', 'Keep it concise'"
+                    disabled={isGeneratingAnswer}
+                  />
+                  <p className="text-xs text-gray-500">{(activeQuestion.aiCustomInstruction || '').length}/2000 characters</p>
+
+                  {aiGenerationError && (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5" />
+                      <p className="text-sm text-rose-700">{aiGenerationError}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-900">AI Generated Answer Preview</h3>
+                {isGeneratingAnswer && (
+                  <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4 flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 text-accent animate-spin" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Generating answer…</p>
+                      <p className="text-xs text-gray-600">This may take a few seconds.</p>
+                    </div>
+                  </div>
+                )}
+                {!isGeneratingAnswer && !aiPreviewAnswer && (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4">
+                    <p className="text-sm text-gray-500">Generated answer will appear here after you click Generate.</p>
+                  </div>
+                )}
+                {aiPreviewAnswer && !isGeneratingAnswer && (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4 max-h-60 overflow-y-auto">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{aiPreviewAnswer}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={handleCloseAiAnswerModal}
+                disabled={isGeneratingAnswer}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors font-medium disabled:opacity-50"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={aiPreviewAnswer && !isGeneratingAnswer ? handleApplyGeneratedAnswer : handleGenerateAnswer}
+                disabled={isGeneratingAnswer}
+                className="flex items-center gap-2 px-6 py-2 bg-accent text-white rounded-xl hover:bg-accent transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+              >
+                {isGeneratingAnswer ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <img src="/artificial-intelligence.png" alt="AI" className="w-5 h-5" />
+                    {aiPreviewAnswer ? 'Use this answer' : 'Generate'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

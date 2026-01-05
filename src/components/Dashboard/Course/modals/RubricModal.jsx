@@ -5,7 +5,7 @@ import {
     Bot, BrainCircuit, Lightbulb, Zap,
     Trash2, Edit2, Database, Cpu,
     Circle, FileText, Settings, Minimize2, Maximize2,
-    AlertTriangle, CheckCircle
+    AlertTriangle, CheckCircle, Hash
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -343,7 +343,7 @@ const RubricItemEditor = ({ item, index, onUpdate, onDelete, validationErrors = 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                                <Circle className="w-4 h-4 text-gray-400" />
+                                                <Hash className="w-4 h-4 text-gray-400" />
                                                 Alloted Marks
                                             </label>
                                             <input

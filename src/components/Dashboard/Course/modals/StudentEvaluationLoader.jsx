@@ -938,11 +938,25 @@ const StudentEvaluationLoader = ({
                                   <span className="font-medium text-accent">
                                     {item.marks_awarded}
                                   </span>
-                                  <span className="text-gray-400">Marks</span>
+                                  <span className="text-gray-400">/</span>
+                                  <span className="text-gray-600">
+                                    {currentQuestion?.rubric_items?.[index]?.max_marks ?? item.max_marks ?? 0}
+                                  </span>
                                 </div>
                               </div>
 
                               <div className="relative">
+                                {currentQuestion?.rubric_items?.[index]?.grading_guidelines && (
+                                  <details className="mb-2 bg-gray-50 border border-gray-200 rounded-md">
+                                    <summary className="cursor-pointer px-3 py-1.5 text-xs font-medium text-gray-700 flex items-center justify-between">
+                                      <span>Marking guidelines</span>
+                                      <span className="text-gray-400 text-[10px]">Click to view</span>
+                                    </summary>
+                                    <div className="px-3 pb-2 pt-1 text-xs text-gray-600 whitespace-pre-line">
+                                      {currentQuestion.rubric_items[index].grading_guidelines}
+                                    </div>
+                                  </details>
+                                )}
                                 <div className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
                                   {feedbackEdits[`question_${questionNumber}`]
                                     ?.items[index]?.editedFeedback ||
