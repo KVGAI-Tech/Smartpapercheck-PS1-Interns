@@ -1526,7 +1526,10 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                                                 }`}
                                             />
                                           </div>
-                                          <span className="text-sm font-medium text-gray-900">{student.marks_obtained}</span>
+                                          <span className="text-sm font-medium text-gray-900">
+                                            {student.marks_obtained}
+                                            {student.max_marks ? ` / ${student.max_marks}` : ''}
+                                          </span>
                                         </div>
                                       ) : (
                                         <span className="text-sm text-gray-500 italic">
