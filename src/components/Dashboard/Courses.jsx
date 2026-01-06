@@ -584,89 +584,106 @@ const Courses = () => {
 
   return (
     <div className="space-y-6">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative flex-1 max-w-2xl"
-            >
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <motion.input
-                whileFocus={{ scale: 1.01 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                type="text"
-                placeholder="Search courses by name or code..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-200 bg-white shadow-sm"
-              />
-            </motion.div>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative flex-1 max-w-2xl"
+          >
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              type="text"
+              placeholder="Search courses by name or code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-200 bg-white shadow-sm"
+            />
+          </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex gap-2"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex gap-2"
+          >
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-2 py-3 px-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700"
             >
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-2 py-3 px-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700"
-              >
-                <Filter className="w-4 h-4" />
-                <span className="hidden sm:inline">Filters</span>
-              </motion.button>
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">Filters</span>
+            </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  setSearchQuery("");
-                  fetchCourses();
-                }}
-                className="flex items-center gap-2 py-3 px-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span className="hidden sm:inline">Refresh</span>
-              </motion.button>
-            </motion.div>
-          </div>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                setSearchQuery("");
+                fetchCourses();
+              }}
+              className="flex items-center gap-2 py-3 px-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline">Refresh</span>
+            </motion.button>
+          </motion.div>
         </div>
-
         {userRole === "professor" && (
-          <CourseModal
-            isOpen={showAddModal}
-            onClose={() => {
-              setShowAddModal(false);
-              setSelectedCourse(null);
-            }}
-            course={selectedCourse}
-            onSubmit={selectedCourse ? handleUpdateCourse : handleAddCourse}
-            isEditing={!!selectedCourse}
-          />
+          <div className="flex justify-end">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                setSelectedCourse(null);
+                setShowAddModal(true);
+              }}
+              className="inline-flex items-center gap-2 py-3 px-4 bg-accent text-white rounded-lg shadow-md hover:shadow-lg hover:bg-accent/90 transition-all duration-300"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Course</span>
+            </motion.button>
+          </div>
         )}
+      </div>
 
-        <DeleteConfirmationModal
-          isOpen={deleteModalOpen}
+      {renderContent()}
+
+      {userRole === "professor" && (
+        <CourseModal
+          isOpen={showAddModal}
           onClose={() => {
-            setDeleteModalOpen(false);
-            setCourseToDelete(null);
+            setShowAddModal(false);
+            setSelectedCourse(null);
           }}
-          onConfirm={confirmDeleteCourse}
-          courseName={courseToDelete?.course_name || "this course"}
+          course={selectedCourse}
+          onSubmit={selectedCourse ? handleUpdateCourse : handleAddCourse}
+          isEditing={!!selectedCourse}
         />
+      )}
 
-        <Toast
-          show={showToast.show}
-          message={showToast.message}
-          type={showToast.type}
-          onClose={() => setShowToast((prev) => ({ ...prev, show: false }))}
-        />
-        {renderContent()}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setCourseToDelete(null);
+        }}
+        onConfirm={confirmDeleteCourse}
+        courseName={courseToDelete?.course_name || "this course"}
+      />
+
+      <Toast
+        show={showToast.show}
+        message={showToast.message}
+        type={showToast.type}
+        onClose={() => setShowToast((prev) => ({ ...prev, show: false }))}
+      />
     </div>
   );
 };
