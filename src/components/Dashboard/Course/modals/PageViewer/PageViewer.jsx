@@ -41,13 +41,13 @@ export const PageViewer = ({
         </div>
       )}
       <div
-        className="transition-transform duration-300 ease-out"
+        className="transition-transform duration-300 ease-out max-h-[80vh] flex items-center justify-center"
         style={{ transform: `scale(${zoomLevel})` }}
       >
         <img
           src={safeUrl}
           alt="Student Answer Sheet"
-          className="max-w-full object-contain shadow-2xl rounded-lg"
+          className="max-w-full max-h-[80vh] object-contain shadow-2xl rounded-lg"
           onError={handleError}
           onLoad={handleLoad}
         />

@@ -830,11 +830,11 @@ const UploadQnAModal = ({
 
   const ModalContent = (
     <div 
-      className={`relative bg-white shadow-xl max-h-[92vh] w-full flex flex-col
+      className={`relative bg-white shadow-xl w-full flex flex-col
         transform transition-all duration-300 ease-in-out 
         ${isFullscreen 
           ? 'max-w-full h-screen rounded-none' 
-          : 'max-w-6xl min-h-[70vh] h-auto rounded-2xl m-4 sm:m-6'}`}
+          : 'max-w-6xl max-h-[92vh] h-[92vh] rounded-2xl m-4 sm:m-6'}`}
       style={{ zIndex: 10000 }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -962,7 +962,7 @@ const UploadQnAModal = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
+      <div className="flex-1 min-h-0 px-6 py-4 bg-gray-50">
         {uploadMode === 'golden-pdf' ? (
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="space-y-6">
@@ -997,8 +997,9 @@ const UploadQnAModal = ({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="h-full min-h-0 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6">
+            {/* Left: Question list panel with its own scroll */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-0">
               <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">Questions</p>
@@ -1014,7 +1015,7 @@ const UploadQnAModal = ({
                 </button>
               </div>
 
-              <div className="max-h-[52vh] lg:max-h-[62vh] overflow-y-auto p-2">
+              <div className="flex-1 overflow-y-auto p-2">
                 <div className="space-y-2">
                   {questions.map((q, idx) => (
                     <button
@@ -1046,7 +1047,8 @@ const UploadQnAModal = ({
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* Right: Editing panel with its own scroll */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm text-gray-500">Editing</p>
@@ -1083,7 +1085,7 @@ const UploadQnAModal = ({
                 </div>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 flex-1 min-h-0 overflow-y-auto">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -1195,28 +1197,31 @@ const UploadQnAModal = ({
                       </div>
                     )}
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <label className="block text-sm font-medium text-gray-600">
-                          Answer Body
-                        </label>
+                    {['text', 'both'].includes(activeQuestion.answerType || 'image') && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <label className="block text-sm font-medium text-gray-600">
+                            Answer Body
+                          </label>
 
-                        <button
-                          type="button"
-                          onClick={handleOpenAiAnswerModal}
-                          disabled={isSubmitting}
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors
-                            ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'} border-gray-200 bg-white text-gray-900`}
-                        >
-                          <img
-                            src="/artificial-intelligence.png"
-                            alt="AI"
-                            className="w-5 h-5"
-                          />
-                          <span className="text-sm font-medium">Generate with AI</span>
-                        </button>
-                      </div>
-                      {['text', 'both'].includes(activeQuestion.answerType || 'image') ? (
+                          {['text', 'both'].includes(activeQuestion.answerType || 'image') && (
+                            <button
+                              type="button"
+                              onClick={handleOpenAiAnswerModal}
+                              disabled={isSubmitting}
+                              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors
+                                ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'} border-gray-200 bg-white text-gray-900`}
+                            >
+                              <img
+                                src="/artificial-intelligence.png"
+                                alt="AI"
+                                className="w-5 h-5"
+                              />
+                              <span className="text-sm font-medium">Generate with AI</span>
+                            </button>
+                          )}
+                        </div>
+
                         <textarea
                           value={activeQuestion.answerBody}
                           onChange={(e) => {
@@ -1230,8 +1235,8 @@ const UploadQnAModal = ({
                           rows={6}
                           placeholder="Enter answer text"
                         />
-                      ) : null}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1496,11 +1501,13 @@ const UploadQnAModal = ({
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Generating...
                   </>
-                ) : (
+                ) : aiPreviewAnswer ? (
                   <>
                     <img src="/artificial-intelligence.png" alt="AI" className="w-5 h-5" />
-                    {aiPreviewAnswer ? 'Use this answer' : 'Generate'}
+                    Use this answer
                   </>
+                ) : (
+                  'Generate'
                 )}
               </button>
             </div>

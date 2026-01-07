@@ -35,6 +35,8 @@ export default function fetchStudentEvaluation(
               pageNumber: page.page_number,
               totalPages: page.total_pages,
               imageUrl: page.presigned_url || page.url,
+              // Preserve question_number so UI can map pages to questions precisely
+              questionNumber: page.question_number,
             }));
             setAnswerScriptPages(processedPages);
           } else {

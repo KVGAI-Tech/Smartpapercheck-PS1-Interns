@@ -1,42 +1,54 @@
-  import React, { useState, useEffect, useCallback, useMemo } from 'react';
-  import { useNavigate } from 'react-router-dom';
-  import {
-    Search, Plus, Edit2, Trash2,
-    ChevronRight, Calendar, Upload,
-    Users, PlayCircle, X, AlertCircle, CheckCircle,
-    Check, History
-  } from 'lucide-react';
-  import UploadQnAModal from '../modals/UploadQnAModal';
-  import RubricModal from '../modals/RubricModal';
-  import UploadAnswersModal from '../modals/UploadAnswersModal';
-  import { API_BASE_URL } from '../../../../BaseURL';
-  
-  const Toast = ({ message, type, show, onClose }) => {
-    useEffect(() => {
-      if (show) {
-        const timer = setTimeout(() => onClose(), 3000);
-        return () => clearTimeout(timer);
-      }
-    }, [show, onClose]);
-  
-    if (!show) return null;
-  
-    return (
-      <div
-        className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all duration-300 ${
-          type === 'success' ? 'bg-accent text-white' : 'bg-red-500 text-white'
-        } ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
-      >
-        {type === 'success' ? (
-          <CheckCircle className="w-5 h-5" />
-        ) : (
-          <AlertCircle className="w-5 h-5" />
-        )}
-        <span>{message}</span>
-      </div>
-    );
-  };
-  
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Search, Plus, Edit2, Trash2,
+  ChevronRight, Calendar, Upload,
+  Users, PlayCircle, X, AlertCircle, CheckCircle,
+  Check, History
+} from 'lucide-react';
+import UploadQnAModal from '../modals/UploadQnAModal';
+import RubricModal from '../modals/RubricModal';
+import UploadAnswersModal from '../modals/UploadAnswersModal';
+import { API_BASE_URL } from '../../../../BaseURL';
+
+const formatExamDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+
+  return `${day}/${month}/${year}`;
+};
+
+const Toast = ({ message, type, show, onClose }) => {
+  useEffect(() => {
+    if (show) {
+      const timer = setTimeout(() => onClose(), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [show, onClose]);
+
+  if (!show) return null;
+
+  return (
+    <div
+      className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all duration-300 ${
+        type === 'success' ? 'bg-accent text-white' : 'bg-red-500 text-white'
+      } ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+    >
+      {type === 'success' ? (
+        <CheckCircle className="w-5 h-5" />
+      ) : (
+        <AlertCircle className="w-5 h-5" />
+      )}
+      <span>{message}</span>
+    </div>
+  );
+};
+
   const StepDot = ({ number, isActive, isCompleted, onClick }) => (
     <button
       onClick={onClick}
@@ -412,28 +424,28 @@
     useEffect(() => {
       setActiveStep(initialStep || 0);
     }, [initialStep]);
-      
+
     const steps = [
-      { 
-        label: 'Upload Q&A', 
+      {
+        label: 'Upload Q&A',
         description: 'Upload your question paper',
         icon: Upload,
-        action: () => onUploadQnA(exam.id) 
+        action: () => onUploadQnA(exam.id)
       },
-      { 
-        label: 'Generate Rubrics', 
+      {
+        label: 'Generate Rubrics',
         description: 'Create marking criteria',
         icon: CheckCircle,
-        action: () => onGenerateRubrics(exam.id) 
+        action: () => onGenerateRubrics(exam.id)
       },
-      { 
-        label: 'Upload Answer Sheets', 
+      {
+        label: 'Upload Answer Sheets',
         description: 'Upload student answer files',
         icon: Upload,
-        action: () => onUploadAnswers(exam.id) 
+        action: () => onUploadAnswers(exam.id)
       }
     ];
-  
+
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden
         transition-all duration-300 hover:shadow-lg">
@@ -445,13 +457,13 @@
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                {new Date(exam.date || Date.now()).toLocaleDateString()}
+                {formatExamDate(exam.created_at || exam.start_time || exam.date)}
               </div>
               <div className="w-1 h-1 rounded-full bg-gray-200" />
               <span className="font-medium">{exam.full_marks || exam.maxMarks || 100} marks</span>
             </div>
           </div>
-  
+
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => onGetEnrollments(exam.id)}
@@ -470,7 +482,7 @@
               <PlayCircle className="w-4 h-4" />
               <span>Evaluate</span>
             </button>
-  
+
             <div className="flex items-center justify-end gap-2 sm:ml-2">
               <button
                 onClick={() => onEdit(exam)}
@@ -489,7 +501,7 @@
             </div>
           </div>
         </div>
-  
+
         <div className="px-6 sm:px-10 py-10 bg-white">
           <div className="flex flex-col items-center">
             <div className="flex items-center justify-center w-full max-w-3xl mx-auto mb-8">
@@ -516,11 +528,11 @@
                 </React.Fragment>
               ))}
             </div>
-            
+
             <div key={activeStep} className="text-center mb-4 transition-all duration-300">
               <div className="flex flex-col items-center gap-2">
                 <div className="p-3 bg-accent/10 rounded-full mb-2 transform transition-all">
-                  {React.createElement(steps[activeStep].icon, { className: "w-6 h-6 text-accent" })}
+                  {React.createElement(steps[activeStep].icon, { className: 'w-6 h-6 text-accent' })}
                 </div>
                 <h4 className="text-lg font-semibold text-gray-800">
                   {steps[activeStep].label}
@@ -530,16 +542,16 @@
                 </p>
               </div>
             </div>
-  
+
             <button
               onClick={steps[activeStep].action}
               className="mt-4 px-6 py-2.5 bg-accent text-white rounded-full flex items-center gap-2
                 shadow-md hover:shadow-lg hover:bg-accent transition-all duration-300 transform hover:scale-105"
             >
-              {React.createElement(steps[activeStep].icon, { className: "w-4 h-4" })}
+              {React.createElement(steps[activeStep].icon, { className: 'w-4 h-4' })}
               <span>{steps[activeStep].label}</span>
             </button>
-            
+
             <div className="flex items-center justify-center gap-4 mt-6">
               <button
                 onClick={() => {

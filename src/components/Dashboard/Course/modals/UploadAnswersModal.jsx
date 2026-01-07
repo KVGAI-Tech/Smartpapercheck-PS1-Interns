@@ -11,7 +11,20 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [evalProgress, setEvalProgress] = useState(null);
   const fileInputRef = useRef(null);
+  const pollingRef = useRef(false);
+  const pollTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      pollingRef.current = false;
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+        pollTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -69,10 +82,11 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     const loadingToast = toast.loading('Uploading answer sheets...');
 
     try {
+      pollingRef.current = true;
       const formData = new FormData();
       formData.append('zip_file', zipFile);
 
-      const response = await fetch(
+      const uploadPromise = fetch(
         `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers`,
         {
           method: 'POST',
@@ -83,6 +97,58 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
         }
       );
 
+      // While the upload/evaluation request is in-flight, poll evaluation progress
+      // every few seconds so we can show a real progress bar.
+      const pollIntervalMs = 3000;
+
+      const pollProgress = async () => {
+        if (!pollingRef.current) return;
+        try {
+          const progressResp = await fetch(
+            `${API_BASE_URL}/exams/${courseId}/exams/${examId}/evaluation-progress`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              },
+            }
+          );
+
+          if (progressResp.ok) {
+            const progressJson = await progressResp.json();
+            if (progressJson?.code === 200 && progressJson.data) {
+              const next = progressJson.data;
+              setEvalProgress(next);
+              if (
+                typeof next?.total_students === 'number' &&
+                next.total_students > 0 &&
+                typeof next?.evaluated_students === 'number' &&
+                next.evaluated_students >= next.total_students
+              ) {
+                pollingRef.current = false;
+                if (pollTimeoutRef.current) {
+                  clearTimeout(pollTimeoutRef.current);
+                  pollTimeoutRef.current = null;
+                }
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          // Swallow progress errors; main upload call will surface real issues
+          console.error('Progress polling error:', e);
+        } finally {
+          if (pollingRef.current) {
+            pollTimeoutRef.current = setTimeout(pollProgress, pollIntervalMs);
+          }
+        }
+      };
+
+      // Start polling without blocking the upload
+      pollProgress();
+
+      const response = await uploadPromise;
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -90,7 +156,13 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
       const data = await response.json();
       
       if (data.code === 200) {
+        pollingRef.current = false;
+        if (pollTimeoutRef.current) {
+          clearTimeout(pollTimeoutRef.current);
+          pollTimeoutRef.current = null;
+        }
         setUploadResults(data.data);
+        setEvalProgress(null);
         toast.success(`Successfully processed ${data.data.total_processed} answer sheets!`, { id: loadingToast });
         
         if (onUploadSuccess) {
@@ -101,6 +173,11 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
       }
     } catch (error) {
       console.error('Upload error:', error);
+      pollingRef.current = false;
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+        pollTimeoutRef.current = null;
+      }
       toast.error('Failed to upload answer sheets: ' + (error.message || 'Unknown error'), { id: loadingToast });
     } finally {
       setIsUploading(false);
@@ -108,8 +185,14 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   };
 
   const handleClose = () => {
+    pollingRef.current = false;
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
     setZipFile(null);
     setUploadResults(null);
+    setEvalProgress(null);
     onClose();
   };
 
@@ -149,6 +232,89 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {!uploadResults ? (
+          <>
+          {isUploading && (
+            <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+              {(() => {
+                const total = evalProgress?.total_students || 0;
+                const evaluated = evalProgress?.evaluated_students || 0;
+                const uploadedOnly = evalProgress?.uploaded_students || 0;
+                const uploadedOrEvaluated = uploadedOnly + evaluated;
+
+                // Phase 1: upload + processing (creating answer docs)
+                const inUploadPhase = total > 0 && uploadedOrEvaluated < total;
+
+                if (!evalProgress || total === 0) {
+                  // No progress yet: show generic uploading state
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Uploading ZIP and processing answer sheets (step 1/2)...</p>
+                        <p className="text-[11px] text-gray-600 mt-0.5">This may take a while for large ZIP files.</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (inUploadPhase) {
+                  const percent = Math.min(((uploadedOrEvaluated / total) * 100) || 0, 100);
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                          <p className="text-sm font-medium text-gray-900">Step 1/2 · Uploading & processing answer sheets...</p>
+                        </div>
+                        <p className="text-xs text-gray-700">
+                          {uploadedOrEvaluated} / {total} students uploaded
+                        </p>
+                      </div>
+                      <div>
+                        <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden">
+                          <div
+                            className="h-full bg-accent transition-all duration-500"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-[11px] text-gray-600">
+                          Once all uploads are processed, automatic evaluation will start (step 2/2).
+                        </p>
+                      </div>
+                    </>
+                  );
+                }
+
+                // Phase 2: all uploads done, now evaluating
+                const evalPercent = Math.min(evalProgress.percent_complete || 0, 100);
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                        <p className="text-sm font-medium text-gray-900">Step 2/2 · Evaluating answer sheets...</p>
+                      </div>
+                      <p className="text-xs text-gray-700">
+                        {evaluated} / {total} students evaluated
+                      </p>
+                    </div>
+                    <div>
+                      <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden">
+                        <div
+                          className="h-full bg-accent transition-all duration-500"
+                          style={{ width: `${evalPercent}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-gray-600">
+                        This may take a few minutes for larger classes. You can continue working while evaluation completes.
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
@@ -318,6 +484,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
             </div>
             </div>
           </div>
+          </>
         ) : (
           /* Upload Results */
           <div className="space-y-6">

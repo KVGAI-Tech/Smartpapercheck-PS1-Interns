@@ -65,6 +65,7 @@ const StudentEvaluationLoader = ({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [answerScriptPages, setAnswerScriptPages] = useState([]);
+  const [questionPageMap, setQuestionPageMap] = useState({});
   const [zoomLevel, setZoomLevel] = useState(1);
   const [annotations, setAnnotations] = useState([]);
   const [activeTab, setActiveTab] = useState("question");
@@ -134,20 +135,73 @@ const StudentEvaluationLoader = ({
     }
   }, [examId, enrollmentId, onError]);
 
+  useEffect(() => {
+    if (!answerScriptPages.length) {
+      setQuestionPageMap({});
+      return;
+    }
+
+    const map = {};
+    answerScriptPages.forEach((page, index) => {
+      const qNum = page.questionNumber;
+      if (!qNum && qNum !== 0) return;
+      if (!map[qNum]) map[qNum] = [];
+      map[qNum].push(index);
+    });
+
+    setQuestionPageMap(map);
+  }, [answerScriptPages]);
+
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 3));
   const handleZoomOut = () =>
     setZoomLevel((prev) => Math.max(prev - 0.25, 0.5));
   const handleZoomReset = () => setZoomLevel(1);
 
+  const syncPageWithQuestion = (newQuestionIndex) => {
+    if (!answerScriptPages.length || !questions.length) return;
+
+    if (answerSheetRef.current) {
+      answerSheetRef.current.scrollTop = 0;
+    }
+
+    const safeQuestionIndex = Math.min(
+      Math.max(newQuestionIndex, 0),
+      questions.length - 1
+    );
+
+    const question = questions[safeQuestionIndex];
+    const qNum = question?.question_number;
+
+    if (qNum != null && questionPageMap[qNum]?.length) {
+      // Use the first page for this question; users can still move to later pages
+      setCurrentPageIndex(questionPageMap[qNum][0]);
+    } else {
+      // Fallback: if mapping is missing, keep current index or reset to first page
+      setCurrentPageIndex((prev) =>
+        prev < answerScriptPages.length ? prev : 0
+      );
+    }
+
+    setZoomLevel(1);
+  };
+
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
+      setCurrentQuestionIndex((prev) => {
+        const nextIndex = prev - 1;
+        syncPageWithQuestion(nextIndex);
+        return nextIndex;
+      });
     }
   };
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+      setCurrentQuestionIndex((prev) => {
+        const nextIndex = prev + 1;
+        syncPageWithQuestion(nextIndex);
+        return nextIndex;
+      });
     }
   };
 
