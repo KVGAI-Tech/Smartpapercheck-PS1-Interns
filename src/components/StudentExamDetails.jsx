@@ -570,8 +570,8 @@ const StudentExamDetails = ({ isHistory = false }) => {
       />
 
       <header className="bg-white shadow-sm border-b">
-        <div className="w-full px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="w-full px-4 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -581,7 +581,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </motion.button>
 
-            <div>
+            <div className="min-w-0">
               <Breadcrumbs
                 items={[
                   { label: 'My Evaluations', to: '/student/evaluations' },
@@ -589,14 +589,14 @@ const StudentExamDetails = ({ isHistory = false }) => {
                   { label: isHistory ? 'History' : 'Exam' },
                 ]}
               />
-              <h1 className="text-xl font-bold text-gray-900 leading-tight">
+              <h1 className="text-xl font-bold text-gray-900 leading-tight truncate">
                 {examData.student && (
                   <span>
                     {examData.student.name} ({examData.student.roll_number})
                   </span>
                 )}
               </h1>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
                 <span>{examData.title}</span>
                 <span className="text-gray-300">|</span>
                 <span>{examData.date}</span>
@@ -604,7 +604,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-start lg:justify-end gap-2 sm:gap-3">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}

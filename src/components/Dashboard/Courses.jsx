@@ -124,7 +124,7 @@ const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
               animate={{ scale: 1 }}
               className={`px-2 py-1 text-xs font-medium rounded-full ${
                 course.is_active
-                  ? "bg-green-50 text-green-600"
+                  ? "bg-accent/10 text-accent"
                   : "bg-gray-50 text-gray-600"
               }`}
             >
@@ -251,7 +251,7 @@ const Toast = ({ show, message, type, onClose }) => {
           exit={{ opacity: 0, y: 50 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
           className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
-            type === "success" ? "bg-green-500" : "bg-red-500"
+            type === "success" ? "bg-accent" : "bg-red-500"
           } text-white z-50`}
         >
           {type === "success" ? (

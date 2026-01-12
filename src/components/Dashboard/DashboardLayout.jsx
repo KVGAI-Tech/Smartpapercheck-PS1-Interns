@@ -3,10 +3,12 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Bell,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../BaseURL";
+import Breadcrumbs from "../ui/breadcrumbs";
 // import PaymentModal from "../Payments/PaymentModal"; // Temporarily disabled credits UI
 
 const DashboardLayout = ({ children }) => {
@@ -15,6 +17,9 @@ const DashboardLayout = ({ children }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadJobs, setUnreadJobs] = useState(0);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [recentJobs, setRecentJobs] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -64,6 +69,48 @@ const DashboardLayout = ({ children }) => {
   }, [fetchUserProfile]);
 
   useEffect(() => {
+    // Open a WebSocket for professor notifications when logged in
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    try {
+      const wsBase = API_BASE_URL.replace(/^http/, "ws");
+      const ws = new WebSocket(`${wsBase}/exams/ws/professor/notifications?token=${encodeURIComponent(token)}`);
+
+      ws.onopen = () => {
+        console.log("Notifications WebSocket connected");
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("Notifications WS message", data);
+          if (data.event === "job_update" && data.job) {
+            setUnreadJobs((prev) => prev + 1);
+            setRecentJobs((prev) => {
+              const next = [data.job, ...prev];
+              // Keep only a small number of recent notifications in the dropdown
+              return next.slice(0, 5);
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse notifications WS message", e);
+        }
+      };
+
+      ws.onerror = (e) => {
+        console.error("Notifications WebSocket error", e);
+      };
+
+      return () => {
+        ws.close();
+      };
+    } catch (e) {
+      console.error("Failed to open notifications WebSocket", e);
+    }
+  }, []);
+
+  useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
       if (window.innerWidth < 768) {
@@ -105,26 +152,38 @@ const DashboardLayout = ({ children }) => {
     // Defaults
     let title = "";
     let subtitle = "";
+    let breadcrumbItems = [];
 
     if (path === "/" || path.startsWith("/dashboard")) {
       title = "Dashboard";
+      breadcrumbItems = [{ label: "Dashboard" }];
     } else if (path.includes("/evaluations")) {
       title = state.examName || "Exam Evaluations";
       subtitle = state.examSubtitle || "";
+      breadcrumbItems = [
+        { label: "Courses", to: "/courses" },
+        { label: state.courseName || "Course" },
+      ];
     } else if (path.startsWith("/courses")) {
       if (/^\/courses\//.test(path)) {
         // Course details or nested exam pages
         title = state.courseName || "Course";
         subtitle = state.courseCode || "";
+        breadcrumbItems = [
+          { label: "Courses", to: "/courses" },
+          { label: title },
+        ];
       } else {
         title = "Courses";
+        breadcrumbItems = [{ label: "Courses" }];
       }
     }
 
-    return { title, subtitle };
+    return { title, subtitle, breadcrumbItems };
   };
 
-  const { title: pageTitle, subtitle: pageSubtitle } = getPageHeader();
+  const { title: pageTitle, subtitle: pageSubtitle, breadcrumbItems } =
+    getPageHeader();
 
   if (isLoading) {
     return (
@@ -301,7 +360,7 @@ const DashboardLayout = ({ children }) => {
                 </button>
               )}
               {pageTitle && (
-                <div className="flex flex-col leading-tight truncate max-w-[180px] md:max-w-xs">
+                <div className="flex flex-col gap-0.5 leading-tight truncate max-w-[220px] md:max-w-xs">
                   <span className="text-base md:text-lg font-semibold text-gray-900 truncate">
                     {pageTitle}
                   </span>
@@ -310,6 +369,7 @@ const DashboardLayout = ({ children }) => {
                       {pageSubtitle}
                     </span>
                   )}
+                  <Breadcrumbs items={breadcrumbItems} />
                 </div>
               )}
             </div>
@@ -318,6 +378,76 @@ const DashboardLayout = ({ children }) => {
               {/* <PaymentModal /> */}
               <div className="h-8 w-px bg-gray-200 hidden sm:block" />
               <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsNotificationsOpen((open) => !open)}
+                    className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-label="Notifications"
+                  >
+                    <Bell className="w-5 h-5 text-gray-500" />
+                    {unreadJobs > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold">
+                        {unreadJobs}
+                      </span>
+                    )}
+                  </button>
+                  {isNotificationsOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-40 text-sm">
+                      <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                        <span className="font-medium text-gray-800">Notifications</span>
+                        {unreadJobs > 0 && (
+                          <span className="text-xs text-gray-500">{unreadJobs} new</span>
+                        )}
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {recentJobs.length === 0 ? (
+                          <div className="px-3 py-2 text-xs text-gray-500">
+                            Background exam processing updates will appear here.
+                          </div>
+                        ) : (
+                          recentJobs.map((job) => (
+                            <div
+                              key={job.id}
+                              className="px-3 py-2 border-b border-gray-100 last:border-b-0 text-xs text-gray-700"
+                            >
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-medium text-gray-800 truncate">
+                                  Exam #{job.exam_id}
+                                </span>
+                                <span
+                                  className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                                    job.status === "completed"
+                                      ? "bg-emerald-50 text-emerald-700"
+                                      : job.status === "failed"
+                                      ? "bg-red-50 text-red-700"
+                                      : "bg-gray-50 text-gray-600"
+                                  }`}
+                                >
+                                  {job.status || "pending"}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-gray-500">
+                                Processed {job.summary?.total_processed ?? 0} · Failed {job.summary?.total_failed ?? 0}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-xs text-accent hover:bg-accent/5 border-t border-gray-100"
+                        onClick={() => {
+                          setUnreadJobs(0);
+                          setIsNotificationsOpen(false);
+                          navigate("/notifications");
+                        }}
+                      >
+                        View all notifications
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="relative">
                   <div className="w-8 h-8 rounded-full border border-gray-200 bg-accent text-white flex items-center justify-center font-medium text-sm">
                     {userData?.name

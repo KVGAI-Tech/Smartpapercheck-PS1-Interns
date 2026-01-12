@@ -293,24 +293,30 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       if (data && data.code === 200 && data.data && Array.isArray(data.data.enrollments)) {
         // Get exam full_marks from response if available
         const examFullMarks = data.data.exam?.full_marks || null;
-        
-        const formattedStudents = data.data.enrollments.map(student => ({
-          enrollment_id: student.id,
-          student_id: student.student_id,
-          exam_id: student.exam_id,
-          student_name: student.student_name,
-          roll_number: student.roll_number,
-          marks_obtained: student.marks_obtained,
-          max_marks: student.max_marks || examFullMarks || 0,
-          feedback: student.feedback,
-          status: student.status || 'not_uploaded',
-          uploaded_by: student.uploaded_by || null,
-          upload_time: student.uploaded_by?.upload_time || null,
-          recheck_requested: student.recheck_requested || false,
-          recheck_count: student.recheck_count || 0,
-          evaluation_status: student.marks_obtained !== null ? 'completed' : 'pending',
-          answer_sheet_url: student.answer_sheet_url || null
-        }));
+
+        const formattedStudents = data.data.enrollments.map(student => {
+          const status = student.status || 'not_uploaded';
+          const hasMarks = student.marks_obtained !== null && student.marks_obtained !== undefined;
+
+          return {
+            enrollment_id: student.id,
+            student_id: student.student_id,
+            exam_id: student.exam_id,
+            student_name: student.student_name,
+            roll_number: student.roll_number,
+            marks_obtained: hasMarks ? student.marks_obtained : null,
+            max_marks: student.max_marks || examFullMarks || 0,
+            feedback: student.feedback,
+            status,
+            uploaded_by: student.uploaded_by || null,
+            upload_time: student.uploaded_by?.upload_time || null,
+            recheck_requested: student.recheck_requested || false,
+            recheck_count: student.recheck_count || 0,
+            // Consider a student evaluated only when marks are present
+            evaluation_status: hasMarks ? 'completed' : 'pending',
+            answer_sheet_url: student.answer_sheet_url || null,
+          };
+        });
 
         setStudents(formattedStudents);
       } else {
@@ -384,10 +390,13 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       evaluatingStudent?.enrollment_id === student.enrollment_id;
 
     if (hasResults) {
+      // Already evaluated: can still be re-evaluated (via batch actions)
       return !(inProgress || batchEvaluating || publishing);
     }
 
-    return student.status === 'uploaded' && !hasResults && !inProgress && !batchEvaluating && !publishing;
+    // For initial evaluation, allow both explicit 'uploaded' and 'evaluated' (backend may mark evaluated without marks yet)
+    return (student.status === 'uploaded' || student.status === 'evaluated')
+      && !hasResults && !inProgress && !batchEvaluating && !publishing;
   }, [evaluationProgress.inProgress, evaluatingStudent, batchEvaluating, publishing]);
 
   const selectedCount = useMemo(() => selectedEnrollmentIds.size, [selectedEnrollmentIds]);
@@ -649,7 +658,47 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   };
 
   const handleEvaluateAll = async () => {
-    showToast('Select students and click Publish to re-evaluate and publish results.', 'info', 4000);
+    try {
+      if (!examId) {
+        throw new Error('Exam ID is missing');
+      }
+
+      const candidates = students.filter(student =>
+        student &&
+        student.status !== 'not_uploaded' &&
+        student.marks_obtained === null &&
+        !isEvaluationInProgress(student)
+      );
+
+      if (candidates.length === 0) {
+        showToast('No pending uploaded submissions to evaluate.', 'warning', 4000);
+        return;
+      }
+
+      setBatchEvaluating(true);
+      setEvaluationProgress({ completed: 0, total: candidates.length, inProgress: [], errors: 0 });
+      showToast('Evaluating all pending uploaded submissions...', 'info', 5000);
+
+      let successCount = 0;
+      for (const student of candidates) {
+        const result = await evaluateStudentWithRetry(student);
+        if (result?.success) successCount += 1;
+      }
+
+      await fetchEnrollments();
+      clearSelection();
+
+      showToast(
+        `Evaluation completed: ${successCount}/${candidates.length} students processed.`,
+        successCount === candidates.length ? 'success' : 'warning',
+        6000
+      );
+    } catch (e) {
+      console.error('Evaluate all error:', e);
+      showToast(e.message || 'Failed to evaluate all students', 'error', 6000);
+    } finally {
+      setBatchEvaluating(false);
+    }
   };
 
   const performReevaluateSelected = useCallback(async () => {
@@ -676,10 +725,24 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       let successCount = 0;
       for (const student of selected) {
         const result = await evaluateStudentWithRetry(student);
-        if (result?.success) successCount += 1;
-      }
+        if (result?.success) {
+          successCount += 1;
 
-      await fetchEnrollments();
+          // Mirror single-student evaluate: immediately apply new marks/feedback to local state
+          setStudents(prev => prev.map(s =>
+            s.enrollment_id === student.enrollment_id
+              ? {
+                  ...s,
+                  marks_obtained: result.data.total_marks || 0,
+                  feedback: Array.isArray(result.data.overall_feedback)
+                    ? result.data.overall_feedback.join('\n')
+                    : (result.data.overall_feedback || ''),
+                  evaluation_status: 'completed',
+                }
+              : s
+          ));
+        }
+      }
       clearSelection();
 
       showToast(`Re-evaluation completed: ${successCount}/${selected.length} updated.`, successCount === selected.length ? 'success' : 'warning', 6000);
@@ -714,17 +777,38 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   };
   
   const stats = useMemo(() => {
+    const total = students.length;
+
+    const evaluated = students.filter(
+      (s) => s.evaluation_status === 'completed' || s.marks_obtained !== null
+    ).length;
+
+    const pending = students.filter(
+      (s) =>
+        s.status !== 'not_uploaded' &&
+        (s.evaluation_status !== 'completed' && s.marks_obtained === null)
+    ).length;
+
+    const uploaded = students.filter((s) => s.status && s.status !== 'not_uploaded').length;
+    const notUploaded = students.filter((s) => s.status === 'not_uploaded').length;
+    const recheckRequested = students.filter((s) => s.recheck_requested).length;
+
+    const evaluatedStudents = students.filter((s) => s.marks_obtained !== null);
+    const averageScore = evaluatedStudents.length
+      ? Math.round(
+          evaluatedStudents.reduce((sum, s) => sum + (s.marks_obtained || 0), 0) /
+            Math.max(1, evaluatedStudents.length)
+        )
+      : 0;
+
     return {
-      total: students.length,
-      evaluated: students.filter(s => s.marks_obtained !== null).length,
-      pending: students.filter(s => s.marks_obtained === null && s.status === 'uploaded').length,
-      uploaded: students.filter(s => s.status === 'uploaded').length,
-      notUploaded: students.filter(s => s.status === 'not_uploaded').length,
-      recheckRequested: students.filter(s => s.recheck_requested).length,
-      averageScore: students.length > 0
-        ? Math.round(students.reduce((sum, s) => sum + (s.marks_obtained || 0), 0) /
-          Math.max(1, students.filter(s => s.marks_obtained !== null).length))
-        : 0
+      total,
+      evaluated,
+      pending,
+      uploaded,
+      notUploaded,
+      recheckRequested,
+      averageScore,
     };
   }, [students]);
 
@@ -757,7 +841,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       }
     }
 
-    if (student.status === 'uploaded') {
+    if (student.status && student.status !== 'not_uploaded') {
+      // Treat both 'uploaded' and 'evaluated' (and any future non-empty) as having an upload
       return 'Uploaded';
     }
 
@@ -856,11 +941,16 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const StudentGridItem = ({ student, index }) => {
     const hasResults = hasEvaluationResults(student);
     const isInProgress = isEvaluationInProgress(student);
-    const status = hasResults ? 'completed' : isInProgress ? 'in Progress' : 'pending';
+    const status = hasResults || student.status === 'evaluated'
+      ? 'completed'
+      : isInProgress
+        ? 'inProgress'
+        : 'pending';
     const delay = 0.05 * (index % 8);
     const hasError = evaluationError[student.enrollment_id];
     
-    const canEvaluate = student.status === 'uploaded' && !hasResults && !isInProgress && !batchEvaluating;
+    const canEvaluate = (student.status === 'uploaded' || student.status === 'evaluated')
+      && !hasResults && !isInProgress && !batchEvaluating;
     const canReevaluate = hasResults && !isInProgress && !batchEvaluating && !publishing;
 
     return (
@@ -1456,10 +1546,19 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                               {filteredStudents.map((student, index) => {
                                 const hasResults = hasEvaluationResults(student);
                                 const isInProgress = isEvaluationInProgress(student);
-                                const status = hasResults ? 'completed' : isInProgress ? 'inProgress' : 'pending';
+                                // Row status badge: completed when marks exist, otherwise inProgress/pending
+                                const status = hasResults
+                                  ? 'completed'
+                                  : isInProgress
+                                    ? 'inProgress'
+                                    : 'pending';
                                 const hasError = evaluationError[student.enrollment_id];
-                                
-                                const canEvaluate = student.status === 'uploaded' && !hasResults && !isInProgress && !batchEvaluating;
+
+                                // Treat any non-'not_uploaded' status as having an uploaded answer sheet
+                                const hasUpload = student.status && student.status !== 'not_uploaded';
+
+                                // Per-row evaluate button: enable when there is an upload and this row is not currently in progress or locked by batch
+                                const canEvaluate = hasUpload && !isInProgress && !batchEvaluating;
                                 const canReevaluate = hasResults && !isInProgress && !batchEvaluating && !publishing;
 
                                 return (

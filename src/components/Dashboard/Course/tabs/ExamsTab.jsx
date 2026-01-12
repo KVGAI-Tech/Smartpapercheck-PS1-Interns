@@ -288,25 +288,53 @@ const Toast = ({ message, type, show, onClose }) => {
       setIsUploading(true);
       const formData = new FormData();
       formData.append('zip_file', file);
-  
+
       try {
-        const response = await fetch(`${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-          body: formData
-        });
-  
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.status}`);
+        // Step 1: upload ZIP to S3 only
+        const uploadResp = await fetch(
+          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!uploadResp.ok) {
+          throw new Error(`Upload failed: ${uploadResp.status}`);
         }
-  
-        const data = await response.json();
-        await onUpload(data);
+
+        const uploadJson = await uploadResp.json();
+        if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
+          throw new Error(uploadJson.message || 'Failed to upload ZIP');
+        }
+
+        const zipKey = uploadJson.data.zip_key;
+
+        // Step 2: start async processing of the uploaded ZIP from S3
+        const processResp = await fetch(
+          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/process-uploaded-answers-async`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ zip_key: zipKey }),
+          }
+        );
+
+        if (!processResp.ok) {
+          throw new Error(`Processing failed to start: ${processResp.status}`);
+        }
+
+        const processJson = await processResp.json();
+        await onUpload(processJson);
         onClose();
       } catch (error) {
-        console.error('Error uploading answers:', error);
+        console.error('Error uploading/processing answers:', error);
         setError(error.message || 'Upload failed. Please try again.');
       } finally {
         setIsUploading(false);

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../BaseURL";
 import { useAuth } from "./AuthContext";
+import Breadcrumbs from "./ui/breadcrumbs";
 import {
   Menu,
   LayoutDashboard,
   FileText,
   LogOut,
-  Bell,
   AlertCircle,
 } from "lucide-react";
 
@@ -118,6 +118,30 @@ const StudentDashboardLayout = ({ children }) => {
   const isActive = (path) => {
     return location.pathname === path;
   };
+
+  const { pageTitle, breadcrumbItems } = useMemo(() => {
+    const pathname = location.pathname;
+
+    // Default title for unknown routes
+    let title = "Student Panel";
+    let items = [];
+
+    if (pathname === "/student-dashboard") {
+      title = "Student Dashboard";
+      items = [{ label: "Dashboard" }];
+    } else if (pathname === "/student/evaluations") {
+      title = "My Evaluations";
+      items = [{ label: "My Evaluations" }];
+    } else if (pathname.startsWith("/student/evaluations/")) {
+      title = "Evaluation Details";
+      items = [
+        { label: "My Evaluations", to: "/student/evaluations" },
+        { label: "Evaluation" },
+      ];
+    }
+
+    return { pageTitle: title, breadcrumbItems: items };
+  }, [location.pathname]);
 
   if (isLoading) {
     return (
@@ -277,15 +301,16 @@ const StudentDashboardLayout = ({ children }) => {
                   <Menu className="w-5 h-5 text-gray-500" />
                 </button>
               )}
-              <h2 className="text-xl font-semibold text-gray-800"></h2>
+              <div className="flex flex-col gap-1">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {pageTitle}
+                </h2>
+                <Breadcrumbs items={breadcrumbItems} />
+              </div>
             </div>
 
             <div className="flex items-center space-x-4">
               {/* <PaymentModal /> */}
-              <button className="p-2 rounded-full hover:bg-gray-50 relative">
-                <Bell className="w-5 h-5 text-gray-500" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full"></span>
-              </button>
               <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">

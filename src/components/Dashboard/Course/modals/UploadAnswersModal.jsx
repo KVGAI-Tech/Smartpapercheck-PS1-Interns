@@ -9,22 +9,11 @@ import { API_BASE_URL } from '../../../../BaseURL';
 const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess }) => {
   const [zipFile, setZipFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(null);
   const [uploadResults, setUploadResults] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [evalProgress, setEvalProgress] = useState(null);
   const fileInputRef = useRef(null);
-  const pollingRef = useRef(false);
-  const pollTimeoutRef = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      pollingRef.current = false;
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current);
-        pollTimeoutRef.current = null;
-      }
-    };
-  }, []);
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -82,12 +71,12 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     const loadingToast = toast.loading('Uploading answer sheets...');
 
     try {
-      pollingRef.current = true;
       const formData = new FormData();
       formData.append('zip_file', zipFile);
 
-      const uploadPromise = fetch(
-        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers`,
+      // Step 1: upload ZIP only to S3
+      const uploadResp = await fetch(
+        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
         {
           method: 'POST',
           headers: {
@@ -97,104 +86,122 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
         }
       );
 
-      // While the upload/evaluation request is in-flight, poll evaluation progress
-      // every few seconds so we can show a real progress bar.
-      const pollIntervalMs = 3000;
-
-      const pollProgress = async () => {
-        if (!pollingRef.current) return;
-        try {
-          const progressResp = await fetch(
-            `${API_BASE_URL}/exams/${courseId}/exams/${examId}/evaluation-progress`,
-            {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-              },
-            }
-          );
-
-          if (progressResp.ok) {
-            const progressJson = await progressResp.json();
-            if (progressJson?.code === 200 && progressJson.data) {
-              const next = progressJson.data;
-              setEvalProgress(next);
-              if (
-                typeof next?.total_students === 'number' &&
-                next.total_students > 0 &&
-                typeof next?.evaluated_students === 'number' &&
-                next.evaluated_students >= next.total_students
-              ) {
-                pollingRef.current = false;
-                if (pollTimeoutRef.current) {
-                  clearTimeout(pollTimeoutRef.current);
-                  pollTimeoutRef.current = null;
-                }
-                return;
-              }
-            }
-          }
-        } catch (e) {
-          // Swallow progress errors; main upload call will surface real issues
-          console.error('Progress polling error:', e);
-        } finally {
-          if (pollingRef.current) {
-            pollTimeoutRef.current = setTimeout(pollProgress, pollIntervalMs);
-          }
-        }
-      };
-
-      // Start polling without blocking the upload
-      pollProgress();
-
-      const response = await uploadPromise;
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!uploadResp.ok) {
+        throw new Error(`Upload failed: ${uploadResp.status}`);
       }
 
-      const data = await response.json();
-      
-      if (data.code === 200) {
-        pollingRef.current = false;
-        if (pollTimeoutRef.current) {
-          clearTimeout(pollTimeoutRef.current);
-          pollTimeoutRef.current = null;
+      const uploadJson = await uploadResp.json();
+      if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
+        throw new Error(uploadJson.message || 'Failed to upload ZIP');
+      }
+
+      const zipKey = uploadJson.data.zip_key;
+      toast.loading('Starting background processing of uploaded answers...', { id: loadingToast });
+
+      // Step 2: start async processing of the uploaded ZIP from S3
+      const processResp = await fetch(
+        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/process-uploaded-answers-async`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ zip_key: zipKey }),
         }
-        setUploadResults(data.data);
-        setEvalProgress(null);
-        toast.success(`Successfully processed ${data.data.total_processed} answer sheets!`, { id: loadingToast });
-        
+      );
+
+      if (!processResp.ok) {
+        throw new Error(`Processing failed to start: ${processResp.status}`);
+      }
+
+      const processJson = await processResp.json();
+      if (processJson.code === 202 && processJson.data?.job_id) {
+        toast.success(
+          'Answer processing started in background. You can continue while we process the ZIP.',
+          { id: loadingToast }
+        );
+
+        // Remember that processing is in progress so we can listen for WebSocket updates
+        setIsProcessing(true);
+
         if (onUploadSuccess) {
-          onUploadSuccess(data.data);
+          onUploadSuccess(processJson.data);
         }
       } else {
-        throw new Error(data.message || 'Upload failed');
+        throw new Error(processJson.message || 'Failed to start background processing');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      pollingRef.current = false;
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current);
-        pollTimeoutRef.current = null;
-      }
-      toast.error('Failed to upload answer sheets: ' + (error.message || 'Unknown error'), { id: loadingToast });
+      console.error('Upload/processing error:', error);
+      toast.error('Failed to upload or process answer sheets: ' + (error.message || 'Unknown error'), {
+        id: loadingToast,
+      });
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleClose = () => {
-    pollingRef.current = false;
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-      pollTimeoutRef.current = null;
-    }
     setZipFile(null);
+    setIsProcessing(false);
+    setProcessingProgress(null);
     setUploadResults(null);
-    setEvalProgress(null);
     onClose();
   };
+
+  // Listen for background processing progress over WebSocket once processing has started
+  useEffect(() => {
+    if (!isOpen || !examId || !isProcessing) return;
+
+    let wsUrl;
+    try {
+      const base = new URL(API_BASE_URL);
+      base.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+      // exams router is typically mounted at /api/exams, and websocket path is /ws/exams/{exam_id}/progress
+      base.pathname = `${base.pathname.replace(/\/+$/, '')}/exams/ws/exams/${examId}/progress`;
+      base.search = '';
+      wsUrl = base.toString();
+    } catch {
+      const httpBase = API_BASE_URL.replace(/^https?/, 'ws');
+      wsUrl = `${httpBase}/exams/ws/exams/${examId}/progress`;
+    }
+
+    let socket;
+    try {
+      socket = new WebSocket(wsUrl);
+    } catch (e) {
+      console.error('Failed to open progress WebSocket:', e);
+      return;
+    }
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data?.event === 'upload_progress' && Number(data.exam_id) === Number(examId)) {
+          setProcessingProgress({
+            studentsTotal: data.students_total,
+            studentsProcessed: data.students_processed,
+            totalProcessed: data.total_processed,
+            totalFailed: data.total_failed,
+          });
+        }
+      } catch (err) {
+        console.error('Error parsing progress message:', err);
+      }
+    };
+
+    socket.onerror = (err) => {
+      console.error('Progress WebSocket error:', err);
+    };
+
+    return () => {
+      try {
+        socket && socket.close();
+      } catch {
+        // ignore
+      }
+    };
+  }, [isOpen, examId, isProcessing]);
 
   if (!isOpen) return null;
 
@@ -233,85 +240,48 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
       <div className="flex-1 overflow-y-auto p-6">
         {!uploadResults ? (
           <>
-          {isUploading && (
+          {(isUploading || isProcessing) && (
             <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-              {(() => {
-                const total = evalProgress?.total_students || 0;
-                const evaluated = evalProgress?.evaluated_students || 0;
-                const uploadedOnly = evalProgress?.uploaded_students || 0;
-                const uploadedOrEvaluated = uploadedOnly + evaluated;
-
-                // Phase 1: upload + processing (creating answer docs)
-                const inUploadPhase = total > 0 && uploadedOrEvaluated < total;
-
-                if (!evalProgress || total === 0) {
-                  // No progress yet: show generic uploading state
-                  return (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Uploading ZIP and processing answer sheets (step 1/2)...</p>
-                        <p className="text-[11px] text-gray-600 mt-0.5">This may take a while for large ZIP files.</p>
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    {isUploading
+                      ? 'Uploading ZIP and starting answer processing...'
+                      : 'Processing uploaded answer sheets in the background...'}
+                  </p>
+                  <p className="text-[11px] text-gray-600 mt-0.5">
+                    You can keep this window open to monitor progress. Large exams may take a few minutes.
+                  </p>
+                  {processingProgress && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
+                        <span>
+                          Students processed: {processingProgress.studentsProcessed}
+                          {processingProgress.studentsTotal ? ` / ${processingProgress.studentsTotal}` : ''}
+                        </span>
+                        <span>
+                          Failed: {processingProgress.totalFailed}
+                        </span>
                       </div>
-                    </div>
-                  );
-                }
-
-                if (inUploadPhase) {
-                  const percent = Math.min(((uploadedOrEvaluated / total) * 100) || 0, 100);
-                  return (
-                    <>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                          <p className="text-sm font-medium text-gray-900">Step 1/2 · Uploading & processing answer sheets...</p>
-                        </div>
-                        <p className="text-xs text-gray-700">
-                          {uploadedOrEvaluated} / {total} students uploaded
-                        </p>
-                      </div>
-                      <div>
-                        <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden">
-                          <div
-                            className="h-full bg-accent transition-all duration-500"
-                            style={{ width: `${percent}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[11px] text-gray-600">
-                          Once all uploads are processed, automatic evaluation will start (step 2/2).
-                        </p>
-                      </div>
-                    </>
-                  );
-                }
-
-                // Phase 2: all uploads done, now evaluating
-                const evalPercent = Math.min(evalProgress.percent_complete || 0, 100);
-                return (
-                  <>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                        <p className="text-sm font-medium text-gray-900">Step 2/2 · Evaluating answer sheets...</p>
-                      </div>
-                      <p className="text-xs text-gray-700">
-                        {evaluated} / {total} students evaluated
-                      </p>
-                    </div>
-                    <div>
-                      <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden">
+                      <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-accent transition-all duration-500"
-                          style={{ width: `${evalPercent}%` }}
+                          className="h-full bg-accent rounded-full transition-all duration-300"
+                          style={{
+                            width:
+                              processingProgress.studentsTotal && processingProgress.studentsTotal > 0
+                                ? `${Math.min(
+                                    100,
+                                    (processingProgress.studentsProcessed / processingProgress.studentsTotal) * 100,
+                                  ).toFixed(0)}%`
+                                : '0%',
+                          }}
                         />
                       </div>
-                      <p className="mt-1 text-[11px] text-gray-600">
-                        This may take a few minutes for larger classes. You can continue working while evaluation completes.
-                      </p>
                     </div>
-                  </>
-                );
-              })()}
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -605,7 +575,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
           </button>
           <button
             onClick={handleUpload}
-            disabled={!zipFile || isUploading}
+            disabled={!zipFile || isUploading || isProcessing}
             className="flex items-center gap-2 px-6 py-2 bg-accent text-white rounded-xl hover:bg-accent transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? (

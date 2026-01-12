@@ -7,22 +7,21 @@ import { API_BASE_URL } from "../BaseURL";
 const CourseCard = ({ id, code, name, instructor, semester, examCount }) => (
   <Link
     to={`/student/evaluations/${id}`}
-    className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-green-100"
+    className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-accent/30"
   >
     <div className="flex items-start justify-between">
       <div className="flex items-start gap-4">
-        <div className="p-3 bg-green-50 rounded-lg">
-          <BookOpen className="w-6 h-6 text-green-600" />
+        <div className="p-3 bg-accent/10 rounded-lg">
+          <BookOpen className="w-6 h-6 text-accent" />
         </div>
         <div>
           <h3 className="font-semibold text-gray-900">{name}</h3>
           <p className="text-sm text-gray-500 mt-1">{code}</p>
           <p className="text-sm text-gray-600 mt-2">‎ </p>
           <p className="text-sm text-gray-600 mt-2">‎ </p>
-
         </div>
       </div>
-      <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-sm font-medium">
+      <span className="px-3 py-1 bg-accent/10 text-accent rounded-full text-sm font-medium">
         {examCount || 0} Exams
       </span>
     </div>
@@ -32,7 +31,7 @@ const CourseCard = ({ id, code, name, instructor, semester, examCount }) => (
         <Calendar className="w-4 h-4" />
         <span>{semester}</span>
       </div>
-      <span className="text-green-600 font-medium">View Details →</span>
+      <span className="text-accent font-medium">View Details →</span>
     </div>
   </Link>
 );
@@ -43,7 +42,7 @@ const FilterDropdown = ({ label, options, value, onChange }) => {
   return (
     <div className="relative">
       <button
-        className="px-4 py-2 border border-gray-200 rounded-lg flex items-center gap-2 hover:border-green-500 transition-colors"
+        className="px-4 py-2 border border-gray-200 rounded-lg flex items-center gap-2 hover:border-accent transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className="text-sm text-gray-700">
@@ -58,7 +57,7 @@ const FilterDropdown = ({ label, options, value, onChange }) => {
             <button
               key={option}
               className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                option === value ? "bg-green-50 text-green-600 font-medium" : "text-gray-700"
+                option === value ? "bg-accent/10 text-accent font-medium" : "text-gray-700"
               }`}
               onClick={() => {
                 onChange(option);
@@ -187,7 +186,7 @@ const StudentEvaluations = () => {
             placeholder="Search by course name, code, or instructor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
           />
         </div>
 
@@ -207,7 +206,7 @@ const StudentEvaluations = () => {
           />
 
           <button 
-            className="p-2 rounded-lg border border-gray-200 hover:border-green-500 transition-colors"
+            className="p-2 rounded-lg border border-gray-200 hover:border-accent transition-colors"
             onClick={handleRefresh}
             title="Refresh courses"
           >
@@ -289,7 +288,7 @@ const StudentEvaluations = () => {
           </p>
           <button
             onClick={handleRefresh}
-            className="px-4 py-2 bg-green-50 text-green-600 rounded-lg font-medium hover:bg-green-100 transition-colors inline-flex items-center gap-2"
+            className="px-4 py-2 bg-accent/10 text-accent rounded-lg font-medium hover:bg-accent/20 transition-colors inline-flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -314,7 +313,7 @@ const StudentEvaluations = () => {
               setSearchQuery("");
               setSelectedSemester("All Semesters");
             }}
-            className="px-4 py-2 bg-green-50 text-green-600 rounded-lg font-medium hover:bg-green-100 transition-colors"
+            className="px-4 py-2 bg-accent/10 text-accent rounded-lg font-medium hover:bg-accent/20 transition-colors"
           >
             Clear filters
           </button>

@@ -42,9 +42,9 @@ const ExamCard = ({
   
   const getStatusColor = () => {
     switch(status) {
-      case 'evaluated': return 'text-green-600 bg-green-50';
-      case 'pending': return 'text-yellow-600 bg-yellow-50';
-      case 'recheck_requested': return 'text-purple-600 bg-purple-50';
+      case 'evaluated': return 'text-accent bg-accent/10';
+      case 'pending': return 'text-amber-700 bg-amber-50';
+      case 'recheck_requested': return 'text-accent bg-accent/5';
       case 'not_uploaded': return 'text-red-600 bg-red-50';
       default: return 'text-gray-600 bg-gray-50';
     }
@@ -99,20 +99,18 @@ const ExamCard = ({
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
-      <div className="flex items-start justify-between mb-4">
+    <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-green-50 rounded-lg">
-            <FileText className="w-6 h-6 text-green-600" />
+          <div className="p-2.5 bg-accent/10 rounded-lg">
+            <FileText className="w-6 h-6 text-accent" />
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">{exam_name}</h3>
-            <div className="text-sm text-gray-500 mt-2 space-y-1">
+            <div className="text-xs text-gray-500 mt-1 space-y-0.5">
               {duration && <p>Duration: {formatDuration(duration)}</p>}
+              {start_time && <p>Exam Date: {formatDate(start_time)}</p>}
             </div>
-            <p className="text-sm text-gray-600 mt-2">‎ </p>
-            <p className="text-sm text-gray-600 mt-2">‎ </p>
-
           </div>
         </div>
         <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${getStatusColor()}`}>
@@ -122,38 +120,38 @@ const ExamCard = ({
       </div>
 
       {status === 'evaluated' && marks_obtained !== null && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        <div className="mt-3 pt-3 border-t border-gray-100">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-600">Score</span>
             <span className="font-medium text-gray-900">{marks_obtained}/{full_marks}</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2">
             <div 
-              className="bg-green-500 h-2 rounded-full transition-all duration-500"
+              className="bg-accent h-2 rounded-full transition-all duration-500"
               style={{ width: `${(marks_obtained/full_marks) * 100}%` }}
             />
           </div>
         </div>
       )}
 
-      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-        <div className="flex gap-2">
+      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+        <div className="flex gap-2 flex-wrap">
           <button 
             onClick={handleViewDetails}
-            className="px-3 py-1.5 text-sm font-medium text-green-600 hover:text-green-700 flex items-center gap-1"
+            className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1"
           >
             <Eye className="w-4 h-4" />
             View Details
           </button>
           {status === 'evaluated' && (
-            <button className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <button className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1">
               <Download className="w-4 h-4" />
               Download
             </button>
           )}
         </div>
         {allow_recheck && status === 'evaluated' && !recheck_requested && (
-          <button className="px-3 py-1.5 text-sm font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1">
+          <button className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1 whitespace-nowrap">
             <History className="w-4 h-4" />
             Request Recheck
           </button>
@@ -238,7 +236,7 @@ const CourseEvaluations = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <Loader className="w-8 h-8 text-blue-500 animate-spin mb-4" />
+        <Loader className="w-8 h-8 text-accent animate-spin mb-4" />
         <p className="text-gray-600">Loading exams...</p>
       </div>
     );
@@ -265,22 +263,15 @@ const CourseEvaluations = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
       <div>
-        <Breadcrumbs
-          items={[
-            { label: 'My Evaluations', to: '/student/evaluations' },
-            { label: 'Course', to: courseId ? `/student/evaluations/${courseId}` : '/student/evaluations' },
-            { label: 'Exams' },
-          ]}
-        />
         <button 
           onClick={() => navigate('/student/evaluations')}
-          className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
+          className="flex items-center text-gray-600 hover:text-accent mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to Courses
         </button>
         
-        <div className="text-sm bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+        <div className="text-sm bg-accent/5 text-accent px-4 py-2 rounded-lg">
           <center><p>{exams?.length || 0} Exams Available</p></center>
         </div>
 
@@ -290,7 +281,7 @@ const CourseEvaluations = () => {
       </div>
 
       {exams && exams.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {exams.map((exam) => (
             <ExamCard 
               key={exam.id} 
