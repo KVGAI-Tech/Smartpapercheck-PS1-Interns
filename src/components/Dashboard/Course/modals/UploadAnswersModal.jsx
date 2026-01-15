@@ -9,7 +9,6 @@ import { API_BASE_URL } from '../../../../BaseURL';
 const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess }) => {
   const [zipFile, setZipFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(null);
   const [uploadResults, setUploadResults] = useState(null);
@@ -69,75 +68,37 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     }
 
     setIsUploading(true);
-    const loadingToast = toast.loading('Preparing upload...');
+    const loadingToast = toast.loading('Uploading answer sheets...');
 
     try {
-      // Step 1: get pre-signed S3 upload URL and zip_key from backend
-      const presignResp = await fetch(
-        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/answers-zip-upload-url`,
+      const formData = new FormData();
+      formData.append('zip_file', zipFile);
+
+      // Step 1: upload ZIP only to S3
+      const uploadResp = await fetch(
+        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           },
+          body: formData
         }
       );
 
-      if (!presignResp.ok) {
-        throw new Error(`Failed to prepare upload: ${presignResp.status}`);
+      if (!uploadResp.ok) {
+        throw new Error(`Upload failed: ${uploadResp.status}`);
       }
 
-      const presignJson = await presignResp.json();
-      if (presignJson.code !== 200 || !presignJson.data?.upload_url || !presignJson.data?.zip_key) {
-        throw new Error(presignJson.message || 'Failed to get upload URL');
+      const uploadJson = await uploadResp.json();
+      if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
+        throw new Error(uploadJson.message || 'Failed to upload ZIP');
       }
 
-      const { upload_url: uploadUrl, zip_key: zipKey } = presignJson.data;
-
-      // Step 2: upload ZIP directly to S3 using the pre-signed URL with progress tracking
-      toast.loading('Uploading answer sheets to storage...', { id: loadingToast });
-
-      setUploadProgress({ loaded: 0, total: zipFile.size || 0 });
-
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', uploadUrl, true);
-        xhr.setRequestHeader('Content-Type', 'application/zip');
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            setUploadProgress({ loaded: event.loaded, total: event.total });
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            // Ensure progress shows as 100%
-            setUploadProgress((prev) =>
-              prev && prev.total
-                ? { loaded: prev.total, total: prev.total }
-                : prev
-            );
-            resolve();
-          } else {
-            reject(new Error(`S3 upload failed: ${xhr.status}`));
-          }
-        };
-
-        xhr.onerror = () => {
-          reject(new Error('Network error during S3 upload'));
-        };
-
-        try {
-          xhr.send(zipFile);
-        } catch (err) {
-          reject(err);
-        }
-      });
-
-      // Step 3: start async processing of the uploaded ZIP from S3
+      const zipKey = uploadJson.data.zip_key;
       toast.loading('Starting background processing of uploaded answers...', { id: loadingToast });
 
+      // Step 2: start async processing of the uploaded ZIP from S3
       const processResp = await fetch(
         `${API_BASE_URL}/exams/${courseId}/exams/${examId}/process-uploaded-answers-async`,
         {
@@ -177,14 +138,11 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
       });
     } finally {
       setIsUploading(false);
-      // Do not clear uploadProgress here so the final state can be briefly visible;
-      // it will be reset when the modal is closed.
     }
   };
 
   const handleClose = () => {
     setZipFile(null);
-    setUploadProgress(null);
     setIsProcessing(false);
     setProcessingProgress(null);
     setUploadResults(null);
@@ -289,66 +247,39 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">
                     {isUploading
-                      ? 'Uploading ZIP to storage and preparing processing...'
+                      ? 'Uploading ZIP and starting answer processing...'
                       : 'Processing uploaded answer sheets in the background...'}
                   </p>
                   <p className="text-[11px] text-gray-600 mt-0.5">
                     You can keep this window open to monitor progress. Large exams may take a few minutes.
                   </p>
-                  <div className="mt-2">
-                    {/* Upload progress (bytes) */}
-                    {isUploading && uploadProgress && uploadProgress.total > 0 && (
-                      <div className="mb-2">
-                        <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
-                          <span>
-                            Uploading: {Math.min(100, (uploadProgress.loaded / uploadProgress.total) * 100).toFixed(0)}%
-                          </span>
-                          <span>
-                            {((uploadProgress.loaded || 0) / (1024 * 1024)).toFixed(1)} MB /
-                            {' '}
-                            {((uploadProgress.total || 0) / (1024 * 1024)).toFixed(1)} MB
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-accent rounded-full transition-all duration-300"
-                            style={{
-                              width: `${Math.min(100, (uploadProgress.loaded / uploadProgress.total) * 100).toFixed(0)}%`,
-                            }}
-                          />
-                        </div>
+                  {processingProgress && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
+                        <span>
+                          Students processed: {processingProgress.studentsProcessed}
+                          {processingProgress.studentsTotal ? ` / ${processingProgress.studentsTotal}` : ''}
+                        </span>
+                        <span>
+                          Failed: {processingProgress.totalFailed}
+                        </span>
                       </div>
-                    )}
-
-                    {/* Processing progress (students) */}
-                    {isProcessing && processingProgress && (
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
-                          <span>
-                            Students processed: {processingProgress.studentsProcessed}
-                            {processingProgress.studentsTotal ? ` / ${processingProgress.studentsTotal}` : ''}
-                          </span>
-                          <span>
-                            Failed: {processingProgress.totalFailed}
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-accent rounded-full transition-all duration-300"
-                            style={{
-                              width:
-                                processingProgress.studentsTotal && processingProgress.studentsTotal > 0
-                                  ? `${Math.min(
-                                      100,
-                                      (processingProgress.studentsProcessed / processingProgress.studentsTotal) * 100,
-                                    ).toFixed(0)}%`
-                                  : '0%',
-                            }}
-                          />
-                        </div>
+                      <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all duration-300"
+                          style={{
+                            width:
+                              processingProgress.studentsTotal && processingProgress.studentsTotal > 0
+                                ? `${Math.min(
+                                    100,
+                                    (processingProgress.studentsProcessed / processingProgress.studentsTotal) * 100,
+                                  ).toFixed(0)}%`
+                                : '0%',
+                          }}
+                        />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
