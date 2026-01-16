@@ -22,6 +22,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import fetchStudentEvaluation from "../../../../lib/apis/fetchStudentEvaluation";
 import { getSafeImageUrl } from "../../../../lib/utils";
 import ExamEvaluationDetail from "./ExamEvaluationDetail";
@@ -87,6 +88,11 @@ const StudentEvaluationLoader = ({
   const [zoomImageTitle, setZoomImageTitle] = useState("");
 
   const [mobilePane, setMobilePane] = useState("sheet");
+
+  const location = useLocation();
+  const navigationState = location.state || {};
+  const courseName = navigationState.courseName || "Course";
+  const examName = navigationState.examName || navigationState.examTitle || "Exam Evaluations";
 
   const getTotalMarks = () => {
     if (!studentData || !studentData.evaluations) return 0;
@@ -452,33 +458,34 @@ const StudentEvaluationLoader = ({
         transition={{ duration: 0.4 }}
         className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur px-4 md:px-6 py-4 shadow-sm space-y-3"
       >
-        <Breadcrumbs
-          items={[
-            { label: "Courses", to: "/courses" },
-            courseId
-              ? { label: "Exams", to: `/courses/${courseId}`, state: { activeTab: "exams" } }
-              : { label: "Exams" },
-            {
-              label: "Exam Evaluations",
-              onClick: onClose,
-            },
-            { label: "Results" },
-          ]}
-        />
-
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-start gap-3">
             <motion.button
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onClose}
-              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors"
-              title="Back"
+              className="p-2 -ml-2 rounded-lg hover:bg-slate-100 transition-colors flex items-center justify-center"
+              aria-label="Back to evaluations"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
+              <ArrowLeft className="w-5 h-5 text-slate-500" />
             </motion.button>
 
-            <div className="min-w-0">
+            <div className="min-w-0 space-y-1">
+              <Breadcrumbs
+                items={[
+                  { label: "Courses", to: "/courses" },
+                  {
+                    label: courseName,
+                    to: courseId ? `/courses/${courseId}` : "/courses",
+                  },
+                  { label: examName || "Exam Evaluations" },
+                  { label: "Student Result" },
+                ]}
+              />
+
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-lg md:text-xl font-semibold text-gray-900">
                   Results
@@ -525,7 +532,7 @@ const StudentEvaluationLoader = ({
               <ScoreDisplay marks={totalMarks} maxMarks={maxTotalMarks} />
             </motion.div>
 
-            <motion.div
+            {/* <motion.div
               className="flex items-center gap-1"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -550,7 +557,7 @@ const StudentEvaluationLoader = ({
               >
                 <Share className="w-5 h-5" />
               </motion.button>
-            </motion.div>
+            </motion.div> */}
           </div>
         </div>
       </motion.div>
@@ -1146,47 +1153,55 @@ const StudentEvaluationLoader = ({
                         </h4>
 
                         <div className="space-y-4">
-                          {currentEvaluation.item_grades?.map((item, index) => (
-                            <div key={index} className="space-y-1">
-                              <div className="flex justify-between items-center">
-                                <div className="text-sm text-gray-700 flex items-center gap-1.5">
-                                  <div className="w-5 h-5 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-medium">
-                                    {index + 1}
-                                  </div>
-                                  <span className="line-clamp-1">
-                                    {currentQuestion?.rubric_items?.[index]?.description ||
-                                      `Criterion ${item.item_number}`}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-medium">
-                                  <span className="text-accent">
-                                    {item.marks_awarded}
-                                  </span>
-                                  <span className="text-gray-400">/</span>
-                                  <span className="text-gray-600">
-                                    {currentQuestion?.rubric_items?.[index]?.max_marks || 1}
-                                  </span>
-                                </div>
-                              </div>
+                          {currentEvaluation.item_grades?.map((item, index) => {
+                            const rubricMax =
+                              currentQuestion?.rubric_items?.[index]?.max_marks || 0;
+                            const safeMax = rubricMax > 0 ? rubricMax : 1;
+                            const percentage = Math.max(
+                              0,
+                              Math.min(
+                                100,
+                                (Number(item.marks_awarded || 0) / safeMax) * 100
+                              )
+                            );
 
-                              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{
-                                    width: `${
-                                      (item.marks_awarded / (item.max_marks || 1)) *
-                                        100
-                                    }%`,
-                                  }}
-                                  transition={{
-                                    duration: 0.8,
-                                    delay: 0.1 * index,
-                                  }}
-                                  className="h-full bg-accent rounded-full"
-                                />
+                            return (
+                              <div key={index} className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <div className="text-sm text-gray-700 flex items-center gap-1.5">
+                                    <div className="w-5 h-5 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-medium">
+                                      {index + 1}
+                                    </div>
+                                    <span className="line-clamp-1">
+                                      {currentQuestion?.rubric_items?.[index]?.description ||
+                                        `Criterion ${item.item_number}`}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm font-medium">
+                                    <span className="text-accent">
+                                      {item.marks_awarded}
+                                    </span>
+                                    <span className="text-gray-400">/</span>
+                                    <span className="text-gray-600">
+                                      {rubricMax || 1}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${percentage}%` }}
+                                    transition={{
+                                      duration: 0.8,
+                                      delay: 0.1 * index,
+                                    }}
+                                    className="h-full bg-accent rounded-full"
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </motion.div>
                     </div>

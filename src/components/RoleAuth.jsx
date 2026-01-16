@@ -342,7 +342,6 @@ const RoleAuth = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [step, setStep] = useState("select-role");
   const [error, setError] = useState(null);
-  const [isComponentTransitioning, setIsComponentTransitioning] = useState(false);
   const { login } = useAuth();
 
   const pageVariants = {
@@ -361,15 +360,7 @@ const RoleAuth = () => {
       setError(null);
       
       if (confirmed) {
-        setIsComponentTransitioning(true);
-        
-        setTimeout(() => {
-          setStep("login");
-          
-          setTimeout(() => {
-            setIsComponentTransitioning(false);
-          }, 50);
-        }, 150);
+        setStep("login");
       }
     } catch (err) {
       console.error("Role selection error:", err);
@@ -379,13 +370,7 @@ const RoleAuth = () => {
 
   const handleBackToRoles = () => {
     try {
-      setIsComponentTransitioning(true);
-      setTimeout(() => {
-        setStep("select-role");
-        setTimeout(() => {
-          setIsComponentTransitioning(false);
-        }, 50);
-      }, 150);
+      setStep("select-role");
       setError(null);
     } catch (err) {
       console.error("Back to roles error:", err);
@@ -411,60 +396,41 @@ const RoleAuth = () => {
   };
 
   const renderLoginForm = () => {
+    if (step !== "login") {
+      return null;
+    }
+
+    if (!selectedRole) {
+      // If somehow we are on the login step without a role, go back to role selection
+      handleBackToRoles();
+      return null;
+    }
+
     try {
-      if (isComponentTransitioning) {
-        return (
-          <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md mx-auto border border-gray-200/50 relative overflow-hidden">
-            <div className="flex items-center justify-center py-10">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent"></div>
-            </div>
-          </div>
-        );
+      switch (selectedRole) {
+        case "professor":
+          return (
+            <ProfessorLogin
+              onBack={handleBackToRoles}
+              onLoginSuccess={handleLoginSuccess}
+            />
+          );
+        case "student":
+          return (
+            <StudentLogin
+              onBack={handleBackToRoles}
+              onLoginSuccess={handleLoginSuccess}
+            />
+          );
+        default:
+          console.error("Unsupported role:", selectedRole);
+          handleBackToRoles();
+          return null;
       }
-      
-      if (!selectedRole || step !== "login") {
-        throw new Error("Component not ready for rendering");
-      }
-      
-      try {
-        switch (selectedRole) {
-          case "professor":
-            return (
-              <ProfessorLogin
-                onBack={handleBackToRoles}
-                onLoginSuccess={handleLoginSuccess}
-              />
-            );
-          case "student":
-            return (
-              <StudentLogin
-                onBack={handleBackToRoles}
-                onLoginSuccess={handleLoginSuccess}
-              />
-            );
-          default:
-            throw new Error(`Unsupported role: ${selectedRole}`);
-        }
-      } catch (componentError) {
-        console.error("Component rendering error:", componentError);
-        throw new Error(`Failed to load ${selectedRole} component: ${componentError.message}`);
-      }
-    } catch (err) {
-      console.error("Login form rendering error:", err);
-      return (
-        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md mx-auto">
-          <div className="text-red-500 text-center">
-            <p>Unable to load login form. Please try again.</p>
-            <p className="text-sm mt-2 text-gray-600">{err.message}</p>
-            <button 
-              onClick={handleBackToRoles}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Return to Role Selection
-            </button>
-          </div>
-        </div>
-      );
+    } catch (componentError) {
+      console.error("Component rendering error:", componentError);
+      handleBackToRoles();
+      return null;
     }
   };
 
@@ -525,14 +491,14 @@ const RoleAuth = () => {
             variants={pageVariants}
             transition={{ type: "tween", ease: "easeInOut", duration: 0.5 }}
           >
-            {step === "select-role" ? (
-              <RoleSelector
-                selectedRole={selectedRole}
-                onRoleSelect={handleRoleSelect}
-              />
-            ) : (
-              renderLoginForm()
-            )}
+            {step === "login" && selectedRole
+              ? renderLoginForm()
+              : (
+                <RoleSelector
+                  selectedRole={selectedRole}
+                  onRoleSelect={handleRoleSelect}
+                />
+              )}
           </motion.div>
         </AnimatePresence>
 

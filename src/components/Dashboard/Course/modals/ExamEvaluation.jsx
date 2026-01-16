@@ -7,7 +7,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
 import { Link } from 'react-router-dom';
-import Breadcrumbs from '../../../ui/breadcrumbs';
+// Breadcrumbs are already handled by the course/layout components; avoid duplicating them here.
+// import Breadcrumbs from '../../../ui/breadcrumbs';
 
 const StudentEvaluationLoader = React.lazy(() => import('./StudentEvaluationLoader'));
 const RubricModal = React.lazy(() => import('./RubricModal'));
@@ -1311,32 +1312,6 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             transition={{ duration: 0.5 }}
             className="w-full flex flex-col h-full min-h-0 min-w-0"
           >
-            <div className="flex items-center gap-2 mt-1 mb-2">
-              <motion.button
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.15 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onClose}
-                className="p-2 -ml-2 hover:bg-white/60 rounded-lg transition-colors flex items-center justify-center"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-500" />
-              </motion.button>
-
-              <div className="flex-1 min-w-0">
-                <Breadcrumbs
-                  items={[
-                    { label: 'Courses', to: '/courses' },
-                    courseId
-                      ? { label: 'Exams', to: `/courses/${courseId}`, state: { activeTab: 'exams' } }
-                      : { label: 'Exams' },
-                    { label: 'Exam Evaluations' },
-                  ]}
-                />
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-1">
               <StatCard
                 icon={Users}

@@ -194,7 +194,18 @@ const ProfessorNotificationsPage = () => {
                 <p className="text-xs text-gray-500 mb-1">Course ID: {job.course_id}</p>
                 {job.summary && (
                   <p className="text-xs text-gray-600">
-                    Processed {job.summary.total_processed ?? 0} · Failed {job.summary.total_failed ?? 0}
+                    Processed {job.summary.total_processed ?? 0}
+                    {" · "}
+                    Failed {job.summary.total_failed ?? 0}
+                    {typeof job.summary.total_attempted_questions === "number" &&
+                      typeof job.summary.total_unattempted_questions === "number" && (
+                        <>
+                          {" · "}
+                          Attempted {job.summary.total_attempted_questions}
+                          {" · "}
+                          Unattempted {job.summary.total_unattempted_questions}
+                        </>
+                      )}
                   </p>
                 )}
                 <p className="text-[11px] text-gray-400 mt-1">

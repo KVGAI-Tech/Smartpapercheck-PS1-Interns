@@ -360,15 +360,17 @@ const DashboardLayout = ({ children }) => {
                 </button>
               )}
               {pageTitle && (
-                <div className="flex flex-col gap-0.5 leading-tight truncate max-w-[220px] md:max-w-xs">
-                  <span className="text-base md:text-lg font-semibold text-gray-900 truncate">
-                    {pageTitle}
-                  </span>
-                  {pageSubtitle && (
-                    <span className="text-xs md:text-sm text-gray-500 truncate">
-                      {pageSubtitle}
+                <div className="flex flex-col gap-0.5 leading-tight truncate max-w-[260px] md:max-w-sm">
+                  <div className="flex items-baseline gap-2 min-w-0">
+                    <span className="text-base md:text-lg font-semibold text-gray-900 truncate">
+                      {pageTitle}
                     </span>
-                  )}
+                    {pageSubtitle && (
+                      <span className="text-xs md:text-sm text-gray-500 truncate">
+                        {pageSubtitle}
+                      </span>
+                    )}
+                  </div>
                   <Breadcrumbs items={breadcrumbItems} />
                 </div>
               )}
@@ -428,7 +430,18 @@ const DashboardLayout = ({ children }) => {
                                 </span>
                               </div>
                               <div className="text-[11px] text-gray-500">
-                                Processed {job.summary?.total_processed ?? 0} · Failed {job.summary?.total_failed ?? 0}
+                                Processed {job.summary?.total_processed ?? 0}
+                                {" · "}
+                                Failed {job.summary?.total_failed ?? 0}
+                                {typeof job.summary?.total_attempted_questions === "number" &&
+                                  typeof job.summary?.total_unattempted_questions === "number" && (
+                                    <>
+                                      {" · "}
+                                      Attempted {job.summary.total_attempted_questions}
+                                      {" · "}
+                                      Unattempted {job.summary.total_unattempted_questions}
+                                    </>
+                                  )}
                               </div>
                             </div>
                           ))

@@ -1094,18 +1094,18 @@ const UploadQnAModal = ({
                       </label>
                       <div className="flex rounded-xl border border-gray-200 overflow-hidden">
                         <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'image' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.questionType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Image
-                        </button>
-                        <button
                           onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'text', question: null, questionPreview: '', questionUrl: '' } : q))}
                           className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.questionType === 'text' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                           type="button"
                         >
                           Text
+                        </button>
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'image' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.questionType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Image
                         </button>
                         <button
                           onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'both' } : q))}
@@ -1160,18 +1160,18 @@ const UploadQnAModal = ({
                       </label>
                       <div className="flex rounded-xl border border-gray-200 overflow-hidden">
                         <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'image' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.answerType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Image
-                        </button>
-                        <button
                           onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'text', answer: null, answerPreview: '', answerUrl: '' } : q))}
                           className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.answerType === 'text' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                           type="button"
                         >
                           Text
+                        </button>
+                        <button
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'image' } : q))}
+                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestion.answerType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                          type="button"
+                        >
+                          Image
                         </button>
                         <button
                           onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'both' } : q))}

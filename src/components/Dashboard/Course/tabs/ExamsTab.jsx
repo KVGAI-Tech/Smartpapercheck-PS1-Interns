@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
@@ -1008,10 +1008,12 @@ const Toast = ({ message, type, show, onClose }) => {
     onAdd = () => { },
     onEdit = () => { },
     onDelete = () => { },
+    onEvaluate = () => { },
     onRefresh = () => { },
     students = [],
   }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
     const [selectedExamId, setSelectedExamId] = useState(null);
@@ -1289,9 +1291,10 @@ const Toast = ({ message, type, show, onClose }) => {
         
         navigate(`/courses/${courseId}/exams/${examId}/evaluations`, {
           state: {
+            ...(location.state || {}),
             from: 'exams',
             examName: exam.exam_name || 'Exam Evaluations',
-          }
+          },
         });
         
       } catch (error) {
