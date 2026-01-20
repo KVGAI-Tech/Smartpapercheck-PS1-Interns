@@ -293,9 +293,6 @@ const StudentsTab = ({
                         <div className="text-sm font-medium text-gray-900">
                           {student.user_name || 'Unknown'}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          Batch: {student.batch}
-                        </div>
                       </div>
                     </div>
                   </td>

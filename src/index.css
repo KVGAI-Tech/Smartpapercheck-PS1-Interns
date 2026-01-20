@@ -56,6 +56,17 @@ select {
   background-color: #ffffff !important;
 }
 
+/* Remove up/down arrows from number inputs (WebKit and others) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 input::placeholder {
   color: #9ca3af !important;
   opacity: 1 !important;

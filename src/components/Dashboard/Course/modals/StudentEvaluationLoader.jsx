@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { API_BASE_URL } from "../../../../BaseURL";
 import fetchStudentEvaluation from "../../../../lib/apis/fetchStudentEvaluation";
 import { getSafeImageUrl } from "../../../../lib/utils";
 import ExamEvaluationDetail from "./ExamEvaluationDetail";
@@ -73,6 +74,7 @@ const StudentEvaluationLoader = ({
   const answerSheetRef = useRef(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingMarks, setIsSavingMarks] = useState(false);
   const [feedbackEdits, setFeedbackEdits] = useState({});
   const [showToast, setShowToast] = useState({
     visible: false,
@@ -82,6 +84,7 @@ const StudentEvaluationLoader = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showPDFControls, setShowPDFControls] = useState(false);
   const [useExamDetail, setUseExamDetail] = useState(false);
+  const [localEvaluationOverrides, setLocalEvaluationOverrides] = useState({});
 
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
@@ -250,6 +253,117 @@ const StudentEvaluationLoader = ({
     console.log("📊 Current evaluation for", evaluationKey, ":", !!evaluation);
 
     return evaluation || null;
+  };
+
+  const getEffectiveEvaluation = () => {
+    const base = getCurrentEvaluation();
+    const currentQ = getCurrentQuestion();
+    if (!base || !currentQ) return null;
+    const key = `question_${currentQ.question_number}`;
+    const override = localEvaluationOverrides[key];
+    if (!override) return base;
+    return {
+      ...base,
+      ...override,
+      item_grades: override.item_grades || base.item_grades,
+    };
+  };
+
+  const handleSaveManualMarks = async () => {
+    const effective = getEffectiveEvaluation();
+    const currentQ = getCurrentQuestion();
+    if (!effective || !currentQ || !examId || !enrollmentId) return;
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setShowToast({
+        visible: true,
+        message: "Authentication required to save marks",
+        type: "error",
+      });
+      setTimeout(() => {
+        setShowToast((prev) => ({ ...prev, visible: false }));
+      }, 3000);
+      return;
+    }
+
+    const key = `question_${currentQ.question_number}`;
+
+    const payload = {
+      evaluations: {
+        [key]: {
+          item_grades: (effective.item_grades || []).map((it) => ({
+            item_number: it.item_number,
+            marks_awarded: it.marks_awarded,
+            feedback: it.feedback,
+          })),
+          total_marks: effective.total_marks || 0,
+          overall_feedback:
+            feedbackEdits[key]?.overall || effective.overall_feedback || "",
+        },
+      },
+      recompute_overall: true,
+    };
+
+    try {
+      setIsSavingMarks(true);
+      const baseUrl = API_BASE_URL || "";
+      const response = await fetch(
+        `${baseUrl}/exams/${examId}/enrollments/${enrollmentId}/manual-evaluation`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to save manual marks");
+      }
+
+      const result = await response.json();
+      const updated = result?.data;
+
+      if (updated?.evaluations) {
+        setStudentData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            evaluations: {
+              ...(prev.evaluations || {}),
+              ...updated.evaluations,
+            },
+          };
+        });
+
+        setLocalEvaluationOverrides((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+
+        setShowToast({
+          visible: true,
+          message: "Manual marks saved successfully",
+          type: "success",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving manual marks", error);
+      setShowToast({
+        visible: true,
+        message: "Failed to save manual marks",
+        type: "error",
+      });
+    } finally {
+      setIsSavingMarks(false);
+      setTimeout(() => {
+        setShowToast((prev) => ({ ...prev, visible: false }));
+      }, 3000);
+    }
   };
 
   const handleOpenQuestionImage = () => {
@@ -695,7 +809,7 @@ const StudentEvaluationLoader = ({
           {/* Question content always visible at the top */}
           <div className="hidden">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-slate-900">
+              <h3 className="text-lg font-medium text-gray-900">
                 Question {questionNumber}
               </h3>
               <div className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-1">
@@ -877,7 +991,7 @@ const StudentEvaluationLoader = ({
                     </motion.div>
                   </div>
 
-                  {currentEvaluation && (
+                  {getEffectiveEvaluation() && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -890,25 +1004,25 @@ const StudentEvaluationLoader = ({
                         </h4>
                         <div className="flex items-center gap-2">
                           <div className="font-medium text-accent">
-                            {currentEvaluation.total_marks} /{" "}
+                            {getEffectiveEvaluation().total_marks} /{" "}
                             {Math.abs(currentQuestion?.max_marks) || 10}
                           </div>
                           <div className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
                             {formatPercentage(
-                              currentEvaluation.total_marks,
+                              getEffectiveEvaluation().total_marks,
                               Math.abs(currentQuestion?.max_marks) || 10
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {currentEvaluation.overall_feedback && (
+                      {getEffectiveEvaluation().overall_feedback && (
                         <div>
                           <h5 className="text-xs uppercase text-accent font-medium mb-1">
                             Overall Feedback
                           </h5>
                           <div className="text-sm text-gray-700 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-                            {currentEvaluation.overall_feedback}
+                            {getEffectiveEvaluation().overall_feedback}
                           </div>
                         </div>
                       )}
@@ -926,7 +1040,7 @@ const StudentEvaluationLoader = ({
                   exit="exit"
                   className="space-y-6"
                 >
-                  {currentEvaluation ? (
+                  {getEffectiveEvaluation() ? (
                     <>
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -937,9 +1051,17 @@ const StudentEvaluationLoader = ({
                           Feedback & Assessment
                         </h3>
                         <ScoreDisplay
-                          marks={currentEvaluation.total_marks}
+                          marks={getEffectiveEvaluation().total_marks}
                           maxMarks={Math.abs(currentQuestion?.max_marks) || 0}
                         />
+                        <button
+                          type="button"
+                          onClick={handleSaveManualMarks}
+                          disabled={isSavingMarks || !getEffectiveEvaluation()}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg border border-accent text-accent hover:bg-accent/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSavingMarks ? "Saving..." : "Save marks"}
+                        </button>
                       </motion.div>
 
                       <div className="space-y-5">
@@ -955,7 +1077,7 @@ const StudentEvaluationLoader = ({
                           <div className="w-full px-4 py-3 border border-gray-200 rounded-lg shadow-sm bg-white">
                             {feedbackEdits[`question_${questionNumber}`]
                               ?.overall ||
-                              currentEvaluation.overall_feedback ||
+                              getEffectiveEvaluation().overall_feedback ||
                               "No feedback available"}
                           </div>
                         </motion.div>
@@ -972,12 +1094,12 @@ const StudentEvaluationLoader = ({
                               Assessment Criteria
                             </h4>
                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                              {currentEvaluation.item_grades?.length || 0}{" "}
+                              {getEffectiveEvaluation().item_grades?.length || 0}{" "}
                               criteria
                             </span>
                           </div>
 
-                          {currentEvaluation.item_grades?.map((item, index) => (
+                          {getEffectiveEvaluation().item_grades?.map((item, index) => (
                             <motion.div
                               key={index}
                               initial={{ opacity: 0, y: 10 }}
@@ -996,9 +1118,57 @@ const StudentEvaluationLoader = ({
                                   </h5>
                                 </div>
                                 <div className="flex items-center gap-1 text-sm px-3 py-1.5 bg-accent/5 rounded-lg shadow-sm whitespace-nowrap">
-                                  <span className="font-medium text-accent">
-                                    {item.marks_awarded}
-                                  </span>
+                                  <input
+                                    type="number"
+                                    className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent bg-white"
+                                    value={item.marks_awarded ?? ""}
+                                    min={0}
+                                    step={0.5}
+                                    max={
+                                      currentQuestion?.rubric_items?.[index]?.max_marks ??
+                                      item.max_marks ??
+                                      0
+                                    }
+                                    onChange={(e) => {
+                                      const raw = e.target.value;
+                                      const parsed = parseFloat(raw);
+                                      const maxVal =
+                                        currentQuestion?.rubric_items?.[index]?.max_marks ??
+                                        item.max_marks ??
+                                        0;
+                                      const safe = isNaN(parsed)
+                                        ? 0
+                                        : Math.min(Math.max(parsed, 0), maxVal);
+                                      const key = `question_${questionNumber}`;
+                                      setLocalEvaluationOverrides((prev) => {
+                                        const existing = prev[key] || {};
+                                        const existingItems =
+                                          existing.item_grades ||
+                                          getEffectiveEvaluation().item_grades ||
+                                          [];
+                                        const updatedItems = existingItems.map((it, i) =>
+                                          i === index
+                                            ? { ...it, marks_awarded: safe }
+                                            : it
+                                        );
+
+                                        const newTotal = updatedItems.reduce(
+                                          (sum, it) =>
+                                            sum + (parseFloat(it.marks_awarded) || 0),
+                                          0
+                                        );
+
+                                        return {
+                                          ...prev,
+                                          [key]: {
+                                            ...existing,
+                                            item_grades: updatedItems,
+                                            total_marks: newTotal,
+                                          },
+                                        };
+                                      });
+                                    }}
+                                  />
                                   <span className="text-gray-400">/</span>
                                   <span className="text-gray-600">
                                     {currentQuestion?.rubric_items?.[index]?.max_marks ?? item.max_marks ?? 0}
@@ -1030,8 +1200,10 @@ const StudentEvaluationLoader = ({
                                     className="h-full bg-accent rounded-full"
                                     style={{
                                       width: `${
-                                        (item.marks_awarded / (item.max_marks || 1)) *
-                                        100
+                                        ((item.marks_awarded || 0) /
+                                          ((currentQuestion?.rubric_items?.[index]?.max_marks ||
+                                            item.max_marks ||
+                                            1))) * 100
                                       }%`,
                                     }}
                                   ></div>
