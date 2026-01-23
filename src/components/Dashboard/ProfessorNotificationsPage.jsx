@@ -61,6 +61,77 @@ const ProfessorNotificationsPage = () => {
     fetchJobs();
   }, []);
 
+  // Live professor notifications WebSocket: keep jobs list/status in sync
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    let wsUrl;
+    try {
+      const base = new URL(API_BASE_URL);
+      base.protocol = base.protocol === "https:" ? "wss:" : "ws:";
+      base.pathname = `${base.pathname.replace(/\/+$/, "")}/exams/ws/professor/notifications`;
+      base.search = `?token=${encodeURIComponent(token)}`;
+      wsUrl = base.toString();
+    } catch {
+      const wsBase = API_BASE_URL.replace(/^https?/, "ws");
+      wsUrl = `${wsBase}/exams/ws/professor/notifications?token=${encodeURIComponent(token)}`;
+    }
+
+    let ws;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch (e) {
+      console.error("Failed to open professor notifications WebSocket", e);
+      return undefined;
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload?.event !== "job_update" || !payload.job) return;
+
+        const job = payload.job;
+
+        // Merge or prepend job into jobs list
+        setJobs((prev) => {
+          if (!Array.isArray(prev) || prev.length === 0) {
+            return [job];
+          }
+
+          const idx = prev.findIndex((j) => j.id === job.id);
+          if (idx === -1) {
+            return [job, ...prev];
+          }
+
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...job };
+          return next;
+        });
+
+        // Keep selected job in sync so status/progress react immediately
+        setSelectedJob((prev) => {
+          if (!prev || prev.id !== job.id) return prev;
+          return { ...prev, ...job };
+        });
+      } catch (e) {
+        console.error("Failed to parse professor notifications WS message", e);
+      }
+    };
+
+    ws.onerror = (e) => {
+      console.error("Professor notifications WebSocket error", e);
+    };
+
+    return () => {
+      try {
+        ws && ws.close();
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
+
   // Open exam progress WebSocket when viewing a job that is still running/pending
   useEffect(() => {
     if (!selectedJob) {

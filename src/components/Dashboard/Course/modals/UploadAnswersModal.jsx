@@ -68,34 +68,105 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     }
 
     setIsUploading(true);
+    // Reset any stale progress from previous runs
+    setProcessingProgress(null);
+    setIsProcessing(false);
     const loadingToast = toast.loading('Uploading answer sheets...');
 
     try {
-      const formData = new FormData();
-      formData.append('zip_file', zipFile);
+      let zipKey = null;
 
-      // Step 1: upload ZIP only to S3
-      const uploadResp = await fetch(
-        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-          },
-          body: formData
+      // Step 1: try presigned direct-to-S3 upload (fast path)
+      try {
+        const presignResp = await fetch(
+          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/answers-zip-presign`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              file_name: zipFile.name,
+              content_type: zipFile.type || 'application/zip',
+              file_size_bytes: zipFile.size,
+            }),
+          }
+        );
+
+        if (!presignResp.ok) {
+          throw new Error(`Presign failed: ${presignResp.status}`);
         }
-      );
 
-      if (!uploadResp.ok) {
-        throw new Error(`Upload failed: ${uploadResp.status}`);
+        const presignJson = await presignResp.json();
+        const upload = presignJson?.data?.upload;
+        const presignedKey = presignJson?.data?.zip_key;
+        if (presignJson?.code !== 200 || !upload?.url || !upload?.fields || !presignedKey) {
+          throw new Error(presignJson?.message || 'Invalid presign response');
+        }
+
+        const s3Form = new FormData();
+        Object.entries(upload.fields).forEach(([k, v]) => s3Form.append(k, v));
+        s3Form.append('file', zipFile);
+
+        const s3Resp = await fetch(upload.url, {
+          method: 'POST',
+          body: s3Form,
+        });
+
+        if (!s3Resp.ok) {
+          throw new Error(`S3 upload failed: ${s3Resp.status}`);
+        }
+
+        // Verify server-side that the object exists (handles S3 CORS/opaque edge cases)
+        const verifyResp = await fetch(
+          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/answers-zip-exists?zip_key=${encodeURIComponent(presignedKey)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+          }
+        );
+
+        if (!verifyResp.ok) {
+          throw new Error(`Verify failed: ${verifyResp.status}`);
+        }
+
+        const verifyJson = await verifyResp.json();
+        if (verifyJson?.code !== 200 || !verifyJson?.data?.exists) {
+          throw new Error('Uploaded ZIP not found in S3');
+        }
+
+        zipKey = presignedKey;
+      } catch (e) {
+        // Safe fallback: use existing backend upload endpoint
+        const formData = new FormData();
+        formData.append('zip_file', zipFile);
+
+        const uploadResp = await fetch(
+          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            },
+            body: formData
+          }
+        );
+
+        if (!uploadResp.ok) {
+          throw new Error(`Upload failed: ${uploadResp.status}`);
+        }
+
+        const uploadJson = await uploadResp.json();
+        if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
+          throw new Error(uploadJson.message || 'Failed to upload ZIP');
+        }
+
+        zipKey = uploadJson.data.zip_key;
       }
 
-      const uploadJson = await uploadResp.json();
-      if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
-        throw new Error(uploadJson.message || 'Failed to upload ZIP');
-      }
-
-      const zipKey = uploadJson.data.zip_key;
       toast.loading('Starting background processing of uploaded answers...', { id: loadingToast });
 
       // Step 2: start async processing of the uploaded ZIP from S3
@@ -203,6 +274,18 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     };
   }, [isOpen, examId, isProcessing]);
 
+  // When progress reaches 100%, mark processing as completed and notify the user
+  useEffect(() => {
+    if (!processingProgress) return;
+
+    const { studentsTotal, studentsProcessed } = processingProgress;
+    if (studentsTotal && studentsProcessed >= studentsTotal) {
+      // Stop listening as an active processing run
+      setIsProcessing(false);
+      toast.success('Answer sheets processing completed.');
+    }
+  }, [processingProgress]);
+
   if (!isOpen) return null;
 
   return (
@@ -240,14 +323,23 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
       <div className="flex-1 overflow-y-auto p-6">
         {!uploadResults ? (
           <>
-          {(isUploading || isProcessing) && (
+          {(isUploading || isProcessing || processingProgress) && (
             <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
               <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                {processingProgress && processingProgress.studentsTotal &&
+                processingProgress.studentsProcessed >= processingProgress.studentsTotal ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">
                     {isUploading
                       ? 'Uploading ZIP and starting answer processing...'
+                      : processingProgress &&
+                        processingProgress.studentsTotal &&
+                        processingProgress.studentsProcessed >= processingProgress.studentsTotal
+                      ? 'Answer processing completed.'
                       : 'Processing uploaded answer sheets in the background...'}
                   </p>
                   <p className="text-[11px] text-gray-600 mt-0.5">

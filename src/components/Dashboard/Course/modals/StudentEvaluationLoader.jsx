@@ -17,6 +17,7 @@ import {
   Mail,
   MessageSquare,
   PieChart,
+  Pencil,
   Share,
   User,
   ZoomIn,
@@ -85,6 +86,7 @@ const StudentEvaluationLoader = ({
   const [showPDFControls, setShowPDFControls] = useState(false);
   const [useExamDetail, setUseExamDetail] = useState(false);
   const [localEvaluationOverrides, setLocalEvaluationOverrides] = useState({});
+  const [editingMarksIndex, setEditingMarksIndex] = useState(null);
 
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
@@ -488,75 +490,29 @@ const StudentEvaluationLoader = ({
     );
   }
 
-  if (useExamDetail) {
-    return (
-      <ExamEvaluationDetail
-        examId={examId}
-        enrollmentId={enrollmentId}
-        studentInfo={
-          studentData?.student
-            ? {
-                student_name: studentData.student.name,
-                roll_number: studentData.student.roll_number,
-                email: studentData.student.email,
-              }
-            : null
-        }
-        questions={questions}
-        answerScriptPages={answerScriptPages}
-        existingEvaluations={studentData?.evaluations || {}}
-        evaluationStatus={studentData?.evaluation_status || "pending"}
-        onClose={onClose}
-        onComplete={handleDetailComplete}
-      />
-    );
-  }
-
   const currentQuestion = getCurrentQuestion();
-  const currentEvaluation = getCurrentEvaluation();
   const questionNumber = currentQuestion?.question_number || 1;
   const currentPage = answerScriptPages[currentPageIndex] || null;
+  const currentEvaluation = getEffectiveEvaluation();
 
   const totalMarks = getTotalMarks();
   const maxTotalMarks = getMaxMarks();
 
-  // Show a fallback if no questions are loaded
-  if (!loading && questions.length === 0) {
-    console.log("⚠️ No questions loaded, showing fallback message");
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="fixed inset-0 bg-white z-50 flex items-center justify-center"
-      >
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-center max-w-md px-6"
-        >
-          <div className="inline-block bg-yellow-100 p-6 rounded-full mb-6">
-            <FileText className="w-12 h-12 text-yellow-500" />
-          </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-3">
-            No Questions Available
-          </h2>
-          <p className="text-gray-600 mb-8">
-            This exam doesn't have any questions yet or there was an issue loading them.
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onClose}
-            className="px-6 py-3 bg-accent text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-          >
-            Go Back
-          </motion.button>
-        </motion.div>
-      </motion.div>
-    );
-  }
+  const questionHasImage = !!currentQuestion?.question_file_url;
+  const questionHasText = !!(
+    currentQuestion?.question_text || currentQuestion?.question_body
+  );
+  const answerHasImage = !!currentQuestion?.answer_file_url;
+  const answerHasText = !!(
+    currentQuestion?.answer_text || currentQuestion?.answer_body
+  );
+
+  const getTypeLabel = (hasImage, hasText) => {
+    if (hasImage && hasText) return "Image + Text";
+    if (hasText) return "Text";
+    if (hasImage) return "Image";
+    return "Not available";
+  };
 
   console.log("🎨 Rendering main StudentEvaluationLoader UI");
 
@@ -907,12 +863,15 @@ const StudentEvaluationLoader = ({
                       className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
                     >
                       <div className="p-3 bg-gray-50 border-b border-gray-200">
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Question Image
+                        <h4 className="text-sm font-medium text-gray-900 flex items-center justify-between">
+                          <span>Question</span>
+                          <span className="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200">
+                            {getTypeLabel(questionHasImage, questionHasText)}
+                          </span>
                         </h4>
                       </div>
                       <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden p-2">
-                        {currentQuestion?.question_file_url ? (
+                        {questionHasImage ? (
                           <motion.div
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -936,10 +895,16 @@ const StudentEvaluationLoader = ({
                               </div>
                             </div>
                           </motion.div>
+                        ) : questionHasText ? (
+                          <div className="w-full h-full overflow-auto p-3 text-left">
+                            <p className="text-sm text-gray-700 whitespace-pre-line">
+                              {currentQuestion.question_text || currentQuestion.question_body}
+                            </p>
+                          </div>
                         ) : (
                           <div className="flex flex-col items-center text-gray-400">
                             <FileText className="w-10 h-10 mb-2" />
-                            <span className="text-sm">No image available</span>
+                            <span className="text-sm">No question available</span>
                           </div>
                         )}
                       </div>
@@ -952,12 +917,15 @@ const StudentEvaluationLoader = ({
                       className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
                     >
                       <div className="p-3 bg-gray-50 border-b border-gray-200">
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Answer Key
+                        <h4 className="text-sm font-medium text-gray-900 flex items-center justify-between">
+                          <span>Answer Key</span>
+                          <span className="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200">
+                            {getTypeLabel(answerHasImage, answerHasText)}
+                          </span>
                         </h4>
                       </div>
                       <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden p-2">
-                        {currentQuestion?.answer_file_url ? (
+                        {answerHasImage ? (
                           <motion.div
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -981,10 +949,16 @@ const StudentEvaluationLoader = ({
                               </div>
                             </div>
                           </motion.div>
+                        ) : answerHasText ? (
+                          <div className="w-full h-full overflow-auto p-3 text-left">
+                            <p className="text-sm text-gray-700 whitespace-pre-line">
+                              {currentQuestion.answer_text || currentQuestion.answer_body}
+                            </p>
+                          </div>
                         ) : (
                           <div className="flex flex-col items-center text-gray-400">
                             <FileText className="w-10 h-10 mb-2" />
-                            <span className="text-sm">No image available</span>
+                            <span className="text-sm">No answer available</span>
                           </div>
                         )}
                       </div>
@@ -1118,57 +1092,68 @@ const StudentEvaluationLoader = ({
                                   </h5>
                                 </div>
                                 <div className="flex items-center gap-1 text-sm px-3 py-1.5 bg-accent/5 rounded-lg shadow-sm whitespace-nowrap">
-                                  <input
-                                    type="number"
-                                    className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent bg-white"
-                                    value={item.marks_awarded ?? ""}
-                                    min={0}
-                                    step={0.5}
-                                    max={
-                                      currentQuestion?.rubric_items?.[index]?.max_marks ??
-                                      item.max_marks ??
-                                      0
-                                    }
-                                    onChange={(e) => {
-                                      const raw = e.target.value;
-                                      const parsed = parseFloat(raw);
-                                      const maxVal =
+                                  {editingMarksIndex === index ? (
+                                    <input
+                                      type="number"
+                                      className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent bg-white"
+                                      value={item.marks_awarded ?? ""}
+                                      min={0}
+                                      step={0.5}
+                                      max={
                                         currentQuestion?.rubric_items?.[index]?.max_marks ??
                                         item.max_marks ??
-                                        0;
-                                      const safe = isNaN(parsed)
-                                        ? 0
-                                        : Math.min(Math.max(parsed, 0), maxVal);
-                                      const key = `question_${questionNumber}`;
-                                      setLocalEvaluationOverrides((prev) => {
-                                        const existing = prev[key] || {};
-                                        const existingItems =
-                                          existing.item_grades ||
-                                          getEffectiveEvaluation().item_grades ||
-                                          [];
-                                        const updatedItems = existingItems.map((it, i) =>
-                                          i === index
-                                            ? { ...it, marks_awarded: safe }
-                                            : it
-                                        );
+                                        0
+                                      }
+                                      onChange={(e) => {
+                                        const raw = e.target.value;
+                                        const parsed = parseFloat(raw);
+                                        const maxVal =
+                                          currentQuestion?.rubric_items?.[index]?.max_marks ??
+                                          item.max_marks ??
+                                          0;
+                                        const safe = isNaN(parsed)
+                                          ? 0
+                                          : Math.min(Math.max(parsed, 0), maxVal);
+                                        const key = `question_${questionNumber}`;
+                                        setLocalEvaluationOverrides((prev) => {
+                                          const existing = prev[key] || {};
+                                          const existingItems =
+                                            existing.item_grades ||
+                                            getEffectiveEvaluation().item_grades ||
+                                            [];
+                                          const updatedItems = existingItems.map((it, i) =>
+                                            i === index
+                                              ? { ...it, marks_awarded: safe }
+                                              : it
+                                          );
 
-                                        const newTotal = updatedItems.reduce(
-                                          (sum, it) =>
-                                            sum + (parseFloat(it.marks_awarded) || 0),
-                                          0
-                                        );
+                                          const newTotal = updatedItems.reduce(
+                                            (sum, it) =>
+                                              sum + (parseFloat(it.marks_awarded) || 0),
+                                            0
+                                          );
 
-                                        return {
-                                          ...prev,
-                                          [key]: {
-                                            ...existing,
-                                            item_grades: updatedItems,
-                                            total_marks: newTotal,
-                                          },
-                                        };
-                                      });
-                                    }}
-                                  />
+                                          return {
+                                            ...prev,
+                                            [key]: {
+                                              ...existing,
+                                              item_grades: updatedItems,
+                                              total_marks: newTotal,
+                                            },
+                                          };
+                                        });
+                                      }}
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="flex items-center gap-1 text-sm text-gray-700 hover:text-accent"
+                                      onClick={() => setEditingMarksIndex(index)}
+                                    >
+                                      <span>{item.marks_awarded ?? 0}</span>
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                   <span className="text-gray-400">/</span>
                                   <span className="text-gray-600">
                                     {currentQuestion?.rubric_items?.[index]?.max_marks ?? item.max_marks ?? 0}

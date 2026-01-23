@@ -286,32 +286,100 @@ const Toast = ({ message, type, show, onClose }) => {
       }
   
       setIsUploading(true);
-      const formData = new FormData();
-      formData.append('zip_file', file);
 
       try {
-        // Step 1: upload ZIP to S3 only
-        const uploadResp = await fetch(
-          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: formData,
+        let zipKey = null;
+
+        // Step 1: try presigned direct-to-S3 upload (fast path)
+        try {
+          const presignResp = await fetch(
+            `${API_BASE_URL}/exams/${courseId}/exams/${examId}/answers-zip-presign`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                file_name: file.name,
+                content_type: file.type || 'application/zip',
+                file_size_bytes: file.size,
+              }),
+            }
+          );
+
+          if (!presignResp.ok) {
+            throw new Error(`Presign failed: ${presignResp.status}`);
           }
-        );
 
-        if (!uploadResp.ok) {
-          throw new Error(`Upload failed: ${uploadResp.status}`);
+          const presignJson = await presignResp.json();
+          const upload = presignJson?.data?.upload;
+          const presignedKey = presignJson?.data?.zip_key;
+          if (presignJson?.code !== 200 || !upload?.url || !upload?.fields || !presignedKey) {
+            throw new Error(presignJson?.message || 'Invalid presign response');
+          }
+
+          const s3Form = new FormData();
+          Object.entries(upload.fields).forEach(([k, v]) => s3Form.append(k, v));
+          s3Form.append('file', file);
+
+          const s3Resp = await fetch(upload.url, {
+            method: 'POST',
+            body: s3Form,
+          });
+
+          if (!s3Resp.ok) {
+            throw new Error(`S3 upload failed: ${s3Resp.status}`);
+          }
+
+          // Verify server-side that the object exists (handles S3 CORS/opaque edge cases)
+          const verifyResp = await fetch(
+            `${API_BASE_URL}/exams/${courseId}/exams/${examId}/answers-zip-exists?zip_key=${encodeURIComponent(presignedKey)}`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              },
+            }
+          );
+
+          if (!verifyResp.ok) {
+            throw new Error(`Verify failed: ${verifyResp.status}`);
+          }
+
+          const verifyJson = await verifyResp.json();
+          if (verifyJson?.code !== 200 || !verifyJson?.data?.exists) {
+            throw new Error('Uploaded ZIP not found in S3');
+          }
+
+          zipKey = presignedKey;
+        } catch (e) {
+          // Safe fallback: use existing backend upload endpoint
+          const formData = new FormData();
+          formData.append('zip_file', file);
+
+          const uploadResp = await fetch(
+            `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              },
+              body: formData,
+            }
+          );
+
+          if (!uploadResp.ok) {
+            throw new Error(`Upload failed: ${uploadResp.status}`);
+          }
+
+          const uploadJson = await uploadResp.json();
+          if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
+            throw new Error(uploadJson.message || 'Failed to upload ZIP');
+          }
+
+          zipKey = uploadJson.data.zip_key;
         }
-
-        const uploadJson = await uploadResp.json();
-        if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
-          throw new Error(uploadJson.message || 'Failed to upload ZIP');
-        }
-
-        const zipKey = uploadJson.data.zip_key;
 
         // Step 2: start async processing of the uploaded ZIP from S3
         const processResp = await fetch(

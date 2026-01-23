@@ -227,6 +227,9 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [showRecheckWindowModal, setShowRecheckWindowModal] = useState(false);
   const [recheckWindowHours, setRecheckWindowHours] = useState(24);
   const [recheckWindowError, setRecheckWindowError] = useState('');
+  const [activeEvaluationJobId, setActiveEvaluationJobId] = useState(null);
+  const [activeEvaluationJob, setActiveEvaluationJob] = useState(null);
+  const evaluationJobPollRef = useRef(null);
   
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
@@ -244,18 +247,6 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
   const hideToast = useCallback(() => {
     setToast({ show: false, message: '', type: 'success' });
-  }, []);
-
-  const toggleSelectedEnrollment = useCallback((enrollmentId) => {
-    setSelectedEnrollmentIds(prev => {
-      const next = new Set(prev);
-      if (next.has(enrollmentId)) {
-        next.delete(enrollmentId);
-      } else {
-        next.add(enrollmentId);
-      }
-      return next;
-    });
   }, []);
 
   const clearSelection = useCallback(() => {
@@ -339,6 +330,197 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       setLoading(false);
     }
   }, [examId, retryCount]);
+
+  const stopEvaluationJobPolling = useCallback(() => {
+    if (evaluationJobPollRef.current) {
+      clearInterval(evaluationJobPollRef.current);
+      evaluationJobPollRef.current = null;
+    }
+  }, []);
+
+  const fetchEvaluationJob = useCallback(async (jobId) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/exams/professor/jobs/evaluations/${jobId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    if (!data || data.code !== 200 || !data.data) {
+      throw new Error(data?.message || 'Failed to fetch evaluation job');
+    }
+    return data.data;
+  }, []);
+
+  const syncUiWithEvaluationJob = useCallback((job) => {
+    const status = job?.status;
+    const progress = job?.progress || {};
+    const running = status === 'pending' || status === 'running';
+
+    setActiveEvaluationJob(job || null);
+    setBatchEvaluating(running);
+
+    setEvaluationProgress({
+      completed: Number(progress.completed || 0),
+      total: Number(progress.total || 0),
+      inProgress: progress.current_enrollment_id ? [Number(progress.current_enrollment_id)] : [],
+      errors: Number(progress.failed || 0),
+    });
+  }, []);
+
+  const pollEvaluationJob = useCallback(async (jobId) => {
+    try {
+      const job = await fetchEvaluationJob(jobId);
+      syncUiWithEvaluationJob(job);
+
+      const status = job?.status;
+      const running = status === 'pending' || status === 'running';
+      if (!running) {
+        stopEvaluationJobPolling();
+        setActiveEvaluationJobId(null);
+        setActiveEvaluationJob(null);
+
+        const failed = Number(job?.progress?.failed || 0);
+        const completed = Number(job?.progress?.completed || 0);
+        const total = Number(job?.progress?.total || 0);
+
+        if (failed > 0) {
+          showToast(`Evaluation finished: ${completed}/${total}. Failed: ${failed}.`, 'warning', 6000);
+        } else {
+          showToast(`Evaluation finished: ${completed}/${total}.`, 'success', 6000);
+        }
+
+        clearSelection();
+        await fetchEnrollments();
+      }
+    } catch (e) {
+      console.error('Evaluation job polling error:', e);
+      stopEvaluationJobPolling();
+      setBatchEvaluating(false);
+      setActiveEvaluationJobId(null);
+      setActiveEvaluationJob(null);
+      showToast(e.message || 'Failed to track evaluation job', 'error', 6000);
+    }
+  }, [fetchEvaluationJob, syncUiWithEvaluationJob, stopEvaluationJobPolling, showToast, clearSelection, fetchEnrollments]);
+
+  const startEvaluationJob = useCallback(async (enrollmentIds, forceReevaluate) => {
+    if (!examId) {
+      throw new Error('Exam ID is missing');
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    if (!Array.isArray(enrollmentIds) || enrollmentIds.length === 0) {
+      throw new Error('No students selected');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluations/jobs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        enrollment_ids: enrollmentIds,
+        force_reevaluate: Boolean(forceReevaluate),
+      }),
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const jobId = data?.data?.job_id;
+    if (!jobId) {
+      throw new Error(data?.message || 'Failed to start evaluation');
+    }
+
+    setActiveEvaluationJobId(jobId);
+    setBatchEvaluating(true);
+    setEvaluationProgress({ completed: 0, total: enrollmentIds.length, inProgress: [], errors: 0 });
+    stopEvaluationJobPolling();
+    evaluationJobPollRef.current = setInterval(() => {
+      pollEvaluationJob(jobId);
+    }, 4000);
+
+    await pollEvaluationJob(jobId);
+    return jobId;
+  }, [examId, pollEvaluationJob, stopEvaluationJobPolling]);
+
+  useEffect(() => {
+    return () => {
+      stopEvaluationJobPolling();
+    };
+  }, [stopEvaluationJobPolling]);
+
+  useEffect(() => {
+    const resume = async () => {
+      try {
+        if (!examId) return;
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const response = await fetch(`${API_BASE_URL}/exams/professor/jobs/evaluations?exam_id=${examId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors'
+        });
+
+        if (!response.ok) return;
+        const data = await response.json();
+        const jobs = Array.isArray(data?.data?.jobs) ? data.data.jobs : [];
+        const active = jobs.find(j => j && (j.status === 'pending' || j.status === 'running'));
+        if (!active?.id) return;
+
+        setActiveEvaluationJobId(active.id);
+        setBatchEvaluating(true);
+        stopEvaluationJobPolling();
+        evaluationJobPollRef.current = setInterval(() => {
+          pollEvaluationJob(active.id);
+        }, 4000);
+
+        await pollEvaluationJob(active.id);
+      } catch (e) {
+        console.error('Failed to resume evaluation job:', e);
+      }
+    };
+
+    resume();
+  }, [examId, pollEvaluationJob, stopEvaluationJobPolling]);
+
+  const toggleSelectedEnrollment = useCallback((enrollmentId) => {
+    setSelectedEnrollmentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(enrollmentId)) {
+        next.delete(enrollmentId);
+      } else {
+        next.add(enrollmentId);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     fetchEnrollments();
@@ -532,112 +714,15 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     setShowRecheckWindowModal(true);
   }, [selectedEnrollmentIds, showToast]);
 
-  const evaluateStudentWithRetry = async (student, retryCount = 0) => {
-    try {
-      setEvaluationProgress(prev => ({
-        ...prev,
-        inProgress: [...prev.inProgress, student.enrollment_id]
-      }));
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-
-      const url = `${API_BASE_URL}/exams/${examId}/evaluate/${student.enrollment_id}?force_reevaluate=true`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json'
-        },
-        mode: 'cors',
-        signal: controller.signal
-      }).finally(() => clearTimeout(timeoutId));
-
-      if (!response.ok) {
-        throw new Error(`API error (${response.status})`);
-      }
-
-      const data = await response.json();
-
-      if (data.code !== 200 || !data.data || typeof data.data.total_marks !== 'number') {
-        throw new Error('Invalid evaluation data received');
-      }
-
-      setEvaluationProgress(prev => ({ 
-        ...prev, 
-        completed: prev.completed + 1,
-        inProgress: prev.inProgress.filter(id => id !== student.enrollment_id)
-      }));
-
-      return {
-        success: true,
-        student,
-        data: data.data
-      };
-    } catch (error) {
-      console.error(`Error evaluating student ${student.enrollment_id}:`, error);
-      
-      if (retryCount < MAX_RETRIES && (error.name === 'AbortError' || error.message.includes('NetworkError'))) {
-        return evaluateStudentWithRetry(student, retryCount + 1);
-      }
-      
-      setEvaluationError(prev => ({
-        ...prev,
-        [student.enrollment_id]: error.message || 'Failed to evaluate'
-      }));
-      
-      setEvaluationProgress(prev => ({ 
-        ...prev, 
-        completed: prev.completed + 1,
-        errors: prev.errors + 1,
-        inProgress: prev.inProgress.filter(id => id !== student.enrollment_id)
-      }));
-      
-      return {
-        success: false,
-        student,
-        error: error.message
-      };
-    }
-  };
-
-  
   const handleEvaluate = async (student) => {
     try {
-      setEvaluatingStudent(student);
+      if (!student || !student.enrollment_id) {
+        throw new Error('Invalid student');
+      }
+
       setEvaluationError(prev => ({ ...prev, [student.enrollment_id]: null }));
-
-      if (!examId) {
-        throw new Error('Exam ID is missing');
-      }
-
-      showToast('Evaluating submission...', 'info');
-
-      const result = await evaluateStudentWithRetry(student);
-
-      if (result.success) {
-        const updatedStudents = students.map(s =>
-          s.enrollment_id === student.enrollment_id
-            ? {
-              ...s,
-              marks_obtained: result.data.total_marks || 0,
-              feedback: Array.isArray(result.data.overall_feedback)
-                ? result.data.overall_feedback.join('\n')
-                : (result.data.overall_feedback || ''),
-              evaluation_status: 'completed'
-            }
-            : s
-        );
-
-        setStudents(updatedStudents);
-        
-        
-        
-        showToast('Evaluation completed successfully. Click "View Results" to see details.', 'success');
-      } else {
-        throw new Error(result.error || 'Evaluation process did not complete successfully');
-      }
+      showToast('Evaluation started...', 'info', 5000);
+      await startEvaluationJob([student.enrollment_id], false);
     } catch (error) {
       console.error("Evaluation error:", error);
 
@@ -676,29 +761,12 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         return;
       }
 
-      setBatchEvaluating(true);
-      setEvaluationProgress({ completed: 0, total: candidates.length, inProgress: [], errors: 0 });
-      showToast('Evaluating all pending uploaded submissions...', 'info', 5000);
-
-      let successCount = 0;
-      for (const student of candidates) {
-        const result = await evaluateStudentWithRetry(student);
-        if (result?.success) successCount += 1;
-      }
-
-      await fetchEnrollments();
-      clearSelection();
-
-      showToast(
-        `Evaluation completed: ${successCount}/${candidates.length} students processed.`,
-        successCount === candidates.length ? 'success' : 'warning',
-        6000
-      );
+      showToast('Evaluation started...', 'info', 5000);
+      await startEvaluationJob(candidates.map(s => s.enrollment_id), false);
     } catch (e) {
       console.error('Evaluate all error:', e);
       showToast(e.message || 'Failed to evaluate all students', 'error', 6000);
     } finally {
-      setBatchEvaluating(false);
     }
   };
 
@@ -719,39 +787,22 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         return;
       }
 
-      setBatchEvaluating(true);
-      setEvaluationProgress({ completed: 0, total: selected.length, inProgress: [], errors: 0 });
-      showToast('Re-evaluating selected students with updated rubric...', 'info', 5000);
+      const evaluatedCount = selected.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined).length;
+      const pendingCount = selected.length - evaluatedCount;
 
-      let successCount = 0;
-      for (const student of selected) {
-        const result = await evaluateStudentWithRetry(student);
-        if (result?.success) {
-          successCount += 1;
-
-          // Mirror single-student evaluate: immediately apply new marks/feedback to local state
-          setStudents(prev => prev.map(s =>
-            s.enrollment_id === student.enrollment_id
-              ? {
-                  ...s,
-                  marks_obtained: result.data.total_marks || 0,
-                  feedback: Array.isArray(result.data.overall_feedback)
-                    ? result.data.overall_feedback.join('\n')
-                    : (result.data.overall_feedback || ''),
-                  evaluation_status: 'completed',
-                }
-              : s
-          ));
-        }
+      if (pendingCount > 0 && evaluatedCount > 0) {
+        showToast('Selected students include both evaluated and not evaluated. Processing all selected.', 'info', 5000);
+      } else if (pendingCount > 0) {
+        showToast('Evaluation started...', 'info', 5000);
+      } else {
+        showToast('Re-evaluation started...', 'info', 5000);
       }
-      clearSelection();
 
-      showToast(`Re-evaluation completed: ${successCount}/${selected.length} updated.`, successCount === selected.length ? 'success' : 'warning', 6000);
+      await startEvaluationJob(selected.map(s => s.enrollment_id), true);
     } catch (e) {
       console.error('Re-evaluate selected error:', e);
       showToast(e.message || 'Failed to re-evaluate selected students', 'error', 6000);
     } finally {
-      setBatchEvaluating(false);
     }
   }, [examId, selectedEnrollmentIds, students, showToast, fetchEnrollments, clearSelection]);
 
@@ -1031,15 +1082,27 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
               </Link>
             ) : (
               <div className="space-y-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleViewResults(student)}
-                  className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span className="font-medium">View Results</span>
-                </motion.button>
+                {isInProgress || batchEvaluating ? (
+                  <motion.button
+                    whileHover={{}}
+                    whileTap={{}}
+                    disabled
+                    className="w-full py-2 bg-gray-200 text-gray-500 rounded-lg flex items-center justify-center gap-2 shadow-sm cursor-wait"
+                  >
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span className="font-medium">Processing...</span>
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleViewResults(student)}
+                    className="w-full py-2 bg-accent text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span className="font-medium">View Results</span>
+                  </motion.button>
+                )}
 
                 {/** Per-student Re-evaluate button hidden; use top toolbar Re-evaluate Selected instead */}
                 {false && (
@@ -1223,8 +1286,15 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
   const getReevaluateIndicator = () => {
     if (batchEvaluating) return 'Re-evaluating...';
-    if (selectedCount === 0) return 'Re-evaluate Selected';
-    return `Re-evaluate (${selectedCount})`;
+    if (selectedCount === 0) return 'Evaluate / Re-evaluate Selected';
+
+    const selectedStudents = students.filter(s => selectedEnrollmentIds.has(s.enrollment_id));
+    const evaluatedCount = selectedStudents.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined).length;
+    const pendingCount = selectedStudents.length - evaluatedCount;
+
+    if (pendingCount > 0 && evaluatedCount === 0) return `Evaluate (${selectedCount})`;
+    if (evaluatedCount > 0 && pendingCount === 0) return `Re-evaluate (${selectedCount})`;
+    return `Evaluate / Re-evaluate (${selectedCount})`;
   };
 
   const getProgressIndicator = () => {
@@ -1645,15 +1715,27 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                                               View Recheck
                                             </motion.button>
                                           )}
-                                          <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => handleViewResults(student)}
-                                            className="inline-flex items-center px-3 py-1.5 border border-accent/20 text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
-                                          >
-                                            <Eye className="w-4 h-4 mr-1.5" />
-                                            View Results
-                                          </motion.button>
+                                          {isInProgress || batchEvaluating ? (
+                                            <motion.button
+                                              whileHover={{}}
+                                              whileTap={{}}
+                                              disabled
+                                              className="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-500 rounded-lg cursor-wait w-full sm:w-auto"
+                                            >
+                                              <Loader className="w-4 h-4 mr-1.5 animate-spin" />
+                                              Processing...
+                                            </motion.button>
+                                          ) : (
+                                            <motion.button
+                                              whileHover={{ scale: 1.05 }}
+                                              whileTap={{ scale: 0.95 }}
+                                              onClick={() => handleViewResults(student)}
+                                              className="inline-flex items-center px-3 py-1.5 border border-accent/20 text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                            >
+                                              <Eye className="w-4 h-4 mr-1.5" />
+                                              View Results
+                                            </motion.button>
+                                          )}
 
                                           {/** Per-row Re-evaluate button hidden; use top toolbar Re-evaluate Selected instead */}
                                           {false && (
@@ -1669,15 +1751,19 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                                               Re-evaluate
                                             </motion.button>
                                           )}
-
                                           <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
+                                            whileHover={isInProgress || batchEvaluating ? {} : { scale: 1.05 }}
+                                            whileTap={isInProgress || batchEvaluating ? {} : { scale: 0.95 }}
                                             onClick={() => {
+                                              if (isInProgress || batchEvaluating) return;
                                               setHistoryEnrollmentId(student.enrollment_id);
                                               setShowHistoryModal(true);
                                             }}
-                                            className="inline-flex items-center px-3 py-1.5 border border-accent/20 text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors shadow-sm hover:shadow-md w-full sm:w-auto"
+                                            disabled={isInProgress || batchEvaluating}
+                                            className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors shadow-sm w-full sm:w-auto
+                                              ${isInProgress || batchEvaluating
+                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                : 'border border-accent/20 text-accent bg-accent/10 hover:bg-accent/20'}`}
                                           >
                                             <History className="w-4 h-4 mr-1.5" />
                                             View History

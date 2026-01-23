@@ -68,6 +68,50 @@ const DashboardLayout = ({ children }) => {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
+  // Seed recent background jobs so the notifications dropdown isn't empty
+  useEffect(() => {
+    const fetchInitialJobs = async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+
+        const resp = await fetch(`${API_BASE_URL}/exams/professor/jobs/answers-processing`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!resp.ok) return;
+
+        const json = await resp.json();
+        const jobs = Array.isArray(json?.data?.jobs) ? json.data.jobs : [];
+        if (!jobs.length) return;
+
+        // Show the most recent few jobs in the dropdown
+        const sorted = [...jobs].sort((a, b) => {
+          const ad = new Date(a.created_at || 0).getTime();
+          const bd = new Date(b.created_at || 0).getTime();
+          return bd - ad;
+        });
+
+        const top = sorted.slice(0, 5);
+        setRecentJobs(top);
+
+        // Unread count: jobs that are not completed/failed yet
+        const pendingCount = top.filter((j) => {
+          const s = (j.status || "").toLowerCase();
+          return s !== "completed" && s !== "failed";
+        }).length;
+        setUnreadJobs(pendingCount);
+      } catch (e) {
+        console.error("Failed to seed initial notifications jobs", e);
+      }
+    };
+
+    fetchInitialJobs();
+  }, []);
+
   useEffect(() => {
     // Open a WebSocket for professor notifications when logged in
     const token = localStorage.getItem("accessToken");
@@ -86,12 +130,30 @@ const DashboardLayout = ({ children }) => {
           const data = JSON.parse(event.data);
           console.log("Notifications WS message", data);
           if (data.event === "job_update" && data.job) {
-            setUnreadJobs((prev) => prev + 1);
+            const job = data.job;
+
+            // Merge or prepend into recent jobs list
             setRecentJobs((prev) => {
-              const next = [data.job, ...prev];
-              // Keep only a small number of recent notifications in the dropdown
-              return next.slice(0, 5);
+              if (!Array.isArray(prev) || prev.length === 0) {
+                return [job];
+              }
+
+              const idx = prev.findIndex((j) => j.id === job.id);
+              if (idx === -1) {
+                const next = [job, ...prev];
+                return next.slice(0, 5);
+              }
+
+              const next = [...prev];
+              next[idx] = { ...next[idx], ...job };
+              return next;
             });
+
+            // If a job has just completed or failed, treat it as a new unread notification
+            const status = (job.status || "").toLowerCase();
+            if (status === "completed" || status === "failed") {
+              setUnreadJobs((prev) => prev + 1);
+            }
           }
         } catch (e) {
           console.error("Failed to parse notifications WS message", e);
