@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import { 
   X, Upload, FileArchive, CheckCircle, AlertTriangle, 
   Folder, FolderOpen, Image, AlertCircle, Loader2 
@@ -11,6 +12,9 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [currentProcessingRoll, setCurrentProcessingRoll] = useState(null);
+  const [processingStage, setProcessingStage] = useState(null);
   const [uploadResults, setUploadResults] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
@@ -70,6 +74,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     setIsUploading(true);
     // Reset any stale progress from previous runs
     setProcessingProgress(null);
+    setUploadProgress(0);
     setIsProcessing(false);
     const loadingToast = toast.loading('Uploading answer sheets...');
 
@@ -109,14 +114,16 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
         Object.entries(upload.fields).forEach(([k, v]) => s3Form.append(k, v));
         s3Form.append('file', zipFile);
 
-        const s3Resp = await fetch(upload.url, {
-          method: 'POST',
-          body: s3Form,
+        await axios.post(upload.url, s3Form, {
+          onUploadProgress: (progressEvent) => {
+            const total = progressEvent?.total || zipFile.size;
+            const loaded = progressEvent?.loaded || 0;
+            if (total > 0) {
+              const percent = Math.round((loaded / total) * 100);
+              setUploadProgress(Math.min(100, Math.max(0, percent)));
+            }
+          },
         });
-
-        if (!s3Resp.ok) {
-          throw new Error(`S3 upload failed: ${s3Resp.status}`);
-        }
 
         // Verify server-side that the object exists (handles S3 CORS/opaque edge cases)
         const verifyResp = await fetch(
@@ -144,22 +151,25 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
         const formData = new FormData();
         formData.append('zip_file', zipFile);
 
-        const uploadResp = await fetch(
+        const uploadResp = await axios.post(
           `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
+          formData,
           {
-            method: 'POST',
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
             },
-            body: formData
-          }
+            onUploadProgress: (progressEvent) => {
+              const total = progressEvent?.total || zipFile.size;
+              const loaded = progressEvent?.loaded || 0;
+              if (total > 0) {
+                const percent = Math.round((loaded / total) * 100);
+                setUploadProgress(Math.min(100, Math.max(0, percent)));
+              }
+            },
+          },
         );
 
-        if (!uploadResp.ok) {
-          throw new Error(`Upload failed: ${uploadResp.status}`);
-        }
-
-        const uploadJson = await uploadResp.json();
+        const uploadJson = uploadResp?.data;
         if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
           throw new Error(uploadJson.message || 'Failed to upload ZIP');
         }
@@ -195,6 +205,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
 
         // Remember that processing is in progress so we can listen for WebSocket updates
         setIsProcessing(true);
+        setProcessingStage('preprocessing');
 
         if (onUploadSuccess) {
           onUploadSuccess(processJson.data);
@@ -216,6 +227,9 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     setZipFile(null);
     setIsProcessing(false);
     setProcessingProgress(null);
+    setUploadProgress(null);
+    setCurrentProcessingRoll(null);
+    setProcessingStage(null);
     setUploadResults(null);
     onClose();
   };
@@ -255,6 +269,12 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
             totalProcessed: data.total_processed,
             totalFailed: data.total_failed,
           });
+          if (typeof data?.current_roll_number !== 'undefined') {
+            setCurrentProcessingRoll(data.current_roll_number);
+          }
+          if (typeof data?.stage !== 'undefined') {
+            setProcessingStage(data.stage);
+          }
         }
       } catch (err) {
         console.error('Error parsing progress message:', err);
@@ -345,15 +365,39 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
                   <p className="text-[11px] text-gray-600 mt-0.5">
                     You can keep this window open to monitor progress. Large exams may take a few minutes.
                   </p>
-                  {processingProgress && (
+                  {!isUploading && isProcessing && processingStage === 'preprocessing' && (
+                    <p className="text-[11px] text-gray-700 mt-1">
+                      Preparing ZIP for processing...
+                    </p>
+                  )}
+                  {!isUploading && isProcessing && currentProcessingRoll && (
+                    <p className="text-[11px] text-gray-700 mt-1">
+                      Currently processing roll number: <span className="font-semibold">{currentProcessingRoll}</span>
+                    </p>
+                  )}
+                  {isUploading && typeof uploadProgress === 'number' && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
+                        <span>Upload progress: {uploadProgress}%</span>
+                        <span>{zipFile ? `${(zipFile.size / 1024 / 1024).toFixed(2)} MB` : ''}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, Math.max(0, uploadProgress))}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {(processingProgress || isProcessing) && (
                     <div className="mt-2">
                       <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
                         <span>
-                          Students processed: {processingProgress.studentsProcessed}
-                          {processingProgress.studentsTotal ? ` / ${processingProgress.studentsTotal}` : ''}
+                          Students processed: {processingProgress?.studentsProcessed || 0}
+                          {processingProgress?.studentsTotal ? ` / ${processingProgress.studentsTotal}` : ''}
                         </span>
                         <span>
-                          Failed: {processingProgress.totalFailed}
+                          Failed: {processingProgress?.totalFailed || 0}
                         </span>
                       </div>
                       <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
@@ -361,10 +405,10 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
                           className="h-full bg-accent rounded-full transition-all duration-300"
                           style={{
                             width:
-                              processingProgress.studentsTotal && processingProgress.studentsTotal > 0
+                              processingProgress?.studentsTotal && processingProgress.studentsTotal > 0
                                 ? `${Math.min(
                                     100,
-                                    (processingProgress.studentsProcessed / processingProgress.studentsTotal) * 100,
+                                    ((processingProgress?.studentsProcessed || 0) / processingProgress.studentsTotal) * 100,
                                   ).toFixed(0)}%`
                                 : '0%',
                           }}

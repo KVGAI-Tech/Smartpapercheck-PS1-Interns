@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle, Clock, RefreshCw, XCircle } from "lucide-react";
 import { API_BASE_URL } from "../../BaseURL";
+import { useLocation } from "react-router-dom";
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -28,6 +29,7 @@ const ProfessorNotificationsPage = () => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [studentsError, setStudentsError] = useState(null);
   const [progress, setProgress] = useState(null);
+  const location = useLocation();
 
   const fetchJobs = async () => {
     try {
@@ -60,6 +62,40 @@ const ProfessorNotificationsPage = () => {
   useEffect(() => {
     fetchJobs();
   }, []);
+
+  // If we navigated here from the bell dropdown, open that specific job.
+  useEffect(() => {
+    const state = location?.state || {};
+    const selectedJobId = state.selectedJobId;
+    const examId = state.examId;
+
+    if (!selectedJobId && !examId) return;
+    if (!Array.isArray(jobs) || jobs.length === 0) return;
+
+    const jobKey = (j) => j?.id || j?.job_id || `${j?.exam_id || ""}-${j?.created_at || ""}`;
+
+    const job = selectedJobId
+      ? jobs.find((j) => jobKey(j) === selectedJobId)
+      : jobs.find((j) => Number(j.exam_id) === Number(examId));
+
+    if (job) {
+      openJob(job);
+
+      // Best-effort mark as read in bell badge storage.
+      try {
+        const raw = localStorage.getItem("unreadJobIds");
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed) && selectedJobId) {
+          localStorage.setItem(
+            "unreadJobIds",
+            JSON.stringify(parsed.filter((k) => k !== selectedJobId))
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [location?.state, jobs]);
 
   // Live professor notifications WebSocket: keep jobs list/status in sync
   useEffect(() => {

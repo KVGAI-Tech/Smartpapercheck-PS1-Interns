@@ -19,9 +19,63 @@ const DashboardLayout = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [unreadJobs, setUnreadJobs] = useState(0);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [recentJobs, setRecentJobs] = useState([]);
+  const [allJobs, setAllJobs] = useState([]);
+  const [notificationsBaselineAt, setNotificationsBaselineAt] = useState(() => {
+    try {
+      const raw = localStorage.getItem("notificationsBaselineAt");
+      const n = raw ? Number(raw) : NaN;
+      return Number.isFinite(n) ? n : Date.now();
+    } catch {
+      return Date.now();
+    }
+  });
+  const [seenJobIds, setSeenJobIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem("seenJobIds");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [unreadJobIds, setUnreadJobIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem("unreadJobIds");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("unreadJobIds", JSON.stringify(unreadJobIds));
+    } catch {
+      // ignore
+    }
+    setUnreadJobs(unreadJobIds.length);
+  }, [unreadJobIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("seenJobIds", JSON.stringify(seenJobIds));
+    } catch {
+      // ignore
+    }
+  }, [seenJobIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("notificationsBaselineAt", String(notificationsBaselineAt));
+    } catch {
+      // ignore
+    }
+  }, [notificationsBaselineAt]);
+
+  const getJobKey = (job) => job?.job_id || job?.id || `${job?.exam_id || ""}-${job?.created_at || ""}`;
 
   const handleNavClick = () => {
     if (isMobile) setIsSidebarOpen(false);
@@ -75,6 +129,11 @@ const DashboardLayout = ({ children }) => {
         const token = localStorage.getItem("accessToken");
         if (!token) return;
 
+        // New page load baseline: do not show historical notifications.
+        const baseline = Date.now();
+        setNotificationsBaselineAt(baseline);
+        setUnreadJobIds([]);
+
         const resp = await fetch(`${API_BASE_URL}/exams/professor/jobs/answers-processing`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -88,22 +147,39 @@ const DashboardLayout = ({ children }) => {
         const jobs = Array.isArray(json?.data?.jobs) ? json.data.jobs : [];
         if (!jobs.length) return;
 
-        // Show the most recent few jobs in the dropdown
-        const sorted = [...jobs].sort((a, b) => {
-          const ad = new Date(a.created_at || 0).getTime();
-          const bd = new Date(b.created_at || 0).getTime();
-          return bd - ad;
+        setAllJobs(jobs);
+
+        // Baseline on refresh: historical completed/failed jobs should NOT become unread.
+        // Only jobs completed after this baseline (via WebSocket) should be marked unread.
+        setSeenJobIds((prevSeen) => {
+          const seenSet = new Set(Array.isArray(prevSeen) ? prevSeen : []);
+          jobs.forEach((j) => {
+            const s = (j.status || "").toLowerCase();
+            const key = getJobKey(j);
+            if (!key) return;
+            if (s === "completed" || s === "failed") {
+              seenSet.add(key);
+            }
+          });
+          return Array.from(seenSet);
         });
 
-        const top = sorted.slice(0, 5);
-        setRecentJobs(top);
-
-        // Unread count: jobs that are not completed/failed yet
-        const pendingCount = top.filter((j) => {
-          const s = (j.status || "").toLowerCase();
-          return s !== "completed" && s !== "failed";
-        }).length;
-        setUnreadJobs(pendingCount);
+        // Clean unread keys to only those that still exist in the fetched jobs list,
+        // and only if the job is actually completed/failed.
+        setUnreadJobIds((prevUnread) => {
+          const unreadArr = Array.isArray(prevUnread) ? prevUnread : [];
+          if (!unreadArr.length) return unreadArr;
+          const completedKeys = new Set(
+            jobs
+              .filter((j) => {
+                const s = (j.status || "").toLowerCase();
+                return s === "completed" || s === "failed";
+              })
+              .map((j) => getJobKey(j))
+              .filter(Boolean)
+          );
+          return unreadArr.filter((k) => completedKeys.has(k));
+        });
       } catch (e) {
         console.error("Failed to seed initial notifications jobs", e);
       }
@@ -111,6 +187,78 @@ const DashboardLayout = ({ children }) => {
 
     fetchInitialJobs();
   }, []);
+
+  useEffect(() => {
+    // Polling fallback: if WS is missed, detect jobs that finished after page load and mark unread.
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    let isCancelled = false;
+
+    const tick = async () => {
+      try {
+        const resp = await fetch(`${API_BASE_URL}/exams/professor/jobs/answers-processing`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!resp.ok) return;
+        const json = await resp.json();
+        const jobs = Array.isArray(json?.data?.jobs) ? json.data.jobs : [];
+        if (!jobs.length || isCancelled) return;
+
+        setAllJobs(jobs);
+
+        const nowUnread = [];
+        const nowSeen = [];
+
+        jobs.forEach((j) => {
+          const status = (j.status || "").toLowerCase();
+          if (status !== "completed" && status !== "failed") return;
+
+          const key = getJobKey(j);
+          if (!key) return;
+
+          const finishedRaw = j.finished_at || j.finishedAt || j.finished;
+          const finishedMs = finishedRaw ? new Date(finishedRaw).getTime() : NaN;
+          if (!Number.isFinite(finishedMs)) return;
+
+          if (finishedMs > notificationsBaselineAt) {
+            nowUnread.push(key);
+          }
+          nowSeen.push(key);
+        });
+
+        if (!nowSeen.length) return;
+
+        setSeenJobIds((prev) => {
+          const s = new Set(Array.isArray(prev) ? prev : []);
+          nowSeen.forEach((k) => s.add(k));
+          return Array.from(s);
+        });
+
+        if (nowUnread.length) {
+          setUnreadJobIds((prev) => {
+            const s = new Set(Array.isArray(prev) ? prev : []);
+            nowUnread.forEach((k) => s.add(k));
+            return Array.from(s);
+          });
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const interval = setInterval(tick, 8000);
+    tick();
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [notificationsBaselineAt]);
 
   useEffect(() => {
     // Open a WebSocket for professor notifications when logged in
@@ -132,19 +280,18 @@ const DashboardLayout = ({ children }) => {
           if (data.event === "job_update" && data.job) {
             const job = data.job;
 
-            // Merge or prepend into recent jobs list
-            setRecentJobs((prev) => {
-              if (!Array.isArray(prev) || prev.length === 0) {
-                return [job];
-              }
+            // Merge or prepend into full jobs list
+            setAllJobs((prev) => {
+              const prevArr = Array.isArray(prev) ? prev : [];
+              const key = getJobKey(job);
+              if (!key) return prevArr;
 
-              const idx = prev.findIndex((j) => j.id === job.id);
+              const idx = prevArr.findIndex((j) => getJobKey(j) === key);
               if (idx === -1) {
-                const next = [job, ...prev];
-                return next.slice(0, 5);
+                return [job, ...prevArr];
               }
 
-              const next = [...prev];
+              const next = [...prevArr];
               next[idx] = { ...next[idx], ...job };
               return next;
             });
@@ -152,7 +299,21 @@ const DashboardLayout = ({ children }) => {
             // If a job has just completed or failed, treat it as a new unread notification
             const status = (job.status || "").toLowerCase();
             if (status === "completed" || status === "failed") {
-              setUnreadJobs((prev) => prev + 1);
+              const key = getJobKey(job);
+              if (key) {
+                setSeenJobIds((prevSeen) => {
+                  const seenSet = new Set(Array.isArray(prevSeen) ? prevSeen : []);
+                  if (!seenSet.has(key)) {
+                    setUnreadJobIds((prevUnread) => {
+                      const unreadSet = new Set(Array.isArray(prevUnread) ? prevUnread : []);
+                      unreadSet.add(key);
+                      return Array.from(unreadSet);
+                    });
+                  }
+                  seenSet.add(key);
+                  return Array.from(seenSet);
+                });
+              }
             }
           }
         } catch (e) {
@@ -465,15 +626,39 @@ const DashboardLayout = ({ children }) => {
                         )}
                       </div>
                       <div className="max-h-64 overflow-y-auto">
-                        {recentJobs.length === 0 ? (
+                        {allJobs.length === 0 || unreadJobIds.length === 0 ? (
                           <div className="px-3 py-2 text-xs text-gray-500">
-                            Background exam processing updates will appear here.
+                            No new notifications.
                           </div>
                         ) : (
-                          recentJobs.map((job) => (
-                            <div
-                              key={job.id}
-                              className="px-3 py-2 border-b border-gray-100 last:border-b-0 text-xs text-gray-700"
+                          [...allJobs]
+                            .filter((job) => {
+                              const s = (job.status || "").toLowerCase();
+                              if (s !== "completed" && s !== "failed") return false;
+                              return unreadJobIds.includes(getJobKey(job));
+                            })
+                            .sort((a, b) => {
+                              const ad = new Date(a.created_at || 0).getTime();
+                              const bd = new Date(b.created_at || 0).getTime();
+                              return bd - ad;
+                            })
+                            .slice(0, 5)
+                            .map((job) => (
+                            <button
+                              key={getJobKey(job)}
+                              type="button"
+                              className="w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 text-xs text-gray-700 hover:bg-gray-50"
+                              onClick={() => {
+                                const key = getJobKey(job);
+                                setUnreadJobIds((prev) => (Array.isArray(prev) ? prev.filter((id) => id !== key) : []));
+                                setIsNotificationsOpen(false);
+                                navigate("/notifications", {
+                                  state: {
+                                    selectedJobId: key,
+                                    examId: job.exam_id,
+                                  },
+                                });
+                              }}
                             >
                               <div className="flex items-center justify-between mb-0.5">
                                 <span className="font-medium text-gray-800 truncate">
@@ -505,7 +690,7 @@ const DashboardLayout = ({ children }) => {
                                     </>
                                   )}
                               </div>
-                            </div>
+                            </button>
                           ))
                         )}
                       </div>
@@ -513,7 +698,7 @@ const DashboardLayout = ({ children }) => {
                         type="button"
                         className="w-full px-3 py-2 text-left text-xs text-accent hover:bg-accent/5 border-t border-gray-100"
                         onClick={() => {
-                          setUnreadJobs(0);
+                          setUnreadJobIds([]);
                           setIsNotificationsOpen(false);
                           navigate("/notifications");
                         }}

@@ -898,7 +898,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       return 'Uploaded';
     }
 
-    return 'Not uploaded';
+    return 'Not submitted';
   };
 
   const LoadingView = () => (
@@ -1175,7 +1175,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
           ) : (
             <div className="w-full py-2 bg-gray-200 text-gray-500 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
               <XCircle className="w-4 h-4" />
-              <span className="font-medium">Not Uploaded</span>
+              <span className="font-medium">Not Submitted</span>
             </div>
           )}
         </div>
@@ -1817,7 +1817,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                                       ) : (
                                         <span className="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed">
                                           <XCircle className="w-4 h-4 mr-1.5" />
-                                          Not Uploaded
+                                          Not Submitted
                                         </span>
                                       )}
                                     </td>
