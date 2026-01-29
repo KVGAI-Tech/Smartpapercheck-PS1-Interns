@@ -1282,18 +1282,18 @@ const UploadQnAModal = ({
                         }}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
                       />
-                      <p className="text-xs text-gray-500">Enter number of rubric items (3-10, default: 3)</p>
+                      <p className="text-xs text-gray-500">Enter number of rubric items (1-10, default: 1)</p>
                       {(() => {
                         const rubricCount = parseInt(activeQuestion.num_rubric_items);
-                        const isInvalid = isNaN(rubricCount) || rubricCount < 3 || rubricCount > 10;
+                        const isInvalid = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
                         if (isInvalid && activeQuestion.num_rubric_items !== '') {
                           return (
                             <p className="text-xs text-amber-600 flex items-center gap-1">
                               <AlertCircle className="w-3 h-3" />
                               {isNaN(rubricCount) 
                                 ? 'Please enter a valid number' 
-                                : rubricCount < 3 
-                                  ? `Minimum 3 rubric items required (current: ${rubricCount})`
+                                : rubricCount < 1 
+                                  ? `Minimum 1 rubric item required (current: ${rubricCount})`
                                   : `Maximum 10 rubric items allowed (current: ${rubricCount})`
                               }
                             </p>
