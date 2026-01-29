@@ -31,7 +31,7 @@ const UploadQnAModal = ({
     answerBody: '',
     domain: 'General',
     isExisting: false,
-    num_rubric_items: 3,
+    num_rubric_items: 1,
     professorInstructions: '',
     aiCustomInstruction: ''
   }]);
@@ -246,7 +246,7 @@ const UploadQnAModal = ({
         domain: q.domain || 'General',
         isExisting: true, 
         questionNumber: q.question_number,
-        num_rubric_items: q.num_rubric_items || 3,
+        num_rubric_items: q.num_rubric_items || 1,
         professorInstructions: q.professor_instructions || '',
         aiCustomInstruction: ''
       }));
@@ -269,7 +269,7 @@ const UploadQnAModal = ({
         answerBody: '',
         domain: 'General',
         isExisting: false,
-        num_rubric_items: 3,
+        num_rubric_items: 1,
         professorInstructions: '',
         aiCustomInstruction: ''
       }]);
@@ -444,7 +444,7 @@ const UploadQnAModal = ({
 
       // Validate rubric items count
       const rubricCount = parseInt(q.num_rubric_items);
-      const invalidRubricCount = isNaN(rubricCount) || rubricCount < 3 || rubricCount > 10;
+      const invalidRubricCount = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
 
       return missingQuestionImage || missingQuestionText || missingAnswerImage || missingAnswerText || !q.marks || invalidRubricCount;
     });
@@ -455,10 +455,10 @@ const UploadQnAModal = ({
       
       // Check if the issue is specifically with rubric count
       const rubricCount = parseInt(invalidQuestion.num_rubric_items);
-      const invalidRubricCount = isNaN(rubricCount) || rubricCount < 3 || rubricCount > 10;
+      const invalidRubricCount = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
       
       if (invalidRubricCount) {
-        setError(`Number of rubric items must be between 3 and 10 (current: ${invalidQuestion.num_rubric_items || 'empty'})`);
+        setError(`Number of rubric items must be between 1 and 10 (current: ${invalidQuestion.num_rubric_items || 'empty'})`);
       } else {
         setError('Please fill in all required fields for each question');
       }
@@ -516,7 +516,7 @@ const UploadQnAModal = ({
               questionFormData.append('answer_text', q.answerText || '');
               
               // Add rubric configuration fields
-              questionFormData.append('num_rubric_items', (q.num_rubric_items || 3).toString());
+              questionFormData.append('num_rubric_items', (q.num_rubric_items || 1).toString());
               if (q.professorInstructions && q.professorInstructions.trim()) {
                 questionFormData.append('professor_instructions', q.professorInstructions.trim());
               }
