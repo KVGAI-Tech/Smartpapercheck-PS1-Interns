@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { studentApi } from './studentApi'; 
 import { StudentImportModal } from '../modals/ImportModal';
+import { API_BASE_URL } from '../../../../BaseURL';
 
 // Create a local storage service for students
 const studentsStorageService = {
@@ -46,6 +47,26 @@ const StudentsTab = ({
   const [error, setError] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
+
+  const handleExportStudents = () => {
+    try {
+      if (!courseId) throw new Error('Course ID is required');
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('No access token found');
+
+      const url = `${API_BASE_URL}/professors/courses/${courseId}/students/export?token=${encodeURIComponent(token)}`;
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `course_${courseId}_students.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Failed to export students:', err);
+    }
+  };
 
   // Function to update students list and also save to storage
   const updateAndSaveStudents = (newStudents) => {
@@ -369,15 +390,26 @@ const StudentsTab = ({
             onClick={() => setShowImportModal(true)}
             disabled={loading}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
-              rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+              rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Upload size={20} />
             Import
+          </button>
+          <button
+            onClick={handleExportStudents}
+            disabled={loading}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
+              rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Upload size={20} />
+            Export
           </button>
           <button
             onClick={handleOnAdd}
             disabled={loading}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white bg-accent rounded-lg 
-              hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
+              hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Plus size={20} />
             Add Student
           </button>

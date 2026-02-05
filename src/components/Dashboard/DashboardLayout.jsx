@@ -47,6 +47,7 @@ const DashboardLayout = ({ children }) => {
       return [];
     }
   });
+  const [notificationsWsConnected, setNotificationsWsConnected] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -73,7 +74,7 @@ const DashboardLayout = ({ children }) => {
     } catch {
       // ignore
     }
-  }, [notificationsBaselineAt]);
+  }, [notificationsBaselineAt, notificationsWsConnected]);
 
   const getJobKey = (job) => job?.job_id || job?.id || `${job?.exam_id || ""}-${job?.created_at || ""}`;
 
@@ -192,6 +193,7 @@ const DashboardLayout = ({ children }) => {
     // Polling fallback: if WS is missed, detect jobs that finished after page load and mark unread.
     const token = localStorage.getItem("accessToken");
     if (!token) return;
+    if (notificationsWsConnected) return;
 
     let isCancelled = false;
 
@@ -251,14 +253,14 @@ const DashboardLayout = ({ children }) => {
       }
     };
 
-    const interval = setInterval(tick, 8000);
+    const interval = setInterval(tick, 15000);
     tick();
 
     return () => {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [notificationsBaselineAt]);
+  }, [notificationsBaselineAt, notificationsWsConnected]);
 
   useEffect(() => {
     // Open a WebSocket for professor notifications when logged in
@@ -271,6 +273,7 @@ const DashboardLayout = ({ children }) => {
 
       ws.onopen = () => {
         console.log("Notifications WebSocket connected");
+        setNotificationsWsConnected(true);
       };
 
       ws.onmessage = (event) => {
@@ -325,11 +328,16 @@ const DashboardLayout = ({ children }) => {
         console.error("Notifications WebSocket error", e);
       };
 
+      ws.onclose = () => {
+        setNotificationsWsConnected(false);
+      };
+
       return () => {
         ws.close();
       };
-    } catch (e) {
-      console.error("Failed to open notifications WebSocket", e);
+    } catch (error) {
+      console.error("Failed to connect to notifications WebSocket:", error);
+      setNotificationsWsConnected(false);
     }
   }, []);
 

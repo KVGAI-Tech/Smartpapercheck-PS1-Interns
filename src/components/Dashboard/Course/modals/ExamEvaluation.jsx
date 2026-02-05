@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } fr
 import {
   Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader,
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
-  BarChart, RefreshCw, List, BarChart2, Star, History, X
+  BarChart, RefreshCw, List, BarChart2, Star, History, X, Download, Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
 import { Link } from 'react-router-dom';
+import Modal from '../tabs/GradingTab/Modal';
 // Breadcrumbs are already handled by the course/layout components; avoid duplicating them here.
 // import Breadcrumbs from '../../../ui/breadcrumbs';
 
@@ -203,6 +204,7 @@ const BatchProcessingIndicator = ({ completed, total }) => {
 const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -230,6 +232,16 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [activeEvaluationJobId, setActiveEvaluationJobId] = useState(null);
   const [activeEvaluationJob, setActiveEvaluationJob] = useState(null);
   const evaluationJobPollRef = useRef(null);
+  const evaluationJobPollDelayRef = useRef(4000);
+  const hasLoadedOnceRef = useRef(false);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalStudents, setTotalStudents] = useState(0);
+
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
   
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
@@ -255,7 +267,11 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
   const fetchEnrollments = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!hasLoadedOnceRef.current) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       setError(null);
 
       if (!examId) {
@@ -265,7 +281,9 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
+      const response = await fetch(
+        `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(page)}&page_size=${encodeURIComponent(pageSize)}`,
+        {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -273,7 +291,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         },
         mode: 'cors',
         signal: controller.signal
-      }).finally(() => clearTimeout(timeoutId));
+        }
+      ).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
@@ -285,6 +304,17 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       if (data && data.code === 200 && data.data && Array.isArray(data.data.enrollments)) {
         // Get exam full_marks from response if available
         const examFullMarks = data.data.exam?.full_marks || null;
+
+        const pag = data.data.pagination || null;
+        if (pag) {
+          const nextTotalPages = Number(pag.total_pages || 1) || 1;
+          const nextTotal = Number(pag.total || 0) || 0;
+          setTotalPages(nextTotalPages);
+          setTotalStudents(nextTotal);
+        } else {
+          setTotalPages(1);
+          setTotalStudents(data.data.enrollments.length);
+        }
 
         const formattedStudents = data.data.enrollments.map(student => {
           const status = student.status || 'not_uploaded';
@@ -311,6 +341,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         });
 
         setStudents(formattedStudents);
+        hasLoadedOnceRef.current = true;
       } else {
         throw new Error(`Invalid response format from API: ${JSON.stringify(data)}`);
       }
@@ -324,18 +355,18 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       } else {
         setError(error.message || "Failed to load student enrollments. Please try again later.");
       }
-
-      setStudents([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [examId, retryCount]);
+  }, [examId, retryCount, page, pageSize]);
 
   const stopEvaluationJobPolling = useCallback(() => {
     if (evaluationJobPollRef.current) {
       clearInterval(evaluationJobPollRef.current);
       evaluationJobPollRef.current = null;
     }
+    evaluationJobPollDelayRef.current = 4000;
   }, []);
 
   const fetchEvaluationJob = useCallback(async (jobId) => {
@@ -408,13 +439,94 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       }
     } catch (e) {
       console.error('Evaluation job polling error:', e);
+      evaluationJobPollDelayRef.current = Math.min(30000, (evaluationJobPollDelayRef.current || 4000) * 2);
+      stopEvaluationJobPolling();
+      if (jobId) {
+        evaluationJobPollRef.current = setInterval(() => {
+          pollEvaluationJob(jobId);
+        }, evaluationJobPollDelayRef.current);
+      }
+    }
+  }, [fetchEvaluationJob, syncUiWithEvaluationJob, stopEvaluationJobPolling, showToast, clearSelection, fetchEnrollments]);
+
+  const cancelEvaluationJob = useCallback(async () => {
+    if (!activeEvaluationJobId) return;
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      showToast('Authentication required', 'error', 6000);
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${API_BASE_URL}/exams/professor/jobs/evaluations/${activeEvaluationJobId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors'
+      });
+
+      if (!resp.ok) {
+        const errorText = await resp.text().catch(() => 'Unknown error');
+        throw new Error(`API error (${resp.status}): ${errorText}`);
+      }
+
       stopEvaluationJobPolling();
       setBatchEvaluating(false);
       setActiveEvaluationJobId(null);
       setActiveEvaluationJob(null);
-      showToast(e.message || 'Failed to track evaluation job', 'error', 6000);
+      showToast('Evaluation stopped', 'success', 4000);
+      await fetchEnrollments();
+    } catch (e) {
+      console.error('Cancel evaluation job error:', e);
+      showToast(e.message || 'Failed to stop evaluation', 'error', 6000);
     }
-  }, [fetchEvaluationJob, syncUiWithEvaluationJob, stopEvaluationJobPolling, showToast, clearSelection, fetchEnrollments]);
+  }, [activeEvaluationJobId, stopEvaluationJobPolling, showToast, fetchEnrollments]);
+
+  const resumeEvaluationJob = useCallback(async (jobIdToResume) => {
+    const jobId = jobIdToResume || activeEvaluationJobId;
+    if (!jobId) return;
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      showToast('Authentication required', 'error', 6000);
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${API_BASE_URL}/exams/professor/jobs/evaluations/${jobId}/resume`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors'
+      });
+
+      if (!resp.ok) {
+        const errorText = await resp.text().catch(() => 'Unknown error');
+        throw new Error(`API error (${resp.status}): ${errorText}`);
+      }
+
+      const data = await resp.json();
+      const newJobId = data?.data?.job_id;
+      if (!newJobId) {
+        throw new Error(data?.message || 'Failed to resume evaluation');
+      }
+
+      setActiveEvaluationJobId(newJobId);
+      setBatchEvaluating(true);
+      stopEvaluationJobPolling();
+      evaluationJobPollRef.current = setInterval(() => {
+        pollEvaluationJob(newJobId);
+      }, 4000);
+      await pollEvaluationJob(newJobId);
+      showToast('Evaluation resumed', 'success', 4000);
+    } catch (e) {
+      console.error('Resume evaluation job error:', e);
+      showToast(e.message || 'Failed to resume evaluation', 'error', 6000);
+    }
+  }, [activeEvaluationJobId, stopEvaluationJobPolling, pollEvaluationJob, showToast]);
 
   const startEvaluationJob = useCallback(async (enrollmentIds, forceReevaluate) => {
     if (!examId) {
@@ -492,16 +604,24 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         const data = await response.json();
         const jobs = Array.isArray(data?.data?.jobs) ? data.data.jobs : [];
         const active = jobs.find(j => j && (j.status === 'pending' || j.status === 'running'));
-        if (!active?.id) return;
+        if (active?.id) {
+          setActiveEvaluationJobId(active.id);
+          setBatchEvaluating(true);
+          stopEvaluationJobPolling();
+          evaluationJobPollRef.current = setInterval(() => {
+            pollEvaluationJob(active.id);
+          }, 4000);
 
-        setActiveEvaluationJobId(active.id);
-        setBatchEvaluating(true);
-        stopEvaluationJobPolling();
-        evaluationJobPollRef.current = setInterval(() => {
-          pollEvaluationJob(active.id);
-        }, 4000);
+          await pollEvaluationJob(active.id);
+          return;
+        }
 
-        await pollEvaluationJob(active.id);
+        const interrupted = jobs.find(j => j && (j.status === 'interrupted'));
+        if (interrupted?.id) {
+          setActiveEvaluationJobId(interrupted.id);
+          setActiveEvaluationJob(interrupted);
+          setBatchEvaluating(false);
+        }
       } catch (e) {
         console.error('Failed to resume evaluation job:', e);
       }
@@ -525,6 +645,10 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   useEffect(() => {
     fetchEnrollments();
   }, [fetchEnrollments]);
+
+  useEffect(() => {
+    clearSelection();
+  }, [page, pageSize, clearSelection]);
 
   const handleSort = (key) => {
     setSortConfig(prev => ({
@@ -714,6 +838,76 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     setShowRecheckWindowModal(true);
   }, [selectedEnrollmentIds, showToast]);
 
+  const handleOpenExport = useCallback(() => {
+    if (selectedEnrollmentIds.size === 0) {
+      showToast('Please select at least one student', 'warning');
+      return;
+    }
+
+    const selected = students.filter(s => selectedEnrollmentIds.has(s.enrollment_id));
+    const evaluated = selected.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined);
+    if (evaluated.length === 0) {
+      showToast('Please select evaluated students only', 'warning');
+      return;
+    }
+
+    setShowExportModal(true);
+  }, [selectedEnrollmentIds, showToast, students]);
+
+  const handleDownloadExport = useCallback(async () => {
+    if (!examId) {
+      showToast('Exam ID is missing', 'error');
+      return;
+    }
+
+    const selected = students.filter(s => selectedEnrollmentIds.has(s.enrollment_id));
+    const evaluated = selected.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined);
+    if (evaluated.length === 0) {
+      showToast('Please select evaluated students only', 'warning');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const resp = await fetch(`${API_BASE_URL}/exams/${examId}/evaluations/export/download`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ enrollment_ids: evaluated.map(s => s.enrollment_id) }),
+        mode: 'cors'
+      });
+
+      if (!resp.ok) {
+        const errorText = await resp.text().catch(() => 'Unknown error');
+        throw new Error(`API error (${resp.status}): ${errorText}`);
+      }
+
+      const blob = await resp.blob();
+      const disposition = resp.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename="?([^\"]+)"?/i);
+      const filename = match?.[1] || (blob.type === 'application/pdf' ? 'export.pdf' : 'export.zip');
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      setShowExportModal(false);
+      showToast('Export downloaded', 'success');
+    } catch (e) {
+      console.error('Export download error:', e);
+      showToast(e.message || 'Failed to download export', 'error', 6000);
+    } finally {
+      setExporting(false);
+    }
+  }, [examId, students, selectedEnrollmentIds, showToast]);
+
   const handleEvaluate = async (student) => {
     try {
       if (!student || !student.enrollment_id) {
@@ -829,7 +1023,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   };
   
   const stats = useMemo(() => {
-    const total = students.length;
+    const total = totalStudents || students.length;
 
     const evaluated = students.filter(
       (s) => s.evaluation_status === 'completed' || s.marks_obtained !== null
@@ -862,7 +1056,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       recheckRequested,
       averageScore,
     };
-  }, [students]);
+  }, [students, totalStudents]);
 
   const renderSortIndicator = (key) => {
     if (sortConfig.key !== key) return null;
@@ -875,7 +1069,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const handleRetry = useCallback(() => {
     setRetryCount(prev => prev + 1);
     setError(null);
-    setLoading(true);
+    setRefreshing(true);
   }, []);
 
   const getUploadedBy = (student) => {
@@ -1297,6 +1491,12 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     return `Evaluate / Re-evaluate (${selectedCount})`;
   };
 
+  const getExportIndicator = () => {
+    if (exporting) return 'Exporting...';
+    if (selectedCount === 0) return 'Export';
+    return `Export (${selectedCount})`;
+  };
+
   const getProgressIndicator = () => {
     if (!batchEvaluating) return 'Evaluate All';
     
@@ -1417,56 +1617,99 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
               transition={{ delay: 0.4 }}
               className="bg-white rounded-xl shadow-sm p-4 md:p-5 mt-4"
             >
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
-                {/* Left: search + status filter */}
-                <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3 min-w-0">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search by name or student ID..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
-                    />
+              <div className="flex flex-col gap-4">
+                {/* Row 1: search + filters + view + pagination */}
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
+                  <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3 min-w-0">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search by name or student ID..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                      />
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                      >
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Evaluated</option>
+                      </select>
+                      <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
                   </div>
-                  <div className="relative">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="completed">Evaluated</option>
-                    </select>
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+
+                  <div className="flex items-center gap-3 justify-start lg:justify-end">
+                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-accent text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                      >
+                        <List className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-accent text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                      >
+                        <BarChart2 className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPage(1);
+                          setPageSize(Number(e.target.value) || 50);
+                        }}
+                        className="px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors text-sm"
+                        aria-label="Rows per page"
+                      >
+                        <option value={25}>25 / page</option>
+                        <option value={50}>50 / page</option>
+                        <option value={100}>100 / page</option>
+                      </select>
+
+                      <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                        <button
+                          type="button"
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          disabled={loading || refreshing || page <= 1}
+                          className="px-3 py-2.5 text-sm text-gray-700 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Prev
+                        </button>
+                        <div className="px-3 py-2.5 text-sm text-gray-600 bg-white">
+                          {page} / {Math.max(1, totalPages)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPage((p) => Math.min(Math.max(1, totalPages), p + 1))}
+                          disabled={loading || refreshing || page >= totalPages}
+                          className="px-3 py-2.5 text-sm text-gray-700 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Center: view mode + main actions */}
-                <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-center">
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                    <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-accent text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                    >
-                      <List className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-accent text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                    >
-                      <BarChart2 className="w-5 h-5" />
-                    </button>
-                  </div>
-
+                {/* Row 2: main actions */}
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
+                  <div className="flex flex-wrap items-center gap-3 justify-start">
                   <NavButton
                     icon={RefreshCw}
                     label="Edit Rubrics"
                     onClick={async () => {
                       try {
-                        setLoading(true);
+                        setRefreshing(true);
                         const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
                           headers: {
                             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -1486,7 +1729,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                       } catch (error) {
                         showToast('Error loading questions: ' + error.message, 'error');
                       } finally {
-                        setLoading(false);
+                        setRefreshing(false);
                       }
                     }}
                     variant="secondary"
@@ -1509,28 +1752,65 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                   />
 
                   <NavButton
+                    icon={exporting ? Loader : Download}
+                    label={getExportIndicator()}
+                    onClick={handleOpenExport}
+                    disabled={publishing || batchEvaluating || exporting || selectedCount === 0}
+                    variant="secondary"
+                  />
+
+                  <NavButton
                     icon={publishing ? Loader : CheckCircle}
                     label={getPublishIndicator()}
                     onClick={handlePublishSelected}
                     disabled={publishing || selectedCount === 0}
                     variant="primary"
                   />
+                  </div>
+                  <div className="text-xs text-gray-500 hidden lg:block">
+                    Showing {students.length} of {stats.total}
+                  </div>
                 </div>
-
-                {/* Right side intentionally empty for now (selection handled via table checkbox) */}
               </div>
 
               {batchEvaluating && (
-                <BatchProcessingIndicator 
-                  completed={evaluationProgress.completed} 
-                  total={evaluationProgress.total} 
-                />
+                <div className="space-y-3">
+                  <BatchProcessingIndicator 
+                    completed={evaluationProgress.completed} 
+                    total={evaluationProgress.total} 
+                  />
+                  <div className="flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={cancelEvaluationJob}
+                      className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 text-sm"
+                    >
+                      Stop evaluation
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!batchEvaluating && activeEvaluationJob && String(activeEvaluationJob.status || '').toLowerCase() === 'interrupted' && (
+                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start justify-between gap-3">
+                  <div className="text-sm text-amber-900">
+                    <div className="font-medium">Evaluation was interrupted</div>
+                    <div className="text-amber-800/90 mt-1">Resume evaluation to continue processing remaining submissions.</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => resumeEvaluationJob(activeEvaluationJob?.id)}
+                    className="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 text-sm"
+                  >
+                    Resume
+                  </button>
+                </div>
               )}
               
             </motion.div>
 
             <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden mt-4 pb-2">
-              {loading ? (
+              {loading && !hasLoadedOnceRef.current ? (
                 <LoadingView />
               ) : error ? (
                 <ErrorState
@@ -1885,6 +2165,42 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         type={toast.type}
         onClose={hideToast}
       />
+
+      <Modal
+        isOpen={showExportModal}
+        onClose={() => {
+          if (!exporting) setShowExportModal(false);
+        }}
+        title={`Export (${selectedCount})`}
+        type="export"
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-gray-700">
+            Choose how you want to export evaluated students.
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleDownloadExport}
+              disabled={exporting}
+              className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border transition-colors
+                ${exporting ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-800 border-gray-200 hover:bg-gray-50'}`}
+            >
+              <Download className="w-4 h-4" />
+              <span className="font-medium">Download</span>
+            </button>
+
+            <button
+              disabled
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+              title="Email export will be added later"
+            >
+              <Send className="w-4 h-4" />
+              <span className="font-medium">Send (coming soon)</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
       
       <AnimatePresence>
         {showRecheckWindowModal && (
