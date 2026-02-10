@@ -19,6 +19,7 @@ import CourseEvaluations from "./components/CourseEvaluations";
 import StudentExamDetails from "./components/StudentExamDetails";
 import ProfessorRecheckDetail from "./components/Dashboard/Course/ProfessorRecheckDetail";
 import ProfessorExamEvaluationsPage from "./components/Dashboard/Course/ProfessorExamEvaluationsPage";
+import ProfessorExamEvaluationsDashboardPage from "./components/Dashboard/Course/ProfessorExamEvaluationsDashboardPage";
 import ProfessorNotificationsPage from "./components/Dashboard/ProfessorNotificationsPage";
 import PoliciesPage from "./components/PoliciesPage";
 
@@ -97,6 +98,16 @@ function App() {
               <RoleRoute requiredRole="professor">
                 <DashboardLayout>
                   <ProfessorExamEvaluationsPage />
+                </DashboardLayout>
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/courses/:courseId/exams/:examId/evaluations/dashboard"
+            element={
+              <RoleRoute requiredRole="professor">
+                <DashboardLayout>
+                  <ProfessorExamEvaluationsDashboardPage />
                 </DashboardLayout>
               </RoleRoute>
             }

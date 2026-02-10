@@ -250,6 +250,24 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
 
+  const dashboardUrl = useMemo(() => {
+    if (!courseId || !examId) return null;
+    return `/courses/${courseId}/exams/${examId}/evaluations/dashboard`;
+  }, [courseId, examId]);
+
+  const DashboardLink = useMemo(() => {
+    if (!dashboardUrl) return null;
+    return (
+      <Link
+        to={dashboardUrl}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm text-gray-700 transition-colors"
+      >
+        <BarChart2 className="w-4 h-4 text-gray-500" />
+        <span>Open Evaluation Dashboard</span>
+      </Link>
+    );
+  }, [dashboardUrl]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setPageLoaded(true);
@@ -1263,7 +1281,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       >
         <div className="p-6 flex-1">
           <div className="flex items-center justify-between mb-4">
-            <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white font-medium text-lg shadow-md">
+            <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white font-medium shadow-sm group-hover:shadow-md transition-shadow mr-3">
               {student.student_name?.charAt(0) || '?'}
             </div>
             <StatusBadge status={status} />
@@ -1819,6 +1837,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                     disabled={publishing || selectedCount === 0}
                     variant="primary"
                   />
+                  {DashboardLink}
                   </div>
                   <div className="text-xs text-gray-500 hidden lg:block">
                     Showing {students.length} of {stats.total}
