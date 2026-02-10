@@ -242,6 +242,10 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  const [showModelSelectModal, setShowModelSelectModal] = useState(false);
+  const [pendingEvaluationAction, setPendingEvaluationAction] = useState(null);
+  const [pendingEvaluationPayload, setPendingEvaluationPayload] = useState(null);
   
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
@@ -528,7 +532,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     }
   }, [activeEvaluationJobId, stopEvaluationJobPolling, pollEvaluationJob, showToast]);
 
-  const startEvaluationJob = useCallback(async (enrollmentIds, forceReevaluate) => {
+  const startEvaluationJob = useCallback(async (enrollmentIds, forceReevaluate, model) => {
     if (!examId) {
       throw new Error('Exam ID is missing');
     }
@@ -551,6 +555,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       body: JSON.stringify({
         enrollment_ids: enrollmentIds,
         force_reevaluate: Boolean(forceReevaluate),
+        model: model || 'current',
       }),
       mode: 'cors'
     });
@@ -577,6 +582,57 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     await pollEvaluationJob(jobId);
     return jobId;
   }, [examId, pollEvaluationJob, stopEvaluationJobPolling]);
+
+  const openModelSelector = useCallback((action, payload) => {
+    setPendingEvaluationAction(action);
+    setPendingEvaluationPayload(payload || null);
+    setShowModelSelectModal(true);
+  }, []);
+
+  const handleModelSelect = useCallback(async (model) => {
+    try {
+      setShowModelSelectModal(false);
+      const action = pendingEvaluationAction;
+      const payload = pendingEvaluationPayload;
+      setPendingEvaluationAction(null);
+      setPendingEvaluationPayload(null);
+
+      if (!action) return;
+
+      if (action === 'evaluate_single') {
+        const student = payload?.student;
+        if (!student?.enrollment_id) throw new Error('Invalid student');
+        setEvaluationError(prev => ({ ...prev, [student.enrollment_id]: null }));
+        showToast('Evaluation started...', 'info', 5000);
+        await startEvaluationJob([student.enrollment_id], false, model);
+        return;
+      }
+
+      if (action === 'evaluate_all') {
+        const enrollmentIds = payload?.enrollmentIds || [];
+        if (!Array.isArray(enrollmentIds) || enrollmentIds.length === 0) {
+          showToast('No pending uploaded submissions to evaluate.', 'warning', 4000);
+          return;
+        }
+        showToast('Evaluation started...', 'info', 5000);
+        await startEvaluationJob(enrollmentIds, false, model);
+        return;
+      }
+
+      if (action === 'reevaluate_selected') {
+        const enrollmentIds = payload?.enrollmentIds || [];
+        if (!Array.isArray(enrollmentIds) || enrollmentIds.length === 0) {
+          showToast('Please select at least one student', 'warning');
+          return;
+        }
+        showToast('Re-evaluation started...', 'info', 5000);
+        await startEvaluationJob(enrollmentIds, true, model);
+      }
+    } catch (e) {
+      console.error('Model select evaluation error:', e);
+      showToast(e.message || 'Failed to start evaluation', 'error', 6000);
+    }
+  }, [pendingEvaluationAction, pendingEvaluationPayload, showToast, startEvaluationJob]);
 
   useEffect(() => {
     return () => {
@@ -914,9 +970,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         throw new Error('Invalid student');
       }
 
-      setEvaluationError(prev => ({ ...prev, [student.enrollment_id]: null }));
-      showToast('Evaluation started...', 'info', 5000);
-      await startEvaluationJob([student.enrollment_id], false);
+      openModelSelector('evaluate_single', { student });
     } catch (error) {
       console.error("Evaluation error:", error);
 
@@ -955,8 +1009,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         return;
       }
 
-      showToast('Evaluation started...', 'info', 5000);
-      await startEvaluationJob(candidates.map(s => s.enrollment_id), false);
+      openModelSelector('evaluate_all', { enrollmentIds: candidates.map(s => s.enrollment_id) });
     } catch (e) {
       console.error('Evaluate all error:', e);
       showToast(e.message || 'Failed to evaluate all students', 'error', 6000);
@@ -992,7 +1045,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         showToast('Re-evaluation started...', 'info', 5000);
       }
 
-      await startEvaluationJob(selected.map(s => s.enrollment_id), true);
+      openModelSelector('reevaluate_selected', { enrollmentIds: selected.map(s => s.enrollment_id) });
     } catch (e) {
       console.error('Re-evaluate selected error:', e);
       showToast(e.message || 'Failed to re-evaluate selected students', 'error', 6000);
@@ -2203,6 +2256,58 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       </Modal>
       
       <AnimatePresence>
+        {showModelSelectModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowModelSelectModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Select AI Model</h3>
+                  <p className="mt-1 text-sm text-gray-500">Choose which AI model to use for this evaluation run.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModelSelectModal(false)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => handleModelSelect('current')}
+                  className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium text-gray-900">Current Model</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Use the existing evaluation model/provider.</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleModelSelect('gemini')}
+                  className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium text-gray-900">Gemini</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Use Google Gemini for evaluation.</div>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
         {showRecheckWindowModal && (
           <motion.div
             initial={{ opacity: 0 }}
