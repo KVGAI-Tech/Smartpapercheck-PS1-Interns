@@ -648,7 +648,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       const resp = await fetch(
         `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(
           page
-        )}&page_size=${encodeURIComponent(pageSize)}`,
+        )}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(selectedModel)}`,
         {
           method: "GET",
           headers: {
@@ -693,6 +693,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
           marks_obtained: hasMarks ? student.marks_obtained : null,
           max_marks: student.max_marks || examFullMarks || 0,
           status: student.status || "not_uploaded",
+          evaluation_model: student.evaluation_model || null,
         };
       });
 
@@ -704,7 +705,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [examId, page, pageSize, students.length]);
+  }, [examId, page, pageSize, selectedModel, students.length]);
 
   useEffect(() => {
     fetchEnrollments();
@@ -1045,6 +1046,11 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
     showToast(`Model applied: ${displayModelName(model)}`, "success");
   }, [pendingModelSelection, showToast]);
 
+  useEffect(() => {
+    // When model changes, refresh marks list and previews to match the chosen model.
+    fetchEnrollments();
+  }, [selectedModel, fetchEnrollments]);
+
   const rerunSingleStudent = useCallback(
     async (enrollmentId) => {
       if (!enrollmentId) return;
@@ -1153,12 +1159,12 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
   );
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900">
+    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 text-[13px]">
       <div className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur">
         <div className="px-5 md:px-7 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-xs text-slate-500">
+              <div className="text-[11px] text-slate-500">
                 Model: <span className="font-medium text-slate-700">{displayModelName(selectedModel)}</span>
                 {activeEvaluationJobId && (
                   <span className="ml-2">
@@ -1173,7 +1179,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
               <button
                 type="button"
                 onClick={() => setShowSettings(true)}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm flex items-center gap-2"
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[13px] flex items-center gap-2"
               >
                 <Settings className="w-4 h-4 text-slate-500" />
                 <span>Settings</span>
@@ -1181,7 +1187,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[13px]"
               >
                 Back
               </button>
@@ -1196,7 +1202,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search students (name / roll no.)"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
             </div>
@@ -1207,7 +1213,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-200 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-accent/20"
                 >
                   <option value="all">All</option>
                   <option value="evaluated">Evaluated</option>
@@ -1223,7 +1229,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
                   value={tagFilter}
                   onChange={(e) => setTagFilter(e.target.value)}
                   placeholder="Filter by tag (e.g. low performer)"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
             </div>
@@ -1561,6 +1567,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
             examId={examId}
             courseId={courseId}
             enrollmentId={selectedEnrollmentId}
+            model={selectedModel}
           />
         )}
       </Suspense>

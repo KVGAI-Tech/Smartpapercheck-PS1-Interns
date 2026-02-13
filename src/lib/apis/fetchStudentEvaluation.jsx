@@ -5,6 +5,7 @@ import fetchQuestions from "./fetchQuestions";
 export default function fetchStudentEvaluation(
   examId,
   enrollmentId,
+  model,
   setAnswerScriptPages,
   setFeedbackEdits,
   setError,
@@ -17,15 +18,20 @@ export default function fetchStudentEvaluation(
   if (token) {
     setLoading(true);
     axios
-      .get(`${API_BASE_URL}/exams/${examId}/feedback/${enrollmentId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
+      .get(
+        `${API_BASE_URL}/exams/${examId}/feedback/${enrollmentId}${
+          model ? `?model=${encodeURIComponent(model)}` : ""
+        }`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      )
       .then((response) => {
         console.log("Student evaluation API response:", response.data);
-        
+
         if (response.data && response.data.code === 200 && response.data.data) {
           const data = response.data.data;
           setStudentData(data);

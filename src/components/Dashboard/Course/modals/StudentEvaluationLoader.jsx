@@ -57,6 +57,7 @@ const StudentEvaluationLoader = ({
   examId,
   enrollmentId,
   courseId,
+  model,
   onClose,
   onSaveFeedback = () => {},
   onError = () => {},
@@ -129,6 +130,7 @@ const StudentEvaluationLoader = ({
       fetchStudentEvaluation(
         examId,
         enrollmentId,
+        model,
         setAnswerScriptPages,
         setFeedbackEdits,
         setError,
@@ -144,7 +146,7 @@ const StudentEvaluationLoader = ({
       setLoading(false);
       onError(errorMessage);
     }
-  }, [examId, enrollmentId, onError]);
+  }, [examId, enrollmentId, model, onError]);
 
   useEffect(() => {
     if (!answerScriptPages.length) {
