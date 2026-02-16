@@ -950,8 +950,6 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
         if (pct === 100) tags.push("Perfect");
         if (pct < 40) tags.push("Needs attention");
       }
-      const model = normalizeModel(student?.evaluation_model);
-      if (model) tags.push(`Model: ${displayModelName(model)}`);
       return tags;
     },
     [maxMarks]
