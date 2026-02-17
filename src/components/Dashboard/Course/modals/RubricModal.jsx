@@ -939,15 +939,31 @@ const RubricModal = ({
         const loadingToast = toast.loading('Generating smart rubric...');
 
         try {
+            const hasExisting = hasRubric(questionNumber);
             const response = await fetch(
-                `${API_BASE_URL}/exams/${examId}/questions/${questionNumber}/rubric`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                        'Content-Type': 'application/json'
+                hasExisting
+                    ? `${API_BASE_URL}/exams/${examId}/questions/${questionNumber}/rubric-settings`
+                    : `${API_BASE_URL}/exams/${examId}/questions/${questionNumber}/rubric`,
+                hasExisting
+                    ? {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            num_rubric_items: numRubricItems,
+                            professor_instructions: profInstructions.trim() || undefined,
+                            regenerate_rubric: true
+                        })
                     }
-                }
+                    : {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
             );
 
             await new Promise(resolve => setTimeout(resolve, 3000));
@@ -960,9 +976,19 @@ const RubricModal = ({
 
             const data = await response.json();
             if (data.code === 200) {
-                setRubricItems(data.data.rubric_items || []);
-                setFeedback(data.data.problem_feedback || '');
+                const rubricPayload = (data?.data?.rubric && data.data.rubric.rubric_items)
+                    ? data.data.rubric
+                    : data.data;
+
+                setRubricItems(rubricPayload?.rubric_items || []);
+                setFeedback(rubricPayload?.problem_feedback || '');
                 setShowRubricEditor(true);
+                if (data?.data?.num_rubric_items) {
+                    setNumRubricItems(data.data.num_rubric_items);
+                }
+                if (typeof data?.data?.professor_instructions === 'string') {
+                    setProfInstructions(data.data.professor_instructions);
+                }
                 toast.success('Rubric generated successfully!', { id: loadingToast });
             } else {
                 throw new Error(data.message || 'Failed to generate rubric');
