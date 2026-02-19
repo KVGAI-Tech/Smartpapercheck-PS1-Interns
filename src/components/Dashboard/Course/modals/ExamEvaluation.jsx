@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } fr
 import {
   Search, Users, CheckCircle, XCircle, Eye, ArrowLeft, Loader,
   Clock, AlertTriangle, Filter, ArrowUp, ArrowDown, PlayCircle,
-  BarChart, RefreshCw, List, BarChart2, Star, History, X, Download, Send
+  BarChart, RefreshCw, List, BarChart2, Star, History, X, Download, Send, Cpu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
@@ -62,6 +62,101 @@ const StatusBadge = ({ status }) => {
     </span>
   );
 };
+
+const NavButton = ({ icon: Icon, label, onClick, disabled, variant = "primary" }) => {
+  const getStyles = () => {
+    switch (variant) {
+      case "primary":
+        return {
+          base: disabled
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-accent text-white hover:shadow-lg',
+          hover: !disabled && 'hover:scale-105',
+          tap: !disabled && 'active:scale-95'
+        };
+      case "secondary":
+        return {
+          base: disabled
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+          hover: !disabled && 'hover:scale-105',
+          tap: !disabled && 'active:scale-95'
+        };
+      case "success":
+        return {
+          base: disabled
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-accent text-white hover:shadow-lg',
+          hover: !disabled && 'hover:scale-105',
+          tap: !disabled && 'active:scale-95'
+        };
+      default:
+        return {
+          base: 'bg-gray-100 text-gray-700',
+          hover: !disabled && 'hover:bg-gray-200',
+          tap: !disabled && 'active:bg-gray-300'
+        };
+    }
+  };
+
+  const styles = getStyles();
+
+  return (
+    <motion.button
+      whileHover={styles.hover ? { scale: 1.05 } : {}}
+      whileTap={styles.tap ? { scale: 0.95 } : {}}
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-all duration-300 ${styles.base}`}
+    >
+      <Icon className="w-5 h-5" />
+      <span className="font-medium">{label}</span>
+    </motion.button>
+  );
+};
+
+const StatCard = React.memo(({ icon: Icon, label, value, color, percentage }) => {
+  const gradients = {
+    blue: "bg-white border-gray-200",
+    green: "bg-white border-gray-200",
+    yellow: "bg-white border-gray-200",
+    purple: "bg-white border-gray-200"
+  };
+
+  const iconColors = {
+    blue: "bg-accent",
+    green: "bg-accent",
+    yellow: "bg-accent/70",
+    purple: "bg-accent"
+  };
+
+  return (
+    <motion.div
+      variants={fadeInUp}
+      initial={false}
+      animate="visible"
+      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+      className={`${gradients[color]} rounded-xl p-6 flex items-center justify-between shadow-sm border`}
+    >
+      <div>
+        <p className="text-sm text-gray-600 mb-1">{label}</p>
+        <div className="flex items-baseline gap-2">
+          <p className="text-2xl font-bold text-gray-900">
+            <AnimatedCounter value={value} />
+          </p>
+          {percentage && (
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/50 text-gray-700">
+              {percentage}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className={`w-12 h-12 ${iconColors[color]} text-white rounded-full flex items-center justify-center shadow-md`}>
+        <Icon className="w-6 h-6" />
+      </div>
+    </motion.div>
+  );
+});
 
 const Toast = ({ show, message, type = 'success', onClose }) => {
   useEffect(() => {
@@ -206,8 +301,12 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [overallProgress, setOverallProgress] = useState(null);
+  const [evaluationStats, setEvaluationStats] = useState(null);
+  const lastOverallProgressRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [resultsModel, setResultsModel] = useState('current');
   const [sortConfig, setSortConfig] = useState({ key: 'student_name', direction: 'asc' });
   const [evaluatingStudent, setEvaluatingStudent] = useState(null);
   const [batchEvaluating, setBatchEvaluating] = useState(false);
@@ -250,6 +349,11 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const API_TIMEOUT = 600000;
   const MAX_RETRIES = 2;
 
+  const localResultsModelKey = useMemo(
+    () => `eval_results_model:${examId}`,
+    [examId]
+  );
+
   const dashboardUrl = useMemo(() => {
     if (!courseId || !examId) return null;
     return `/courses/${courseId}/exams/${examId}/evaluations/dashboard`;
@@ -274,6 +378,25 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(localResultsModelKey);
+      if (raw === 'gemini' || raw === 'current') {
+        setResultsModel(raw);
+      }
+    } catch {
+      // ignore
+    }
+  }, [localResultsModelKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(localResultsModelKey, resultsModel);
+    } catch {
+      // ignore
+    }
+  }, [localResultsModelKey, resultsModel]);
 
   const showToast = useCallback((message, type = 'success', duration = 3000) => {
     setToast({ show: true, message, type, duration });
@@ -304,7 +427,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
       const response = await fetch(
-        `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(page)}&page_size=${encodeURIComponent(pageSize)}`,
+        `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(page)}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(resultsModel)}`,
         {
         method: 'GET',
         headers: {
@@ -381,7 +504,91 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [examId, retryCount, page, pageSize]);
+  }, [examId, retryCount, page, pageSize, resultsModel]);
+
+  const fetchOverallProgress = useCallback(async () => {
+    try {
+      if (!examId || !courseId) return;
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const resp = await fetch(
+        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/evaluation-stats?marks_mode=marks&bin_size=10`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors',
+        }
+      );
+
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const stats = data?.data || null;
+      if (stats) {
+        const nextKpi = stats.kpi || null;
+
+        setEvaluationStats((prev) => {
+          if (!prev && !stats) return prev;
+          const prevKpi = prev?.kpi || null;
+          const prevDist = prev?.distribution || null;
+          const nextDist = stats?.distribution || null;
+
+          const kpiEqual =
+            (!prevKpi && !nextKpi) ||
+            (prevKpi && nextKpi &&
+              prevKpi.total_students === nextKpi.total_students &&
+              prevKpi.evaluated_students === nextKpi.evaluated_students &&
+              prevKpi.uploaded_students === nextKpi.uploaded_students &&
+              prevKpi.not_uploaded_students === nextKpi.not_uploaded_students &&
+              prevKpi.pending_evaluation_students === nextKpi.pending_evaluation_students &&
+              prevKpi.average_score === nextKpi.average_score &&
+              prevKpi.percent_complete === nextKpi.percent_complete);
+
+          const distEqual =
+            (!prevDist && !nextDist) ||
+            (prevDist && nextDist &&
+              prevDist.mode === nextDist.mode &&
+              prevDist.bin_size === nextDist.bin_size &&
+              prevDist.max_marks === nextDist.max_marks &&
+              prevDist.count === nextDist.count &&
+              prevDist.avg === nextDist.avg &&
+              prevDist.min === nextDist.min &&
+              prevDist.max === nextDist.max &&
+              prevDist.std_dev === nextDist.std_dev &&
+              JSON.stringify(prevDist.bins || []) === JSON.stringify(nextDist.bins || []));
+
+          return kpiEqual && distEqual ? prev : stats;
+        });
+
+        setOverallProgress((prev) => {
+          if (!prev && !nextKpi) return prev;
+          if (!prev || !nextKpi) return nextKpi;
+          const equal =
+            prev.total_students === nextKpi.total_students &&
+            prev.evaluated_students === nextKpi.evaluated_students &&
+            prev.uploaded_students === nextKpi.uploaded_students &&
+            prev.not_uploaded_students === nextKpi.not_uploaded_students &&
+            prev.pending_evaluation_students === nextKpi.pending_evaluation_students &&
+            prev.average_score === nextKpi.average_score &&
+            prev.percent_complete === nextKpi.percent_complete;
+          return equal ? prev : nextKpi;
+        });
+      }
+    } catch (e) {
+      // ignore; stats can fall back to pagination totals
+    }
+  }, [courseId, examId]);
+
+  useEffect(() => {
+    if (overallProgress) lastOverallProgressRef.current = overallProgress;
+  }, [overallProgress]);
+
+  useEffect(() => {
+    fetchOverallProgress();
+  }, [fetchOverallProgress]);
 
   const stopEvaluationJobPolling = useCallback(() => {
     if (evaluationJobPollRef.current) {
@@ -458,6 +665,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
         clearSelection();
         await fetchEnrollments();
+        await fetchOverallProgress();
       }
     } catch (e) {
       console.error('Evaluation job polling error:', e);
@@ -469,7 +677,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         }, evaluationJobPollDelayRef.current);
       }
     }
-  }, [fetchEvaluationJob, syncUiWithEvaluationJob, stopEvaluationJobPolling, showToast, clearSelection, fetchEnrollments]);
+  }, [fetchEvaluationJob, syncUiWithEvaluationJob, stopEvaluationJobPolling, showToast, clearSelection, fetchEnrollments, fetchOverallProgress]);
 
   const cancelEvaluationJob = useCallback(async () => {
     if (!activeEvaluationJobId) return;
@@ -500,11 +708,12 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       setActiveEvaluationJob(null);
       showToast('Evaluation stopped', 'success', 4000);
       await fetchEnrollments();
+      await fetchOverallProgress();
     } catch (e) {
       console.error('Cancel evaluation job error:', e);
       showToast(e.message || 'Failed to stop evaluation', 'error', 6000);
     }
-  }, [activeEvaluationJobId, stopEvaluationJobPolling, showToast, fetchEnrollments]);
+  }, [activeEvaluationJobId, stopEvaluationJobPolling, showToast, fetchEnrollments, fetchOverallProgress]);
 
   const resumeEvaluationJob = useCallback(async (jobIdToResume) => {
     const jobId = jobIdToResume || activeEvaluationJobId;
@@ -895,13 +1104,14 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
       clearSelection();
       await fetchEnrollments();
+      await fetchOverallProgress();
     } catch (e) {
       console.error('Publish error:', e);
       showToast(e.message || 'Failed to publish results', 'error', 6000);
     } finally {
       setPublishing(false);
     }
-  }, [examId, selectedEnrollmentIds, showToast, clearSelection, fetchEnrollments]);
+  }, [examId, selectedEnrollmentIds, showToast, clearSelection, fetchEnrollments, fetchOverallProgress]);
 
   const handlePublishSelected = useCallback(() => {
     if (selectedEnrollmentIds.size === 0) {
@@ -1094,28 +1304,17 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   };
   
   const stats = useMemo(() => {
-    const total = totalStudents || students.length;
+    const stable = overallProgress || lastOverallProgressRef.current;
+    const total = Number(stable?.total_students || 0) || 0;
+    const evaluated = Number(stable?.evaluated_students || 0) || 0;
+    const pending = Number(stable?.pending_evaluation_students || 0) || 0;
+    const uploaded = Number(stable?.uploaded_students || 0) || 0;
+    const notUploaded = Number(stable?.not_uploaded_students || 0) || 0;
 
-    const evaluated = students.filter(
-      (s) => s.evaluation_status === 'completed' || s.marks_obtained !== null
-    ).length;
-
-    const pending = students.filter(
-      (s) =>
-        s.status !== 'not_uploaded' &&
-        (s.evaluation_status !== 'completed' && s.marks_obtained === null)
-    ).length;
-
-    const uploaded = students.filter((s) => s.status && s.status !== 'not_uploaded').length;
-    const notUploaded = students.filter((s) => s.status === 'not_uploaded').length;
-    const recheckRequested = students.filter((s) => s.recheck_requested).length;
-
-    const evaluatedStudents = students.filter((s) => s.marks_obtained !== null);
-    const averageScore = evaluatedStudents.length
-      ? Math.round(
-          evaluatedStudents.reduce((sum, s) => sum + (s.marks_obtained || 0), 0) /
-            Math.max(1, evaluatedStudents.length)
-        )
+    // Backend provides a stable exam-wide average, so it doesn't flicker with pagination.
+    const averageScoreRaw = stable?.average_score;
+    const averageScore = Number.isFinite(Number(averageScoreRaw))
+      ? Math.round(Number(averageScoreRaw))
       : 0;
 
     return {
@@ -1124,10 +1323,9 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       pending,
       uploaded,
       notUploaded,
-      recheckRequested,
       averageScore,
     };
-  }, [students, totalStudents]);
+  }, [overallProgress]);
 
   const renderSortIndicator = (key) => {
     if (sortConfig.key !== key) return null;
@@ -1443,101 +1641,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
               <span className="font-medium">Not Submitted</span>
             </div>
           )}
-        </div>
-      </motion.div>
-    );
-  };
 
-  const NavButton = ({ icon: Icon, label, onClick, disabled, variant = "primary" }) => {
-    const getStyles = () => {
-      switch (variant) {
-        case "primary":
-          return {
-            base: `${disabled
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-accent text-white hover:shadow-lg'}`,
-            hover: !disabled && 'hover:scale-105',
-            tap: !disabled && 'active:scale-95'
-          };
-        case "secondary":
-          return {
-            base: `${disabled
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-white border border-gray-200 text-gray-700 hover:text-gray-900 hover:border-gray-300'}`,
-            hover: !disabled && 'hover:scale-105',
-            tap: !disabled && 'active:scale-95'
-          };
-        case "success":
-          return {
-            base: `${disabled
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-accent text-white hover:shadow-lg'}`,
-            hover: !disabled && 'hover:scale-105',
-            tap: !disabled && 'active:scale-95'
-          };
-        default:
-          return {
-            base: 'bg-gray-100 text-gray-700',
-            hover: !disabled && 'hover:bg-gray-200',
-            tap: !disabled && 'active:bg-gray-300'
-          };
-      }
-    };
-
-    const styles = getStyles();
-
-    return (
-      <motion.button
-        whileHover={styles.hover ? { scale: 1.05 } : {}}
-        whileTap={styles.tap ? { scale: 0.95 } : {}}
-        onClick={onClick}
-        disabled={disabled}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-all duration-300 ${styles.base}`}
-      >
-        <Icon className="w-5 h-5" />
-        <span className="font-medium">{label}</span>
-      </motion.button>
-    );
-  };
-
-  const StatCard = ({ icon: Icon, label, value, color, percentage }) => {
-    const gradients = {
-      blue: "bg-white border-gray-200",
-      green: "bg-white border-gray-200",
-      yellow: "bg-white border-gray-200",
-      purple: "bg-white border-gray-200"
-    };
-
-    const iconColors = {
-      blue: "bg-accent",
-      green: "bg-accent",
-      yellow: "bg-accent/70",
-      purple: "bg-accent"
-    };
-
-    return (
-      <motion.div
-        variants={fadeInUp}
-        initial="hidden"
-        animate="visible"
-        whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-        className={`${gradients[color]} rounded-xl p-6 flex items-center justify-between shadow-sm border`}
-      >
-        <div>
-          <p className="text-sm text-gray-600 mb-1">{label}</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-gray-900">
-              <AnimatedCounter value={value} />
-            </p>
-            {percentage && (
-              <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/50 text-gray-700">
-                {percentage}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className={`w-12 h-12 ${iconColors[color]} text-white rounded-full flex items-center justify-center shadow-md`}>
-          <Icon className="w-6 h-6" />
         </div>
       </motion.div>
     );
@@ -1690,9 +1794,9 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             >
               <div className="flex flex-col gap-4">
                 {/* Row 1: search + filters + view + pagination */}
-                <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
-                  <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3 min-w-0">
-                    <div className="relative flex-1 min-w-[200px]">
+                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-3 items-start lg:items-center">
+                  <div className="flex flex-col md:flex-row md:items-center gap-3 min-w-0">
+                    <div className="relative flex-1 min-w-0">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
                         type="text"
@@ -1702,11 +1806,29 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
                       />
                     </div>
-                    <div className="relative">
+                    <div className="relative w-full md:w-auto">
+                      <select
+                        value={resultsModel}
+                        onChange={(e) => {
+                          const next = e.target.value === 'gemini' ? 'gemini' : 'current';
+                          setResultsModel(next);
+                          setPage(1);
+                          clearSelection();
+                          hasLoadedOnceRef.current = false;
+                          setStudents([]);
+                        }}
+                        className="w-full md:w-auto pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                      >
+                        <option value="current">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                      </select>
+                      <Cpu className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                    <div className="relative w-full md:w-auto">
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                        className="w-full md:w-auto pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
                       >
                         <option value="all">All Status</option>
                         <option value="pending">Pending</option>
@@ -1716,7 +1838,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 justify-start lg:justify-end">
+                  <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-end">
                     <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                       <button
                         onClick={() => setViewMode('list')}
@@ -1732,7 +1854,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <select
                         value={pageSize}
                         onChange={(e) => {
@@ -1774,7 +1896,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
                 {/* Row 2: main actions */}
                 <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
-                  <div className="flex flex-wrap items-center gap-3 justify-start">
+                  <div className="flex flex-wrap items-center gap-2 justify-start">
                   <NavButton
                     icon={RefreshCw}
                     label="Edit Rubrics"
@@ -1837,10 +1959,11 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                     disabled={publishing || selectedCount === 0}
                     variant="primary"
                   />
-                  {DashboardLink}
+                  <div className="w-full sm:w-auto">{DashboardLink}</div>
                   </div>
-                  <div className="text-xs text-gray-500 hidden lg:block">
-                    Showing {students.length} of {stats.total}
+                  <div className="text-xs text-gray-500">
+                    <span className="hidden sm:inline">Showing {students.length} of {stats.total}</span>
+                    <span className="sm:hidden">{students.length}/{stats.total}</span>
                   </div>
                 </div>
               </div>

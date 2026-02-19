@@ -1500,17 +1500,24 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
   const computeAutoTags = useCallback(
     (student) => {
       const tags = [];
-      if (student?.status === "not_uploaded") tags.push("Not uploaded");
+      const addTag = (t) => {
+        if (!t) return;
+        if (!tags.includes(t)) tags.push(t);
+      };
+
       const score = Number.isFinite(student?.marks_obtained) ? Number(student.marks_obtained) : null;
       const uploaded = student?.status && student.status !== "not_uploaded";
-      if (!uploaded) tags.push("Not uploaded");
-      if (uploaded && score == null) tags.push("Pending evaluation");
+
+      if (!uploaded) addTag("Not uploaded");
+      if (uploaded && score == null) addTag("Pending evaluation");
+
       if (score != null && maxMarks > 0) {
         const pct = (score / maxMarks) * 100;
-        if (pct >= 90) tags.push("Top performer");
-        if (pct === 100) tags.push("Perfect");
-        if (pct < 45) tags.push("Needs attention");
+        if (pct >= 90) addTag("Top performer");
+        if (pct === 100) addTag("Perfect");
+        if (pct < 45) addTag("Needs attention");
       }
+
       return tags;
     },
     [maxMarks]

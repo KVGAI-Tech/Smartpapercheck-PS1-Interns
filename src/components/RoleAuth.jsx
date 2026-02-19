@@ -350,15 +350,21 @@ const RoleAuth = () => {
     out: { opacity: 0, y: -20 },
   };
 
+  useEffect(() => {
+    if (step === "login" && !selectedRole) {
+      setStep("select-role");
+    }
+  }, [step, selectedRole]);
+
   const handleRoleSelect = (role, confirmed = false) => {
     try {
       if (!role) {
         throw new Error("No role selected");
       }
-      
+
       setSelectedRole(role);
       setError(null);
-      
+
       if (confirmed) {
         setStep("login");
       }
@@ -370,6 +376,7 @@ const RoleAuth = () => {
 
   const handleBackToRoles = () => {
     try {
+      setSelectedRole(null);
       setStep("select-role");
       setError(null);
     } catch (err) {
@@ -383,11 +390,11 @@ const RoleAuth = () => {
       if (!token) {
         throw new Error("Authentication failed: No token received");
       }
-      
+
       if (!role || !["professor", "student"].includes(role)) {
         throw new Error(`Invalid role: ${role}`);
       }
-      
+
       login(token, role);
     } catch (err) {
       console.error("Login success error:", err);
@@ -401,8 +408,6 @@ const RoleAuth = () => {
     }
 
     if (!selectedRole) {
-      // If somehow we are on the login step without a role, go back to role selection
-      handleBackToRoles();
       return null;
     }
 
@@ -424,12 +429,10 @@ const RoleAuth = () => {
           );
         default:
           console.error("Unsupported role:", selectedRole);
-          handleBackToRoles();
           return null;
       }
     } catch (componentError) {
       console.error("Component rendering error:", componentError);
-      handleBackToRoles();
       return null;
     }
   };
