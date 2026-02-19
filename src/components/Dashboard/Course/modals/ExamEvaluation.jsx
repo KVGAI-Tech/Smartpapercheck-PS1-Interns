@@ -1159,7 +1159,10 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ enrollment_ids: evaluated.map(s => s.enrollment_id) }),
+        body: JSON.stringify({
+          enrollment_ids: evaluated.map(s => s.enrollment_id),
+          model: resultsModel,
+        }),
         mode: 'cors'
       });
 
