@@ -11,6 +11,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   const [zipFile, setZipFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingJobId, setProcessingJobId] = useState(null);
   const [processingProgress, setProcessingProgress] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [currentProcessingRoll, setCurrentProcessingRoll] = useState(null);
@@ -76,6 +77,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
     setProcessingProgress(null);
     setUploadProgress(0);
     setIsProcessing(false);
+    setProcessingJobId(null);
     const loadingToast = toast.loading('Uploading answer sheets...');
 
     try {
@@ -205,6 +207,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
 
         // Remember that processing is in progress so we can listen for WebSocket updates
         setIsProcessing(true);
+        setProcessingJobId(processJson.data.job_id);
         setProcessingStage('preprocessing');
 
         if (onUploadSuccess) {
@@ -226,6 +229,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   const handleClose = () => {
     setZipFile(null);
     setIsProcessing(false);
+    setProcessingJobId(null);
     setProcessingProgress(null);
     setUploadProgress(null);
     setCurrentProcessingRoll(null);
@@ -259,6 +263,16 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
       return;
     }
 
+    const pingInterval = setInterval(() => {
+      try {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send('ping');
+        }
+      } catch {
+        // ignore
+      }
+    }, 25000);
+
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -287,12 +301,89 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
 
     return () => {
       try {
+        clearInterval(pingInterval);
+      } catch {
+        // ignore
+      }
+      try {
         socket && socket.close();
       } catch {
         // ignore
       }
     };
   }, [isOpen, examId, isProcessing]);
+
+  // Poll job status as a fallback (robust even if WebSocket progress doesn't arrive)
+  useEffect(() => {
+    if (!isOpen || !isProcessing || !processingJobId) return;
+
+    let isCancelled = false;
+    const startedAt = Date.now();
+    const timeoutMs = 10 * 60 * 1000; // 10 minutes
+    const intervalMs = 3000;
+
+    const poll = async () => {
+      try {
+        const resp = await fetch(
+          `${API_BASE_URL}/exams/professor/jobs/answers-processing/${processingJobId}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+          }
+        );
+
+        if (!resp.ok) {
+          throw new Error(`Job status fetch failed: ${resp.status}`);
+        }
+
+        const json = await resp.json();
+        if (isCancelled) return;
+
+        const job = json?.data;
+        const status = String(job?.status || '').toLowerCase();
+
+        if (status) {
+          setProcessingStage(status);
+        }
+
+        if (status === 'completed' || status === 'completed_with_errors') {
+          setIsProcessing(false);
+          toast.success('Answer sheets processing completed.');
+          return;
+        }
+
+        if (status === 'failed' || status === 'canceled' || status === 'cancelled') {
+          setIsProcessing(false);
+          const errMsg = job?.error ? String(job.error) : 'Processing failed.';
+          toast.error(errMsg);
+          return;
+        }
+
+        if (Date.now() - startedAt > timeoutMs) {
+          setIsProcessing(false);
+          toast.error('Processing is taking too long. Please try again or check server logs.');
+        }
+      } catch (e) {
+        if (isCancelled) return;
+        console.error('Polling job status failed:', e);
+        // Keep polling; transient failures are possible (network, server restart)
+        if (Date.now() - startedAt > timeoutMs) {
+          setIsProcessing(false);
+          toast.error('Processing status could not be confirmed (timeout). Please try again.');
+        }
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, intervalMs);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [isOpen, isProcessing, processingJobId]);
 
   // When progress reaches 100%, mark processing as completed and notify the user
   useEffect(() => {

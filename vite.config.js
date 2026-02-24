@@ -32,10 +32,16 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'unsafe-none',
       'Cross-Origin-Resource-Policy': 'cross-origin'
     },
-    hmr: {
-      protocol: 'ws',
-      host: 'localhost'
-    }
+    hmr:
+      process.env.VITE_HMR_HOST || process.env.VITE_HMR_PROTOCOL || process.env.VITE_HMR_CLIENT_PORT
+        ? {
+            protocol: process.env.VITE_HMR_PROTOCOL || 'ws',
+            host: process.env.VITE_HMR_HOST,
+            clientPort: process.env.VITE_HMR_CLIENT_PORT
+              ? Number(process.env.VITE_HMR_CLIENT_PORT)
+              : undefined,
+          }
+        : undefined,
   },
   resolve: {
     alias: {
