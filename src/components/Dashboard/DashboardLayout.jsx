@@ -269,12 +269,41 @@ const DashboardLayout = ({ children }) => {
 
     try {
       const wsBase = API_BASE_URL.replace(/^http/, "ws");
-      const ws = new WebSocket(`${wsBase}/exams/ws/professor/notifications?token=${encodeURIComponent(token)}`);
+      const wsUrl = `${wsBase}/exams/ws/professor/notifications?token=${encodeURIComponent(token)}`;
+      let ws;
+      let pingInterval;
+      let reconnectTimeout;
+      let reconnectAttempt = 0;
 
-      ws.onopen = () => {
-        console.log("Notifications WebSocket connected");
-        setNotificationsWsConnected(true);
-      };
+      const connect = () => {
+        try {
+          ws = new WebSocket(wsUrl);
+        } catch (e) {
+          console.error("Failed to create notifications WebSocket:", e);
+          setNotificationsWsConnected(false);
+          return;
+        }
+
+        ws.onopen = () => {
+          reconnectAttempt = 0;
+          console.log("Notifications WebSocket connected");
+          setNotificationsWsConnected(true);
+
+          try {
+            clearInterval(pingInterval);
+          } catch {
+            // ignore
+          }
+          pingInterval = setInterval(() => {
+            try {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send("ping");
+              }
+            } catch {
+              // ignore
+            }
+          }, 25000);
+        };
 
       ws.onmessage = (event) => {
         try {
@@ -324,16 +353,63 @@ const DashboardLayout = ({ children }) => {
         }
       };
 
-      ws.onerror = (e) => {
-        console.error("Notifications WebSocket error", e);
+        ws.onerror = (e) => {
+          console.error("Notifications WebSocket error", e, { url: wsUrl, readyState: ws?.readyState });
+        };
+
+        ws.onclose = (e) => {
+          setNotificationsWsConnected(false);
+          console.warn("Notifications WebSocket closed", {
+            code: e?.code,
+            reason: e?.reason,
+            wasClean: e?.wasClean,
+            url: wsUrl,
+          });
+
+          try {
+            clearInterval(pingInterval);
+          } catch {
+            // ignore
+          }
+
+          // Reconnect unless explicitly unauthorized
+          if (e?.code === 4401) {
+            return;
+          }
+
+          const backoffMs = Math.min(30000, 1000 * Math.pow(2, reconnectAttempt));
+          reconnectAttempt += 1;
+          try {
+            clearTimeout(reconnectTimeout);
+          } catch {
+            // ignore
+          }
+          reconnectTimeout = setTimeout(() => {
+            connect();
+          }, backoffMs);
+        };
+
+        return ws;
       };
 
-      ws.onclose = () => {
-        setNotificationsWsConnected(false);
-      };
+      connect();
 
       return () => {
-        ws.close();
+        try {
+          clearTimeout(reconnectTimeout);
+        } catch {
+          // ignore
+        }
+        try {
+          clearInterval(pingInterval);
+        } catch {
+          // ignore
+        }
+        try {
+          ws && ws.close();
+        } catch {
+          // ignore
+        }
       };
     } catch (error) {
       console.error("Failed to connect to notifications WebSocket:", error);
