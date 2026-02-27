@@ -49,15 +49,15 @@ const FAQ = () => {
   const faqs = [
     {
       question: "Does it support handwritten diagrams?",
-      answer: "Yes, SmartQnA is equipped with advanced Vision-Language Models that can interpret not only handwritten text but also diagrams, equations, and tables. Our system recognizes different diagram types and evaluates them based on technical accuracy and relevance to the question."
+      answer: "Yes, Smart Paper Check is equipped with advanced Vision-Language Models that can interpret not only handwritten text but also diagrams, equations, and tables. Our system recognizes different diagram types and evaluates them based on technical accuracy and relevance to the question."
     },
     {
       question: "How accurate is the evaluation?",
-      answer: "SmartQnA achieves over 90% correlation with expert evaluators. Our AI models are continuously trained on academic content and refined based on feedback from education professionals. For subjective questions, the system provides explanation for each score, allowing instructors to review or override when necessary."
+      answer: "Smart Paper Check achieves over 90% correlation with expert evaluators. Our AI models are continuously trained on academic content and refined based on feedback from education professionals. For subjective questions, the system provides explanation for each score, allowing instructors to review or override when necessary."
     },
     {
       question: "Can I manually override scores?",
-      answer: "Absolutely. While SmartQnA provides automated evaluations, we understand the importance of human oversight. Instructors can review and modify any AI-generated score with a simple interface. Each change you make helps train the system to better align with your specific grading style over time."
+      answer: "Absolutely. While Smart Paper Check provides automated evaluations, we understand the importance of human oversight. Instructors can review and modify any AI-generated score with a simple interface. Each change you make helps train the system to better align with your specific grading style over time."
     },
     {
       question: "Is data stored securely?",
@@ -65,11 +65,11 @@ const FAQ = () => {
     },
     {
       question: "Do you integrate with LMS platforms?",
-      answer: "Yes, SmartQnA offers seamless integration with popular Learning Management Systems including Canvas, Moodle, Blackboard, and Google Classroom. Our API and built-in connectors allow for automatic assignment creation, script uploading, and grade synchronization, minimizing administrative overhead."
+      answer: "Yes, Smart Paper Check offers seamless integration with popular Learning Management Systems including Canvas, Moodle, Blackboard, and Google Classroom. Our API and built-in connectors allow for automatic assignment creation, script uploading, and grade synchronization, minimizing administrative overhead."
     },
     {
-      question: "What types of questions can SmartQnA evaluate?",
-      answer: "SmartQnA can evaluate a wide range of question types including short answers, long-form essays, numerical problems, diagrams, proofs, and case analyses. The system adapts to different subjects from humanities to STEM fields, with specialized capabilities for mathematical notation, scientific diagrams, and domain-specific terminology."
+      question: "What types of questions can Smart Paper Check evaluate?",
+      answer: "Smart Paper Check can evaluate a wide range of question types including short answers, long-form essays, numerical problems, diagrams, proofs, and case analyses. The system adapts to different subjects from humanities to STEM fields, with specialized capabilities for mathematical notation, scientific diagrams, and domain-specific terminology."
     }
   ];
 
@@ -93,7 +93,7 @@ const FAQ = () => {
             Frequently Asked <span className="text-accent">Questions</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Find answers to common questions about SmartQnA's capabilities and features
+            Find answers to common questions about Smart Paper Check's capabilities and features
           </p>
         </motion.div>
 

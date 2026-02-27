@@ -33,7 +33,7 @@ const LoadingAnimation = () => {
               <div className="font-medium text-3xl sm:text-4xl md:text-5xl text-gray-900 text-center">
                 Smart
                 <span className="font-light italic text-accent">
-                  QnA
+                  Paper Check
                 </span>
               </div>
             </div>

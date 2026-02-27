@@ -21,6 +21,10 @@ body,
   font-family: sans-serif;
 }
 
+html {
+  font-size: 14px;
+}
+
 .landing-page-html {
   background-color: #0b1011 !important;
   color: #ffffff !important;

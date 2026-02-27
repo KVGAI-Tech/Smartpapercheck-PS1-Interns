@@ -209,7 +209,7 @@ const generateCourseData = (institution, department, course) => {
     return mockData;
   }
   
-  // Base averages for each institution (TA scores higher, SmartQnA undergrades by 1-5%)
+  // Base averages for each institution (TA scores higher, Smart Paper Check undergrades by 1-5%)
   const institutionBaselines = {
     'BITS Pilani': { ta: 85, smartQnA: 82 },
     'IIT Delhi': { ta: 88, smartQnA: 85 },
@@ -245,11 +245,11 @@ const generateCourseData = (institution, department, course) => {
   // Get department modifier
   const deptMod = departmentModifiers[department] || { ta: 2, smartQnA: 1 };
   
-  // Calculate final scores (TA higher than SmartQnA by 1-5%)
+  // Calculate final scores (TA higher than Smart Paper Check by 1-5%)
   let ta = Math.min(98, Math.max(75, baseline.ta + deptMod.ta + courseRandom.ta));
   let smartQnA = Math.min(95, Math.max(70, baseline.smartQnA + deptMod.smartQnA + courseRandom.smartQnA));
   
-  // Ensure TA is higher than SmartQnA (SmartQnA undergrades by 1-5%)
+  // Ensure TA is higher than Smart Paper Check (Smart Paper Check undergrades by 1-5%)
   if (smartQnA >= ta) {
     smartQnA = ta - (1 + Math.random() * 4); // 1-5% lower
   }
@@ -438,11 +438,11 @@ const SingleCourseChart = ({ data, label }) => {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div>
           <h3 className="text-2xl font-bold text-gray-900">{label}</h3>
-          <p className="text-sm text-gray-500 mt-1">SmartQnA vs TA grading comparison</p>
+          <p className="text-sm text-gray-500 mt-1">Smart Paper Check vs TA grading comparison</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-            <span className="w-2 h-2 rounded-full bg-accent" /> SmartQnA
+            <span className="w-2 h-2 rounded-full bg-accent" /> Smart Paper Check
           </span>
           <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
             <span className="w-2 h-2 rounded-full bg-gray-400" /> TA
@@ -453,7 +453,7 @@ const SingleCourseChart = ({ data, label }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6">
           <div className="flex items-baseline justify-between mb-3">
-            <p className="text-sm font-semibold text-gray-700">SmartQnA Score</p>
+            <p className="text-sm font-semibold text-gray-700">Smart Paper Check Score</p>
             <p className="text-2xl font-bold text-accent">{smartQnAValue}%</p>
           </div>
           <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -496,7 +496,7 @@ const SingleCourseChart = ({ data, label }) => {
           <div className="mt-4 flex items-center justify-between bg-accent/5 border border-accent/20 rounded-2xl p-4">
             <div>
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Difference</p>
-              <p className="text-sm text-gray-600 mt-1">TA - SmartQnA</p>
+              <p className="text-sm text-gray-600 mt-1">TA - Smart Paper Check</p>
             </div>
             <p className={`text-xl font-bold ${taValue - smartQnAValue >= 0 ? 'text-gray-700' : 'text-accent'}`}>
               {(taValue - smartQnAValue > 0 ? '+' : '') + (Math.round((taValue - smartQnAValue) * 10) / 10)}%
@@ -803,9 +803,9 @@ const DepartmentAnalytics = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                  {/* Average SmartQnA score */}
+                  {/* Average Smart Paper Check score */}
                   <div className="bg-accent/5 rounded-xl p-5 shadow-md border border-accent/20">
-                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. SmartQnA Score</p>
+                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. Smart Paper Check Score</p>
                     <p className="text-3xl font-bold text-accent mb-1">
                       {summaryStats.avgSmartQnA}%
                     </p>
@@ -829,7 +829,7 @@ const DepartmentAnalytics = () => {
                       {summaryStats.avgImprovement}%
                     </p>
                     <p className={`text-xs ${summaryStats.avgImprovement < 0 ? 'text-red-600' : 'text-accent'}`}>
-                      {summaryStats.avgImprovement < 0 ? 'TA scores higher' : 'SmartQnA higher'}
+                      {summaryStats.avgImprovement < 0 ? 'TA scores higher' : 'Smart Paper Check higher'}
                     </p>
                   </div>
                   
@@ -871,9 +871,9 @@ const DepartmentAnalytics = () => {
                       <h4 className="text-sm font-semibold text-gray-900 mb-1">Key Insight</h4>
                       <p className="text-sm text-gray-700">
                         {summaryStats.avgImprovement < 0 ? (
-                          <>SmartQnA maintains conservative grading standards, typically scoring {Math.abs(summaryStats.avgImprovement)}% lower than TAs to ensure fairness. Students can always request manual review if they believe their answer deserves higher marks.</>
+                          <>Smart Paper Check maintains conservative grading standards, typically scoring {Math.abs(summaryStats.avgImprovement)}% lower than TAs to ensure fairness. Students can always request manual review if they believe their answer deserves higher marks.</>
                         ) : (
-                          <>SmartQnA provides consistent grading with {summaryStats.avgImprovement}% higher average scores, indicating improved accuracy in assessment.</>
+                          <>Smart Paper Check provides consistent grading with {summaryStats.avgImprovement}% higher average scores, indicating improved accuracy in assessment.</>
                         )}
                       </p>
                     </div>
@@ -903,7 +903,7 @@ const DepartmentAnalytics = () => {
                     <h4 className="text-lg font-bold text-gray-900">Grading Philosophy</h4>
                   </div>
                   <p className="text-gray-700 font-medium text-base md:text-lg max-w-2xl">
-                    SmartQnA employs conservative grading standards to ensure fairness and maintain academic integrity. 
+                    Smart Paper Check employs conservative grading standards to ensure fairness and maintain academic integrity. 
                     Students benefit from consistent evaluation criteria and can always request manual review for reassessment.
                   </p>
                 </motion.div>

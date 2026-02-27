@@ -14,7 +14,7 @@ const USP = () => {
 
   const competitors = [
     {
-      name: "SmartQnA",
+      name: "Smart Paper Check",
       features: [true, true, true, true, true, true],
       highlight: true
     },
@@ -48,7 +48,7 @@ const USP = () => {
             Our <span className="text-accent">Edge</span> Over Others
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            See how SmartQnA stands out from traditional evaluation platforms with our cutting-edge AI technologies
+            See how Smart Paper Check stands out from traditional evaluation platforms with our cutting-edge AI technologies
           </p>
         </motion.div>
 
@@ -124,7 +124,7 @@ const USP = () => {
         >
           <div className="inline-block py-4 px-6 rounded-lg bg-accent/5 border border-accent/20 shadow-sm">
             <p className="text-gray-700">
-              SmartQnA combines the power of LLMs and Vision-Language Models to deliver a comprehensive evaluation experience that traditional platforms simply can't match.
+              Smart Paper Check combines the power of LLMs and Vision-Language Models to deliver a comprehensive evaluation experience that traditional platforms simply can't match.
             </p>
           </div>
         </motion.div>

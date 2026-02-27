@@ -344,12 +344,6 @@ const RoleAuth = () => {
   const [error, setError] = useState(null);
   const { login } = useAuth();
 
-  const pageVariants = {
-    initial: { opacity: 0, y: 20 },
-    in: { opacity: 1, y: 0 },
-    out: { opacity: 0, y: -20 },
-  };
-
   useEffect(() => {
     if (step === "login" && !selectedRole) {
       setStep("select-role");
@@ -470,7 +464,7 @@ const RoleAuth = () => {
           >
             Welcome to{" "}
             <span className="text-accent">
-              Smart QnA
+              Smart Paper Check
             </span>
           </motion.h1>
 
@@ -485,13 +479,12 @@ const RoleAuth = () => {
           </motion.p>
         </div>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
             transition={{ type: "tween", ease: "easeInOut", duration: 0.5 }}
           >
             {step === "login" && selectedRole
@@ -511,7 +504,7 @@ const RoleAuth = () => {
           transition={{ delay: 0.6 }}
           className="text-center mt-8 text-gray-500 text-sm"
         >
-          <p>© 2025 Smart QnA. All rights reserved.</p>
+          <p>&copy; 2025 Smart Paper Check. All rights reserved.</p>
         </motion.div>
       </div>
     </div>

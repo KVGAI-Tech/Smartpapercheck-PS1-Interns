@@ -80,7 +80,7 @@ const Clientele = () => {
             Trusted by <span className="text-accent">Global Leaders</span> in Education
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Leading academic institutions and organizations use SmartQnA to streamline assessments.
+            Leading academic institutions and organizations use Smart Paper Check to streamline assessments.
           </p>
         </motion.div>
 

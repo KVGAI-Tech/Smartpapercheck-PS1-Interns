@@ -181,7 +181,7 @@ const Features = ({
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
             Why{" "}
             <span className="text-accent">
-              SmartQnA
+              Smart Paper Check
             </span>
             ?
           </h2>
@@ -261,7 +261,7 @@ const Features = ({
                 Ready to transform your evaluation process?
               </h3>
               <p className="text-gray-600 max-w-xl">
-                Join leading institutions already using SmartQnA to save time
+                Join leading institutions already using Smart Paper Check to save time
                 and improve assessment quality.
               </p>
             </div>

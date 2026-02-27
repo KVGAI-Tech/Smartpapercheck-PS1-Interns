@@ -64,7 +64,7 @@ const Testimonials = () => {
   const testimonials = [
     {
       quote:
-        "SmartQnA saves us hours every exam season. The consistency and accuracy in grading has been truly remarkable.",
+        "Smart Paper Check saves us hours every exam season. The consistency and accuracy in grading has been truly remarkable.",
       name: "Prof. Saurabh Gandh",
       designation: "Asst. Prof. Computer Science ",
       institute: "IIT Jodhpur, Jodhpur, India",
@@ -80,7 +80,7 @@ const Testimonials = () => {
     },
     {
       quote:
-        "We've reduced our grading time by 80% and improved feedback quality with SmartQnA's automated evaluation system.",
+        "We've reduced our grading time by 80% and improved feedback quality with Smart Paper Check's automated evaluation system.",
       name: "Dr. Vikas Hassija",
       designation: "Associate Prof, CSIT",
       institute: "KIIT",
@@ -118,7 +118,7 @@ const Testimonials = () => {
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Hear from faculty members who've transformed their evaluation
-            process with SmartQnA
+            process with Smart Paper Check
           </p>
         </motion.div>
 

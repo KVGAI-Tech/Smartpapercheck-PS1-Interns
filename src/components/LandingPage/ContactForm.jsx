@@ -213,7 +213,7 @@ const ContactForm = () => {
                     alt="Contact illustration" 
                     className="w-full h-auto rounded-lg mb-4"
                   />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">SmartQnA Support Team</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Smart Paper Check Support Team</h3>
                   <p className="text-gray-600">Our dedicated team of education and AI experts are ready to assist you with setup, onboarding, and ongoing support.</p>
                 </motion.div>
 

@@ -49,11 +49,11 @@ const Footer = () => {
             <div className="flex items-center mb-6">
               <img 
                 src="/logo_smartqna.png" 
-                alt="SmartQnA Logo" 
+                alt="Smart Paper Check Logo" 
                 className="h-8 mr-3" 
               />
               <div className="font-medium text-xl text-gray-900">
-                Smart<span className="font-light italic text-teal-600">QnA</span>
+                Smart<span className="font-light italic text-teal-600"> Paper Check</span>
               </div>
             </div>
             <p className="text-gray-600 mb-6 text-sm">
@@ -114,7 +114,7 @@ const Footer = () => {
         
         <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm mb-4 md:mb-0">
-            © {new Date().getFullYear()} Smart QnA by KVGAI Tech Pvt. Ltd. All rights reserved.
+            &copy; {new Date().getFullYear()} Smart Paper Check by KVGAI Tech Pvt. Ltd. All rights reserved.
           </p>
           <p className="text-gray-400 text-xs">
             Revolutionizing educational assessment with AI

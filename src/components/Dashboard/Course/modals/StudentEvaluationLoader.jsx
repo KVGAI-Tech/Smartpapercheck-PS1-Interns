@@ -32,6 +32,18 @@ import ImageZoomModal from "./ImageZoomModal";
 import { PageViewer } from "./PageViewer/PageViewer";
 import Breadcrumbs from "../../../ui/breadcrumbs";
 
+const normalizeModel = (m) => {
+  const v = String(m || "").trim().toLowerCase();
+  if (v === "gemini" || v === "google" || v === "google_gemini") return "gemini";
+  return "current";
+};
+
+const displayModelName = (m) => {
+  const v = normalizeModel(m);
+  if (v === "gemini") return "Gemini";
+  return "OpenAI";
+};
+
 const ScoreDisplay = ({ marks, maxMarks }) => {
   const percentage = Math.round((marks / maxMarks) * 100) || 0;
 
@@ -564,6 +576,9 @@ const StudentEvaluationLoader = ({
                 </h1>
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-900/5 text-slate-700 border border-slate-200">
                   {studentData?.evaluation_status || "Pending"}
+                </span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white text-slate-700 border border-slate-200">
+                  Model: {displayModelName(model)}
                 </span>
               </div>
 

@@ -536,6 +536,7 @@ const RubricModal = ({
     const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, index: null, itemDescription: '' });
     const [numRubricItems, setNumRubricItems] = useState(3);
     const [profInstructions, setProfInstructions] = useState('');
+    const [questionRubricSettings, setQuestionRubricSettings] = useState({});
     const [showRubricSettings, setShowRubricSettings] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
     const previousHeight = useRef(null);
@@ -656,6 +657,9 @@ const RubricModal = ({
         }
     }, [isOpen, questions, selectedQuestion]);
 
+    // Load rubric contents when question changes.
+    // IMPORTANT: this must NOT depend on settings state, otherwise after generation/regeneration
+    // the effect may overwrite freshly generated rubricItems with stale `questions` props.
     useEffect(() => {
         if (selectedQuestion) {
             const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
@@ -668,10 +672,6 @@ const RubricModal = ({
                     setFeedback(currentQuestion.problem_feedback || '');
                 }
 
-                // Load rubric settings
-                setNumRubricItems(currentQuestion.num_rubric_items || rubricItems.length || 3);
-                setProfInstructions(currentQuestion.professor_instructions || '');
-
                 const hasRubricItems =
                     (currentQuestion.rubric && currentQuestion.rubric.rubric_items &&
                         currentQuestion.rubric.rubric_items.length > 0) ||
@@ -682,6 +682,27 @@ const RubricModal = ({
             }
         }
     }, [selectedQuestion, questions]);
+
+    // Load rubric settings when question changes OR local settings are updated.
+    // This effect intentionally does not touch rubricItems/feedback.
+    useEffect(() => {
+        if (selectedQuestion) {
+            const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
+            if (currentQuestion) {
+                const localSettings = questionRubricSettings?.[selectedQuestion];
+                setNumRubricItems(
+                    (typeof localSettings?.num_rubric_items === 'number'
+                        ? localSettings.num_rubric_items
+                        : (currentQuestion.num_rubric_items || 3))
+                );
+                setProfInstructions(
+                    (typeof localSettings?.professor_instructions === 'string'
+                        ? localSettings.professor_instructions
+                        : (currentQuestion.professor_instructions || ''))
+                );
+            }
+        }
+    }, [selectedQuestion, questions, questionRubricSettings]);
 
     const handleDeleteRubricItem = (index) => {
         const item = rubricItems[index];
@@ -901,6 +922,26 @@ const RubricModal = ({
                     }
                 }
             }
+
+            // Keep local settings in sync for questions we regenerated.
+            // generateAllRubrics currently doesn't update parent `questions`, so this prevents
+            // the settings UI from snapping back on navigation.
+            if (successCount > 0) {
+                setQuestionRubricSettings(prev => {
+                    const next = { ...(prev || {}) };
+                    for (const q of questionsWithoutRubrics) {
+                        const qn = q?.question_number;
+                        if (qn == null) continue;
+                        if (!next[qn]) {
+                            next[qn] = {
+                                num_rubric_items: q?.num_rubric_items || 3,
+                                professor_instructions: q?.professor_instructions || '',
+                            };
+                        }
+                    }
+                    return next;
+                });
+            }
             
             if (successCount > 0) {
                 toast.success(`Successfully generated ${successCount} rubrics!`, { id: loadingToast });
@@ -953,7 +994,9 @@ const RubricModal = ({
                         },
                         body: JSON.stringify({
                             num_rubric_items: numRubricItems,
-                            professor_instructions: profInstructions.trim() || undefined,
+                            // IMPORTANT: send empty string to CLEAR instructions server-side.
+                            // Sending undefined would skip updating and the old value would persist.
+                            professor_instructions: (profInstructions || '').trim(),
                             regenerate_rubric: true
                         })
                     }
@@ -989,6 +1032,23 @@ const RubricModal = ({
                 if (typeof data?.data?.professor_instructions === 'string') {
                     setProfInstructions(data.data.professor_instructions);
                 }
+
+                // Persist settings locally for this question so UI doesn't rehydrate stale values
+                // from parent `questions` props when switching questions.
+                setQuestionRubricSettings(prev => ({
+                    ...(prev || {}),
+                    [questionNumber]: {
+                        num_rubric_items:
+                            typeof data?.data?.num_rubric_items === 'number'
+                                ? data.data.num_rubric_items
+                                : numRubricItems,
+                        professor_instructions:
+                            typeof data?.data?.professor_instructions === 'string'
+                                ? data.data.professor_instructions
+                                : (profInstructions || '').trim(),
+                    },
+                }));
+
                 toast.success('Rubric generated successfully!', { id: loadingToast });
             } else {
                 throw new Error(data.message || 'Failed to generate rubric');
@@ -1089,7 +1149,9 @@ const RubricModal = ({
                     },
                     body: JSON.stringify({
                         num_rubric_items: numRubricItems,
-                        professor_instructions: profInstructions.trim() || undefined,
+                        // IMPORTANT: send empty string to CLEAR instructions server-side.
+                        // Sending undefined would skip updating and the old value would persist.
+                        professor_instructions: (profInstructions || '').trim(),
                         regenerate_rubric: regenerate
                     })
                 }
@@ -1101,6 +1163,23 @@ const RubricModal = ({
 
             const data = await response.json();
             if (data.code === 200) {
+                // Persist settings locally so switching questions doesn't rehydrate stale props.
+                setQuestionRubricSettings(prev => ({
+                    ...(prev || {}),
+                    [selectedQuestion]: {
+                        num_rubric_items: data?.data?.num_rubric_items ?? numRubricItems,
+                        professor_instructions:
+                            typeof data?.data?.professor_instructions === 'string'
+                                ? data.data.professor_instructions
+                                : (profInstructions || '').trim(),
+                    },
+                }));
+                if (typeof data?.data?.professor_instructions === 'string') {
+                    setProfInstructions(data.data.professor_instructions);
+                }
+                if (typeof data?.data?.num_rubric_items === 'number') {
+                    setNumRubricItems(data.data.num_rubric_items);
+                }
                 if (regenerate && data.data.rubric) {
                     setRubricItems(data.data.rubric.rubric_items || []);
                     setFeedback(data.data.rubric.problem_feedback || '');

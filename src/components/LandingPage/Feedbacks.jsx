@@ -16,49 +16,49 @@ const FeedbackCard = ({ desc, user }) => {
 const Feedbacks = () => {
   const feedbacks1 = [
     {
-      desc: "Smart QnA has completely transformed our grading process. It's fast, reliable, and incredibly accurate.",
+      desc: "Smart Paper Check has completely transformed our grading process. It's fast, reliable, and incredibly accurate.",
       user: "Vinay Chamola",
     },
     {
-      desc: "Scaling up evaluations across multiple campuses was always a challenge, but Smart QnA made it effortless. The cloud-based system allowed us to integrate our existing tools seamlessly, while the robust AI ensured accuracy and fairness in grading. It's a smart, reliable, and scalable solution that's become an indispensable part of our academic operations.",
+      desc: "Scaling up evaluations across multiple campuses was always a challenge, but Smart Paper Check made it effortless. The cloud-based system allowed us to integrate our existing tools seamlessly, while the robust AI ensured accuracy and fairness in grading. It's a smart, reliable, and scalable solution that's become an indispensable part of our academic operations.",
       user: "Vinay Chamola",
     },
     {
-      desc: "Smart QnA has completely transformed our evaluation process. The AI-powered automation saves us hours of manual work, and the accuracy is unmatched!",
+      desc: "Smart Paper Check has completely transformed our evaluation process. The AI-powered automation saves us hours of manual work, and the accuracy is unmatched!",
       user: "Vinay Chamola",
     },
     {
-      desc: "Smart QnA intuitive interface and real-time feedback have made evaluation a breeze. It's the perfect blend of technology and education.",
+      desc: "Smart Paper Check intuitive interface and real-time feedback have made evaluation a breeze. It's the perfect blend of technology and education.",
       user: "Vinay Chamola",
     },
   ];
 
   const feedbacks2 = [
     {
-      desc: "Smart QnA has revolutionized how we handle answer script evaluations. What used to take days can now be completed in hours with unparalleled precision. The AI-driven automation and customizable scoring have significantly reduced manual errors, while insightful analytics give us a clear view of student performance trends. It's a seamless and secure solution that has truly elevated our evaluation standards.",
+      desc: "Smart Paper Check has revolutionized how we handle answer script evaluations. What used to take days can now be completed in hours with unparalleled precision. The AI-driven automation and customizable scoring have significantly reduced manual errors, while insightful analytics give us a clear view of student performance trends. It's a seamless and secure solution that has truly elevated our evaluation standards.",
       user: "Vinay Chamola",
     },
     {
-      desc: "Thanks to Smart QnA, we've been able to scale our operations effortlessly without compromising on quality. The integration was seamless!",
+      desc: "Thanks to Smart Paper Check, we've been able to scale our operations effortlessly without compromising on quality. The integration was seamless!",
       user: "Vinay Chamola",
     },
     {
-      desc: "Smart QnA intuitive interface and real-time feedback have made evaluation a breeze. It's the perfect blend of technology and education.",
+      desc: "Smart Paper Check intuitive interface and real-time feedback have made evaluation a breeze. It's the perfect blend of technology and education.",
       user: "Vinay Chamola",
     },
   ];
 
   const feedbacks3 = [
     {
-      desc: "Smart QnA has completely transformed our evaluation process. The AI-powered automation saves us hours of manual work, and the accuracy is unmatched!",
+      desc: "Smart Paper Check has completely transformed our evaluation process. The AI-powered automation saves us hours of manual work, and the accuracy is unmatched!",
       user: "Vinay Chamola",
     },
     {
-      desc: "Smart QnA intuitive interface and real-time feedback have made evaluation a breeze. It's the perfect blend of technology and education.",
+      desc: "Smart Paper Check intuitive interface and real-time feedback have made evaluation a breeze. It's the perfect blend of technology and education.",
       user: "Vinay Chamola",
     },
     {
-      desc: "Scaling up evaluations across multiple campuses was always a challenge, but Smart QnA made it effortless. The cloud-based system allowed us to integrate our existing tools seamlessly, while the robust AI ensured accuracy and fairness in grading. It's a smart, reliable, and scalable solution that's become an indispensable part of our academic operations.",
+      desc: "Scaling up evaluations across multiple campuses was always a challenge, but Smart Paper Check made it effortless. The cloud-based system allowed us to integrate our existing tools seamlessly, while the robust AI ensured accuracy and fairness in grading. It's a smart, reliable, and scalable solution that's become an indispensable part of our academic operations.",
       user: "Vinay Chamola",
     },
   ];

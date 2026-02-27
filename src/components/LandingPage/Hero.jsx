@@ -114,8 +114,8 @@ const Hero = ({ scrollToDemo }) => {
           animate="visible"
           variants={fadeIn}
         >
-          SmartQnA automates and explains grading of handwritten answer scripts
-          using cutting-edge Vision-Language Models & Agentic AI Workflows.
+          Smart Paper Check automates and explains grading of handwritten answer
+          scripts using cutting-edge Vision-Language Models & Agentic AI Workflows.
         </motion.p>
 
         <motion.div
@@ -265,7 +265,7 @@ const Hero = ({ scrollToDemo }) => {
               >
                 <img
                   src="../../../public/Screenshot 2025-05-02 at 1.45.52 PM.png"
-                  alt="SmartQnA Dashboard"
+                  alt="Smart Paper Check Dashboard"
                   className="rounded-xl object-cover w-full h-auto"
                 />
               </motion.div>

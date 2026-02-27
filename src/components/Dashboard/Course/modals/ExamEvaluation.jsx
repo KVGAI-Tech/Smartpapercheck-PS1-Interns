@@ -1715,6 +1715,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             examId={examId}
             enrollmentId={detailEnrollmentId}
             courseId={courseId}
+            model={resultsModel}
             onClose={() => {
               setShowDetailView(false);
               setDetailEnrollmentId(null);
@@ -2437,8 +2438,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                   onClick={() => handleModelSelect('current')}
                   className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="font-medium text-gray-900">Current Model</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Use the existing evaluation model/provider.</div>
+                  <div className="font-medium text-gray-900">OpenAI</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Evaluate using OpenAI.</div>
                 </button>
 
                 <button

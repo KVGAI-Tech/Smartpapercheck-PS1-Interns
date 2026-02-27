@@ -25,10 +25,10 @@ const VideoDemo = () => {
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            See <span className="text-accent">SmartQnA</span> in Action
+            See <span className="text-accent">Smart Paper Check</span> in Action
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Watch how SmartQnA transforms handwritten copies into fully graded evaluations with feedback in minutes.
+            Watch how Smart Paper Check transforms handwritten copies into fully graded evaluations with feedback in minutes.
           </p>
         </motion.div>
 
@@ -62,7 +62,7 @@ const VideoDemo = () => {
             <iframe
               className="absolute top-0 left-0 w-full h-full"
               src={`https://www.youtube.com/embed/3egoZx6St5Y?autoplay=1&rel=0&modestbranding=1`}
-              title="SmartQnA Demo Video"
+              title="Smart Paper Check Demo Video"
               style={{ border: 0 }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; microphone"
               allowFullScreen

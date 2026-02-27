@@ -39,7 +39,7 @@ const MobileMenu = () => {
       >
         <div className="p-6 text-gray-900">
           <div className="flex justify-between items-center mb-8">
-            <img src="/logo_smartqna.png" alt="SmartQnA Logo" className="h-7" />
+            <img src="/logo_smartqna.png" alt="Smart Paper Check Logo" className="h-7" />
             <button onClick={() => setIsOpen(false)} className="p-2 rounded-md hover:bg-gray-100">
               <HiX className="w-6 h-6 text-gray-600" />
             </button>
@@ -76,7 +76,7 @@ const MobileMenu = () => {
                 navigate("/auth");
               }}
             >
-              Free grading Tool 🚀
+              Get Started 🚀
             </button>
           </div>
         </div>
@@ -137,11 +137,11 @@ const Navbar = ({
         >
           <img
             src="/logo_smartqna.png"
-            alt="SmartQnA Logo"
+            alt="Smart Paper Check Logo"
             className="h-7 sm:h-8 mr-2 sm:mr-3"
           />
           <div className="font-medium text-xl sm:text-2xl text-gray-900 whitespace-nowrap">
-            Smart<span className="font-light italic text-accent">QnA</span>
+            Smart<span className="font-light italic text-accent"> Paper Check</span>
           </div>
         </motion.div>
 
@@ -185,7 +185,7 @@ const Navbar = ({
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            Free grading Tool 🚀
+            Get Started 
           </motion.button>
         </div>
 

@@ -51,7 +51,7 @@ const ComparisonMetrics = () => {
             Evaluation in <span className="text-accent">Minutes</span>, Not Days
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            SmartQnA revolutionizes answer script evaluation with unprecedented speed and accuracy
+            Smart Paper Check revolutionizes answer script evaluation with unprecedented speed and accuracy
           </p>
         </div>
 
@@ -65,7 +65,7 @@ const ComparisonMetrics = () => {
             </div>
 
             <p className="text-gray-600 mb-8">
-              SmartQnA reduces evaluation time from <span className="font-medium">5-6 days</span> to just <span className="font-medium text-accent">10-20 minutes</span>, saving over 100% of time spent on grading.
+              Smart Paper Check reduces evaluation time from <span className="font-medium">5-6 days</span> to just <span className="font-medium text-accent">10-20 minutes</span>, saving over 100% of time spent on grading.
             </p>
 
             <div className="flex flex-col relative h-64">
@@ -102,7 +102,7 @@ const ComparisonMetrics = () => {
                     100% Time Saved
                   </div>
                   <div className="mt-8 text-center">
-                    <div className="font-medium text-gray-800">SmartQnA</div>
+                    <div className="font-medium text-gray-800">Smart Paper Check</div>
                     <div className="text-sm text-gray-500">AI-Powered Evaluation</div>
                   </div>
                 </div>
@@ -180,14 +180,14 @@ const ComparisonMetrics = () => {
           viewport={{ once: true }}
         >
           <h3 className="text-2xl font-bold mb-6 text-center text-gray-900">
-            <span className="text-accent">SmartQnA</span> vs. Traditional Grading
+            <span className="text-accent">Smart Paper Check</span> vs. Traditional Grading
           </h3>
           <table className="min-w-full bg-white rounded-xl shadow-md overflow-hidden">
             <thead>
               <tr className="bg-accent text-white">
                 <th className="py-4 px-6 text-left">Metric</th>
                 <th className="py-4 px-6 text-center">Traditional Grading</th>
-                <th className="py-4 px-6 text-center">SmartQnA</th>
+                <th className="py-4 px-6 text-center">Smart Paper Check</th>
                 <th className="py-4 px-6 text-center">Improvement</th>
               </tr>
             </thead>
@@ -221,14 +221,14 @@ const ComparisonMetrics = () => {
           </table>
           <div className="mt-4 text-center">
             <p className="text-gray-600 italic text-sm">
-              *Based on data collected from 50+ educational institutions using SmartQnA
+              *Based on data collected from 50+ educational institutions using Smart Paper Check
             </p>
           </div>
         </motion.div>
 
         <div className="bg-accent/10 rounded-xl p-8 text-center max-w-4xl mx-auto">
           <p className="text-gray-700 mb-6">
-            SmartQnA's Vision-Language Models understand complex handwritten answers, diagrams, and equations with human-level comprehension but machine-level efficiency.
+            Smart Paper Check's Vision-Language Models understand complex handwritten answers, diagrams, and equations with human-level comprehension but machine-level efficiency.
           </p>
 
           <motion.button
