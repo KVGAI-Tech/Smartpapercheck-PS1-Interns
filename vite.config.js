@@ -7,10 +7,10 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', 
     port: 5173,
-    allowedHosts: ['dev.smart-qna.com', 'localhost'],
+    allowedHosts: ['dev.smart-qna.com', 'localhost','smartpapercheck.com'],
     proxy: {
       '/api': {
-        target: 'https://dev.smart-qna.com',
+        target: 'https://smartpapercheck.com',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
