@@ -1817,7 +1817,15 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                         type="text"
                         placeholder="Search by name or student ID..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setSearchQuery(next);
+                          setPage(1);
+                          setTotalPages(1);
+                          setTotalStudents(0);
+                          setStudents([]);
+                          clearSelection();
+                        }}
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
                       />
                     </div>
