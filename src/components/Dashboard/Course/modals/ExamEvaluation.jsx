@@ -305,6 +305,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [evaluationStats, setEvaluationStats] = useState(null);
   const lastOverallProgressRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [resultsModel, setResultsModel] = useState('current');
   const [sortConfig, setSortConfig] = useState({ key: 'student_name', direction: 'asc' });
@@ -398,6 +399,13 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     }
   }, [localResultsModelKey, resultsModel]);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(String(searchQuery || '').trim());
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   const showToast = useCallback((message, type = 'success', duration = 3000) => {
     setToast({ show: true, message, type, duration });
   }, []);
@@ -426,8 +434,12 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
+      const search = String(debouncedSearch || '').trim();
+
       const response = await fetch(
-        `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(page)}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(resultsModel)}`,
+        `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(page)}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(resultsModel)}${
+          search ? `&search=${encodeURIComponent(search)}` : ''
+        }`,
         {
         method: 'GET',
         headers: {
@@ -504,7 +516,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [examId, retryCount, page, pageSize, resultsModel]);
+  }, [examId, retryCount, page, pageSize, resultsModel, debouncedSearch]);
 
   const fetchOverallProgress = useCallback(async () => {
     try {
@@ -930,6 +942,13 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   }, [fetchEnrollments]);
 
   useEffect(() => {
+    setPage(1);
+    setTotalPages(1);
+    setTotalStudents(0);
+    clearSelection();
+  }, [debouncedSearch, clearSelection]);
+
+  useEffect(() => {
     clearSelection();
   }, [page, pageSize, clearSelection]);
 
@@ -942,14 +961,6 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
   const filteredStudents = useMemo(() => {
     let result = [...students];
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(student =>
-        (student.student_name?.toLowerCase().includes(query)) ||
-        (student.roll_number?.toLowerCase().includes(query))
-      );
-    }
 
     if (statusFilter !== 'all') {
       const isEvaluated = statusFilter === 'completed';
@@ -971,7 +982,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     });
 
     return result;
-  }, [searchQuery, statusFilter, students, sortConfig]);
+  }, [statusFilter, students, sortConfig]);
 
   const isStudentSelectable = useCallback((student) => {
     if (!student || student.status === 'not_uploaded') return false;
