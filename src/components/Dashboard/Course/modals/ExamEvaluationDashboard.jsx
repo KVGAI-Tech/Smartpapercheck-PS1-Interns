@@ -748,6 +748,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
   const manualPageChangeRef = useRef(false);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("");
   
@@ -1112,6 +1113,13 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
     setToast({ show: false, message: "", type: "success" });
   }, []);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(String(searchQuery || "").trim());
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   const fetchEnrollments = useCallback(async (opts = {}) => {
     try {
       if (!examId) throw new Error("Exam ID is missing");
@@ -1131,10 +1139,14 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
+      const search = String(debouncedSearch || "").trim();
+
       const resp = await fetch(
         `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(
           targetPage
-        )}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(selectedModel)}`,
+        )}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(selectedModel)}${
+          search ? `&search=${encodeURIComponent(search)}` : ""
+        }`,
         {
           method: "GET",
           headers: {
@@ -1204,13 +1216,22 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [examId, page, pageSize, selectedModel]);
+  }, [examId, page, pageSize, selectedModel, debouncedSearch]);
 
   useEffect(() => {
     const forceReplace = Boolean(manualPageChangeRef.current);
     manualPageChangeRef.current = false;
     fetchEnrollments({ pageOverride: page, replace: page === 1 || forceReplace });
   }, [fetchEnrollments]);
+
+  useEffect(() => {
+    manualPageChangeRef.current = true;
+    setStudents([]);
+    setPage(1);
+    setTotalPages(1);
+    setTotalStudents(0);
+    fetchEnrollments({ pageOverride: 1, replace: true });
+  }, [debouncedSearch, fetchEnrollments]);
 
   useEffect(() => {
     if (!loadMoreSentinelRef.current) return;
@@ -1525,17 +1546,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
 
   // T@GS
   const filteredStudents = useMemo(() => {
-    const query = String(searchQuery || "").trim().toLowerCase();
-
     return (students || []).filter((s) => {
-      // Search filter
-      if (query) {
-        const ok =
-          s.student_name?.toLowerCase().includes(query) ||
-          s.roll_number?.toLowerCase().includes(query);
-        if (!ok) return false;
-      }
-
       // Get all tags for this student (auto + custom)
       const autoTags = computeAutoTags(s);
       const customTags = customTagsByEnrollment[String(s.enrollment_id)] || [];
@@ -1586,7 +1597,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
 
       return true;
     });
-  }, [students, searchQuery, filters, customTagsByEnrollment, computeAutoTags, maxMarks]);
+  }, [students, filters, customTagsByEnrollment, computeAutoTags, maxMarks]);
 
   const valuesForHistogram = useMemo(() => {
     // Use selected students if any are selected, otherwise use all filtered students
