@@ -12,13 +12,13 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
   const navigate = useNavigate();
 
-  
+
   useEffect(() => {
     const initAuth = () => {
       try {
         const token = localStorage.getItem('accessToken');
         const role = localStorage.getItem('userRole');
-        
+
         if (token && role) {
           setIsAuthenticated(true);
           setUserRole(role);
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       setAuthError('Login failed: Missing authentication token or role');
       return;
     }
-    
+
     try {
       localStorage.setItem('accessToken', token);
       localStorage.setItem('userRole', role);
@@ -65,9 +65,17 @@ export const AuthProvider = ({ children }) => {
         case 'student':
           navigate('/student-dashboard', { replace: true });
           break;
-        case 'professor':
-          navigate('/dashboard', { replace: true });
+        case 'professor': {
+          // First-time professor login → show the onboarding demo tour
+          const hasSeenDemo = localStorage.getItem('professor_demo_seen');
+          if (!hasSeenDemo) {
+            localStorage.setItem('professor_demo_seen', 'true');
+            navigate('/demo', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
           break;
+        }
         default:
           throw new Error(`Invalid role type: ${role}`);
       }
@@ -81,7 +89,7 @@ export const AuthProvider = ({ children }) => {
       } catch (clearError) {
         console.error('Failed to clear authentication data after login error:', clearError);
       }
-      
+
       setIsAuthenticated(false);
       setUserRole(null);
     }

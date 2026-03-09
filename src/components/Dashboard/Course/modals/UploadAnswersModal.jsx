@@ -318,6 +318,7 @@ const handleSingleUpload = async () => {
     if (onUploadSuccess) {
       onUploadSuccess({ mode: 'single', results });
     }
+    handleClose();
   } catch (e) {
     console.error('Single upload failed:', e);
     toast.error(e?.message || 'Failed to upload answer pages', { id: loadingToast });
@@ -760,9 +761,9 @@ const hasAnySingleJobs = (studentEntries || []).some((e) => {
 if (!isOpen) return null;
 
 return (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+  <div className="fixed inset-0 !m-0 bg-black bg-opacity-50 flex items-start justify-center z-50 backdrop-blur-sm px-4 pt-3 pb-4">
     <div
-      className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col m-4"
+      className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}

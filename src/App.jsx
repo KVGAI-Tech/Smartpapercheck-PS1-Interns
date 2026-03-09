@@ -22,6 +22,7 @@ import ProfessorExamEvaluationsPage from "./components/Dashboard/Course/Professo
 import ProfessorExamEvaluationsDashboardPage from "./components/Dashboard/Course/ProfessorExamEvaluationsDashboardPage";
 import ProfessorNotificationsPage from "./components/Dashboard/ProfessorNotificationsPage";
 import PoliciesPage from "./components/PoliciesPage";
+import DemoPage, { DemoEvaluationPage } from "./components/Demo/DemoPage";
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -51,6 +52,8 @@ function App() {
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/policies" element={<PoliciesPage />} />
           <Route path="/auth" element={<RoleAuth />} />
+          <Route path="/demo" element={<DemoPage />} />
+          <Route path="/demo/evaluations" element={<DemoEvaluationPage />} />
 
           <Route
             path="/dashboard"

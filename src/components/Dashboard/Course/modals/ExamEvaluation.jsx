@@ -299,6 +299,7 @@ const BatchProcessingIndicator = ({ completed, total }) => {
 const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [overallProgress, setOverallProgress] = useState(null);
@@ -435,6 +436,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
       const search = String(debouncedSearch || '').trim();
+      if (search) setSearchLoading(true);
 
       const response = await fetch(
         `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(page)}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(resultsModel)}${
@@ -515,6 +517,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setSearchLoading(false);
     }
   }, [examId, retryCount, page, pageSize, resultsModel, debouncedSearch]);
 
@@ -1896,7 +1899,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                         <button
                           type="button"
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          disabled={loading || refreshing || page <= 1}
+                          disabled={loading || refreshing || searchLoading || page <= 1}
                           className="px-3 py-2.5 text-sm text-gray-700 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Prev
@@ -1907,7 +1910,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                         <button
                           type="button"
                           onClick={() => setPage((p) => Math.min(Math.max(1, totalPages), p + 1))}
-                          disabled={loading || refreshing || page >= totalPages}
+                          disabled={loading || refreshing || searchLoading || page >= totalPages}
                           className="px-3 py-2.5 text-sm text-gray-700 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Next
@@ -2028,7 +2031,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             </motion.div>
 
             <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden mt-4 pb-2">
-              {loading && !hasLoadedOnceRef.current ? (
+              {(loading && !hasLoadedOnceRef.current) || searchLoading ? (
                 <LoadingView />
               ) : error ? (
                 <ErrorState

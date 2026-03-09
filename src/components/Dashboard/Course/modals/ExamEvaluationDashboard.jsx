@@ -734,6 +734,7 @@ const StudentCard = ({
 const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
@@ -1140,6 +1141,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
       const search = String(debouncedSearch || "").trim();
+      if (search) setSearchLoading(true);
 
       const resp = await fetch(
         `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(
@@ -1215,6 +1217,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
+      setSearchLoading(false);
     }
   }, [examId, page, pageSize, selectedModel, debouncedSearch]);
 
@@ -1245,7 +1248,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       (entries) => {
         const entry = entries && entries[0];
         if (!entry || !entry.isIntersecting) return;
-        if (loading || refreshing || loadingMore) return;
+        if (loading || refreshing || loadingMore || searchLoading) return;
         if (page >= totalPages) return;
         setPage((p) => p + 1);
       },
@@ -1259,7 +1262,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
         loadMoreObserverRef.current = null;
       }
     };
-  }, [loading, refreshing, loadingMore, page, totalPages]);
+  }, [loading, refreshing, loadingMore, searchLoading, page, totalPages]);
 
   const stopEvaluationJobPolling = useCallback(() => {
     if (evaluationJobPollRef.current) {
@@ -3210,7 +3213,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
           </div>
         </div>
 
-        {loading ? (
+        {loading || searchLoading ? (
           <div className="flex items-center justify-center py-16">
             <div className="flex items-center gap-2 text-slate-600">
               <Loader className="w-5 h-5 animate-spin" />
