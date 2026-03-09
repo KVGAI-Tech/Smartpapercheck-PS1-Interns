@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../BaseURL';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +12,6 @@ export const AuthProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   const [authError, setAuthError] = useState(null);
   const navigate = useNavigate();
-
 
   useEffect(() => {
     const initAuth = () => {
@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = (token, role) => {
+  const login = async (token, role) => {
     if (!token || !role) {
       setAuthError('Login failed: Missing authentication token or role');
       return;
@@ -68,10 +68,30 @@ export const AuthProvider = ({ children }) => {
         case 'professor': {
           // First-time professor login → show the onboarding demo tour
           const hasSeenDemo = localStorage.getItem('professor_demo_seen');
-          if (!hasSeenDemo) {
-            localStorage.setItem('professor_demo_seen', 'true');
-            navigate('/demo', { replace: true });
-          } else {
+          try {
+            const coursesRes = await fetch(`${API_BASE_URL}/professors/courses`, {
+              method: 'GET',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (!coursesRes.ok) {
+              navigate('/dashboard', { replace: true });
+              break;
+            }
+
+            const coursesJson = await coursesRes.json().catch(() => ({}));
+            const courses = Array.isArray(coursesJson?.data) ? coursesJson.data : [];
+
+            if (courses.length === 0 && !hasSeenDemo) {
+              localStorage.setItem('professor_demo_seen', 'true');
+              navigate('/demo', { replace: true });
+            } else {
+              navigate('/dashboard', { replace: true });
+            }
+          } catch (e) {
             navigate('/dashboard', { replace: true });
           }
           break;
