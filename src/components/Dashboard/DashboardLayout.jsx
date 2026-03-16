@@ -443,6 +443,7 @@ const DashboardLayout = ({ children }) => {
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard" },
     { icon: BookOpen, label: "Courses", to: "/courses" },
+    { icon: BookOpen, label: "Archived Courses", to: "/courses/archived" },
   ];
 
   const isActive = (path) => {

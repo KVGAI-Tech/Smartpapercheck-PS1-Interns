@@ -8,6 +8,13 @@ export default defineConfig({
     host: '0.0.0.0', 
     port: 5173,
     allowedHosts: ['dev.smart-qna.com', 'localhost','smartpapercheck.com'],
+    fs: {
+      allow: [
+        path.resolve(__dirname),
+        path.resolve(__dirname, '..'),
+        path.resolve(__dirname, '..', 'node_modules'),
+      ],
+    },
     proxy: {
       '/api': {
         target: 'https://smartpapercheck.com',

@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import {
   X, Upload, FileArchive, CheckCircle, AlertTriangle,
-  Folder, FolderOpen, Image, AlertCircle, Loader2, Search, ChevronDown, Check, Clipboard, Trash2
+  Folder, FolderOpen, Image, AlertCircle, Loader2, Search, ChevronDown, Check, Clipboard, Trash2, Maximize, Minimize
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API_BASE_URL } from '../../../../BaseURL';
 
 const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess }) => {
-  const [activeTab, setActiveTab] = useState('bulk');
+  const [activeTab, setActiveTab] = useState('single');
   const [zipFile, setZipFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -21,10 +21,13 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   const [uploadResults, setUploadResults] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [singleStudents, setSingleStudents] = useState([]);
   const [singleQuestions, setSingleQuestions] = useState([]);
   const [isSingleUploading, setIsSingleUploading] = useState(false);
+  const [singleStudentListSearch, setSingleStudentListSearch] = useState('');
+  const [selectedSingleQuestionNumber, setSelectedSingleQuestionNumber] = useState(null);
 
   // Multi-student upload state — each entry holds its own student + per-question files
   const makeEntry = () => ({ entryId: Date.now() + Math.random(), studentId: '', studentSearch: '', filesByQuestion: {}, dropdownOpen: false, highlightIndex: 0 });
@@ -490,7 +493,8 @@ const handleUpload = async () => {
 };
 
 const handleClose = () => {
-  setActiveTab('bulk');
+  setActiveTab('single');
+  setIsFullscreen(false);
   setZipFile(null);
   setIsProcessing(false);
   setProcessingJobId(null);
@@ -502,6 +506,8 @@ const handleClose = () => {
   setUploadResults(null);
   setSingleStudents([]);
   setSingleQuestions([]);
+  setSingleStudentListSearch('');
+  setSelectedSingleQuestionNumber(null);
   setIsSingleUploading(false);
   setStudentEntries([makeEntry()]);
   setActiveEntryId(undefined);
@@ -565,6 +571,19 @@ useEffect(() => {
   window.addEventListener('paste', onPaste);
   return () => window.removeEventListener('paste', onPaste);
 }, [isOpen, activeTab, activeQuestionForPaste, studentEntries]);
+
+useEffect(() => {
+  const handleEscKey = (e) => {
+    if (e.key === 'Escape' && isFullscreen) {
+      setIsFullscreen(false);
+    }
+  };
+
+  document.addEventListener('keydown', handleEscKey);
+  return () => {
+    document.removeEventListener('keydown', handleEscKey);
+  };
+}, [isFullscreen]);
 
 // Listen for background processing progress over WebSocket once processing has started
 useEffect(() => {
@@ -761,9 +780,9 @@ const hasAnySingleJobs = (studentEntries || []).some((e) => {
 if (!isOpen) return null;
 
 return (
-  <div className="fixed inset-0 !m-0 bg-black bg-opacity-50 flex items-start justify-center z-50 backdrop-blur-sm px-4 pt-3 pb-4">
+  <div className={`fixed inset-0 !m-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm ${isFullscreen ? '' : 'px-4 py-4'}`}>
     <div
-      className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col"
+      className={`bg-white shadow-2xl w-full overflow-hidden flex flex-col ${isFullscreen ? 'fixed inset-0 max-w-none max-h-none rounded-none' : 'rounded-2xl max-w-6xl max-h-[92vh]'}`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
@@ -782,9 +801,18 @@ return (
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            type="button"
+          >
+            {isFullscreen ? <Minimize className="w-5 h-5 text-gray-500" /> : <Maximize className="w-5 h-5 text-gray-500" />}
+          </button>
+          <button
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
             aria-label="Close"
+            type="button"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -792,17 +820,9 @@ return (
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className={`flex-1 min-h-0 p-6 ${activeTab === 'single' ? 'overflow-hidden' : 'overflow-y-auto'}`} style={activeTab === 'single' ? { display: 'flex', flexDirection: 'column' } : {}}>
         <div className="mb-4">
           <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('bulk')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'bulk' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
-                }`}
-            >
-              Bulk Upload
-            </button>
             <button
               type="button"
               onClick={() => setActiveTab('single')}
@@ -810,6 +830,14 @@ return (
                 }`}
             >
               Single Upload
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('bulk')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'bulk' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
+                }`}
+            >
+              Bulk Upload
             </button>
           </div>
         </div>
@@ -1064,264 +1092,267 @@ return (
                 </div>
               </div>
             ) : (
-              <div className="space-y-5">
-                <div className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Students</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Add multiple students and upload their answers in one go.</div>
-                      <p className="text-xs text-gray-500 mt-0.5">Select 1 or more images per question. Upload will replace existing pages for that question.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addNewEntry}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      <Upload className="w-4 h-4" />
-                      Add student
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {(studentEntries || []).map((e, idx) => {
-                      const active = e.entryId === (activeEntryId || studentEntries?.[0]?.entryId);
-                      return (
-                        <div
-                          key={e.entryId}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${active ? 'border-accent bg-accent/5' : 'border-gray-200 bg-white'}`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setActiveEntryId(e.entryId)}
-                            className="text-xs font-medium text-gray-900 max-w-[220px] truncate"
-                            title={e.studentId ? e.studentSearch : `Student ${idx + 1}`}
-                          >
-                            {e.studentId ? (e.studentSearch || `Student ${idx + 1}`) : `Student ${idx + 1}`}
-                          </button>
-                          {(studentEntries || []).length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeEntry(e.entryId)}
-                              className="p-1 rounded-lg hover:bg-gray-100"
-                              aria-label="Remove student"
-                            >
-                              <X className="w-4 h-4 text-gray-500" />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {(() => {
-                    const active = getActiveEntry();
-                    if (!active) return null;
-                    const list = getFilteredStudents(active.studentSearch);
-                    return (
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Select student</label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <Search className="w-4 h-4" />
-                          </div>
-                          <input
-                            ref={(el) => {
-                              studentSearchInputRefs.current[String(active.entryId)] = el;
-                            }}
-                            type="text"
-                            value={active.studentSearch}
-                            onChange={(ev) => {
-                              updateEntry(active.entryId, { studentSearch: ev.target.value, dropdownOpen: true, highlightIndex: 0, studentId: '' });
-                            }}
-                            onFocus={() => updateEntry(active.entryId, { dropdownOpen: true })}
-                            onBlur={() => setTimeout(() => updateEntry(active.entryId, { dropdownOpen: false }), 120)}
-                            placeholder="Search by name / roll number / email"
-                            className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
-                          />
-                          <button
-                            type="button"
-                            onMouseDown={(ev) => ev.preventDefault()}
-                            onClick={() => updateEntry(active.entryId, { dropdownOpen: !active.dropdownOpen })}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                            aria-label="Toggle student dropdown"
-                          >
-                            <ChevronDown className="w-4 h-4 text-gray-500" />
-                          </button>
-                          {active.dropdownOpen && (
-                            <div className="absolute z-20 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
-                              <div className="max-h-64 overflow-auto">
-                                {list.length === 0 ? (
-                                  <div className="px-4 py-3 text-sm text-gray-500">No matching students.</div>
-                                ) : (
-                                  list.slice(0, 50).map((s, idx) => (
-                                    <button
-                                      key={s.id}
-                                      type="button"
-                                      onMouseDown={(ev) => ev.preventDefault()}
-                                      onClick={() => updateEntry(active.entryId, { studentId: String(s.id), studentSearch: getStudentLabel(s), dropdownOpen: false })}
-                                      className="w-full px-4 py-2.5 text-left flex items-center justify-between gap-3 text-sm hover:bg-gray-50"
-                                    >
-                                      <div className="min-w-0">
-                                        <div className="font-medium text-gray-900 truncate">{getStudentLabel(s)}</div>
-                                        <div className="text-xs text-gray-500 truncate">{s?.email ? String(s.email) : ''}</div>
-                                      </div>
-                                      {String(active.studentId) === String(s.id) && (
-                                        <Check className="w-4 h-4 text-accent flex-shrink-0" />
-                                      )}
-                                    </button>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">Select a student for the active tab above. Then upload per-question pages below.</div>
+              <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6" style={{ height: 0, flexGrow: 1 }}>
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-0">
+                  <div className="px-4 py-3 border-b border-gray-200">
+                    <div className="text-sm font-semibold text-gray-900">Students</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Select a student to upload their answers.</div>
+                    <div className="mt-3 relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <Search className="w-4 h-4" />
                       </div>
-                    );
-                  })()}
+                      <input
+                        type="text"
+                        value={singleStudentListSearch}
+                        onChange={(e) => setSingleStudentListSearch(e.target.value)}
+                        placeholder="Search by name / roll / email"
+                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto p-2">
+                    <div className="space-y-2">
+                      {(() => {
+                        const active = getActiveEntry();
+                        const list = getFilteredStudents(singleStudentListSearch);
+                        if (!list.length) {
+                          return (
+                            <div className="px-3 py-3 text-sm text-gray-500">No matching students.</div>
+                          );
+                        }
+                        return list.slice(0, 200).map((s) => {
+                          const isActive = String(active?.studentId || '') === String(s.id);
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                const entry = getActiveEntry() || studentEntries?.[0];
+                                if (!entry) return;
+                                updateEntry(entry.entryId, { studentId: String(s.id), studentSearch: getStudentLabel(s) });
+                              }}
+                              className={`w-full text-left rounded-xl border transition-colors px-3 py-3 flex items-start gap-3 ${isActive ? 'border-accent bg-accent/10' : 'border-gray-200 hover:bg-gray-50'}`}
+                            >
+                              <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold ${isActive ? 'bg-accent text-white' : 'bg-gray-100 text-gray-700'}`}>
+                                {(String(s?.roll_number || s?.rollNumber || '').slice(-2) || 'S')}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{getStudentLabel(s)}</p>
+                                  {isActive && <Check className="w-4 h-4 text-accent flex-shrink-0" />}
+                                </div>
+                                <p className="text-xs text-gray-500 truncate">{s?.email ? String(s.email) : ''}</p>
+                              </div>
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+
+
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-                  <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Upload pages per question</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">Select 1 or more images per question. Upload will replace existing pages for that question.</p>
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-0">
+                  <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                    <div className="text-sm text-gray-500">Uploading for</div>
+                    <div className="text-lg font-semibold text-gray-900 truncate">
+                      {(() => {
+                        const active = getActiveEntry();
+                        return active?.studentSearch || 'Select a student';
+                      })()}
                     </div>
+                    <div className="text-xs text-gray-500 mt-0.5">For each question below, drag/drop or click to upload answer images.</div>
                   </div>
 
-                  <div className="p-5 space-y-4">
-                    {(!singleQuestions || singleQuestions.length === 0) ? (
-                      <div className="text-sm text-gray-500">No questions found for this exam.</div>
-                    ) : (
-                      singleQuestions
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    {(() => {
+                      const active = getActiveEntry();
+
+                      if (!active?.studentId) {
+                        return (
+                          <div className="p-6">
+                            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                              Select a student to begin uploading answers.
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const sorted = (singleQuestions || [])
                         .slice()
-                        .sort((a, b) => (Number(a.question_number) || 0) - (Number(b.question_number) || 0))
-                        .map((q) => {
-                          const qn = q.question_number;
-                          const active = getActiveEntry();
-                          const selectedFiles = active?.filesByQuestion?.[String(qn)] || [];
-                          const isPasteTarget =
-                            !!activeQuestionForPaste &&
-                            activeQuestionForPaste.entryId === active?.entryId &&
-                            String(activeQuestionForPaste.qn) === String(qn);
+                        .sort((a, b) => (Number(a.question_number) || 0) - (Number(b.question_number) || 0));
 
-                          return (
-                            <div
-                              key={qn}
-                              className={`rounded-xl border p-4 transition-colors ${isPasteTarget ? 'border-accent bg-accent/5' : 'border-gray-200 bg-white'}`}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <div className="text-sm font-semibold text-gray-900">Q{qn}</div>
-                                    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${selectedFiles.length ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                                      {selectedFiles.length ? `${selectedFiles.length} image(s)` : 'No images'}
-                                    </span>
-                                  </div>
-                                  {q.question_text && (
-                                    <div className="text-xs text-gray-600 mt-1 line-clamp-3">{q.question_text}</div>
-                                  )}
-                                </div>
+                      if (!sorted.length) {
+                        return (
+                          <div className="p-6 text-sm text-gray-500">No questions found for this exam.</div>
+                        );
+                      }
 
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (!active?.studentId) {
-                                        toast.error('Please select a student first');
-                                        return;
-                                      }
-                                      setActiveQuestionForPaste({ entryId: active.entryId, qn });
-                                      toast.success(`Now pasting to Q${qn}. Press Ctrl+V to paste images.`);
-                                    }}
-                                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${isPasteTarget ? 'bg-white border-accent text-accent' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-                                    title="Set as paste target"
-                                  >
-                                    <Clipboard className="w-4 h-4" />
-                                    Paste here
-                                  </button>
+                      return (
+                        <div className="p-6 space-y-6 max-w-5xl mx-auto w-full">
+                          {sorted.map((q) => {
+                            const qn = String(q.question_number);
+                            const isActivePaste = activeQuestionForPaste?.entryId === active.entryId && activeQuestionForPaste?.qn === qn;
+                            const questionFiles = active.filesByQuestion?.[qn] || [];
 
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const ref = singleQuestionFileInputRefs.current?.[`${active?.entryId || 'na'}-${String(qn)}`];
-                                      ref?.click?.();
-                                    }}
-                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-accent text-white text-xs font-medium hover:bg-accent transition-colors"
-                                  >
-                                    <Upload className="w-4 h-4" />
-                                    Add images
-                                  </button>
-                                </div>
-                              </div>
-
-                              <input
-                                ref={(el) => {
-                                  const active = getActiveEntry();
-                                  singleQuestionFileInputRefs.current[`${active?.entryId || 'na'}-${String(qn)}`] = el;
-                                }}
-                                type="file"
-                                accept="image/png,image/jpg,image/jpeg"
-                                multiple
-                                onChange={(e) => {
-                                  const files = e.target.files ? Array.from(e.target.files) : [];
-                                  const active = getActiveEntry();
-                                  if (!active?.studentId) {
-                                    toast.error('Please select a student first');
-                                    e.target.value = '';
-                                    return;
-                                  }
-                                  appendFilesToEntryQuestion(active.entryId, qn, files);
-                                  e.target.value = '';
-                                }}
-                                className="hidden"
-                              />
-
-                              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                {selectedFiles.length === 0 ? (
-                                  <div className="col-span-full rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
-                                    <div className="flex items-start gap-3">
-                                      <Image className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                                      <div>
-                                        <div className="text-sm font-medium text-gray-800">Add pages for Q{qn}</div>
-                                        <div className="text-xs text-gray-500 mt-0.5">Use “Add images” or click “Paste here” and press Ctrl+V.</div>
-                                      </div>
+                            return (
+                              <div key={qn} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                                {/* Question header */}
+                                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                                  <div className="flex items-start gap-4">
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                                      <span className="text-sm font-bold text-accent">Q{qn}</span>
                                     </div>
+                                    <div className="flex-1 min-w-0 py-1">
+                                      {q?.question_text ? (
+                                        <p className="text-base text-gray-800 font-medium leading-relaxed">{q.question_text}</p>
+                                      ) : (
+                                        <p className="text-base text-gray-500 italic">Question {qn}</p>
+                                      )}
+                                    </div>
+                                    {questionFiles.length > 0 && (
+                                      <span className="flex-shrink-0 text-xs px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        {questionFiles.length} image{questionFiles.length > 1 ? 's' : ''}
+                                      </span>
+                                    )}
                                   </div>
-                                ) : (
-                                  selectedFiles.map((f, idx) => (
-                                    <div key={`${f.name}-${idx}`} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                                      <div className="relative aspect-[4/3] bg-gray-50">
-                                        <img
-                                          src={getObjectUrlForFile(f)}
-                                          alt={f?.name || `Q${qn} page ${idx + 1}`}
-                                          className="w-full h-full object-cover"
-                                        />
+                                </div>
+
+                                {/* Per-question upload area */}
+                                <div className="p-4 space-y-3">
+                                  {/* Drop zone — click activates paste target, drag-drop still works */}
+                                  <div
+                                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); if (e.currentTarget === e.target) setIsDragging(false); }}
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setIsDragging(false);
+                                      const files = Array.from(e.dataTransfer.files || []).filter((f) => String(f?.type || '').startsWith('image/'));
+                                      if (!files.length) { toast.error('Please drop image files only'); return; }
+                                      appendFilesToEntryQuestion(active.entryId, qn, files);
+                                    }}
+                                    onClick={() => {
+                                      // Clicking just activates this as the paste target — does NOT open file picker
+                                      setActiveQuestionForPaste({ entryId: active.entryId, qn });
+                                      setSelectedSingleQuestionNumber(qn);
+                                    }}
+                                    className={`border-2 border-dashed rounded-xl px-4 py-8 transition-all duration-200 cursor-pointer text-center ${
+                                      isActivePaste
+                                        ? 'border-accent bg-accent/5'
+                                        : 'border-gray-200 hover:border-accent/40 hover:bg-accent/5'
+                                    }`}
+                                    role="button"
+                                    tabIndex={0}
+                                  >
+                                    <Upload className={`w-8 h-8 mx-auto mb-3 ${isActivePaste ? 'text-accent' : 'text-gray-400'}`} />
+                                    <p className="text-sm text-gray-600">
+                                      {isActivePaste
+                                        ? <span className="font-medium text-accent">Paste target active — press Ctrl+V to paste</span>
+                                        : 'Drag & drop images here, or use the buttons below'}
+                                    </p>
+                                  </div>
+
+                                  {/* Two action buttons: paste + upload */}
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveQuestionForPaste({ entryId: active.entryId, qn });
+                                        setSelectedSingleQuestionNumber(qn);
+                                      }}
+                                      className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
+                                        isActivePaste
+                                          ? 'border-accent bg-accent/10 text-accent'
+                                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      <Clipboard className="w-4 h-4" />
+                                      {isActivePaste ? 'Paste target active (Ctrl+V)' : 'Set paste target'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveQuestionForPaste({ entryId: active.entryId, qn });
+                                        setSelectedSingleQuestionNumber(qn);
+                                        const ref = singleQuestionFileInputRefs.current?.[`${active.entryId}-${qn}`];
+                                        ref?.click?.();
+                                      }}
+                                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                    >
+                                      <Upload className="w-4 h-4" />
+                                      Upload images
+                                    </button>
+                                  </div>
+
+                                  {questionFiles.length > 0 && (
+                                    <>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium text-gray-700">{questionFiles.length} image(s) selected</span>
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            const active = getActiveEntry();
-                                            if (!active) return;
-                                            removeFileFromEntryQuestion(active.entryId, qn, idx);
+                                            questionFiles.forEach((f) => revokeObjectUrlForFile(f));
+                                            updateEntry(active.entryId, { filesByQuestion: { ...active.filesByQuestion, [qn]: [] } });
                                           }}
-                                          className="absolute top-2 right-2 p-2 rounded-lg bg-white/90 hover:bg-white border border-gray-200 shadow-sm"
-                                          aria-label="Remove image"
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
                                         >
-                                          <Trash2 className="w-4 h-4 text-gray-700" />
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          Clear
                                         </button>
                                       </div>
-                                      <div className="px-3 py-2">
-                                        <div className="text-xs font-medium text-gray-800 truncate">{f?.name || 'Image'}</div>
-                                        <div className="text-[11px] text-gray-500 mt-0.5">{Math.max(0, (f?.size || 0) / 1024).toFixed(0)} KB</div>
+                                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+                                        {questionFiles.map((f, idx) => (
+                                          <div key={`${f.name}-${idx}`} className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                                            <div className="relative aspect-[4/3] bg-gray-50">
+                                              <img
+                                                src={getObjectUrlForFile(f)}
+                                                alt={f?.name || `Q${qn} page ${idx + 1}`}
+                                                className="w-full h-full object-cover"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); removeFileFromEntryQuestion(active.entryId, qn, idx); }}
+                                                className="absolute top-1 right-1 p-1 rounded bg-white/90 hover:bg-white border border-gray-200 shadow-sm"
+                                                aria-label="Remove image"
+                                              >
+                                                <Trash2 className="w-3 h-3 text-gray-700" />
+                                              </button>
+                                            </div>
+                                            <div className="px-2 py-1">
+                                              <div className="text-[10px] text-gray-500 truncate">{f?.name || 'Image'}</div>
+                                            </div>
+                                          </div>
+                                        ))}
                                       </div>
-                                    </div>
-                                  ))
-                                )}
+                                    </>
+                                  )}
+
+                                  <input
+                                    ref={(el) => {
+                                      if (!el) return;
+                                      singleQuestionFileInputRefs.current[`${active.entryId}-${qn}`] = el;
+                                    }}
+                                    type="file"
+                                    accept="image/png,image/jpg,image/jpeg"
+                                    multiple
+                                    onChange={(e) => {
+                                      const files = e.target.files ? Array.from(e.target.files) : [];
+                                      appendFilesToEntryQuestion(active.entryId, qn, files);
+                                      e.target.value = '';
+                                    }}
+                                    className="hidden"
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })
-                    )}
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

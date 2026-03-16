@@ -96,6 +96,8 @@ const CourseDetails = () => {
     const [courseDetails, setCourseDetails] = useState(null);
     const [activeTab, setActiveTab] = useState('students');
 
+    const activeTabStorageKey = `course_${courseId}_active_tab`;
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSection, setSelectedSection] = useState('All sections');
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -119,6 +121,29 @@ const CourseDetails = () => {
             setActiveTab(nextTab);
         }
     }, [location?.state]);
+
+    useEffect(() => {
+        if (!courseId) return;
+
+        const nextTab = location?.state?.activeTab;
+        if (typeof nextTab === 'string' && nextTab.length > 0) {
+            try {
+                localStorage.setItem(activeTabStorageKey, nextTab);
+            } catch {
+                // ignore
+            }
+            return;
+        }
+
+        try {
+            const stored = localStorage.getItem(activeTabStorageKey);
+            if (stored && typeof stored === 'string') {
+                setActiveTab(stored);
+            }
+        } catch {
+            // ignore
+        }
+    }, [courseId, activeTabStorageKey, location?.state]);
 
     // Ensure layout header always has the actual course name/code, even after refresh
     useEffect(() => {
@@ -536,6 +561,11 @@ const CourseDetails = () => {
                                     key={tab.id}
                                     onClick={() => {
                                         setActiveTab(tab.id);
+                                        try {
+                                            localStorage.setItem(activeTabStorageKey, tab.id);
+                                        } catch {
+                                            // ignore
+                                        }
                                         setSearchQuery('');
                                         setSelectedSection('All sections');
                                     }}

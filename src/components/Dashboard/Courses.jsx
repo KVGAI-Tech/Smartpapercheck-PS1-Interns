@@ -5,12 +5,16 @@ import {
   BookOpen,
   Calendar,
   CheckCircle,
+  ClipboardList,
   Filter,
+  Archive,
+  ArchiveRestore,
   MoreVertical,
   Pencil,
   Plus,
   RefreshCw,
   Search,
+  Users,
   Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -53,11 +57,28 @@ export const fetchApi = async (endpoint, options = {}) => {
   return response.json();
 };
 
-const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
+const CourseCard = ({
+  course,
+  onEdit,
+  onRemove,
+  onArchive,
+  onUnarchive,
+  index,
+  userRole,
+}) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const dropdownRef = useRef(null);
+
+  const isArchived = Boolean(course?.is_archived || course?.archived_at);
+
+  const studentsCount = Number.isFinite(Number(course?.students_count))
+    ? Number(course.students_count)
+    : 0;
+  const examsCount = Number.isFinite(Number(course?.exams_count))
+    ? Number(course.exams_count)
+    : 0;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -106,106 +127,148 @@ const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
       animate="visible"
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-      className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:border-gray-200 transition-all duration-300 flex flex-col h-full cursor-pointer"
+      className="bg-gradient-to-br from-accent/10 via-white to-indigo-50 rounded-2xl border border-accent/20 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer overflow-hidden"
       onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
       }}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {course.course_code || "No Code"}
-            </h3>
-            <motion.span
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              className={`px-2 py-1 text-xs font-medium rounded-full ${
-                course.is_active
-                  ? "bg-accent/10 text-accent"
-                  : "bg-gray-50 text-gray-600"
-              }`}
-            >
-              {course.is_active ? "Active" : "Inactive"}
-            </motion.span>
+      <div className="p-6 pb-4">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                {course.course_code || "No Code"}
+              </h3>
+              <motion.span
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  course.is_active
+                    ? "bg-accent/10 text-accent"
+                    : "bg-gray-50 text-gray-600"
+                }`}
+              >
+                {course.is_active ? "Active" : "Inactive"}
+              </motion.span>
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2 truncate">
+              {course.course_name}
+            </h4>
           </div>
-          <h4 className="text-xl font-bold text-gray-800 mb-2">
-            {course.course_name}
-          </h4>
+
+          {userRole === "professor" && (
+            <div className="relative ml-4" ref={dropdownRef}>
+              <motion.button
+                whileHover={{ rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDropdown(!showDropdown);
+                }}
+                className="p-2 hover:bg-white/70 rounded-xl transition-colors duration-200"
+              >
+                <MoreVertical className="w-5 h-5 text-gray-500" />
+              </motion.button>
+
+              <AnimatePresence>
+                {showDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-10 overflow-hidden"
+                  >
+                    <motion.button
+                      whileHover={{ backgroundColor: "#F3F4F6" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(course);
+                        setShowDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      <span>Edit Course</span>
+                    </motion.button>
+
+                    {isArchived ? (
+                      <motion.button
+                        whileHover={{ backgroundColor: "#F3F4F6" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUnarchive?.(course);
+                          setShowDropdown(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <ArchiveRestore className="w-4 h-4" />
+                        <span>Unarchive Course</span>
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        whileHover={{ backgroundColor: "#F3F4F6" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onArchive?.(course);
+                          setShowDropdown(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Archive className="w-4 h-4" />
+                        <span>Archive Course</span>
+                      </motion.button>
+                    )}
+
+                    <motion.button
+                      whileHover={{ backgroundColor: "#FEF2F2" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove(course);
+                        setShowDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Remove Course</span>
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
 
-        {userRole === "professor" && (
-          <div className="relative ml-4" ref={dropdownRef}>
-            <motion.button
-              whileHover={{ rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDropdown(!showDropdown);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            >
-              <MoreVertical className="w-5 h-5 text-gray-500" />
-            </motion.button>
-
-            <AnimatePresence>
-              {showDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-10 overflow-hidden"
-                >
-                  <motion.button
-                    whileHover={{ backgroundColor: "#F3F4F6" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(course);
-                      setShowDropdown(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    <span>Edit Course</span>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ backgroundColor: "#FEF2F2" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove(course);
-                      setShowDropdown(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Remove Course</span>
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-3 mb-6">
+        <div className="space-y-3 mb-5">
         <div className="flex items-center text-gray-600">
           <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
           <span className="text-sm">
             {formatDate(course.start_date)} - {formatDate(course.end_date)}
           </span>
         </div>
-        {course.semester && (
-          <div className="text-sm text-gray-500">
-            <span className="font-medium">Semester:</span> {course.year}-
-            {course.semester}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-accent/10 bg-white/80 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
+              <ClipboardList className="w-4 h-4 text-accent/70" />
+              Exams
+            </div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900">{examsCount}</div>
           </div>
-        )}
+          <div className="rounded-2xl border border-accent/10 bg-white/80 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
+              <Users className="w-4 h-4 text-indigo-500" />
+              Students
+            </div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900">{studentsCount}</div>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto px-6 pb-5 pt-2">
         <AnimatePresence>
           {(isHovered || course.is_active) && (
             <motion.div
@@ -213,7 +276,7 @@ const CourseCard = ({ course, onEdit, onRemove, index, userRole }) => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="text-sm text-accent hover:text-accent font-medium flex items-center group"
+              className="text-sm text-accent hover:text-accent font-semibold flex items-center group"
             >
               View Details
               <motion.span
@@ -361,7 +424,7 @@ const DeleteConfirmationModal = ({
   );
 };
 
-const Courses = () => {
+const Courses = ({ archivedView = false }) => {
   const navigate = useNavigate();
   const { userRole } = useAuth();
   const [courses, setCourses] = useState([]);
@@ -380,14 +443,16 @@ const Courses = () => {
 
   useEffect(() => {
     fetchCourses();
-  }, [userRole]);
+  }, [userRole, archivedView]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
       const endpoint =
         userRole === "professor"
-          ? "/professors/courses"
+          ? archivedView
+            ? "/professors/courses/archived"
+            : "/professors/courses"
           : "/students/courses";
       const response = await fetchApi(endpoint);
       setCourses(response.data);
@@ -413,6 +478,30 @@ const Courses = () => {
   const handleRemoveCourse = (course) => {
     setCourseToDelete(course);
     setDeleteModalOpen(true);
+  };
+
+  const handleArchiveCourse = async (course) => {
+    try {
+      await fetchApi(`/professors/courses/${course.id}/archive`, {
+        method: "PATCH",
+      });
+      showToastMessage("Course archived successfully", "success");
+      await fetchCourses();
+    } catch (err) {
+      showToastMessage(`Failed to archive course: ${err.message}`, "error");
+    }
+  };
+
+  const handleUnarchiveCourse = async (course) => {
+    try {
+      await fetchApi(`/professors/courses/${course.id}/unarchive`, {
+        method: "PATCH",
+      });
+      showToastMessage("Course unarchived successfully", "success");
+      await fetchCourses();
+    } catch (err) {
+      showToastMessage(`Failed to unarchive course: ${err.message}`, "error");
+    }
   };
 
   const confirmDeleteCourse = async () => {
@@ -576,6 +665,8 @@ const Courses = () => {
               setShowAddModal(true);
             }}
             onRemove={handleRemoveCourse}
+            onArchive={userRole === "professor" ? handleArchiveCourse : undefined}
+            onUnarchive={userRole === "professor" ? handleUnarchiveCourse : undefined}
           />
         ))}
       </motion.div>

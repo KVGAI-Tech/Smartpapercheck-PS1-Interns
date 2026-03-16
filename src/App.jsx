@@ -23,6 +23,51 @@ import ProfessorExamEvaluationsDashboardPage from "./components/Dashboard/Course
 import ProfessorNotificationsPage from "./components/Dashboard/ProfessorNotificationsPage";
 import PoliciesPage from "./components/PoliciesPage";
 import DemoPage, { DemoEvaluationPage } from "./components/Demo/DemoPage";
+import { useAuth } from "./components/AuthContext";
+
+function HomeRoute() {
+  const { isAuthenticated, isLoading, userRole } = useAuth();
+
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  if (userRole === "student") {
+    return <Navigate to="/student-dashboard" replace />;
+  }
+
+  if (userRole === "professor") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Navigate to="/auth" replace />;
+}
+
+function AuthRoute() {
+  const { isAuthenticated, isLoading, userRole } = useAuth();
+
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
+
+  if (!isAuthenticated) {
+    return <RoleAuth />;
+  }
+
+  if (userRole === "student") {
+    return <Navigate to="/student-dashboard" replace />;
+  }
+
+  if (userRole === "professor") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <RoleAuth />;
+}
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -47,11 +92,11 @@ function App() {
         {loading && <LoadingIndicator />}
 
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<HomeRoute />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/policies" element={<PoliciesPage />} />
-          <Route path="/auth" element={<RoleAuth />} />
+          <Route path="/auth" element={<AuthRoute />} />
           <Route path="/demo" element={<DemoPage />} />
           <Route path="/demo/evaluations" element={<DemoEvaluationPage />} />
 
@@ -81,6 +126,16 @@ function App() {
               <RoleRoute requiredRole="professor">
                 <DashboardLayout>
                   <Courses />
+                </DashboardLayout>
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/courses/archived"
+            element={
+              <RoleRoute requiredRole="professor">
+                <DashboardLayout>
+                  <Courses archivedView />
                 </DashboardLayout>
               </RoleRoute>
             }

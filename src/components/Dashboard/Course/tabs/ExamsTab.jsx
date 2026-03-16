@@ -515,11 +515,13 @@ const Toast = ({ message, type, show, onClose }) => {
     initialStep = 0,
     onStepChange,
   }) => {
-    const [activeStep, setActiveStep] = useState(initialStep || 0);
+    const [activeStep, setActiveStep] = useState(Math.min(2, initialStep || 0));
 
     useEffect(() => {
-      setActiveStep(initialStep || 0);
+      setActiveStep(Math.min(2, initialStep || 0));
     }, [initialStep]);
+
+    const allStepsCompleted = Number(initialStep || 0) >= 3;
 
     const steps = [
       {
@@ -605,8 +607,8 @@ const Toast = ({ message, type, show, onClose }) => {
                 <React.Fragment key={index}>
                   <StepDot
                     number={index + 1}
-                    isActive={activeStep === index}
-                    isCompleted={index < activeStep}
+                    isActive={!allStepsCompleted && activeStep === index}
+                    isCompleted={allStepsCompleted ? true : index < activeStep}
                     onClick={() => {
                       setActiveStep(index);
                       if (onStepChange) {
@@ -618,7 +620,7 @@ const Toast = ({ message, type, show, onClose }) => {
                   {index < steps.length - 1 && (
                     <StepConnector
                       isActive={activeStep > index}
-                      isCompleted={index < activeStep - 1}
+                      isCompleted={allStepsCompleted ? true : index < activeStep - 1}
                     />
                   )}
                 </React.Fragment>
@@ -1152,20 +1154,20 @@ const Toast = ({ message, type, show, onClose }) => {
             questionsHaveRubrics[exam.id]
           );
 
-          let derivedStep = 0;
+          let derivedProgress = 0;
           if (hasQnA) {
-            derivedStep = 1;
+            derivedProgress = 1;
           }
           if (hasRubrics) {
-            derivedStep = 2;
+            derivedProgress = 2;
           }
           if (backendHasAnswers) {
-            // If backend says answers are uploaded, treat final step as reached
-            derivedStep = 2;
+            // Answers uploaded => all 3 steps completed
+            derivedProgress = 3;
           }
 
           const previousStep = prev[exam.id] ?? 0;
-          updated[exam.id] = Math.max(previousStep, derivedStep);
+          updated[exam.id] = Math.max(previousStep, derivedProgress);
         });
 
         return updated;
@@ -1340,6 +1342,10 @@ const Toast = ({ message, type, show, onClose }) => {
             ...prev,
             [selectedExamId]: Math.max(prev[selectedExamId] ?? 0, 2),
           }));
+        }
+
+        if (onRefresh) {
+          onRefresh();
         }
         return data;
       } catch (error) {
@@ -1544,6 +1550,10 @@ const Toast = ({ message, type, show, onClose }) => {
             ...prev,
             [examId]: Math.max(prev[examId] ?? 0, 1),
           }));
+
+          if (onRefresh) {
+            onRefresh();
+          }
         }
         
         if (goldenPdf) {
@@ -1567,6 +1577,10 @@ const Toast = ({ message, type, show, onClose }) => {
             ...prev,
             [examId]: Math.max(prev[examId] ?? 0, 1),
           }));
+
+          if (onRefresh) {
+            onRefresh();
+          }
         }
         
         return true;
@@ -1728,6 +1742,16 @@ const Toast = ({ message, type, show, onClose }) => {
                 const data = await response.json();
                 if (data.code === 200) {
                   showToast('Question paper uploaded successfully', 'success');
+
+                  setExamSteps(prev => ({
+                    ...prev,
+                    [examId]: Math.max(prev[examId] ?? 0, 1),
+                  }));
+
+                  if (onRefresh) {
+                    onRefresh();
+                  }
+
                   return data;
                 } else {
                   throw new Error(data.message || 'Upload failed');
@@ -1764,7 +1788,7 @@ const Toast = ({ message, type, show, onClose }) => {
               if (selectedExamId) {
                 setExamSteps(prev => ({
                   ...prev,
-                  [selectedExamId]: Math.max(prev[selectedExamId] ?? 0, 2),
+                  [selectedExamId]: Math.max(prev[selectedExamId] ?? 0, 3),
                 }));
               }
               if (onRefresh) {
