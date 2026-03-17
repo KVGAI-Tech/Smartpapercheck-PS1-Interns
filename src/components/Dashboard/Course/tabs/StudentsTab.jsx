@@ -47,6 +47,7 @@ const StudentsTab = ({
   const [error, setError] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   const handleExportStudents = () => {
     try {
@@ -222,6 +223,58 @@ const StudentsTab = ({
     return matchesSearch && matchesSection;
   });
 
+  const getSortableValue = (student, key) => {
+    switch (key) {
+      case 'name':
+        return student.user_name ?? '';
+      case 'roll_number':
+        return student.roll_number ?? '';
+      case 'tut_section':
+        return student.tut_section ?? '';
+      case 'email':
+        return student.user_email ?? '';
+      default:
+        return '';
+    }
+  };
+
+  const sortedStudents = (() => {
+    if (!sortConfig.key) return filteredStudents;
+
+    const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
+    return [...filteredStudents].sort((a, b) => {
+      const aVal = getSortableValue(a, sortConfig.key);
+      const bVal = getSortableValue(b, sortConfig.key);
+
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return (aVal - bVal) * directionMultiplier;
+      }
+
+      return String(aVal).localeCompare(String(bVal), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      }) * directionMultiplier;
+    });
+  })();
+
+  const requestSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const renderSortIndicator = (key) => {
+    if (sortConfig.key !== key) return null;
+    return (
+      <span className="ml-1 text-[10px] text-gray-400">
+        {sortConfig.direction === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -247,10 +300,6 @@ const StudentsTab = ({
         </div>
       );
     }
-
-    
-    console.log("Filtered students:", filteredStudents);
-    console.log("Total students count:", students.length);
 
     if (!students.length) {
       return (
@@ -282,17 +331,45 @@ const StudentsTab = ({
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Student Details
+                  <button
+                    type="button"
+                    onClick={() => requestSort('name')}
+                    className="inline-flex items-center hover:text-gray-700"
+                  >
+                    Student Details
+                    {renderSortIndicator('name')}
+                  </button>
                 </th>
 
                 <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Roll Number
+                  <button
+                    type="button"
+                    onClick={() => requestSort('roll_number')}
+                    className="inline-flex items-center hover:text-gray-700"
+                  >
+                    Roll Number
+                    {renderSortIndicator('roll_number')}
+                  </button>
                 </th>
                 <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Section
+                  <button
+                    type="button"
+                    onClick={() => requestSort('tut_section')}
+                    className="inline-flex items-center hover:text-gray-700"
+                  >
+                    Section
+                    {renderSortIndicator('tut_section')}
+                  </button>
                 </th>
                 <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  <button
+                    type="button"
+                    onClick={() => requestSort('email')}
+                    className="inline-flex items-center hover:text-gray-700"
+                  >
+                    Email
+                    {renderSortIndicator('email')}
+                  </button>
                 </th>
                 <th scope="col" className="relative px-2 sm:px-6 py-3 w-16 sm:w-20">
                   <span className="sr-only">Actions</span>
@@ -301,7 +378,7 @@ const StudentsTab = ({
             </thead>
 
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStudents.map((student) => (
+              {sortedStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="px-2 sm:px-6 py-4 whitespace-normal sm:whitespace-nowrap">
                     <div className="flex items-center">
