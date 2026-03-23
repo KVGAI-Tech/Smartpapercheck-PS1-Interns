@@ -115,6 +115,12 @@ const CourseDetails = () => {
     const [exams, setExams] = useState([]);
     const [uploadStatus, setUploadStatus] = useState(null);
 
+    const refreshExams = async () => {
+        if (!courseId) return;
+        const examsResponse = await getCourseExams(courseId);
+        setExams(examsResponse?.data || []);
+    };
+
     useEffect(() => {
         const nextTab = location?.state?.activeTab;
         if (typeof nextTab === 'string' && nextTab.length > 0) {
@@ -170,7 +176,7 @@ const CourseDetails = () => {
 
     const handleCreateExam = async (formData) => {
         try {
-            const response = await fetchApi(`/professors/courses/${courseId}/exams/`, {
+            const response = await fetchApi(`/professors/courses/${courseId}/exams`, {
                 method: 'POST',
                 body: JSON.stringify(formData)
             });
@@ -180,7 +186,7 @@ const CourseDetails = () => {
 
     const handleUpdateExam = async (examId, formData) => {
         try {
-            const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}/`, {
+            const response = await fetchApi(`/professors/courses/${courseId}/exams/${examId}`, {
                 method: 'PUT',
                 body: JSON.stringify(formData)
             });
@@ -194,9 +200,7 @@ const CourseDetails = () => {
                 method: 'DELETE'
             });
             showToast('Exam deleted successfully');
-            // Refresh exams list after successful deletion
-            const examsResponse = await getCourseExams(courseId);
-            setExams(examsResponse?.data || []);
+            await refreshExams();
         } catch (error) {
             if (error.message.includes('NotFoundError')) {
                 showToast('Exam not found or already deleted', 'error');
@@ -465,7 +469,7 @@ const CourseDetails = () => {
                 return (
                     <StudentsTab
                         courseId={courseId}
-                        students={getFilteredItems(students, 'student')}
+                        students={students}
                         sections={courseDetails?.tut_sections || ''}
                         searchQuery={searchQuery}
                         selectedSection={selectedSection}
@@ -476,10 +480,7 @@ const CourseDetails = () => {
                             setShowAddModal(true);
                         }}
                         onEdit={(student) => handleEdit(student, 'student')}
-                        onDelete={(student) => {
-                            setItemToDelete({ type: 'student', id: student.id });
-                            setShowDeleteModal(true);
-                        }}
+                        onDelete={() => {}}
                         onImport={() => setShowStudentImportModal(true)}
                     />
                 );
@@ -525,6 +526,7 @@ const CourseDetails = () => {
                         onEdit={(exam) => handleEdit(exam, 'exam')}
                         onDelete={handleDeleteExam}
                         onEvaluate={handleEvaluate}
+                        onRefresh={refreshExams}
                     />
                 );
 

@@ -51,6 +51,55 @@ export const examsApi = {
       throw error;
     }
   },
+
+  getConductExamQuestions: async (examId) => {
+    const token = localStorage.getItem('accessToken');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-questions`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Unable to load conducted exam questions.');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching conducted exam questions:', error);
+      throw error;
+    }
+  },
+
+  submitConductExam: async (examId, answers) => {
+    const token = localStorage.getItem('accessToken');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ answers })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Unable to submit conducted exam.');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error submitting conducted exam:', error);
+      throw error;
+    }
+  },
   
   
   submitRecheckRequest: async (examId, data) => {

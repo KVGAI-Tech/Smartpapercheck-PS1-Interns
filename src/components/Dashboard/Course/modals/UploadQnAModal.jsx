@@ -102,34 +102,69 @@ const RichTextEditor = ({ value, onChange, placeholder, className, modules, form
   );
 };
 
-const UploadQnAModal = ({
-  isOpen, onClose, examId, onSubmit, existingQuestions = [] }) => {
+const createEmptyMcqOption = (index = 0) => ({
+  optionId: `option_${index + 1}`,
+  optionBody: '',
+});
 
-  const [questions, setQuestions] = useState([{
-    id: 1,
-    questionType: 'image',
-    answerType: 'image',
-    question: null,
-    questionPreview: '',
-    questionUrl: '',
-    answer: null,
-    answerPreview: '',
-    answerUrl: '',
-    marks: '',
-    questionText: '',
-    questionBody: '',
-    answerText: '',
-    answerBody: '',
-    domain: 'General',
-    isExisting: false,
-    num_rubric_items: 1,
-    professorInstructions: '',
-    aiCustomInstruction: ''
-  }]);
+const getNextMcqOptionId = (existingOptions = []) => {
+  const usedIds = new Set((existingOptions || []).map((opt) => String(opt?.optionId || '').trim()).filter(Boolean));
+  let maxNumeric = 0;
+  usedIds.forEach((id) => {
+    const match = /^option_(\d+)$/i.exec(id);
+    if (match) {
+      const parsed = Number(match[1]);
+      if (!Number.isNaN(parsed)) {
+        maxNumeric = Math.max(maxNumeric, parsed);
+      }
+    }
+  });
+
+  let candidate = maxNumeric + 1;
+  let nextId = `option_${candidate}`;
+  while (usedIds.has(nextId)) {
+    candidate += 1;
+    nextId = `option_${candidate}`;
+  }
+  return nextId;
+};
+
+const createDefaultQuestion = (id = 1) => ({
+  id,
+  questionType: 'image',
+  answerType: 'image',
+  question: null,
+  questionPreview: '',
+  questionUrl: '',
+  answer: null,
+  answerPreview: '',
+  answerUrl: '',
+  marks: '',
+  questionText: '',
+  questionBody: '',
+  answerText: '',
+  answerBody: '',
+  domain: 'General',
+  isExisting: false,
+  num_rubric_items: 1,
+  professorInstructions: '',
+  aiCustomInstruction: '',
+  mcqOptions: [createEmptyMcqOption(0), createEmptyMcqOption(1)],
+  correctOptionId: 'option_1',
+  reasonRequired: false,
+});
+
+const UploadQnAModal = ({
+  isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [] }) => {
+
+  const isConductExam = examType === 'conduct';
+
+  const [questions, setQuestions] = useState([createDefaultQuestion(1)]);
 
   const [goldenPdfFile, setGoldenPdfFile] = useState(null);
   const [questionPdfFile, setQuestionPdfFile] = useState(null);
   const [uploadMode, setUploadMode] = useState('standard'); 
+  const isPdfUploadMode = !isConductExam && uploadMode === 'golden-pdf';
 
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -203,9 +238,11 @@ const UploadQnAModal = ({
       .trim();
   };
 
-  const normalizeType = (value) => {
-    if (!value) return '';
-    return String(value).trim().toLowerCase();
+  const inferContentType = ({ body, hasFile }) => {
+    const hasEditorContent = !isRichTextEmpty(body || '') || /<img\b/i.test(body || '');
+    if (hasFile && hasEditorContent) return 'both';
+    if (hasEditorContent) return 'text';
+    return 'image';
   };
 
   useEffect(() => {
@@ -324,11 +361,12 @@ const UploadQnAModal = ({
 
     const questionImageUrl = activeQuestion.questionUrl || activeQuestion.questionPreview || '';
     const questionBody = activeQuestion.questionBody || '';
-    const questionType = activeQuestion.questionType || 'image';
+    const questionHasInlineImage = /<img\b/i.test(questionBody);
+    const questionType = inferContentType({ body: questionBody, hasFile: Boolean(questionImageUrl) });
 
     const questionBodyPlain = richTextToPlainText(questionBody);
 
-    if (!questionImageUrl && !questionBodyPlain.trim()) {
+    if (!questionImageUrl && !questionBodyPlain.trim() && !questionHasInlineImage) {
       setAiGenerationError('Please provide question text or upload a question image.');
       return;
     }
@@ -402,20 +440,26 @@ const UploadQnAModal = ({
       setGoldenPdfFile(null);
       setQuestionPdfFile(null);
       setError('');
+      setUploadMode('standard');
+      setShowAiAnswerModal(false);
     }
   }, [isOpen]);
 
   useEffect(() => {
+    if (isConductExam) {
+      setUploadMode('standard');
+      setShowAiAnswerModal(false);
+    }
+  }, [isConductExam]);
+
+  useEffect(() => {
     if (existingQuestions && existingQuestions.length > 0) {
       const formattedQuestions = existingQuestions.map((q, index) => ({
+        ...createDefaultQuestion(index + 1),
         id: index + 1,
         questionType: q.question_type || q.question_format || (q.question_file_url ? 'image' : 'text'),
         answerType: q.answer_type || (q.answer_file_url ? 'image' : 'text'),
-        question: null,
-        questionPreview: '',
         questionUrl: q.question_file_url || '',
-        answer: null,
-        answerPreview: '',
         answerUrl: q.answer_file_url || '',
         marks: q.max_marks || '',
         questionText: q.question_text || '',
@@ -425,33 +469,23 @@ const UploadQnAModal = ({
         domain: q.domain || 'General',
         isExisting: true, 
         questionNumber: q.question_number,
-        num_rubric_items: q.num_rubric_items || 1,
-        professorInstructions: q.professor_instructions || '',
-        aiCustomInstruction: ''
+        aiCustomInstruction: '',
+        mcqOptions: Array.isArray(q.mcq_options) && q.mcq_options.length > 0
+          ? q.mcq_options.map((option, optionIndex) => ({
+              optionId: option.option_id || `option_${optionIndex + 1}`,
+              optionBody: option.option_body || option.option_text || '',
+            }))
+          : [createEmptyMcqOption(0), createEmptyMcqOption(1)],
+        correctOptionId: Array.isArray(q.correct_option_ids) && q.correct_option_ids.length > 0
+          ? q.correct_option_ids[0]
+          : 'option_1',
+        reasonRequired: Boolean(q.reason_required),
+        num_rubric_items: q.reason_num_rubric_items || q.num_rubric_items || 1,
+        professorInstructions: q.reason_professor_instructions || q.professor_instructions || '',
       }));
       setQuestions(formattedQuestions);
     } else {
-      setQuestions([{
-        id: 1,
-        questionType: 'image',
-        answerType: 'image',
-        question: null,
-        questionPreview: '',
-        questionUrl: '',
-        answer: null,
-        answerPreview: '',
-        answerUrl: '',
-        marks: '',
-        questionText: '',
-        questionBody: '',
-        answerText: '',
-        answerBody: '',
-        domain: 'General',
-        isExisting: false,
-        num_rubric_items: 1,
-        professorInstructions: '',
-        aiCustomInstruction: ''
-      }]);
+      setQuestions([createDefaultQuestion(1)]);
     }
   }, [existingQuestions]);
 
@@ -506,27 +540,7 @@ const UploadQnAModal = ({
     const newId = questions.length + 1;
     setQuestions(prev => [
       ...prev,
-      {
-        id: newId,
-        questionType: 'image',
-        answerType: 'image',
-        question: null,
-        questionPreview: '',
-        questionUrl: '',
-        answer: null,
-        answerPreview: '',
-        answerUrl: '',
-        marks: '',
-        questionText: '',
-        questionBody: '',
-        answerText: '',
-        answerBody: '',
-        domain: 'General',
-        isExisting: false,
-        num_rubric_items: 3,
-        professorInstructions: '',
-        aiCustomInstruction: ''
-      }
+      createDefaultQuestion(newId)
     ]);
     
     setCurrentQuestionIndex(questions.length);
@@ -575,7 +589,41 @@ const UploadQnAModal = ({
   };
 
   const validateQuestions = () => {
-    if (uploadMode === 'golden-pdf') {
+    if (isConductExam) {
+      const conductIssue = questions.find((q) => {
+        const hasQuestionFile = Boolean(q.question || q.questionUrl);
+        const hasQuestionContent = !isRichTextEmpty(q.questionBody) || /<img\b/i.test(q.questionBody || '');
+        const marksValue = Number(q.marks);
+        const invalidMarks = Number.isNaN(marksValue) || marksValue <= 0;
+        const validOptions = (q.mcqOptions || []).filter((option) => !isRichTextEmpty(option.optionBody || ''));
+        const invalidOptions = validOptions.length < 2;
+        const missingCorrectOption = !validOptions.some((option) => option.optionId === q.correctOptionId);
+        const rubricCount = parseInt(q.num_rubric_items);
+        const invalidReasonRubricCount = Boolean(q.reasonRequired) && (
+          isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10
+        );
+
+        if (!hasQuestionFile && !hasQuestionContent) return { question: q, message: 'Question content is required.' };
+        if (invalidMarks) return { question: q, message: 'Max marks must be greater than 0.' };
+        if (invalidOptions) return { question: q, message: 'Add at least 2 MCQ options with content.' };
+        if (missingCorrectOption) return { question: q, message: 'Select a correct option among the non-empty options.' };
+        if (invalidReasonRubricCount) return { question: q, message: 'Reason rubric item count must be between 1 and 10.' };
+        return null;
+      });
+
+      if (conductIssue) {
+        const firstInvalidIndex = questions.findIndex((q) => q.id === conductIssue.question.id);
+        setCurrentQuestionIndex(firstInvalidIndex);
+        scrollToQuestion(conductIssue.question.id);
+        setError(`Question ${firstInvalidIndex + 1}: ${conductIssue.message}`);
+        return false;
+      }
+
+      setError('');
+      return true;
+    }
+
+    if (isPdfUploadMode) {
       if (!questionPdfFile) {
         setError('Please upload a question paper PDF');
         return false;
@@ -589,22 +637,16 @@ const UploadQnAModal = ({
     }
 
     const invalidQuestions = questions.filter(q => {
-      const hasQuestionFile = q.question || q.questionUrl;
-      const hasAnswerFile = q.answer || q.answerUrl;
-
-      const questionType = normalizeType(q.questionType || 'image') || 'image';
-      const answerType = normalizeType(q.answerType || 'image') || 'image';
-
-      const missingQuestionImage = ['image', 'both'].includes(questionType) ? !hasQuestionFile : false;
-      const missingQuestionText = ['text', 'both'].includes(questionType) ? isRichTextEmpty(q.questionBody) : false;
-      const missingAnswerImage = ['image', 'both'].includes(answerType) ? !hasAnswerFile : false;
-      const missingAnswerText = ['text', 'both'].includes(answerType) ? isRichTextEmpty(q.answerBody) : false;
+      const hasQuestionFile = Boolean(q.question || q.questionUrl);
+      const hasAnswerFile = Boolean(q.answer || q.answerUrl);
+      const hasQuestionContent = !isRichTextEmpty(q.questionBody) || /<img\b/i.test(q.questionBody || '');
+      const hasAnswerContent = !isRichTextEmpty(q.answerBody) || /<img\b/i.test(q.answerBody || '');
 
       // Validate rubric items count
       const rubricCount = parseInt(q.num_rubric_items);
       const invalidRubricCount = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
 
-      return missingQuestionImage || missingQuestionText || missingAnswerImage || missingAnswerText || !q.marks || invalidRubricCount;
+      return !hasQuestionFile && !hasQuestionContent || !hasAnswerFile && !hasAnswerContent || !q.marks || invalidRubricCount;
     });
     
     if (invalidQuestions.length > 0) {
@@ -636,7 +678,7 @@ const UploadQnAModal = ({
     setError('');
     
     try {
-      if (uploadMode === 'golden-pdf') {
+      if (isPdfUploadMode) {
         const pdfFormData = new FormData();
         if (questionPdfFile) {
           pdfFormData.append('question_pdf', questionPdfFile);
@@ -656,8 +698,10 @@ const UploadQnAModal = ({
 
           // Always send metadata updates (e.g., max marks) when an existing file URL exists.
           // Backend supports updating without re-uploading the file.
-          const shouldSendQuestion = (q.questionType && q.questionType !== 'image') || hasQuestionFile;
-          const shouldSendAnswer = (q.answerType && q.answerType !== 'image') || hasAnswerFile;
+          const hasQuestionContent = !isRichTextEmpty(q.questionBody) || /<img\b/i.test(q.questionBody || '');
+          const hasAnswerContent = !isRichTextEmpty(q.answerBody) || /<img\b/i.test(q.answerBody || '');
+          const shouldSendQuestion = hasQuestionFile || hasQuestionContent;
+          const shouldSendAnswer = !isConductExam ? (hasAnswerFile || hasAnswerContent) : false;
 
           try {
             if (shouldSendQuestion) {
@@ -665,41 +709,61 @@ const UploadQnAModal = ({
               questionFormData.append('question_number', questionNumber.toString());
               questionFormData.append('file_type', 'question');
               questionFormData.append('max_marks', q.marks);
-              questionFormData.append('question_type', q.questionType || 'image');
+              const inferredQuestionType = inferContentType({ body: q.questionBody, hasFile: Boolean(hasQuestionFile) });
+              questionFormData.append('question_type', inferredQuestionType);
               questionFormData.append('question_body', q.questionBody || '');
               // Optional short title/label for the question
               questionFormData.append('question_text', q.questionText || '');
               questionFormData.append('domain', q.domain || 'General');
               // Optional short label for the answer
               questionFormData.append('answer_text', q.answerText || '');
+              if (isConductExam) {
+                const normalizedOptions = (q.mcqOptions || []).map((option, optionIndex) => ({
+                  option_id: option.optionId || `option_${optionIndex + 1}`,
+                  option_text: richTextToPlainText(option.optionBody || ''),
+                  option_body: option.optionBody || '',
+                }));
+                questionFormData.append('mcq_options', JSON.stringify(normalizedOptions));
+                questionFormData.append('correct_option_ids', JSON.stringify([q.correctOptionId]));
+                questionFormData.append('reason_required', q.reasonRequired ? 'true' : 'false');
+                if (q.reasonRequired) {
+                  questionFormData.append('num_rubric_items', (q.num_rubric_items || 1).toString());
+                  if (q.professorInstructions && q.professorInstructions.trim()) {
+                    questionFormData.append('professor_instructions', q.professorInstructions.trim());
+                  }
+                }
+              }
               
               // Add rubric configuration fields
-              questionFormData.append('num_rubric_items', (q.num_rubric_items || 1).toString());
-              if (q.professorInstructions && q.professorInstructions.trim()) {
+              if (!isConductExam) {
+                questionFormData.append('num_rubric_items', (q.num_rubric_items || 1).toString());
+              }
+              if (!isConductExam && q.professorInstructions && q.professorInstructions.trim()) {
                 questionFormData.append('professor_instructions', q.professorInstructions.trim());
               }
               
-              if (['image', 'both'].includes(q.questionType || 'image') && q.question) {
+              if (['image', 'both'].includes(inferredQuestionType) && q.question) {
                 questionFormData.append('file', q.question);
-              } else if (['image', 'both'].includes(q.questionType || 'image') && !hasQuestionFile) {
+              } else if (['image', 'both'].includes(inferredQuestionType) && !hasQuestionFile) {
                 throw new Error('Question image is required');
               }
               await onSubmit(examId, questionFormData);
             }
 
-            if (shouldSendAnswer) {
+            if (!isConductExam && shouldSendAnswer) {
               const answerFormData = new FormData();
               answerFormData.append('question_number', questionNumber.toString());
               answerFormData.append('file_type', 'answer');
-              answerFormData.append('answer_type', q.answerType || 'image');
+              const inferredAnswerType = inferContentType({ body: q.answerBody, hasFile: Boolean(hasAnswerFile) });
+              answerFormData.append('answer_type', inferredAnswerType);
               answerFormData.append('answer_body', q.answerBody || '');
               answerFormData.append('answer_text', q.answerText || '');
               answerFormData.append('question_text', q.questionText || '');
               answerFormData.append('max_marks', q.marks);
               answerFormData.append('domain', q.domain || 'General');
-              if (['image', 'both'].includes(q.answerType || 'image') && q.answer) {
+              if (['image', 'both'].includes(inferredAnswerType) && q.answer) {
                 answerFormData.append('file', q.answer);
-              } else if (['image', 'both'].includes(q.answerType || 'image') && !hasAnswerFile) {
+              } else if (['image', 'both'].includes(inferredAnswerType) && !hasAnswerFile) {
                 throw new Error('Answer image is required');
               }
               await onSubmit(examId, answerFormData);
@@ -983,8 +1047,6 @@ const UploadQnAModal = ({
 
   const safeIndex = Math.min(Math.max(currentQuestionIndex, 0), questions.length - 1);
   const activeQuestion = questions[safeIndex];
-  const activeQuestionType = normalizeType(activeQuestion.questionType || 'image') || 'image';
-  const activeAnswerType = normalizeType(activeQuestion.answerType || 'image') || 'image';
 
   const ModalContent = (
     <div 
@@ -1024,8 +1086,14 @@ const UploadQnAModal = ({
             <FileText className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Upload Questions & Solutions</h2>
-            <p className="text-sm text-gray-500">Upload question images/text, answers, marks, and rubric configuration.</p>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {isConductExam ? 'Build Portal MCQ Exam' : 'Upload Questions & Solutions'}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {isConductExam
+                ? 'Create MCQ questions, options, correct answers, and optional reasoning rules.'
+                : 'Upload question images/text, answers, marks, and rubric configuration.'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1102,7 +1170,7 @@ const UploadQnAModal = ({
       )}
 
       <div className="flex-1 min-h-0 px-6 py-4 bg-gray-50">
-        {uploadMode === 'golden-pdf' ? (
+        {isPdfUploadMode ? (
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-4">
@@ -1227,154 +1295,48 @@ const UploadQnAModal = ({
               <div className="p-6 space-y-6 flex-1 min-h-0 overflow-y-auto">
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Question Type
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-600">
+                        Question Body <span className="text-red-500">*</span>
                       </label>
-                      <div className="flex rounded-xl border border-gray-200 overflow-hidden">
-                        <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'text', question: null, questionPreview: '', questionUrl: '' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestionType === 'text' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Text
-                        </button>
-                        <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'image' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestionType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Image
-                        </button>
-                        <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, questionType: 'both' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeQuestionType === 'both' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Both
-                        </button>
-                      </div>
+                      <RichTextEditor
+                        className="question-body-quill rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-accent focus-within:border-transparent transition-all duration-200 bg-white"
+                        value={activeQuestion.questionBody || ''}
+                        onChange={(value) => {
+                          setQuestions(prev => prev.map(q =>
+                            q.id === activeQuestion.id
+                              ? { ...q, questionBody: value }
+                              : q
+                          ));
+                        }}
+                        placeholder="Enter question text"
+                        modules={quillModules}
+                        formats={quillFormats}
+                      />
                     </div>
-
-                    {['image', 'both'].includes(activeQuestionType) && (
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-600">
-                          Question Image <span className="text-red-500">*</span>
-                        </label>
-                        <QuestionDisplay
-                          type="question"
-                          data={activeQuestion}
-                          onFileChange={handleFileChange}
-                          questionId={activeQuestion.id}
-                        />
-                      </div>
-                    )}
-
-                    {['text', 'both'].includes(activeQuestionType) && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <label className="block text-sm font-medium text-gray-600">
-                            Question Body <span className="text-red-500">*</span>
-                          </label>
-                          <button
-                            type="button"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors border-gray-200 bg-white text-gray-900 opacity-0 pointer-events-none"
-                          >
-                            <img
-                              src="/artificial-intelligence.png"
-                              alt=""
-                              className="w-5 h-5"
-                            />
-                            <span className="text-sm font-medium">Generate with AI</span>
-                          </button>
-                        </div>
-                        <RichTextEditor
-                          className="question-body-quill rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-accent focus-within:border-transparent transition-all duration-200 bg-white"
-                          value={activeQuestion.questionBody || ''}
-                          onChange={(value) => {
-                            setQuestions(prev => prev.map(q =>
-                              q.id === activeQuestion.id
-                                ? { ...q, questionBody: value }
-                                : q
-                            ));
-                          }}
-                          placeholder="Enter question text"
-                          modules={quillModules}
-                          formats={quillFormats}
-                        />
-                      </div>
-                    )}
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Answer Type
-                      </label>
-                      <div className="flex rounded-xl border border-gray-200 overflow-hidden">
-                        <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'text', answer: null, answerPreview: '', answerUrl: '' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeAnswerType === 'text' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Text
-                        </button>
-                        <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'image' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeAnswerType === 'image' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Image
-                        </button>
-                        <button
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, answerType: 'both' } : q))}
-                          className={`px-3 py-1.5 text-sm transition-colors ${activeAnswerType === 'both' ? 'bg-accent/10 text-accent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                          type="button"
-                        >
-                          Both
-                        </button>
-                      </div>
-                    </div>
-
-                    {['image', 'both'].includes(activeAnswerType) && (
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-600">
-                          Answer Image <span className="text-red-500">*</span>
-                        </label>
-                        <QuestionDisplay
-                          type="answer"
-                          data={activeQuestion}
-                          onFileChange={handleFileChange}
-                          questionId={activeQuestion.id}
-                        />
-                      </div>
-                    )}
-
-                    {['text', 'both'].includes(activeAnswerType) && (
+                  {!isConductExam ? (
+                    <div className="space-y-3">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-3">
                           <label className="block text-sm font-medium text-gray-600">
                             Answer Body
                           </label>
-
-                          {['text', 'both'].includes(activeAnswerType) && (
-                            <button
-                              type="button"
-                              onClick={handleOpenAiAnswerModal}
-                              disabled={isSubmitting}
-                              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors
-                                ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'} border-gray-200 bg-white text-gray-900`}
-                            >
-                              <img
-                                src="/artificial-intelligence.png"
-                                alt="AI"
-                                className="w-5 h-5"
-                              />
-                              <span className="text-sm font-medium">Generate with AI</span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={handleOpenAiAnswerModal}
+                            disabled={isSubmitting}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors
+                              ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'} border-gray-200 bg-white text-gray-900`}
+                          >
+                            <img
+                              src="/artificial-intelligence.png"
+                              alt="AI"
+                              className="w-5 h-5"
+                            />
+                            <span className="text-sm font-medium">Generate with AI</span>
+                          </button>
                         </div>
 
                         <RichTextEditor
@@ -1392,8 +1354,79 @@ const UploadQnAModal = ({
                           formats={quillFormats}
                         />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            MCQ Options
+                          </label>
+                          <p className="text-xs text-gray-500 mt-1">Add at least 2 options and pick the correct one.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? ({
+                            ...q,
+                            mcqOptions: [
+                              ...(q.mcqOptions || []),
+                              { optionId: getNextMcqOptionId(q.mcqOptions || []), optionBody: '' },
+                            ],
+                          }) : q))}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Option
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {(activeQuestion.mcqOptions || []).map((option, optionIndex) => (
+                          <div key={option.optionId} className="rounded-2xl border border-gray-200 p-4 space-y-3 bg-gray-50">
+                            <div className="flex items-center justify-between gap-3">
+                              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <input
+                                  type="radio"
+                                  name={`correct-option-${activeQuestion.id}`}
+                                  checked={activeQuestion.correctOptionId === option.optionId}
+                                  onChange={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, correctOptionId: option.optionId } : q))}
+                                  className="h-4 w-4 text-accent"
+                                />
+                                Correct Option
+                              </label>
+                              {(activeQuestion.mcqOptions || []).length > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setQuestions(prev => prev.map(q => {
+                                    if (q.id !== activeQuestion.id) return q;
+                                    const nextOptions = (q.mcqOptions || []).filter((item) => item.optionId !== option.optionId);
+                                    const nextCorrect = q.correctOptionId === option.optionId ? nextOptions[0]?.optionId || '' : q.correctOptionId;
+                                    return { ...q, mcqOptions: nextOptions, correctOptionId: nextCorrect };
+                                  }))}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+
+                            <RichTextEditor
+                              className="rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-accent focus-within:border-transparent transition-all duration-200 bg-white"
+                              value={option.optionBody || ''}
+                              onChange={(value) => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? {
+                                ...q,
+                                mcqOptions: (q.mcqOptions || []).map((item) => item.optionId === option.optionId ? { ...item, optionBody: value } : item),
+                              } : q))}
+                              placeholder={`Option ${optionIndex + 1} (rich text, formulas supported)`}
+                              modules={quillModules}
+                              formats={quillFormats}
+                            />
+
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
@@ -1415,74 +1448,135 @@ const UploadQnAModal = ({
                   />
                 </div>
 
-                <div className="p-5 bg-accent/5 rounded-2xl border border-accent/15">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText className="w-4 h-4 text-accent" />
-                    <h4 className="text-sm font-semibold text-gray-900">Rubric Configuration</h4>
-                  </div>
+                {!isConductExam ? (
+                  <div className="p-5 bg-accent/5 rounded-2xl border border-accent/15">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FileText className="w-4 h-4 text-accent" />
+                      <h4 className="text-sm font-semibold text-gray-900">Rubric Configuration</h4>
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Number of Rubric Items
-                      </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Number of Rubric Items
+                        </label>
+                        <input
+                          type="text"
+                          value={activeQuestion.num_rubric_items}
+                          onChange={(e) => {
+                            setQuestions(prev => prev.map(q =>
+                              q.id === activeQuestion.id
+                                ? { ...q, num_rubric_items: e.target.value }
+                                : q
+                            ));
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
+                        />
+                        <p className="text-xs text-gray-500">Enter number of rubric items (1-10, default: 1)</p>
+                        {(() => {
+                          const rubricCount = parseInt(activeQuestion.num_rubric_items);
+                          const isInvalid = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
+                          if (isInvalid && activeQuestion.num_rubric_items !== '') {
+                            return (
+                              <p className="text-xs text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {isNaN(rubricCount) 
+                                  ? 'Please enter a valid number' 
+                                  : rubricCount < 1 
+                                    ? `Minimum 1 rubric item required (current: ${rubricCount})`
+                                    : `Maximum 10 rubric items allowed (current: ${rubricCount})`
+                                }
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Professor Instructions (Optional)
+                        </label>
+                        <textarea
+                          value={activeQuestion.professorInstructions}
+                          onChange={(e) => {
+                            setQuestions(prev => prev.map(q =>
+                              q.id === activeQuestion.id
+                                ? { ...q, professorInstructions: e.target.value }
+                                : q
+                            ));
+                          }}
+                          maxLength={2000}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
+                          rows={4}
+                          placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Weight mathematical rigor higher')"
+                        />
+                        <p className="text-xs text-gray-500">
+                          {activeQuestion.professorInstructions?.length || 0}/2000 characters
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle className="w-4 h-4 text-blue-700" />
+                      <h4 className="text-sm font-semibold text-gray-900">Portal Exam Rules</h4>
+                    </div>
+                    <label className="inline-flex items-center gap-3 text-sm text-gray-700">
                       <input
-                        type="text"
-                        value={activeQuestion.num_rubric_items}
-                        onChange={(e) => {
-                          setQuestions(prev => prev.map(q =>
-                            q.id === activeQuestion.id
-                              ? { ...q, num_rubric_items: e.target.value }
-                              : q
-                          ));
-                        }}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
+                        type="checkbox"
+                        checked={Boolean(activeQuestion.reasonRequired)}
+                        onChange={(e) => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, reasonRequired: e.target.checked } : q))}
+                        className="h-4 w-4 rounded border-gray-300 text-accent"
                       />
-                      <p className="text-xs text-gray-500">Enter number of rubric items (1-10, default: 1)</p>
-                      {(() => {
-                        const rubricCount = parseInt(activeQuestion.num_rubric_items);
-                        const isInvalid = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
-                        if (isInvalid && activeQuestion.num_rubric_items !== '') {
-                          return (
-                            <p className="text-xs text-amber-600 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" />
-                              {isNaN(rubricCount) 
-                                ? 'Please enter a valid number' 
-                                : rubricCount < 1 
-                                  ? `Minimum 1 rubric item required (current: ${rubricCount})`
-                                  : `Maximum 10 rubric items allowed (current: ${rubricCount})`
-                              }
-                            </p>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Professor Instructions (Optional)
-                      </label>
-                      <textarea
-                        value={activeQuestion.professorInstructions}
-                        onChange={(e) => {
-                          setQuestions(prev => prev.map(q =>
-                            q.id === activeQuestion.id
-                              ? { ...q, professorInstructions: e.target.value }
-                              : q
-                          ));
-                        }}
-                        maxLength={2000}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
-                        rows={4}
-                        placeholder="Optional: Guide AI rubric generation (e.g., 'Focus on problem-solving steps', 'Weight mathematical rigor higher')"
-                      />
-                      <p className="text-xs text-gray-500">
-                        {activeQuestion.professorInstructions?.length || 0}/2000 characters
-                      </p>
-                    </div>
+                      Require students to provide a short reason with their selected option
+                    </label>
+                    {Boolean(activeQuestion.reasonRequired) && (
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Rubric Items for Reason
+                          </label>
+                          <input
+                            type="number"
+                            value={activeQuestion.num_rubric_items}
+                            onChange={(e) => {
+                              setQuestions(prev => prev.map(q =>
+                                q.id === activeQuestion.id
+                                  ? { ...q, num_rubric_items: e.target.value }
+                                  : q
+                              ));
+                            }}
+                            min="1"
+                            max="10"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
+                            placeholder="1 to 10"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Reason Rubric Instructions (Optional)
+                          </label>
+                          <textarea
+                            value={activeQuestion.professorInstructions}
+                            onChange={(e) => {
+                              setQuestions(prev => prev.map(q =>
+                                q.id === activeQuestion.id
+                                  ? { ...q, professorInstructions: e.target.value }
+                                  : q
+                              ));
+                            }}
+                            maxLength={2000}
+                            rows={3}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
+                            placeholder="Optional guidance for evaluating reason text"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -1491,9 +1585,9 @@ const UploadQnAModal = ({
 
       <div className="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-between sticky bottom-0 z-20">
         <div className="text-sm text-gray-500">
-          {uploadMode === 'golden-pdf' 
-            ? 'Ready to upload PDF files' 
-            : `${questions.length} ${questions.length === 1 ? 'question' : 'questions'} to upload`
+          {isPdfUploadMode
+            ? 'Ready to upload PDF files'
+            : `${questions.length} ${questions.length === 1 ? 'question' : 'questions'} ${isConductExam ? 'to save' : 'to upload'}`
           }
         </div>
         <div className="flex items-center gap-4">
@@ -1517,19 +1611,19 @@ const UploadQnAModal = ({
             {isSubmitting ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Uploading...</span>
+                <span>{isConductExam ? 'Saving...' : 'Uploading...'}</span>
               </>
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                <span>Upload {uploadMode === 'golden-pdf' ? 'PDFs' : 'Questions'}</span>
+                <span>{isPdfUploadMode ? 'Upload PDFs' : `${isConductExam ? 'Save' : 'Upload'} Questions`}</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {showAiAnswerModal && (
+      {!isConductExam && showAiAnswerModal && (
         <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col m-4"
@@ -1562,7 +1656,7 @@ const UploadQnAModal = ({
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-900">Question Preview</h3>
 
-                  {(['image', 'both'].includes(activeQuestion.questionType || 'image')) && (activeQuestion.questionPreview || activeQuestion.questionUrl) && (
+                  {(activeQuestion.questionPreview || activeQuestion.questionUrl) && (
                     <div className="rounded-2xl border border-gray-200 overflow-hidden bg-gray-50">
                       <img
                         src={activeQuestion.questionPreview || activeQuestion.questionUrl}
@@ -1572,7 +1666,7 @@ const UploadQnAModal = ({
                     </div>
                   )}
 
-                  {(['text', 'both'].includes(activeQuestionType)) && !isRichTextEmpty(activeQuestion.questionBody || '') && (
+                  {!isRichTextEmpty(activeQuestion.questionBody || '') && (
                     <div className="rounded-2xl border border-gray-200 bg-white p-4">
                       <div
                         className="text-sm text-gray-800"

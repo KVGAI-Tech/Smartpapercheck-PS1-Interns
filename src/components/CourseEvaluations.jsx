@@ -20,6 +20,8 @@ const ExamCard = ({
   exam_id,
   exam_name,
   full_marks,
+  exam_type,
+  exam_is_active,
   marks_obtained,
   start_time,
   duration,
@@ -32,6 +34,9 @@ const ExamCard = ({
   const { courseId } = useParams();
   
   const getStatus = () => {
+    if (exam_type === 'conduct' && upload_status === 'submitted') return 'submitted';
+    if (exam_type === 'conduct' && !exam_is_active) return 'inactive';
+    if (exam_type === 'conduct') return 'ready';
     if (recheck_requested) return 'recheck_requested';
     if (evaluation_status === 'evaluated') return 'evaluated';
     if (upload_status === 'not_uploaded') return 'not_uploaded';
@@ -45,6 +50,9 @@ const ExamCard = ({
       case 'evaluated': return 'text-accent bg-accent/10';
       case 'pending': return 'text-amber-700 bg-amber-50';
       case 'recheck_requested': return 'text-accent bg-accent/5';
+      case 'ready': return 'text-blue-700 bg-blue-50';
+      case 'inactive': return 'text-gray-700 bg-gray-100';
+      case 'submitted': return 'text-green-700 bg-green-50';
       case 'not_uploaded': return 'text-red-600 bg-red-50';
       default: return 'text-gray-600 bg-gray-50';
     }
@@ -55,6 +63,9 @@ const ExamCard = ({
       case 'evaluated': return <CheckCircle className="w-4 h-4" />;
       case 'pending': return <Clock className="w-4 h-4" />;
       case 'recheck_requested': return <History className="w-4 h-4" />;
+      case 'ready': return <Clock className="w-4 h-4" />;
+      case 'inactive': return <AlertTriangle className="w-4 h-4" />;
+      case 'submitted': return <CheckCircle className="w-4 h-4" />;
       case 'not_uploaded': return <AlertTriangle className="w-4 h-4" />;
       default: return <AlertTriangle className="w-4 h-4" />;
     }
@@ -65,6 +76,9 @@ const ExamCard = ({
       case 'evaluated': return 'Evaluated';
       case 'pending': return 'Pending';
       case 'recheck_requested': return 'Recheck Requested';
+      case 'ready': return 'Ready';
+      case 'inactive': return 'Inactive';
+      case 'submitted': return 'Submitted';
       case 'not_uploaded': return 'Not Uploaded';
       default: return status;
     }
@@ -108,6 +122,8 @@ const ExamCard = ({
           <div>
             <h3 className="font-semibold text-gray-900">{exam_name}</h3>
             <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+              {exam_type && <p>Type: {exam_type === 'conduct' ? 'Portal MCQ Exam' : 'Evaluated Exam'}</p>}
+              {exam_type === 'conduct' && <p>Availability: {exam_is_active ? 'Active' : 'Inactive'}</p>}
               {duration && <p>Duration: {formatDuration(duration)}</p>}
               {start_time && <p>Exam Date: {formatDate(start_time)}</p>}
             </div>
@@ -138,10 +154,15 @@ const ExamCard = ({
         <div className="flex gap-2 flex-wrap">
           <button 
             onClick={handleViewDetails}
-            className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1"
+            disabled={status === 'inactive'}
+            className={`px-3 py-1.5 text-sm font-medium flex items-center gap-1 ${
+              status === 'inactive'
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-accent hover:text-accent/80'
+            }`}
           >
             <Eye className="w-4 h-4" />
-            View Details
+            {exam_type === 'conduct' ? 'Open Exam' : 'View Details'}
           </button>
           {status === 'evaluated' && (
             <button className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1">
@@ -290,6 +311,8 @@ const CourseEvaluations = () => {
               exam_id={exam.exam_id}
               exam_name={exam.exam_name}
               full_marks={exam.full_marks}
+              exam_type={exam.exam_type}
+              exam_is_active={exam.exam_is_active}
               marks_obtained={exam.marks_obtained}
               start_time={exam.start_time}
               duration={exam.duration}

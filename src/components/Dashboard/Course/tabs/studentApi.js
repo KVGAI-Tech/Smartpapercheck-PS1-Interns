@@ -140,15 +140,14 @@ export const studentApi = {
     if (!uploadId) {
       throw new Error('Upload ID is required');
     }
-    let attempts = 0;
-    const MAX_ATTEMPTS = 30;
+    const MAX_DURATION_MS = 20 * 60 * 1000; // 20 minutes
+    const startedAt = Date.now();
     const POLL_INTERVAL = 2000; 
     const pollInterval = setInterval(async () => {
       try {
-        attempts++;
-        if (attempts >= MAX_ATTEMPTS) {
+        if (Date.now() - startedAt >= MAX_DURATION_MS) {
           clearInterval(pollInterval);
-          onError(new Error('Upload status check timed out'));
+          onError(new Error('Upload is taking longer than expected. Please check again shortly.'));
           return;
         }
         const status = await studentApi.checkUploadStatus(uploadId);
@@ -162,14 +161,14 @@ export const studentApi = {
             onError(new Error(status.error_message || 'Upload failed'));
             break;
           case 'processing':
-            onProgress?.(status.processed_count);
+            onProgress?.(status.processed_count || 0);
             break;
           default:
             console.warn('Unknown upload status:', status);
         }
       } catch (error) {
-        clearInterval(pollInterval);
-        onError(handleApiError(error));
+        // Keep polling on transient failures.
+        console.warn('Upload status poll error, retrying:', error);
       }
     }, POLL_INTERVAL);
     return () => clearInterval(pollInterval);

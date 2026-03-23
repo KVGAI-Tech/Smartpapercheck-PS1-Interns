@@ -11,6 +11,8 @@ const ExamForm = ({
   const [formData, setFormData] = useState({
     exam_name: initialData?.exam_name || '',
     full_marks: initialData?.full_marks || '',
+    exam_type: initialData?.exam_type || 'evaluated',
+    is_active: initialData?.is_active ?? (initialData?.exam_type === 'conduct' ? false : true),
     allow_recheck: true,
     max_recheck_attempts: 1
   });
@@ -70,6 +72,38 @@ const ExamForm = ({
             required
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Exam Type *
+          </label>
+          <select
+            value={formData.exam_type}
+            onChange={(e) => setFormData(prev => ({ ...prev, exam_type: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="evaluated">Evaluated Exam</option>
+            <option value="conduct">Portal MCQ Exam</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Evaluated exams use the current answer-sheet workflow. Portal MCQ exams happen directly in this portal.
+          </p>
+        </div>
+
+        {formData.exam_type === 'conduct' && (
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+            <label className="inline-flex items-center gap-3 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={Boolean(formData.is_active)}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              Set portal exam active now (students can attempt only when active)
+            </label>
+          </div>
+        )}
 
       </div>
 

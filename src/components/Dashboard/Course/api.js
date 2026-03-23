@@ -190,15 +190,14 @@ export const pollUploadStatus = (uploadId, onProgress, onComplete, onError) => {
   if (!uploadId) {
     throw new Error('Upload ID is required');
   }
-  let attempts = 0;
-  const MAX_ATTEMPTS = 30;
+  const MAX_DURATION_MS = 20 * 60 * 1000; // 20 minutes
+  const startedAt = Date.now();
   
   const pollInterval = setInterval(async () => {
     try {
-      attempts++;
-      if (attempts >= MAX_ATTEMPTS) {
+      if (Date.now() - startedAt >= MAX_DURATION_MS) {
         clearInterval(pollInterval);
-        onError('Upload status check timed out');
+        onError('Upload is taking longer than expected. Please check again shortly.');
         return;
       }
 
@@ -209,12 +208,12 @@ export const pollUploadStatus = (uploadId, onProgress, onComplete, onError) => {
       } else if (response.data.status === 'failed') {
         clearInterval(pollInterval);
         onError(response.data.error_message || 'Upload failed');
-      } else if (response.data.processed_count) {
-        onProgress(response.data.processed_count);
+      } else if (response.data.status === 'processing') {
+        onProgress?.(response.data.processed_count || 0);
       }
     } catch (error) {
-      clearInterval(pollInterval);
-      onError(error.message);
+      // Keep polling on transient failures.
+      console.warn('Upload status poll error, retrying:', error);
     }
   }, 2000);
 

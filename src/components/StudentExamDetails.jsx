@@ -18,6 +18,7 @@ import {
 } from "./StudentExamDetails/StatusDisplays";
 import Toast from "./StudentExamDetails/Toast";
 import QuestionOverview from "./StudentExamDetails/QuestionOverview";
+import ConductExamSession from "./ConductExamSession";
 
 const StatusBadge = ({ status }) => {
   const isEvaluated = status === "evaluated";
@@ -82,6 +83,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
   const [hasSubmittedRecheck, setHasSubmittedRecheck] = useState(false);
   const [canRequestRecheck, setCanRequestRecheck] = useState(true);
   const [recheckDeadline, setRecheckDeadline] = useState(null);
+  const [examMeta, setExamMeta] = useState(null);
+  const [examMetaResolved, setExamMetaResolved] = useState(false);
+  const isConductExam = examMeta?.exam_type === "conduct";
 
   const mainContentRef = useRef(null);
 
@@ -190,6 +194,16 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
   useEffect(() => {
     const fetchExamData = async () => {
+      if (!examMetaResolved) {
+        return;
+      }
+
+      if (isConductExam) {
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -330,7 +344,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
         URL.revokeObjectURL(pdfFile);
       }
     };
-  }, [examId, enrollmentId]);
+  }, [examId, enrollmentId, examMetaResolved, isConductExam]);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -349,6 +363,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
         console.log(courseId);
         for (let exam of data.data) {
           if (exam.exam_id === parseInt(examId)) {
+            setExamMeta(exam);
             setProgressPercentage(
               (100 * exam.marks_obtained) / exam.full_marks
             );
@@ -361,13 +376,16 @@ const StudentExamDetails = ({ isHistory = false }) => {
             if (exam.recheck_deadline) {
               setRecheckDeadline(exam.recheck_deadline);
             }
+            break;
           }
         }
+        setExamMetaResolved(true);
       })
       .catch((err) => {
         console.log(err);
+        setExamMetaResolved(true);
       });
-  }, [courseId]);
+  }, [courseId, examId]);
 
   useEffect(() => {
     if (examData && examData.questions) {
@@ -530,6 +548,16 @@ const StudentExamDetails = ({ isHistory = false }) => {
   const handleRetry = () => {
     window.location.reload();
   };
+
+  if (isConductExam) {
+    return (
+      <ConductExamSession
+        examId={examId}
+        courseId={courseId}
+        enrollmentId={enrollmentId}
+      />
+    );
+  }
 
   if (loading) {
     return (

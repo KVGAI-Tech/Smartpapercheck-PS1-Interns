@@ -511,11 +511,15 @@ const Toast = ({ message, type, show, onClose }) => {
     onGenerateRubrics,
     onUploadAnswers,
     onGetEnrollments,
+    onReviewPortalAttempts,
     onStartEvaluation,
+    onToggleExamActive,
+    isTogglingActive = false,
     initialStep = 0,
     onStepChange,
   }) => {
     const [activeStep, setActiveStep] = useState(Math.min(2, initialStep || 0));
+    const isConductExam = exam?.exam_type === 'conduct';
 
     useEffect(() => {
       setActiveStep(Math.min(2, initialStep || 0));
@@ -525,22 +529,22 @@ const Toast = ({ message, type, show, onClose }) => {
 
     const steps = [
       {
-        label: 'Upload Q&A',
-        description: 'Upload your question paper',
+        label: isConductExam ? 'Build MCQ Questions' : 'Upload Q&A',
+        description: isConductExam ? 'Create portal MCQ questions and options' : 'Upload your question paper',
         icon: Upload,
         action: () => onUploadQnA(exam.id)
       },
       {
-        label: 'Generate Rubrics',
-        description: 'Create marking criteria',
+        label: isConductExam ? 'Activation' : 'Generate Rubrics',
+        description: isConductExam ? `Current: ${exam?.is_active ? 'Active' : 'Inactive'}` : 'Create marking criteria',
         icon: CheckCircle,
-        action: () => onGenerateRubrics(exam.id)
+        action: () => (isConductExam ? onToggleExamActive(exam) : onGenerateRubrics(exam.id))
       },
       {
-        label: 'Upload Answer Sheets',
-        description: 'Upload student answer files',
+        label: isConductExam ? 'Track Attempts' : 'Upload Answer Sheets',
+        description: isConductExam ? 'Review enrollments and submissions' : 'Upload student answer files',
         icon: Upload,
-        action: () => onUploadAnswers(exam.id)
+        action: () => (isConductExam ? onReviewPortalAttempts(exam.id) : onUploadAnswers(exam.id))
       }
     ];
 
@@ -559,6 +563,18 @@ const Toast = ({ message, type, show, onClose }) => {
               </div>
               <div className="w-1 h-1 rounded-full bg-gray-200" />
               <span className="font-medium">{exam.full_marks || exam.maxMarks || 100} marks</span>
+              <div className="w-1 h-1 rounded-full bg-gray-200" />
+              <span className={`font-medium ${isConductExam ? 'text-blue-700' : 'text-accent'}`}>
+                {isConductExam ? 'Portal MCQ' : 'Evaluated'}
+              </span>
+              {isConductExam && (
+                <>
+                  <div className="w-1 h-1 rounded-full bg-gray-200" />
+                  <span className={`font-medium ${exam?.is_active ? 'text-green-700' : 'text-gray-600'}`}>
+                    {exam?.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -572,14 +588,39 @@ const Toast = ({ message, type, show, onClose }) => {
               <span className="sm:hidden">Enroll</span>
               <span className="hidden sm:inline">Manage Enrollments</span>
             </button>
-            <button
-              onClick={() => onStartEvaluation(exam)}
-              className="w-full sm:w-auto px-3 sm:px-4 py-2 text-white bg-accent hover:bg-accent
-                rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
-            >
-              <PlayCircle className="w-4 h-4" />
-              <span>Evaluate</span>
-            </button>
+            {!isConductExam && (
+              <button
+                onClick={() => onStartEvaluation(exam)}
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-white bg-accent hover:bg-accent
+                  rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
+              >
+                <PlayCircle className="w-4 h-4" />
+                <span>Evaluate</span>
+              </button>
+            )}
+            {isConductExam && (
+              <label className={`w-full sm:w-auto inline-flex items-center justify-center gap-3 px-3 sm:px-4 py-2 rounded-lg border transition-colors ${
+                isTogglingActive ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+              } ${exam?.is_active ? 'bg-green-50 border-green-200 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
+                <span className="text-sm font-medium">
+                  {exam?.is_active ? 'Active' : 'Inactive'}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(exam?.is_active)}
+                  disabled={isTogglingActive}
+                  onChange={() => onToggleExamActive(exam)}
+                  className="sr-only"
+                />
+                <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  exam?.is_active ? 'bg-green-600' : 'bg-gray-300'
+                }`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    exam?.is_active ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </span>
+              </label>
+            )}
 
             <div className="flex items-center justify-end gap-2 sm:ml-2">
               <button
@@ -1069,6 +1110,251 @@ const Toast = ({ message, type, show, onClose }) => {
       </div>
     );
   };
+
+  const ConductAttemptsModal = ({ isOpen, onClose, examId }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [enrollments, setEnrollments] = useState([]);
+    const [questions, setQuestions] = useState([]);
+    const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
+
+    useEffect(() => {
+      if (!isOpen || !examId) return;
+
+      const fetchData = async () => {
+        setIsLoading(true);
+        setError('');
+        try {
+          const pageSize = 200;
+          let page = 1;
+          let totalPages = 1;
+          const allEnrollments = [];
+
+          while (page <= totalPages) {
+            const enrollmentsResp = await fetch(
+              `${API_BASE_URL}/exams/${examId}/enrollments/list?include_evaluations=false&page=${page}&page_size=${pageSize}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                },
+              }
+            );
+
+            if (!enrollmentsResp.ok) {
+              throw new Error(`Failed to fetch enrollments: ${enrollmentsResp.status}`);
+            }
+
+            const enrollmentsJson = await enrollmentsResp.json();
+            if (enrollmentsJson?.code !== 200) {
+              throw new Error(enrollmentsJson?.message || 'Failed to fetch enrollments');
+            }
+
+            const pageEnrollments = enrollmentsJson?.data?.enrollments || [];
+            allEnrollments.push(...pageEnrollments);
+            totalPages = Number(enrollmentsJson?.data?.pagination?.total_pages || 1);
+            page += 1;
+          }
+
+          const questionsResp = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+          });
+          if (!questionsResp.ok) {
+            throw new Error(`Failed to fetch questions: ${questionsResp.status}`);
+          }
+
+          const questionsJson = await questionsResp.json();
+
+          const nextEnrollments = allEnrollments.filter(
+            (item) => String(item?.exam_type || '').toLowerCase() === 'conduct'
+          );
+          const nextQuestions = questionsJson?.data?.questions || (
+            questionsJson?.data?.question_number ? [questionsJson.data] : []
+          );
+
+          setEnrollments(nextEnrollments);
+          setQuestions(nextQuestions);
+          if (nextEnrollments.length > 0) {
+            setSelectedEnrollmentId(nextEnrollments[0].id);
+          } else {
+            setSelectedEnrollmentId(null);
+          }
+        } catch (err) {
+          setError(err.message || 'Failed to load portal exam attempts');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchData();
+    }, [isOpen, examId]);
+
+    if (!isOpen) return null;
+
+    const selectedEnrollment = enrollments.find((item) => item.id === selectedEnrollmentId) || null;
+    const answersByQuestion = {};
+    for (const answer of selectedEnrollment?.conduct_submission?.answers_by_question || []) {
+      answersByQuestion[String(answer.question_number)] = answer;
+    }
+
+    const submittedCount = enrollments.filter(
+      (item) => item?.conduct_submission?.status === 'submitted'
+    ).length;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-xl w-[95vw] max-w-7xl h-[88vh] overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Portal MCQ Attempts</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {submittedCount}/{enrollments.length} students submitted
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {isLoading && (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+            </div>
+          )}
+
+          {!isLoading && error && (
+            <div className="p-4">
+              <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">{error}</div>
+            </div>
+          )}
+
+          {!isLoading && !error && (
+            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[320px_1fr]">
+              <div className="border-r border-gray-200 overflow-y-auto">
+                {enrollments.length === 0 ? (
+                  <div className="p-6 text-sm text-gray-500">No enrollments found for this portal exam.</div>
+                ) : (
+                  <div className="p-3 space-y-2">
+                    {enrollments.map((enrollment) => {
+                      const isSelected = enrollment.id === selectedEnrollmentId;
+                      const submission = enrollment.conduct_submission || {};
+                      const isSubmitted = submission.status === 'submitted';
+                      return (
+                        <button
+                          key={enrollment.id}
+                          type="button"
+                          onClick={() => setSelectedEnrollmentId(enrollment.id)}
+                          className={`w-full text-left rounded-lg border px-3 py-3 transition-colors ${
+                            isSelected ? 'border-accent bg-accent/10' : 'border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="font-medium text-sm text-gray-900 truncate">{enrollment.student_name}</div>
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                              isSubmitted ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {isSubmitted ? 'Submitted' : 'Pending'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Roll: {enrollment.roll_number || '-'}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-2">
+                            Attempted: {submission.attempted_questions || 0}/{submission.total_questions || questions.length}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="overflow-y-auto p-5">
+                {!selectedEnrollment ? (
+                  <div className="text-sm text-gray-500">Select a student to view responses.</div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                      <div className="text-lg font-semibold text-gray-900">{selectedEnrollment.student_name}</div>
+                      <div className="text-sm text-gray-600 mt-1">Roll: {selectedEnrollment.roll_number || '-'}</div>
+                    </div>
+
+                    {questions.map((question, index) => {
+                      const qn = question.question_number;
+                      const answer = answersByQuestion[String(qn)] || {};
+                      const selectedOptionId = answer.selected_option_id;
+                      const correctOptionIds = question.correct_option_ids || [];
+                      return (
+                        <div key={qn} className="rounded-xl border border-gray-200 p-4 bg-white">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs uppercase text-gray-500">Question {index + 1}</p>
+                              <h4 className="text-sm font-semibold text-gray-900 mt-1">
+                                {question.question_text || `Question ${qn}`}
+                              </h4>
+                            </div>
+                            <div className="text-sm font-medium text-gray-600">{question.max_marks || 0} marks</div>
+                          </div>
+
+                          <div className="mt-3 space-y-2">
+                            {(question.mcq_options || []).map((option) => {
+                              const isSelected = selectedOptionId === option.option_id;
+                              const isCorrect = correctOptionIds.includes(option.option_id);
+                              return (
+                                <div
+                                  key={option.option_id}
+                                  className={`rounded-lg border px-3 py-3 ${
+                                    isSelected && isCorrect ? 'border-green-300 bg-green-50' :
+                                    isSelected ? 'border-blue-300 bg-blue-50' :
+                                    isCorrect ? 'border-green-200 bg-green-50/60' :
+                                    'border-gray-200 bg-white'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-sm font-medium text-gray-800">{option.option_id}</span>
+                                    <div className="flex items-center gap-2 text-xs">
+                                      {isSelected && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Selected</span>}
+                                      {isCorrect && <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">Correct</span>}
+                                    </div>
+                                  </div>
+                                  {option.option_body && (
+                                    <div
+                                      className="mt-2 text-sm text-gray-700"
+                                      dangerouslySetInnerHTML={{ __html: option.option_body }}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="mt-3 text-sm text-gray-700">
+                            <span className="font-medium">Marks awarded:</span> {answer.marks_awarded ?? 0}
+                          </div>
+                          {question.reason_required && (
+                            <div className="mt-2">
+                              <div className="text-sm font-medium text-gray-700">Reason</div>
+                              <div className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
+                                {answer.reason_text || 'No reason submitted'}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
   
   const ExamsTab = ({
     exams = [],
@@ -1087,6 +1373,7 @@ const Toast = ({ message, type, show, onClose }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showAnswerUploadModal, setShowAnswerUploadModal] = useState(false);
     const [selectedExamId, setSelectedExamId] = useState(null);
+    const [selectedExamType, setSelectedExamType] = useState('evaluated');
     const [existingQuestions, setExistingQuestions] = useState([]);
     const [showRubricModal, setShowRubricModal] = useState(false);
     const [currentExamQuestions, setCurrentExamQuestions] = useState([]);
@@ -1097,6 +1384,9 @@ const Toast = ({ message, type, show, onClose }) => {
     const [selectedExamForRecheck, setSelectedExamForRecheck] = useState(null);
     const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
     const [selectedExamForEnrollments, setSelectedExamForEnrollments] = useState(null);
+    const [showConductAttemptsModal, setShowConductAttemptsModal] = useState(false);
+    const [selectedExamForConductAttempts, setSelectedExamForConductAttempts] = useState(null);
+    const [togglingExamId, setTogglingExamId] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedExamForEdit, setSelectedExamForEdit] = useState(null);
     const [examSteps, setExamSteps] = useState({});
@@ -1137,6 +1427,7 @@ const Toast = ({ message, type, show, onClose }) => {
 
         exams.forEach((exam) => {
           if (!exam || !exam.id) return;
+          const isConductExam = exam.exam_type === 'conduct';
 
           // Backend may provide derived progress flags; fall back to existing fields
           const backendHasQuestions = exam.has_questions;
@@ -1153,12 +1444,13 @@ const Toast = ({ message, type, show, onClose }) => {
             backendHasRubrics ||
             questionsHaveRubrics[exam.id]
           );
+          const isExamActive = Boolean(exam.is_active);
 
           let derivedProgress = 0;
           if (hasQnA) {
             derivedProgress = 1;
           }
-          if (hasRubrics) {
+          if (isConductExam ? isExamActive : hasRubrics) {
             derivedProgress = 2;
           }
           if (backendHasAnswers) {
@@ -1202,12 +1494,14 @@ const Toast = ({ message, type, show, onClose }) => {
         }
   
         
-        const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${updatedExam.id}/`;
+        const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${updatedExam.id}`;
         
         console.log('Making PUT request to:', fullUrl);
         console.log('Request payload:', {
           exam_name: updatedExam.exam_name,
-          full_marks: updatedExam.full_marks
+          full_marks: updatedExam.full_marks,
+          exam_type: updatedExam.exam_type,
+          is_active: updatedExam.is_active,
         });
         
         const response = await fetch(fullUrl, {
@@ -1218,7 +1512,9 @@ const Toast = ({ message, type, show, onClose }) => {
           },
           body: JSON.stringify({
             exam_name: updatedExam.exam_name,
-            full_marks: updatedExam.full_marks
+            full_marks: updatedExam.full_marks,
+            exam_type: updatedExam.exam_type,
+            is_active: updatedExam.is_active,
           })
         });
   
@@ -1238,7 +1534,7 @@ const Toast = ({ message, type, show, onClose }) => {
           
           
           if (onRefresh) {
-            onRefresh();
+            await onRefresh();
           }
           
           return data.data;
@@ -1260,6 +1556,52 @@ const Toast = ({ message, type, show, onClose }) => {
           showToast(error.message || 'Failed to update exam', 'error');
         }
         throw error;
+      }
+    };
+
+    const handleToggleExamActive = async (exam) => {
+      try {
+        if (!courseId || !exam?.id) {
+          throw new Error('Course ID or Exam ID is missing');
+        }
+        setTogglingExamId(exam.id);
+
+        const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${exam.id}`;
+        const nextIsActive = !Boolean(exam.is_active);
+
+        const response = await fetch(fullUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            exam_name: exam.exam_name,
+            full_marks: exam.full_marks,
+            exam_type: exam.exam_type,
+            is_active: nextIsActive,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Failed to update exam status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.code !== 200) {
+          throw new Error(data.message || 'Failed to update exam status');
+        }
+
+        showToast(`Portal exam is now ${nextIsActive ? 'active' : 'inactive'}`, 'success');
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } catch (error) {
+        console.error('Error toggling exam active status:', error);
+        showToast(error.message || 'Failed to update exam status', 'error');
+      } finally {
+        setTogglingExamId(null);
       }
     };
   
@@ -1381,6 +1723,11 @@ const Toast = ({ message, type, show, onClose }) => {
       setSelectedExamForEnrollments(examId);
       setShowEnrollmentsModal(true);
     };
+
+    const handleReviewConductAttempts = async (examId) => {
+      setSelectedExamForConductAttempts(examId);
+      setShowConductAttemptsModal(true);
+    };
   
     const handleEnrollmentChange = async (studentId, isEnrolled) => {
       try {
@@ -1421,6 +1768,7 @@ const Toast = ({ message, type, show, onClose }) => {
         showToast('Error: Exam ID is missing', 'error');
         return;
       }
+      const selectedExam = exams.find((exam) => Number(exam.id) === Number(examId));
       setIsLoading(true);
       try {
         let questions = [];
@@ -1453,6 +1801,7 @@ const Toast = ({ message, type, show, onClose }) => {
         }
         setExistingQuestions(questions);
         setSelectedExamId(examId);
+        setSelectedExamType(selectedExam?.exam_type || 'evaluated');
         setShowUploadModal(true);
       } finally {
         setIsLoading(false);
@@ -1639,7 +1988,10 @@ const Toast = ({ message, type, show, onClose }) => {
                   onGenerateRubrics={handleGenerateRubrics}
                   onUploadAnswers={handleAnswerUpload}
                   onGetEnrollments={handleGetEnrollments}
+                  onReviewPortalAttempts={handleReviewConductAttempts}
                   onStartEvaluation={handleStartEvaluation}
+                  onToggleExamActive={handleToggleExamActive}
+                  isTogglingActive={togglingExamId === exam.id}
                   initialStep={examSteps[exam.id] ?? 0}
                   onStepChange={(step) => {
                     if (!exam || !exam.id) return;
@@ -1709,9 +2061,11 @@ const Toast = ({ message, type, show, onClose }) => {
             onClose={() => {
               setShowUploadModal(false);
               setSelectedExamId(null);
+              setSelectedExamType('evaluated');
               setExistingQuestions([]);
             }}
             examId={selectedExamId}
+            examType={selectedExamType}
             existingQuestions={existingQuestions}
             onSubmit={async (examId, formData) => {
               try {
@@ -1807,6 +2161,15 @@ const Toast = ({ message, type, show, onClose }) => {
             courseId={courseId}
             onEnrollmentChange={handleEnrollmentChange}
             students={students}
+          />
+
+          <ConductAttemptsModal
+            isOpen={showConductAttemptsModal}
+            onClose={() => {
+              setShowConductAttemptsModal(false);
+              setSelectedExamForConductAttempts(null);
+            }}
+            examId={selectedExamForConductAttempts}
           />
         </div>
   
