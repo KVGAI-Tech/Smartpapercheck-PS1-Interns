@@ -18,7 +18,7 @@ const Breadcrumbs = ({ items = [] }) => {
             {idx > 0 && <ChevronRight className="w-4 h-4 text-gray-400" />}
 
             {isLast || (!hasLink && !hasClick) ? (
-              <span className="text-blue-600 font-medium">{item.label}</span>
+              <span className="text-gray-600 font-medium">{item.label}</span>
             ) : hasLink ? (
               <Link
                 to={item.to}

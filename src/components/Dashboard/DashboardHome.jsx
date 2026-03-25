@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../BaseURL';
 
-import { 
+import {
   Users,
-  CheckCircle,
   Clock,
   FileCheck,
+  BookOpen,
+  Calendar,
   Search,
   MoreVertical,
-  Filter,
 } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, trend, trendValue }) => (
@@ -21,7 +21,7 @@ const StatCard = ({ title, value, icon: Icon, trend, trendValue }) => (
         <h3 className="text-2xl font-bold text-gray-900 mb-2">{value}</h3>
         {trend && (
           <p className={`text-sm ${trend === 'up' ? 'text-accent' : 'text-red-500'}`}>
-            {trend === 'up' ? '↑' : '↓'} {trendValue}% from last week
+            {trend === 'up' ? '^' : 'v'} {trendValue}% from last week
           </p>
         )}
       </div>
@@ -86,7 +86,7 @@ const Dashboard = () => {
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState(null);
   const navigate = useNavigate();
-  
+
   const fetchUserProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -109,7 +109,7 @@ const Dashboard = () => {
 
       const data = await response.json();
       console.log('User data:', data);
-      
+
       if (data && data.data && data.data.name) {
         setUserData(data.data);
       } else {
@@ -119,7 +119,7 @@ const Dashboard = () => {
       console.error('Error fetching user profile:', error);
       localStorage.removeItem('accessToken');
       navigate('/auth');
-    } 
+    }
   }, [navigate]);
 
   useEffect(() => {
@@ -166,10 +166,17 @@ const Dashboard = () => {
   const userName = userData?.name || 'Guest User';
 
   const statValues = {
-    totalAnswerSheets: summary?.total_answer_sheets ?? 0,
-    evaluatedToday: summary?.evaluated_today ?? 0,
-    activeTAs: summary?.active_tas ?? 0,
-    pendingReviews: summary?.pending_reviews ?? 0,
+    totalStudents: (summary?.course_overview || []).reduce(
+      (total, course) => total + (Number(course?.students_count) || 0),
+      0
+    ),
+    activeCourses: (summary?.course_overview || []).length,
+    pendingEvaluation: (summary?.current_evaluations || []).reduce((total, exam) => {
+      const totalSheets = Number(exam?.total_answer_sheets) || 0;
+      const evaluated = Number(exam?.evaluated) || 0;
+      return total + Math.max(0, totalSheets - evaluated);
+    }, 0),
+    upcomingExams: (summary?.current_evaluations || []).length,
   };
 
   const evaluationCards = (summary?.current_evaluations || []).slice(0, 3);
@@ -181,7 +188,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Welcome {userName}!</h1>
         </div>
-        
+
         {/** Search courses bar temporarily disabled */}
         {false && (
           <div className="flex items-center space-x-4">
@@ -199,39 +206,28 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/** Dashboard stat cards temporarily disabled */}
-      {false && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Total Answer Sheets"
-            value={isLoadingSummary ? '—' : statValues.totalAnswerSheets.toLocaleString()}
-            icon={FileCheck}
-            trend="up"
-            trendValue="15.3"
-          />
-          <StatCard
-            title="Evaluated Today"
-            value={isLoadingSummary ? '—' : statValues.evaluatedToday.toLocaleString()}
-            icon={CheckCircle}
-            trend="up"
-            trendValue="8.2"
-          />
-          <StatCard
-            title="Active TAs"
-            value={isLoadingSummary ? '—' : statValues.activeTAs.toLocaleString()}
-            icon={Users}
-            trend="up"
-            trendValue="2.5"
-          />
-          <StatCard
-            title="Pending Reviews"
-            value={isLoadingSummary ? '—' : statValues.pendingReviews.toLocaleString()}
-            icon={Clock}
-            trend="down"
-            trendValue="5.8"
-          />
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="Total Students"
+          value={isLoadingSummary ? '--' : statValues.totalStudents.toLocaleString()}
+          icon={Users}
+        />
+        <StatCard
+          title="Active Courses"
+          value={isLoadingSummary ? '--' : statValues.activeCourses.toLocaleString()}
+          icon={BookOpen}
+        />
+        <StatCard
+          title="Pending Evaluation"
+          value={isLoadingSummary ? '--' : statValues.pendingEvaluation.toLocaleString()}
+          icon={Clock}
+        />
+        <StatCard
+          title="Upcoming Exams"
+          value={isLoadingSummary ? '--' : statValues.upcomingExams.toLocaleString()}
+          icon={Calendar}
+        />
+      </div>
 
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -293,55 +289,76 @@ const Dashboard = () => {
           <p className="text-sm text-gray-500">No recent activity available yet.</p>
         ) : (
           <div className="space-y-3">
-            {evaluationCards.map((exam) => (
-              <div
-                key={exam.exam_id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50/60 px-4 py-3 hover:bg-gray-50 transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {exam.exam_name || "Untitled Exam"}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {exam.course_name || "Unknown Course"}
-                  </p>
-                  <p className="mt-1 text-[11px] text-gray-500">
-                    <span className="font-medium text-gray-700">
-                      {exam.evaluated?.toLocaleString() ?? 0}
+            {evaluationCards.map((exam) => {
+              const totalSheets = Number(exam?.total_answer_sheets) || 0;
+              const evaluated = Number(exam?.evaluated) || 0;
+              const percent = totalSheets
+                ? Math.min(100, (Math.max(evaluated, 0) / totalSheets) * 100)
+                : 0;
+              const status =
+                percent >= 80 ? 'On track' : percent >= 40 ? 'In progress' : 'Needs attention';
+              const statusClass =
+                percent >= 80
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                  : percent >= 40
+                  ? 'bg-amber-50 text-amber-700 border-amber-100'
+                  : 'bg-rose-50 text-rose-700 border-rose-100';
+
+              const timeLeft = String(exam?.time_left || '').trim();
+              const showTimeLeft = /\d/.test(timeLeft);
+
+              return (
+                <div
+                  key={exam.exam_id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="h-10 w-10 rounded-2xl bg-accent/10 flex items-center justify-center">
+                      <FileCheck className="w-5 h-5 text-accent" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">
+                        {exam.exam_name || 'Untitled Exam'}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {exam.course_name || 'Unknown Course'}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-500">
+                        <span className="font-medium text-gray-700">
+                          {evaluated.toLocaleString()}
+                        </span>
+                        <span>/</span>
+                        <span>{totalSheets.toLocaleString()} evaluated</span>
+                        {showTimeLeft && (
+                          <>
+                            <span>*</span>
+                            <span>{timeLeft} left</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0 min-w-[140px]">
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${statusClass}`}>
+                      {status}
                     </span>
-                    {" / "}
-                    <span className="text-gray-500">
-                      {exam.total_answer_sheets?.toLocaleString() ?? 0} evaluated
-                    </span>
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                  <span className="text-xs font-medium text-gray-500">
-                    {exam.total_answer_sheets
-                      ? `${Math.min(
-                          100,
-                          (Math.max(exam.evaluated || 0, 0) /
-                            exam.total_answer_sheets) * 100
-                        ).toFixed(0)}% complete`
-                      : 'No sheets yet'}
-                  </span>
-                  <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent rounded-full"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          exam.total_answer_sheets
-                            ? (Math.max(exam.evaluated || 0, 0) /
-                              exam.total_answer_sheets) * 100
-                            : 0
-                        ).toFixed(0)}%`,
-                      }}
-                    />
+                    <div className="w-full">
+                      <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+                        <span>{percent.toFixed(0)}% complete</span>
+                        <span>{totalSheets ? totalSheets - evaluated : 0} left</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all"
+                          style={{ width: `${percent.toFixed(0)}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

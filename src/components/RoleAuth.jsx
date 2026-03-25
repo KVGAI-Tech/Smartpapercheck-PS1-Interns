@@ -313,27 +313,6 @@ const RoleSelector = ({ selectedRole, onRoleSelect }) => {
         ))}
       </div>
 
-      {selectedRole && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-8 flex justify-center"
-        >
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              boxShadow:
-                "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-            }}
-            whileTap={{ scale: 0.98 }}
-            className="px-10 py-3.5 rounded-xl font-medium bg-accent text-white shadow-lg"
-            onClick={() => onRoleSelect(selectedRole, true)}
-          >
-            Continue as {roles.find((r) => r.id === selectedRole)?.name}
-          </motion.button>
-        </motion.div>
-      )}
     </div>
   );
 };
@@ -350,7 +329,7 @@ const RoleAuth = () => {
     }
   }, [step, selectedRole]);
 
-  const handleRoleSelect = (role, confirmed = false) => {
+  const handleRoleSelect = (role) => {
     try {
       if (!role) {
         throw new Error("No role selected");
@@ -358,10 +337,7 @@ const RoleAuth = () => {
 
       setSelectedRole(role);
       setError(null);
-
-      if (confirmed) {
-        setStep("login");
-      }
+      setStep("login");
     } catch (err) {
       console.error("Role selection error:", err);
       setError("Failed to select role. Please try again.");
@@ -393,41 +369,6 @@ const RoleAuth = () => {
     } catch (err) {
       console.error("Login success error:", err);
       setError(`Authentication error: ${err.message || "Unknown error occurred"}`);
-    }
-  };
-
-  const renderLoginForm = () => {
-    if (step !== "login") {
-      return null;
-    }
-
-    if (!selectedRole) {
-      return null;
-    }
-
-    try {
-      switch (selectedRole) {
-        case "professor":
-          return (
-            <ProfessorLogin
-              onBack={handleBackToRoles}
-              onLoginSuccess={handleLoginSuccess}
-            />
-          );
-        case "student":
-          return (
-            <StudentLogin
-              onBack={handleBackToRoles}
-              onLoginSuccess={handleLoginSuccess}
-            />
-          );
-        default:
-          console.error("Unsupported role:", selectedRole);
-          return null;
-      }
-    } catch (componentError) {
-      console.error("Component rendering error:", componentError);
-      return null;
     }
   };
 
@@ -479,24 +420,38 @@ const RoleAuth = () => {
           </motion.p>
         </div>
 
-        <AnimatePresence mode="wait" initial={false}>
+        {step === "login" && selectedRole ? (
           <motion.div
-            key={step}
-            initial={{ opacity: 0, y: 20 }}
+            key="login-form-container"
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ type: "tween", ease: "easeInOut", duration: 0.5 }}
+            transition={{ duration: 0.3 }}
           >
-            {step === "login" && selectedRole
-              ? renderLoginForm()
-              : (
-                <RoleSelector
-                  selectedRole={selectedRole}
-                  onRoleSelect={handleRoleSelect}
-                />
-              )}
+            {selectedRole === "professor" ? (
+              <ProfessorLogin
+                onBack={handleBackToRoles}
+                onLoginSuccess={handleLoginSuccess}
+              />
+            ) : (
+              <StudentLogin
+                onBack={handleBackToRoles}
+                onLoginSuccess={handleLoginSuccess}
+              />
+            )}
           </motion.div>
-        </AnimatePresence>
+        ) : (
+          <motion.div
+            key="role-selection-container"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <RoleSelector
+              selectedRole={selectedRole}
+              onRoleSelect={handleRoleSelect}
+            />
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0 }}

@@ -558,4 +558,4 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
 };
 
 
-export default React.memo(ProfessorLogin);
+export default ProfessorLogin;

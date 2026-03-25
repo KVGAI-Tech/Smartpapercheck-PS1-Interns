@@ -48,6 +48,8 @@ const StudentsTab = ({
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const handleExportStudents = () => {
     try {
@@ -123,6 +125,17 @@ const StudentsTab = ({
 
     fetchStudents();
   }, [courseId, externalStudents]);
+
+  useEffect(() => {
+    setSelectedStudentIds((prev) => {
+      const ids = new Set();
+      const validIds = new Set((students || []).map((s) => s.id));
+      prev.forEach((id) => {
+        if (validIds.has(id)) ids.add(id);
+      });
+      return ids;
+    });
+  }, [students]);
 
   const handleRemoveStudent = async (student) => {
     try {
@@ -210,6 +223,18 @@ const StudentsTab = ({
   const handleOnEdit = (student) => {
     onEdit(student, (studentData) => handleUpdateStudent(studentData));
   };
+
+  const toggleSelectStudent = (id) => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
   
   const filteredStudents = students.filter(student => {
     const matchesSearch = !searchQuery || 
@@ -222,6 +247,9 @@ const StudentsTab = ({
     
     return matchesSearch && matchesSection;
   });
+
+  const totalStudentCount = students.length;
+  const visibleStudentCount = filteredStudents.length;
 
   const getSortableValue = (student, key) => {
     switch (key) {
@@ -257,6 +285,59 @@ const StudentsTab = ({
     });
   })();
 
+  const visibleStudentIds = sortedStudents.map((student) => student.id);
+  const allVisibleSelected =
+    visibleStudentIds.length > 0 &&
+    visibleStudentIds.every((id) => selectedStudentIds.has(id));
+
+  const toggleSelectAllVisible = () => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visibleStudentIds.forEach((id) => next.delete(id));
+      } else {
+        visibleStudentIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedStudentIds.size) return;
+    const confirmed = window.confirm(
+      `Delete ${selectedStudentIds.size} student${selectedStudentIds.size > 1 ? 's' : ''}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setBulkDeleting(true);
+    const idsToDelete = Array.from(selectedStudentIds);
+    const remaining = [];
+    const failed = [];
+
+    await Promise.allSettled(
+      idsToDelete.map(async (id) => {
+        const student = students.find((s) => s.id === id);
+        if (!student) return;
+        try {
+          await studentApi.removeStudent(courseId, id);
+        } catch (err) {
+          failed.push(student);
+        }
+      })
+    );
+
+    const failedIds = new Set(failed.map((s) => s.id));
+    students.forEach((student) => {
+      if (!selectedStudentIds.has(student.id) || failedIds.has(student.id)) {
+        remaining.push(student);
+      }
+    });
+
+    updateAndSaveStudents(remaining);
+    setSelectedStudentIds(new Set(failedIds));
+    setBulkDeleting(false);
+  };
+
   const requestSort = (key) => {
     setSortConfig((prev) => {
       if (prev.key === key) {
@@ -264,6 +345,17 @@ const StudentsTab = ({
       }
       return { key, direction: 'asc' };
     });
+  };
+
+  const handleSortChange = (value) => {
+    if (!value) {
+      setSortConfig({ key: null, direction: 'asc' });
+      return;
+    }
+    setSortConfig((prev) => ({
+      key: value,
+      direction: prev.key === value ? prev.direction : 'asc',
+    }));
   };
 
   const renderSortIndicator = (key) => {
@@ -330,6 +422,15 @@ const StudentsTab = ({
           <table className="min-w-full sm:min-w-[720px] w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th scope="col" className="px-2 sm:px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAllVisible}
+                    aria-label="Select all students"
+                    className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                  />
+                </th>
                 <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
                     type="button"
@@ -380,6 +481,15 @@ const StudentsTab = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50">
+                  <td className="px-2 sm:px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedStudentIds.has(student.id)}
+                      onChange={() => toggleSelectStudent(student.id)}
+                      aria-label={`Select ${student.user_name || 'student'}`}
+                      className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                    />
+                  </td>
                   <td className="px-2 sm:px-6 py-4 whitespace-normal sm:whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="hidden sm:flex h-10 w-10 rounded-full bg-accent/10 items-center justify-center">
@@ -437,59 +547,94 @@ const StudentsTab = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search students..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
-            disabled={loading}
-          />
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-end sm:w-auto">
-          {sections.length > 0 && (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+          <div className="relative flex-1 min-w-0 max-w-3xl">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search students..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full h-11 pl-10 pr-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
+              disabled={loading}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+            {sections.length > 0 && (
+              <select
+                value={selectedSection}
+                onChange={(e) => onSectionChange(e.target.value)}
+                className="h-11 px-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
+                disabled={loading}
+              >
+                <option value="All sections">All sections</option>
+                {sections.map(section => (
+                  <option key={section} value={section}>{section}</option>
+                ))}
+              </select>
+            )}
             <select
-              value={selectedSection}
-              onChange={(e) => onSectionChange(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
+              value={sortConfig.key || ''}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="h-11 px-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
               disabled={loading}
             >
-              <option value="All sections">All sections</option>
-              {sections.map(section => (
-                <option key={section} value={section}>{section}</option>
-              ))}
+              <option value="">Sort by</option>
+              <option value="name">Name</option>
+              <option value="roll_number">Roll Number</option>
+              <option value="tut_section">Section</option>
+              <option value="email">Email</option>
             </select>
+            <button
+              onClick={handleBulkDelete}
+              disabled={loading || bulkDeleting || selectedStudentIds.size === 0}
+              className="h-11 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Bulk Delete
+            </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              disabled={loading}
+              className="h-11 px-4 flex items-center justify-center gap-2 text-gray-700 bg-white border border-gray-300 
+                rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Upload size={18} />
+              Import
+            </button>
+            <button
+              onClick={handleExportStudents}
+              disabled={loading}
+              className="h-11 px-4 flex items-center justify-center gap-2 text-gray-700 bg-white border border-gray-300 
+                rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Upload size={18} />
+              Export
+            </button>
+            <button
+              onClick={handleOnAdd}
+              disabled={loading}
+              className="h-11 px-4 flex items-center justify-center gap-2 text-white bg-accent rounded-lg 
+                hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={18} />
+              Add Student
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-gray-400" />
+            <span className="font-medium text-gray-900">{totalStudentCount}</span>
+            <span>students</span>
+            <span className="text-xs text-gray-400">Showing {visibleStudentCount}</span>
+          </div>
+          {selectedStudentIds.size > 0 && (
+            <div className="text-xs text-gray-500">
+              {selectedStudentIds.size} selected
+            </div>
           )}
-          <button
-            onClick={() => setShowImportModal(true)}
-            disabled={loading}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
-              rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Upload size={20} />
-            Import
-          </button>
-          <button
-            onClick={handleExportStudents}
-            disabled={loading}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 
-              rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Upload size={20} />
-            Export
-          </button>
-          <button
-            onClick={handleOnAdd}
-            disabled={loading}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white bg-accent rounded-lg 
-              hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus size={20} />
-            Add Student
-          </button>
         </div>
       </div>
 

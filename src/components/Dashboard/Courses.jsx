@@ -6,7 +6,6 @@ import {
   Calendar,
   CheckCircle,
   ClipboardList,
-  Filter,
   Archive,
   ArchiveRestore,
   MoreVertical,
@@ -17,7 +16,7 @@ import {
   Users,
   Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CourseModal } from "./Course/modals/CourseModal";
 import { useAuth } from "../AuthContext";
@@ -79,6 +78,13 @@ const CourseCard = ({
   const examsCount = Number.isFinite(Number(course?.exams_count))
     ? Number(course.exams_count)
     : 0;
+  const progress = useMemo(() => {
+    const start = course?.start_date ? new Date(course.start_date).getTime() : NaN;
+    const end = course?.end_date ? new Date(course.end_date).getTime() : NaN;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+    const now = Date.now();
+    return Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
+  }, [course?.start_date, course?.end_date]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -264,6 +270,19 @@ const CourseCard = ({
               Students
             </div>
             <div className="mt-1 text-2xl font-semibold text-gray-900">{studentsCount}</div>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>Course Progress</span>
+            <span>{progress.toFixed(0)}%</span>
+          </div>
+          <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${progress >= 100 ? "bg-green-500" : "bg-accent"}`}
+              style={{ width: `${progress.toFixed(0)}%` }}
+            />
           </div>
         </div>
       </div>
@@ -675,72 +694,48 @@ const Courses = ({ archivedView = false }) => {
 
   return (
     <div className="space-y-6">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative flex-1 max-w-2xl"
-          >
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <motion.input
-              whileFocus={{ scale: 1.01 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              type="text"
-              placeholder="Search courses by name or code..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-200 bg-white shadow-sm"
-            />
-          </motion.div>
+      <div className="mb-6 flex items-center gap-3">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative flex-1"
+        >
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search courses by name or code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-11 pl-9 pr-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-200 bg-white shadow-sm text-sm text-gray-700 placeholder:text-gray-400"
+          />
+        </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex gap-2"
-          >
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="flex items-center gap-2 py-3 px-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700"
-            >
-              <Filter className="w-4 h-4" />
-              <span className="hidden sm:inline">Filters</span>
-            </motion.button>
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { setSearchQuery(""); fetchCourses(); }}
+          className="flex items-center gap-2 h-11 px-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700 text-sm shrink-0"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span className="hidden sm:inline">Refresh</span>
+        </motion.button>
 
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                setSearchQuery("");
-                fetchCourses();
-              }}
-              className="flex items-center gap-2 py-3 px-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="hidden sm:inline">Refresh</span>
-            </motion.button>
-          </motion.div>
-        </div>
         {userRole === "professor" && (
-          <div className="flex justify-end">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                setSelectedCourse(null);
-                setShowAddModal(true);
-              }}
-              className="inline-flex items-center gap-2 py-3 px-4 bg-accent text-white rounded-lg shadow-md hover:shadow-lg hover:bg-accent/90 transition-all duration-300"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Course</span>
-            </motion.button>
-          </div>
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { setSelectedCourse(null); setShowAddModal(true); }}
+            className="inline-flex items-center gap-2 h-11 px-4 bg-accent text-white rounded-lg shadow-md hover:shadow-lg hover:bg-accent/90 transition-all duration-300 text-sm shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Course</span>
+          </motion.button>
         )}
       </div>
 

@@ -1,10 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Search, BookOpen, ChevronDown, Filter, Calendar, AlertCircle, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../BaseURL";
 
-const CourseCard = ({ id, code, name, instructor, semester, examCount }) => (
+// Compute date-based progress outside the component (pure function, no hooks needed)
+function calcDateProgress(startDate, endDate) {
+  const start = startDate ? new Date(startDate).getTime() : NaN;
+  const end = endDate ? new Date(endDate).getTime() : NaN;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  return Math.max(0, Math.min(100, ((Date.now() - start) / (end - start)) * 100));
+}
+
+const CourseCard = React.memo(({ id, code, name, instructor, semester, examCount, startDate, endDate }) => {
+  const progress = calcDateProgress(startDate, endDate);
+
+  return (
   <Link
     to={`/student/evaluations/${id}`}
     className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-accent/30"
@@ -26,15 +37,28 @@ const CourseCard = ({ id, code, name, instructor, semester, examCount }) => (
       </span>
     </div>
 
-    <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-sm">
-      <div className="flex items-center gap-2 text-gray-500">
-        <Calendar className="w-4 h-4" />
-        <span>{semester}</span>
+    <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-between text-sm mb-3">
+        <div className="flex items-center gap-2 text-gray-500">
+          <Calendar className="w-4 h-4" />
+          <span>{semester}</span>
+        </div>
+        <span className="text-accent font-medium">View Details →</span>
       </div>
-      <span className="text-accent font-medium">View Details →</span>
+      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+        <span>Course Progress</span>
+        <span>{progress.toFixed(0)}%</span>
+      </div>
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${progress >= 100 ? "bg-green-500" : "bg-accent"}`}
+          style={{ width: `${progress.toFixed(0)}%` }}
+        />
+      </div>
     </div>
   </Link>
-);
+  );
+});
 
 const FilterDropdown = ({ label, options, value, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -269,6 +293,8 @@ const StudentEvaluations = () => {
               instructor={course.instructor_name || "Not assigned"}
               semester={`${course.year || "N/A"}-${course.semester || "N/A"}`}
               examCount={course.exam_count || 0}
+              startDate={course.start_date}
+              endDate={course.end_date}
             />
           ))}
         </div>

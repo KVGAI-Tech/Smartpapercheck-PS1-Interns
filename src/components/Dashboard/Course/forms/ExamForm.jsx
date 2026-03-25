@@ -12,10 +12,20 @@ const ExamForm = ({
     exam_name: initialData?.exam_name || '',
     full_marks: initialData?.full_marks || '',
     exam_type: initialData?.exam_type || 'evaluated',
-    is_active: initialData?.is_active ?? (initialData?.exam_type === 'conduct' ? false : true),
+    is_active: initialData?.is_active ?? false,
     allow_recheck: true,
     max_recheck_attempts: 1
   });
+
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      exam_type: newType,
+      // If creating a new exam, keep is_active false. If editing, preserve the value.
+      is_active: initialData ? prev.is_active : false
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,7 +89,7 @@ const ExamForm = ({
           </label>
           <select
             value={formData.exam_type}
-            onChange={(e) => setFormData(prev => ({ ...prev, exam_type: e.target.value }))}
+            onChange={handleTypeChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             required
           >

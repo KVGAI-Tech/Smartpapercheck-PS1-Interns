@@ -1449,12 +1449,14 @@ const Toast = ({ message, type, show, onClose }) => {
           let derivedProgress = 0;
           if (hasQnA) {
             derivedProgress = 1;
-          }
-          if (isConductExam ? isExamActive : hasRubrics) {
-            derivedProgress = 2;
-          }
-          if (backendHasAnswers) {
-            // Answers uploaded => all 3 steps completed
+            if (isConductExam ? isExamActive : hasRubrics) {
+              derivedProgress = 2;
+              if (backendHasAnswers) {
+                derivedProgress = 3;
+              }
+            }
+          } else if (backendHasAnswers) {
+            // Fallback for cases where answers exist but Q&A is not detected correctly
             derivedProgress = 3;
           }
 
@@ -1951,14 +1953,14 @@ const Toast = ({ message, type, show, onClose }) => {
       <>
         <div className="space-y-6 opacity-100 transition-opacity duration-1000">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="relative flex-1 max-w-xl min-w-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <div className="relative flex-1 max-w-2xl min-w-0">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search exams..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl
                   focus:ring-2 focus:ring-accent focus:border-transparent
                   transition-all duration-300 text-gray-700"
               />
