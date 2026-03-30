@@ -1238,9 +1238,22 @@ const RubricModal = ({
 
             const data = await response.json();
             if (data.code === 200) {
+                
+                // Keep the mutated array up to date locally so we don't lose the save across switches
+                const questionIndex = questions.findIndex(q => q.question_number === selectedQuestion);
+                if (questionIndex !== -1) {
+                    questions[questionIndex].rubric_items = normalizedItems;
+                    questions[questionIndex].problem_feedback = feedback;
+                    if (!questions[questionIndex].rubric) {
+                        questions[questionIndex].rubric = {};
+                    }
+                    questions[questionIndex].rubric.rubric_items = normalizedItems;
+                    questions[questionIndex].rubric.problem_feedback = feedback;
+                }
+
                 await onSave(data.data);
-                toast.success('Rubric saved successfully!', { id: loadingToast });
-                onClose();
+                toast.success('Question rubric saved!', { id: loadingToast });
+                // We do NOT close the modal on single save anymore
             } else {
                 throw new Error(data.message || 'Failed to save rubric');
             }
@@ -1248,6 +1261,78 @@ const RubricModal = ({
             console.error("Error saving rubric:", err);
             setError('Failed to save rubric: ' + (err.message || 'Unknown error'));
             toast.error('Failed to save rubric: ' + (err.message || 'Unknown error'), { id: loadingToast });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSaveAllAndEvaluate = async () => {
+        if (!validation.isValid) {
+            setError('Please fix validation errors in the current question before saving all');
+            toast.error('Please fix validation errors in the current question before saving all');
+            return;
+        }
+
+        setIsLoading(true);
+        setError('');
+        const loadingToast = toast.loading('Saving all rubrics...');
+
+        try {
+            // Include latest current edits
+            const currentNormalizedItems = normalizeRubricItemsForSave();
+
+            const promises = questions.map(q => {
+                let itemsToSave, feedbackToSave;
+
+                if (q.question_number === selectedQuestion) {
+                    itemsToSave = currentNormalizedItems;
+                    feedbackToSave = feedback;
+                } else {
+                    const rawItems = q.rubric?.rubric_items || q.rubric_items || [];
+                    const qMaxMarks = Math.abs(q.max_marks || 10);
+                    itemsToSave = rawItems.map(item => {
+                        const cleaned = { ...item };
+                        delete cleaned['weight'];
+                        cleaned.max_marks = Math.abs(parseFloat(cleaned.max_marks) || 0);
+                        cleaned.score_options = buildScoreOptions(qMaxMarks, cleaned.max_marks);
+                        return cleaned;
+                    });
+                    feedbackToSave = q.rubric?.problem_feedback || q.problem_feedback || '';
+                }
+
+                return fetch(
+                    `${API_BASE_URL}/exams/${examId}/questions/${q.question_number}/rubric`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            rubric_items: itemsToSave,
+                            problem_feedback: feedbackToSave
+                        })
+                    }
+                ).then(async (res) => {
+                    if (!res.ok) throw new Error(`Failed to save question ${q.question_number}`);
+                    const data = await res.json();
+                    return data.data;
+                });
+            });
+
+            await Promise.all(promises);
+            
+            // Just call onSave once to update exams tab (with current question's data, or just empty to trigger refresh)
+            const currentDataIdx = questions.findIndex(q => q.question_number === selectedQuestion);
+            const currentData = currentDataIdx !== -1 ? await promises[currentDataIdx] : {};
+            await onSave(currentData);
+            
+            toast.success('All rubrics saved successfully!', { id: loadingToast });
+            onClose(); // Only close on Save All
+        } catch (err) {
+            console.error("Error saving all rubrics:", err);
+            setError('Failed to save all rubrics. ' + (err.message || 'Unknown error'));
+            toast.error('Failed to save all rubrics. ' + (err.message || 'Unknown error'), { id: loadingToast });
         } finally {
             setIsLoading(false);
         }
@@ -1794,12 +1879,26 @@ const RubricModal = ({
                                                     Cancel
                                                 </motion.button>
                                                 <motion.button
+                                                    whileHover={{ scale: validation.isValid ? 1.05 : 1 }}
+                                                    whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
+                                                    onClick={handleSave}
+                                                    disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
+                                                    className={`inline-flex items-center gap-2 px-4 py-2 border rounded-xl transition-all duration-300 font-medium shadow-sm whitespace-nowrap ${
+                                                        isLoading || rubricItems.length === 0 || !validation.isValid
+                                                            ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                                            : 'border-accent/40 bg-accent/5 text-accent hover:bg-accent/10'
+                                                    }`}
+                                                >
+                                                    <Save className="w-4 h-4" />
+                                                    <span>Save Question</span>
+                                                </motion.button>
+                                                <motion.button
                                                     whileHover={{ 
                                                         scale: validation.isValid ? 1.05 : 1, 
                                                         boxShadow: validation.isValid ? "0 4px 12px rgba(var(--accent-rgb), 0.35)" : "" 
                                                     }}
                                                     whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
-                                                    onClick={handleSave}
+                                                    onClick={handleSaveAllAndEvaluate}
                                                     disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
                                                     className={`inline-flex items-center gap-2 px-6 py-2 rounded-xl transition-all duration-300 font-medium shadow-md whitespace-nowrap ${
                                                         isLoading || rubricItems.length === 0 || !validation.isValid
@@ -1814,12 +1913,12 @@ const RubricModal = ({
                                                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                                 className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
                                                             />
-                                                            <span>Saving Changes...</span>
+                                                            <span>Saving...</span>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <Save className="w-4 h-4" />
-                                                            <span>Save Rubric</span>
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            <span>Save All & Evaluate</span>
                                                         </>
                                                     )}
                                                 </motion.button>

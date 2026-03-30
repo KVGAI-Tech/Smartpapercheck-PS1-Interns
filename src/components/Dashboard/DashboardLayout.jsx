@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../BaseURL";
+import { useAuth } from "../AuthContext";
 import Breadcrumbs from "../ui/breadcrumbs";
 // import PaymentModal from "../Payments/PaymentModal"; // Temporarily disabled credits UI
 
@@ -52,6 +53,7 @@ const DashboardLayout = ({ children }) => {
   const [notificationsWsConnected, setNotificationsWsConnected] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   useEffect(() => {
     try {
@@ -114,8 +116,7 @@ const DashboardLayout = ({ children }) => {
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      localStorage.removeItem("accessToken");
-      navigate("/auth");
+      logout();
     } finally {
       setIsLoading(false);
     }
@@ -433,13 +434,7 @@ const DashboardLayout = ({ children }) => {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      localStorage.removeItem("accessToken");
-      navigate("/auth");
-    } catch (error) {
-      console.error("Logout error:", error);
-      navigate("/auth");
-    }
+    logout();
   };
 
   const menuItems = [

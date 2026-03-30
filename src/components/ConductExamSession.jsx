@@ -66,6 +66,16 @@ const ConductExamSession = ({ examId, courseId, enrollmentId }) => {
     }));
   };
 
+  const handleClearSelection = (questionNumber) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionNumber]: {
+        ...(prev[questionNumber] || {}),
+        selected_option_id: '',
+      },
+    }));
+  };
+
   const handleReasonChange = (questionNumber, value) => {
     setAnswers((prev) => ({
       ...prev,
@@ -214,33 +224,34 @@ const ConductExamSession = ({ examId, courseId, enrollmentId }) => {
           return (
             <div key={question.question_number} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
                   <div>
                     <p className="text-xs uppercase tracking-wide text-gray-500">Question {index + 1}</p>
-                    <h2 className="text-lg font-semibold text-gray-900 mt-1">
-                      {question.question_text || `Question ${question.question_number}`}
-                    </h2>
                   </div>
                   <div className="text-sm font-medium text-gray-600">
                     {question.max_marks} marks
                   </div>
                 </div>
 
+                {question.question_body ? (
+                  <div
+                    className="prose prose-sm max-w-none text-lg font-semibold text-gray-900"
+                    dangerouslySetInnerHTML={{ __html: question.question_body }}
+                  />
+                ) : (
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {question.question_text || `Question ${question.question_number}`}
+                  </h2>
+                )}
+
                 {question.question_file_url && (
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden mt-2">
                     <img
                       src={question.question_file_url}
                       alt={`Question ${question.question_number}`}
                       className="w-full h-auto object-contain max-h-[420px]"
                     />
                   </div>
-                )}
-
-                {question.question_body && (
-                  <div
-                    className="prose prose-sm max-w-none text-gray-800"
-                    dangerouslySetInnerHTML={{ __html: question.question_body }}
-                  />
                 )}
 
                 <div className="grid gap-3 pt-2">
@@ -265,14 +276,15 @@ const ConductExamSession = ({ examId, courseId, enrollmentId }) => {
                             className="mt-1 h-4 w-4 text-accent"
                           />
                           <div className="flex-1 space-y-2">
-                            <div className="text-sm font-medium text-gray-900">
-                              {option.option_text || option.option_id}
-                            </div>
-                            {option.option_body && (
+                            {option.option_body ? (
                               <div
-                                className="text-sm text-gray-700"
+                                className="text-sm font-medium text-gray-900 prose prose-sm max-w-none"
                                 dangerouslySetInnerHTML={{ __html: option.option_body }}
                               />
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900">
+                                {option.option_text || option.option_id}
+                              </div>
                             )}
                             {option.option_image_url && (
                               <img
@@ -287,6 +299,18 @@ const ConductExamSession = ({ examId, courseId, enrollmentId }) => {
                     );
                   })}
                 </div>
+
+                {questionAnswer.selected_option_id && (
+                  <div className="flex justify-end mt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleClearSelection(question.question_number)}
+                      className="text-sm text-gray-500 hover:text-red-600 font-medium transition-colors cursor-pointer"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                )}
 
                 {question.reason_required && (
                   <div className="pt-2">

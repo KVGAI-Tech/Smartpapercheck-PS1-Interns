@@ -90,14 +90,7 @@ const StudentDashboardLayout = ({ children }) => {
   }, [logout]);
 
   const handleLogout = () => {
-    try {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("userRole");
-      navigate("/auth");
-    } catch (err) {
-      navigate("/auth");
-    }
+    logout();
   };
 
   const menuItems = [

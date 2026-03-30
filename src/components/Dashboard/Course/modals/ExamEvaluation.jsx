@@ -307,7 +307,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const lastOverallProgressRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [evaluationStatusFilter, setEvaluationStatusFilter] = useState('all');
+  const [uploadStatusFilter, setUploadStatusFilter] = useState('all');
   const [resultsModel, setResultsModel] = useState('current');
   const [sortConfig, setSortConfig] = useState({ key: 'student_name', direction: 'asc' });
   const [evaluatingStudent, setEvaluatingStudent] = useState(null);
@@ -419,7 +420,10 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     setSelectedEnrollmentIds(new Set());
   }, []);
 
+  const latestRequestIdRef = useRef(0);
+
   const fetchEnrollments = useCallback(async () => {
+    const requestId = ++latestRequestIdRef.current;
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true);
@@ -436,12 +440,24 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
       const search = String(debouncedSearch || '').trim();
+      const evalFilter = String(evaluationStatusFilter || '').trim();
+      const uploadFilter = String(uploadStatusFilter || '').trim();
       if (search) setSearchLoading(true);
 
+      const queryParams = [
+        `page=${encodeURIComponent(page)}`,
+        `page_size=${encodeURIComponent(pageSize)}`,
+        `model=${encodeURIComponent(resultsModel)}`
+      ];
+
+      if (search) queryParams.push(`search=${encodeURIComponent(search)}`);
+      if (evalFilter && evalFilter !== 'all') queryParams.push(`evaluation_status=${encodeURIComponent(evalFilter)}`);
+      if (uploadFilter && uploadFilter !== 'all') queryParams.push(`upload_status=${encodeURIComponent(uploadFilter)}`);
+      if (sortConfig?.key) queryParams.push(`sort_key=${encodeURIComponent(sortConfig.key)}`);
+      if (sortConfig?.direction) queryParams.push(`sort_dir=${encodeURIComponent(sortConfig.direction)}`);
+
       const response = await fetch(
-        `${API_BASE_URL}/exams/${examId}/enrollments/list?page=${encodeURIComponent(page)}&page_size=${encodeURIComponent(pageSize)}&model=${encodeURIComponent(resultsModel)}${
-          search ? `&search=${encodeURIComponent(search)}` : ''
-        }`,
+        `${API_BASE_URL}/exams/${examId}/enrollments/list?${queryParams.join('&')}`,
         {
         method: 'GET',
         headers: {
@@ -459,6 +475,9 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       }
 
       const data = await response.json();
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
 
       if (data && data.code === 200 && data.data && Array.isArray(data.data.enrollments)) {
         // Get exam full_marks from response if available
@@ -515,11 +534,12 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         setError(error.message || "Failed to load student enrollments. Please try again later.");
       }
     } finally {
+      if (requestId !== latestRequestIdRef.current) return;
       setLoading(false);
       setRefreshing(false);
       setSearchLoading(false);
     }
-  }, [examId, retryCount, page, pageSize, resultsModel, debouncedSearch]);
+  }, [examId, retryCount, page, pageSize, resultsModel, debouncedSearch, evaluationStatusFilter, uploadStatusFilter, sortConfig]);
 
   const fetchOverallProgress = useCallback(async () => {
     try {
@@ -949,7 +969,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     setTotalPages(1);
     setTotalStudents(0);
     clearSelection();
-  }, [debouncedSearch, clearSelection]);
+  }, [debouncedSearch, evaluationStatusFilter, uploadStatusFilter, clearSelection]);
 
   useEffect(() => {
     clearSelection();
@@ -960,21 +980,19 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+    setPage(1);
+    setTotalPages(1);
+    setTotalStudents(0);
+    clearSelection();
   };
 
-  const filteredStudents = useMemo(() => {
-    let result = [...students];
-
-    if (statusFilter !== 'all') {
-      const isEvaluated = statusFilter === 'completed';
-      result = result.filter(student =>
-        isEvaluated ? student.marks_obtained !== null : student.marks_obtained === null
-      );
-    }
+  const sortedStudents = useMemo(() => {
+    if (!sortConfig?.key) return students;
+    const result = [...students];
 
     result.sort((a, b) => {
-      const aValue = a[sortConfig.key] || '';
-      const bValue = b[sortConfig.key] || '';
+      const aValue = a?.[sortConfig.key] ?? '';
+      const bValue = b?.[sortConfig.key] ?? '';
 
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
@@ -985,7 +1003,30 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     });
 
     return result;
-  }, [statusFilter, students, sortConfig]);
+  }, [students, sortConfig]);
+
+  const filteredStudents = useMemo(() => {
+    let result = sortedStudents;
+
+    if (evaluationStatusFilter !== 'all') {
+      const isEvaluated = evaluationStatusFilter === 'completed';
+      result = result.filter(student => {
+        const hasMarks = student.marks_obtained !== null && student.marks_obtained !== undefined;
+        if (isEvaluated) return hasMarks;
+        const hasUpload = !!student.status && student.status !== 'not_uploaded';
+        return hasUpload && !hasMarks;
+      });
+    }
+
+    if (uploadStatusFilter !== 'all') {
+      result = result.filter(student => {
+        const hasUpload = !!student.status && student.status !== 'not_uploaded';
+        return uploadStatusFilter === 'uploaded' ? hasUpload : !hasUpload;
+      });
+    }
+
+    return result;
+  }, [evaluationStatusFilter, uploadStatusFilter, sortedStudents]);
 
   const isStudentSelectable = useCallback((student) => {
     if (!student || student.status === 'not_uploaded') return false;
@@ -1011,8 +1052,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   );
 
   const selectableStudents = useMemo(
-    () => students.filter(isStudentSelectable),
-    [students, isStudentSelectable]
+    () => sortedStudents.filter(isStudentSelectable),
+    [sortedStudents, isStudentSelectable]
   );
 
   const allFilteredSelected = useMemo(() => {
@@ -1852,13 +1893,25 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                     </div>
                     <div className="relative w-full md:w-auto">
                       <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        value={evaluationStatusFilter}
+                        onChange={(e) => setEvaluationStatusFilter(e.target.value)}
                         className="w-full md:w-auto pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
                       >
-                        <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
+                        <option value="all">All Evaluations</option>
+                        <option value="pending">Not Evaluated</option>
                         <option value="completed">Evaluated</option>
+                      </select>
+                      <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                    <div className="relative w-full md:w-auto">
+                      <select
+                        value={uploadStatusFilter}
+                        onChange={(e) => setUploadStatusFilter(e.target.value)}
+                        className="w-full md:w-auto pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-accent focus:border-transparent bg-gray-50 hover:bg-white transition-colors"
+                      >
+                        <option value="all">All Uploads</option>
+                        <option value="uploaded">Uploaded</option>
+                        <option value="not_uploaded">Not Uploaded</option>
                       </select>
                       <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
@@ -2031,7 +2084,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             </motion.div>
 
             <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden mt-4 pb-2">
-              {(loading && !hasLoadedOnceRef.current) || searchLoading ? (
+              {(loading && !hasLoadedOnceRef.current) || refreshing || searchLoading ? (
                 <LoadingView />
               ) : error ? (
                 <ErrorState
@@ -2039,7 +2092,14 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                   onRetry={handleRetry}
                 />
               ) : students.length === 0 ? (
-                <EmptyState />
+                (debouncedSearch || evaluationStatusFilter !== 'all' || uploadStatusFilter !== 'all') ? (
+                  <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No students match your filters</h3>
+                    <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+                  </div>
+                ) : (
+                  <EmptyState />
+                )
               ) : (
                 <>
                   {viewMode === 'list' ? (

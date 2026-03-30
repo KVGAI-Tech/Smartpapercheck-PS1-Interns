@@ -167,8 +167,13 @@ function matchRoute(url, method) {
     // ── Enrollments ────────────────────────────────────────────────────────────
     // GET enrollments/list — ExamEvaluation expects data = { enrollments:[...], pagination:{...} }
     if (method === 'GET' && u.includes(`${DEMO_EXAM_ID}/enrollments/list`)) {
+        const urlObj = new URL(u, window.location.origin);
+        const evalFilter = (urlObj.searchParams.get('evaluation_status') || '').trim().toLowerCase();
+        const uploadFilter = (urlObj.searchParams.get('upload_status') || '').trim().toLowerCase();
+        const sortKey = (urlObj.searchParams.get('sort_key') || '').trim().toLowerCase();
+        const sortDir = (urlObj.searchParams.get('sort_dir') || 'asc').trim().toLowerCase();
         const marks = [18, 18, 11, 20, 14.5, 18, 8, 16.5];
-        const enrollments = DEMO_STUDENTS.map((s, i) => ({
+        let enrollments = DEMO_STUDENTS.map((s, i) => ({
             id: `enr-${s.id}`,
             student_id: s.id,
             exam_id: DEMO_EXAM_ID,
@@ -182,10 +187,59 @@ function matchRoute(url, method) {
             recheck_count: 0,
             answer_sheet_url: null,
         }));
+
+        if (evalFilter === 'completed' || evalFilter === 'evaluated') {
+            enrollments = enrollments.filter(e => e.marks_obtained !== null && e.marks_obtained !== undefined);
+        } else if (evalFilter === 'pending' || evalFilter === 'not_evaluated' || evalFilter === 'not-evaluated') {
+            enrollments = enrollments.filter(e => e.marks_obtained === null || e.marks_obtained === undefined);
+        }
+
+        if (uploadFilter === 'uploaded') {
+            enrollments = enrollments.filter(e => e.status !== 'not_uploaded');
+        } else if (uploadFilter === 'not_uploaded' || uploadFilter === 'not-uploaded') {
+            enrollments = enrollments.filter(e => e.status === 'not_uploaded');
+        }
+
+        if (sortKey) {
+            const dir = sortDir === 'desc' ? -1 : 1;
+            const getValue = (item) => {
+                switch (sortKey) {
+                    case 'student_name':
+                    case 'name':
+                    case 'student':
+                        return item.student_name || '';
+                    case 'roll_number':
+                    case 'roll':
+                        return item.roll_number || '';
+                    case 'marks_obtained':
+                    case 'score':
+                    case 'marks':
+                        return item.marks_obtained ?? -Infinity;
+                    case 'status':
+                    case 'upload_status':
+                    case 'upload':
+                        return item.status === 'not_uploaded' ? 0 : 1;
+                    case 'evaluation_status':
+                    case 'eval_status':
+                        return item.marks_obtained !== null && item.marks_obtained !== undefined ? 1 : 0;
+                    default:
+                        return item.student_name || '';
+                }
+            };
+
+            enrollments = [...enrollments].sort((a, b) => {
+                const aVal = getValue(a);
+                const bVal = getValue(b);
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return (aVal - bVal) * dir;
+                }
+                return String(aVal).localeCompare(String(bVal)) * dir;
+            });
+        }
         return jsonResponse({
             enrollments,
-            pagination: { page: 1, page_size: 50, total: 8, total_pages: 1 },
-            status_counts: { not_uploaded: 0, uploaded: 0, evaluated: 8, recheck_requested: 0 },
+            pagination: { page: 1, page_size: 50, total: enrollments.length, total_pages: 1 },
+            status_counts: { not_uploaded: 0, uploaded: 0, evaluated: enrollments.length, recheck_requested: 0 },
         });
     }
     // GET generic enrollments (manage enrollments modal)
