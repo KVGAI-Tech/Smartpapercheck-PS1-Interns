@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import {
   BookOpen,
   LayoutDashboard,
@@ -120,7 +121,7 @@ const DashboardLayout = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [navigate]);
+  }, [logout, navigate]);
 
   useEffect(() => {
     fetchUserProfile();
@@ -462,6 +463,10 @@ const DashboardLayout = ({ children }) => {
     if (path === "/" || path.startsWith("/dashboard")) {
       title = "Dashboard";
       breadcrumbItems = [{ label: "Dashboard" }];
+    } else if (path.includes("/review/")) {
+      title = "";
+      subtitle = "";
+      breadcrumbItems = [];
     } else if (path.includes("/evaluations")) {
       title = state.examName || "Exam Evaluations";
       subtitle = state.examSubtitle || "";

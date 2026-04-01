@@ -223,25 +223,7 @@ const CourseEvaluations = () => {
       } catch (err) {
         console.error("Error fetching exams:", err);
         setError(err.message || 'Unable to load exams. Please try again later.');
-        
-        
-        setExams([
-          {
-            id: 394, 
-            student_id: 428,
-            exam_id: 13,
-            marks_obtained: null,
-            feedback: null,
-            exam_name: "Midterm Exam",
-            full_marks: 100,
-            start_time: "2025-04-10T09:00:00",
-            duration: 90,
-            allow_recheck: true,
-            recheck_requested: false,
-            upload_status: "not_uploaded",
-            evaluation_status: null
-          }
-        ]);
+        setExams([]);
       } finally {
         setLoading(false);
       }

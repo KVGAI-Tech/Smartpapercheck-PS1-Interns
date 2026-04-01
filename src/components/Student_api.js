@@ -1,5 +1,14 @@
 import { API_BASE_URL } from '../BaseURL';
 
+const resolveApiErrorMessage = async (response, fallbackMessage) => {
+  const errorData = await response.json().catch(() => ({}));
+  return (
+    errorData?.message ||
+    errorData?.detail ||
+    errorData?.error ||
+    fallbackMessage
+  );
+};
 
 export const examsApi = {
   
@@ -16,8 +25,9 @@ export const examsApi = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Unable to load exams. Please try again later.');
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to load exams. Please try again later.')
+        );
       }
       
       return await response.json();
@@ -41,8 +51,9 @@ export const examsApi = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Unable to load exam details. Please try again later.');
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to load exam details. Please try again later.')
+        );
       }
       
       return await response.json();
@@ -65,8 +76,9 @@ export const examsApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Unable to load conducted exam questions.');
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to load conducted exam questions.')
+        );
       }
 
       return await response.json();
@@ -90,8 +102,9 @@ export const examsApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Unable to submit conducted exam.');
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to submit conducted exam.')
+        );
       }
 
       return await response.json();
@@ -116,8 +129,9 @@ export const examsApi = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Unable to submit recheck request. Please try again later.');
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to submit recheck request. Please try again later.')
+        );
       }
       
       return await response.json();
@@ -141,8 +155,9 @@ export const examsApi = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Unable to load courses. Please try again later.');
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to load courses. Please try again later.')
+        );
       }
       
       return await response.json();
@@ -166,8 +181,9 @@ export const examsApi = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Unable to load recheck history. Please try again later.');
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to load recheck history. Please try again later.')
+        );
       }
       
       return await response.json();

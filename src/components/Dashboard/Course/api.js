@@ -156,6 +156,34 @@ export const getCourseExams = async (courseId) => {
   return fetchApi(`/professors/courses/${courseId}/exams`);
 };
 
+export const getConductExamAnalytics = async (examId) => {
+  if (!examId) {
+    throw new Error('Exam ID is required');
+  }
+  return fetchApi(`/exams/${examId}/analytics`);
+};
+
+export const getConductExamResults = async (examId) => {
+  if (!examId) {
+    throw new Error('Exam ID is required');
+  }
+  return fetchApi(`/exams/${examId}/results`);
+};
+
+export const getConductExamStudentAnswers = async (examId, studentId) => {
+  if (!examId || !studentId) {
+    throw new Error('Exam ID and Student ID are required');
+  }
+  return fetchApi(`/exams/${examId}/students/${studentId}/answers`);
+};
+
+export const getConductExamQuestions = async (examId) => {
+  if (!examId) {
+    throw new Error('Exam ID is required');
+  }
+  return fetchApi(`/exams/${examId}/question-answer`);
+};
+
 export const createExam = async (courseId, data) => {
   if (!courseId || !data) {
     throw new Error('Course ID and exam data are required');

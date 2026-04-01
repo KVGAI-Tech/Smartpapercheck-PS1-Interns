@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
-  Users, PlayCircle, X, AlertCircle, CheckCircle,
+  Users, PlayCircle, X, AlertCircle, CheckCircle, BarChart3,
   Check, History
 } from 'lucide-react';
 import UploadQnAModal from '../modals/UploadQnAModal';
@@ -588,6 +588,16 @@ const Toast = ({ message, type, show, onClose }) => {
               <span className="sm:hidden">Enroll</span>
               <span className="hidden sm:inline">Manage Enrollments</span>
             </button>
+            {isConductExam && (
+              <button
+                onClick={() => onStartEvaluation(exam)}
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-accent bg-accent/10 hover:bg-accent/15
+                  rounded-lg flex items-center justify-center gap-2 transition-colors border border-accent/20"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Evaluate</span>
+              </button>
+            )}
             {!isConductExam && (
               <button
                 onClick={() => onStartEvaluation(exam)}
@@ -1704,14 +1714,19 @@ const Toast = ({ message, type, show, onClose }) => {
           throw new Error('Exam ID is missing');
         }
         const examId = exam.id;
+        const isConductExam = exam.exam_type === 'conduct';
         
         showToast('Preparing evaluation...', 'success');
         
-        navigate(`/courses/${courseId}/exams/${examId}/evaluations`, {
+        navigate(
+          isConductExam
+            ? `/courses/${courseId}/exams/${examId}/evaluate`
+            : `/courses/${courseId}/exams/${examId}/evaluations`,
+          {
           state: {
             ...(location.state || {}),
             from: 'exams',
-            examName: exam.exam_name || 'Exam Evaluations',
+            examName: exam.exam_name || (isConductExam ? 'MCQ Evaluation' : 'Exam Evaluations'),
           },
         });
         
