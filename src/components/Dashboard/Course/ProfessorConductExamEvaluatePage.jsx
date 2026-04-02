@@ -6,6 +6,7 @@ import {
   BarChart3,
   CheckCircle2,
   Eye,
+  GripVertical,
   Loader2,
   Trophy,
   Users,
@@ -30,6 +31,55 @@ const StatCard = ({ title, value, icon: Icon }) => (
     </div>
   </div>
 );
+
+const DragHandle = () => (
+  <span
+    title="Drag to reorder"
+    aria-label="Drag handle"
+    className="cursor-grab text-gray-400 transition hover:text-gray-600 active:cursor-grabbing"
+  >
+    <GripVertical className="h-4 w-4" />
+  </span>
+);
+
+const StudentRow = ({ row, onOpenAnswers }) => {
+  return (
+    <tr className="hover:bg-gray-50/60">
+      <td className="px-4 py-4">
+        <DragHandle />
+      </td>
+      <td className="px-6 py-4">
+        <div className="font-medium text-gray-900">{row.student_name}</div>
+        <div className="text-xs text-gray-500">{row.roll_number || "No roll number"}</div>
+      </td>
+      <td className="px-6 py-4 text-sm font-medium text-gray-800">
+        {row.score !== null ? `${row.score}%` : "Pending"}
+      </td>
+      <td className="px-6 py-4">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+            row.status === "pass" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          }`}
+        >
+          {row.status === "pass" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+          {row.status === "pass" ? "Pass" : "Fail"}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-sm text-gray-600">
+        {row.submission_status === "submitted" ? "Submitted" : "Not Submitted"}
+      </td>
+      <td className="px-6 py-4 text-right">
+        <button
+          onClick={() => onOpenAnswers(row)}
+          className="inline-flex items-center gap-2 rounded-xl border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/15"
+        >
+          <Eye className="h-4 w-4" />
+          View Answers
+        </button>
+      </td>
+    </tr>
+  );
+};
 
 const ProfessorConductExamEvaluatePage = () => {
   const navigate = useNavigate();
@@ -226,6 +276,7 @@ const ProfessorConductExamEvaluatePage = () => {
               <table className="min-w-full divide-y divide-gray-100">
                 <thead className="bg-gray-50/80">
                   <tr>
+                    <th className="w-12 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"></th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Student Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Score</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
@@ -235,43 +286,11 @@ const ProfessorConductExamEvaluatePage = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredResults.map((row) => (
-                    <tr key={row.enrollment_id} className="hover:bg-gray-50/60">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{row.student_name}</div>
-                        <div className="text-xs text-gray-500">{row.roll_number || "No roll number"}</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                        {row.score !== null ? `${row.score}%` : "Pending"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
-                            row.status === "pass"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {row.status === "pass" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-                          {row.status === "pass" ? "Pass" : "Fail"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {row.submission_status === "submitted" ? "Submitted" : "Not Submitted"}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleOpenAnswers(row)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/15"
-                        >
-                          <Eye className="h-4 w-4" />
-                          View Answers
-                        </button>
-                      </td>
-                    </tr>
+                    <StudentRow key={row.enrollment_id} row={row} onOpenAnswers={handleOpenAnswers} />
                   ))}
                   {!filteredResults.length && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
+                      <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
                         No student results match the selected filters.
                       </td>
                     </tr>

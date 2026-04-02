@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 import ReactDOM from 'react-dom'; 
 import ReactQuill from 'react-quill';
@@ -12,6 +12,23 @@ import {
   File, FilePlus, Upload as UploadIcon,
   AlertCircle, Loader2
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { API_BASE_URL } from '../../../../BaseURL';
 
@@ -129,7 +146,15 @@ const getNextMcqOptionId = (existingOptions = []) => {
   return nextId;
 };
 
-const createDefaultQuestion = (id = 1) => ({
+const createQuestionId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `question_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const createDefaultQuestion = (id = createQuestionId()) => ({
   id,
   questionType: 'image',
   answerType: 'image',
@@ -154,12 +179,183 @@ const createDefaultQuestion = (id = 1) => ({
   reasonRequired: false,
 });
 
+// ── Drag Handle Icon (⋮⋮) ───────────────────────────────────
+const DragHandleIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="5.5" cy="3" r="1.25" />
+    <circle cx="10.5" cy="3" r="1.25" />
+    <circle cx="5.5" cy="8" r="1.25" />
+    <circle cx="10.5" cy="8" r="1.25" />
+    <circle cx="5.5" cy="13" r="1.25" />
+    <circle cx="10.5" cy="13" r="1.25" />
+  </svg>
+);
+
+// ── Sortable Question Item ───────────────────────────────────
+const SortableQuestionItem = ({ question, index, isSelected, onSelect }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: question.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+    position: 'relative',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <button
+        type="button"
+        onClick={() => onSelect(index)}
+        className={`w-full text-left rounded-xl border transition-colors px-3 py-3 flex items-start gap-2
+          ${isSelected ? 'border-accent bg-accent/10' : 'border-gray-200 hover:bg-gray-50'}
+          ${isDragging ? 'shadow-lg ring-2 ring-accent/30' : ''}`}
+      >
+        {/* Question number badge */}
+        <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0
+          ${isSelected ? 'bg-accent text-white' : 'bg-gray-100 text-gray-700'}`}
+        >
+          {index + 1}
+        </div>
+
+        {/* Question info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-gray-900 truncate">Question {index + 1}</p>
+            {question.isExisting && (
+              <span className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Existing</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 truncate">
+            {question.marks ? `${question.marks} marks` : 'Marks not set'}
+          </p>
+        </div>
+
+        {/* Drag Handle */}
+        <div
+          ref={setActivatorNodeRef}
+          {...listeners}
+          className={`mt-1 flex-shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-gray-200/70 transition-colors
+            ${isSelected ? 'text-accent/70 hover:text-accent' : 'text-gray-400 hover:text-gray-600'}`}
+          aria-label="Drag to reorder question"
+          role="button"
+          tabIndex={0}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DragHandleIcon />
+        </div>
+      </button>
+    </div>
+  );
+};
+
+// ── Drag Overlay Item (static preview while dragging) ────────
+const DragOverlayItem = ({ question, index }) => (
+  <div className="rounded-xl border border-accent bg-white shadow-xl px-3 py-3 flex items-start gap-2 opacity-90 w-[300px]">
+    <div className="mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold bg-accent text-white flex-shrink-0">
+      {index + 1}
+    </div>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-medium text-gray-900 truncate">Question {index + 1}</p>
+        {question.isExisting && (
+          <span className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Existing</span>
+        )}
+      </div>
+      <p className="text-xs text-gray-500 truncate">
+        {question.marks ? `${question.marks} marks` : 'Marks not set'}
+      </p>
+    </div>
+    <div className="mt-1 flex-shrink-0 p-0.5 text-accent/70">
+      <DragHandleIcon />
+    </div>
+  </div>
+);
+
+const buildDraftStorageKey = (examId, examType) => `mcq_exam_builder_draft_${examType || 'evaluated'}_${examId || 'new'}`;
+
+const serializeQuestionDraft = (question) => ({
+  id: question.id,
+  questionType: question.questionType,
+  answerType: question.answerType,
+  questionPreview: question.questionPreview || '',
+  questionUrl: question.questionUrl || '',
+  answerPreview: question.answerPreview || '',
+  answerUrl: question.answerUrl || '',
+  marks: question.marks ?? '',
+  questionText: question.questionText || '',
+  questionBody: question.questionBody || '',
+  answerText: question.answerText || '',
+  answerBody: question.answerBody || '',
+  domain: question.domain || 'General',
+  isExisting: Boolean(question.isExisting),
+  questionNumber: question.questionNumber,
+  num_rubric_items: question.num_rubric_items ?? 1,
+  professorInstructions: question.professorInstructions || '',
+  aiCustomInstruction: question.aiCustomInstruction || '',
+  mcqOptions: Array.isArray(question.mcqOptions)
+    ? question.mcqOptions.map((option, optionIndex) => ({
+        optionId: option.optionId || `option_${optionIndex + 1}`,
+        optionBody: option.optionBody || '',
+      }))
+    : [createEmptyMcqOption(0), createEmptyMcqOption(1)],
+  correctOptionId: question.correctOptionId || 'option_1',
+  reasonRequired: Boolean(question.reasonRequired),
+});
+
+const parseStoredDraft = (draftKey) => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(draftKey);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.questions) || parsed.questions.length === 0) {
+      return null;
+    }
+
+    return {
+      selectedIndex: Number.isInteger(parsed.selectedIndex) ? parsed.selectedIndex : 0,
+      questions: parsed.questions.map((question, index) => ({
+        ...createDefaultQuestion(question?.id || createQuestionId()),
+        ...question,
+        id: question?.id || createQuestionId(),
+        mcqOptions: Array.isArray(question?.mcqOptions) && question.mcqOptions.length > 0
+          ? question.mcqOptions.map((option, optionIndex) => ({
+              optionId: option?.optionId || `option_${optionIndex + 1}`,
+              optionBody: option?.optionBody || '',
+            }))
+          : [createEmptyMcqOption(0), createEmptyMcqOption(1)],
+        correctOptionId: question?.correctOptionId || 'option_1',
+        reasonRequired: Boolean(question?.reasonRequired),
+        isExisting: Boolean(question?.isExisting),
+        questionNumber: question?.questionNumber ?? index + 1,
+        question: null,
+        answer: null,
+      })),
+    };
+  } catch (error) {
+    console.warn('Failed to parse MCQ exam draft from sessionStorage:', error);
+    return null;
+  }
+};
+
 const UploadQnAModal = ({
   isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [] }) => {
 
   const isConductExam = examType === 'conduct';
 
-  const [questions, setQuestions] = useState([createDefaultQuestion(1)]);
+  const [questions, setQuestions] = useState([createDefaultQuestion()]);
 
   const [goldenPdfFile, setGoldenPdfFile] = useState(null);
   const [questionPdfFile, setQuestionPdfFile] = useState(null);
@@ -174,11 +370,19 @@ const UploadQnAModal = ({
   const [aiGenerationError, setAiGenerationError] = useState('');
   const [aiPreviewAnswer, setAiPreviewAnswer] = useState('');
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedIndex, setSelectedIndexRaw] = useState(0);
+  const [initialized, setInitialized] = useState(false);
+  const suppressQuillOnChangeRef = useRef(false);
+  const existingQuestionsRef = useRef(existingQuestions);
+  existingQuestionsRef.current = existingQuestions;
   const modalRef = useRef(null);
   const questionRefs = useRef({});
   const dropZoneRefs = useRef({});
   const modalRootRef = useRef(null);
+  const draftStorageKey = React.useMemo(
+    () => buildDraftStorageKey(examId, examType),
+    [examId, examType]
+  );
 
   const stripMarkdown = (text = '') => {
     if (!text) return '';
@@ -244,6 +448,79 @@ const UploadQnAModal = ({
     if (hasEditorContent) return 'text';
     return 'image';
   };
+
+  const setQuestionsDraft = (updater) => {
+    setQuestions((prevQuestions) => (
+      typeof updater === 'function' ? updater(prevQuestions) : updater
+    ));
+  };
+
+  const updateQuestion = (questionId, updater) => {
+    setQuestionsDraft((prevQuestions) => (
+      prevQuestions.map((question) => (
+        question.id === questionId ? updater(question) : question
+      ))
+    ));
+  };
+
+  // ── Drag-and-drop setup ───────────────────────────────────────
+  const [activeDragId, setActiveDragId] = useState(null);
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const questionIds = useMemo(
+    () => questions.map((q) => q.id),
+    [questions]
+  );
+
+  const handleDragStart = React.useCallback((event) => {
+    setActiveDragId(event.active.id);
+  }, []);
+
+  const handleDragEnd = React.useCallback((event) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    // Capture the currently selected question's ID before reordering
+    const selectedQuestionId = questions[selectedIndex]?.id;
+
+    setQuestions((prevQuestions) => {
+      const oldIndex = prevQuestions.findIndex((q) => q.id === active.id);
+      const newIndex = prevQuestions.findIndex((q) => q.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prevQuestions;
+      const reordered = arrayMove(prevQuestions, oldIndex, newIndex);
+
+      // Update selectedIndex to track the same question by ID
+      if (selectedQuestionId) {
+        const newSelectedIdx = reordered.findIndex((q) => q.id === selectedQuestionId);
+        if (newSelectedIdx !== -1) {
+          setSelectedIndexRaw(newSelectedIdx);
+        }
+      }
+
+      return reordered;
+    });
+  }, [questions, selectedIndex]);
+
+  const handleDragCancel = React.useCallback(() => {
+    setActiveDragId(null);
+  }, []);
+
+  const activeDragQuestion = activeDragId
+    ? questions.find((q) => q.id === activeDragId)
+    : null;
+  const activeDragIndex = activeDragId
+    ? questions.findIndex((q) => q.id === activeDragId)
+    : -1;
+  // ── End drag-and-drop setup ───────────────────────────────────
 
   useEffect(() => {
 
@@ -420,7 +697,7 @@ const UploadQnAModal = ({
       return;
     }
 
-    setQuestions(prev => prev.map(q => {
+    updateQuestion(activeQuestion.id, (q) => {
       if (q.id !== activeQuestion.id) return q;
       const nextAnswerType = (q.answerType || 'image') === 'image' ? 'both' : (q.answerType || 'image');
       return {
@@ -428,7 +705,7 @@ const UploadQnAModal = ({
         answerType: nextAnswerType,
         answerBody: cleaned,
       };
-    }));
+    });
 
     setAiPreviewAnswer('');
     setAiGenerationError('');
@@ -442,6 +719,9 @@ const UploadQnAModal = ({
       setError('');
       setUploadMode('standard');
       setShowAiAnswerModal(false);
+      setQuestions([createDefaultQuestion()]);
+      setSelectedIndexRaw(0);
+      setInitialized(false);
     }
   }, [isOpen]);
 
@@ -453,10 +733,25 @@ const UploadQnAModal = ({
   }, [isConductExam]);
 
   useEffect(() => {
-    if (existingQuestions && existingQuestions.length > 0) {
-      const formattedQuestions = existingQuestions.map((q, index) => ({
-        ...createDefaultQuestion(index + 1),
-        id: index + 1,
+    if (!isOpen || initialized) {
+      return;
+    }
+
+    const storedDraft = parseStoredDraft(draftStorageKey);
+    if (storedDraft?.questions?.length) {
+      setQuestions(storedDraft.questions);
+      setSelectedIndexRaw(
+        Math.min(Math.max(storedDraft.selectedIndex || 0, 0), storedDraft.questions.length - 1)
+      );
+      setInitialized(true);
+      return;
+    }
+
+    const currentExisting = existingQuestionsRef.current;
+    if (currentExisting && currentExisting.length > 0) {
+      const formattedQuestions = currentExisting.map((q, index) => ({
+        ...createDefaultQuestion(),
+        id: q.id || q.question_id || `existing_${q.question_number || index + 1}`,
         questionType: q.question_type || q.question_format || (q.question_file_url ? 'image' : 'text'),
         answerType: q.answer_type || (q.answer_file_url ? 'image' : 'text'),
         questionUrl: q.question_file_url || '',
@@ -484,10 +779,38 @@ const UploadQnAModal = ({
         professorInstructions: q.reason_professor_instructions || q.professor_instructions || '',
       }));
       setQuestions(formattedQuestions);
+      setSelectedIndexRaw(0);
     } else {
-      setQuestions([createDefaultQuestion(1)]);
+      setQuestions([createDefaultQuestion()]);
+      setSelectedIndexRaw(0);
     }
-  }, [existingQuestions]);
+    setInitialized(true);
+  }, [draftStorageKey, initialized, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !initialized || !questions.length || typeof window === 'undefined') {
+      return;
+    }
+
+    const payload = {
+      selectedIndex,
+      questions: questions.map(serializeQuestionDraft),
+    };
+
+    try {
+      window.sessionStorage.setItem(draftStorageKey, JSON.stringify(payload));
+    } catch (error) {
+      console.warn('Failed to persist MCQ exam draft to sessionStorage:', error);
+    }
+  }, [draftStorageKey, initialized, isOpen, questions, selectedIndex]);
+
+  useEffect(() => {
+    console.log('[Build MCQ Exam] Questions state updated:', questions);
+  }, [questions]);
+
+  useEffect(() => {
+    console.log('[Build MCQ Exam] Selected question index changed:', selectedIndex);
+  }, [selectedIndex]);
 
   useEffect(() => {
     const handleEscKey = (e) => {
@@ -506,47 +829,45 @@ const UploadQnAModal = ({
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setQuestions(prevQuestions => 
-          prevQuestions.map(q => 
-            q.id === questionId 
-              ? {
-                  ...q,
-                  [type]: file,
-                  [`${type}Preview`]: reader.result,
-                  [`${type}Url`]: '' 
-                }
-              : q
-          )
-        );
+        updateQuestion(questionId, (q) => ({
+          ...q,
+          [type]: file,
+          [`${type}Preview`]: reader.result,
+          [`${type}Url`]: '',
+        }));
       };
       reader.readAsDataURL(file);
     } else {
-      setQuestions(prevQuestions => 
-        prevQuestions.map(q => 
-          q.id === questionId 
-            ? {
-                ...q,
-                [type]: null,
-                [`${type}Preview`]: '',
-                [`${type}Url`]: ''
-              }
-            : q
-        )
-      );
+      updateQuestion(questionId, (q) => ({
+        ...q,
+        [type]: null,
+        [`${type}Preview`]: '',
+        [`${type}Url`]: '',
+      }));
     }
   };
 
+  const setSelectedIndex = React.useCallback((newIndex) => {
+    suppressQuillOnChangeRef.current = true;
+    setSelectedIndexRaw(newIndex);
+    // Allow Quill editors to settle with new value before accepting onChange again
+    setTimeout(() => {
+      suppressQuillOnChangeRef.current = false;
+    }, 50);
+  }, []);
+
   const addQuestion = () => {
-    const newId = questions.length + 1;
-    setQuestions(prev => [
-      ...prev,
-      createDefaultQuestion(newId)
+    const newQuestion = createDefaultQuestion();
+    const nextIndex = questions.length;
+    setQuestionsDraft((prevQuestions) => [
+      ...prevQuestions,
+      newQuestion,
     ]);
-    
-    setCurrentQuestionIndex(questions.length);
+
+    setSelectedIndex(nextIndex);
     
     setTimeout(() => {
-      scrollToQuestion(newId);
+      scrollToQuestion(newQuestion.id);
     }, 100);
   };
 
@@ -564,10 +885,10 @@ const UploadQnAModal = ({
       const indexToRemove = questions.findIndex(q => q.id === id);
       const newQuestions = questions.filter(q => q.id !== id);
       
-      setQuestions(newQuestions);
+      setQuestionsDraft(newQuestions);
       
-      if (currentQuestionIndex >= indexToRemove && currentQuestionIndex > 0) {
-        setCurrentQuestionIndex(currentQuestionIndex - 1);
+      if (selectedIndex >= indexToRemove && selectedIndex > 0) {
+        setSelectedIndex(Math.max(0, selectedIndex - 1));
       }
     }
   };
@@ -576,12 +897,12 @@ const UploadQnAModal = ({
     let newIndex;
     
     if (direction === 'prev') {
-      newIndex = Math.max(0, currentQuestionIndex - 1);
+      newIndex = Math.max(0, selectedIndex - 1);
     } else {
-      newIndex = Math.min(questions.length - 1, currentQuestionIndex + 1);
+      newIndex = Math.min(questions.length - 1, selectedIndex + 1);
     }
     
-    setCurrentQuestionIndex(newIndex);
+    setSelectedIndex(newIndex);
     
     if (questionRefs.current[questions[newIndex].id]) {
       scrollToQuestion(questions[newIndex].id);
@@ -613,7 +934,7 @@ const UploadQnAModal = ({
 
       if (conductIssue) {
         const firstInvalidIndex = questions.findIndex((q) => q.id === conductIssue.question.id);
-        setCurrentQuestionIndex(firstInvalidIndex);
+        setSelectedIndex(firstInvalidIndex);
         scrollToQuestion(conductIssue.question.id);
         setError(`Question ${firstInvalidIndex + 1}: ${conductIssue.message}`);
         return false;
@@ -663,7 +984,7 @@ const UploadQnAModal = ({
         setError('Please fill in all required fields for each question');
       }
       
-      setCurrentQuestionIndex(firstInvalidIndex);
+      setSelectedIndex(firstInvalidIndex);
       scrollToQuestion(invalidQuestions[0].id);
       return false;
     }
@@ -777,6 +1098,9 @@ const UploadQnAModal = ({
         }
       }
   
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(draftStorageKey);
+      }
       onClose();
     } catch (error) {
       setError(error.message || 'Failed to upload files');
@@ -1045,7 +1369,7 @@ const UploadQnAModal = ({
 
   if (!isOpen || questions.length === 0) return null;
 
-  const safeIndex = Math.min(Math.max(currentQuestionIndex, 0), questions.length - 1);
+  const safeIndex = Math.min(Math.max(selectedIndex, 0), questions.length - 1);
   const activeQuestion = questions[safeIndex];
 
   const ModalContent = (
@@ -1122,9 +1446,9 @@ const UploadQnAModal = ({
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => navigateQuestion('prev')}
-                  disabled={currentQuestionIndex === 0}
+                  disabled={selectedIndex === 0}
                   className={`flex items-center justify-center p-1 rounded transition-colors ${
-                    currentQuestionIndex === 0 
+                    selectedIndex === 0 
                     ? 'text-gray-300 cursor-not-allowed' 
                     : 'text-gray-600 hover:bg-gray-100'
                   }`}
@@ -1133,13 +1457,13 @@ const UploadQnAModal = ({
                   <ArrowUp className="w-4 h-4" />
                 </button>
                 <span className="text-sm font-medium text-gray-700 px-2">
-                  Question {currentQuestionIndex + 1} of {questions.length}
+                  Question {selectedIndex + 1} of {questions.length}
                 </span>
                 <button
                   onClick={() => navigateQuestion('next')}
-                  disabled={currentQuestionIndex === questions.length - 1}
+                  disabled={selectedIndex === questions.length - 1}
                   className={`flex items-center justify-center p-1 rounded transition-colors ${
-                    currentQuestionIndex === questions.length - 1 
+                    selectedIndex === questions.length - 1 
                     ? 'text-gray-300 cursor-not-allowed' 
                     : 'text-gray-600 hover:bg-gray-100'
                   }`}
@@ -1223,34 +1547,32 @@ const UploadQnAModal = ({
               </div>
 
               <div className="flex-1 overflow-y-auto p-2">
-                <div className="space-y-2">
-                  {questions.map((q, idx) => (
-                    <button
-                      key={q.id}
-                      type="button"
-                      onClick={() => setCurrentQuestionIndex(idx)}
-                      className={`w-full text-left rounded-xl border transition-colors px-3 py-3 flex items-start gap-3
-                        ${idx === currentQuestionIndex ? 'border-accent bg-accent/10' : 'border-gray-200 hover:bg-gray-50'}`}
-                    >
-                      <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold
-                        ${idx === currentQuestionIndex ? 'bg-accent text-white' : 'bg-gray-100 text-gray-700'}`}
-                      >
-                        {idx + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900 truncate">Question {idx + 1}</p>
-                          {q.isExisting && (
-                            <span className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Existing</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 truncate">
-                          {q.marks ? `${q.marks} marks` : 'Marks not set'}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                <DndContext
+                  sensors={dndSensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={handleDragCancel}
+                >
+                  <SortableContext items={questionIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-2">
+                      {questions.map((q, idx) => (
+                        <SortableQuestionItem
+                          key={q.id}
+                          question={q}
+                          index={idx}
+                          isSelected={idx === selectedIndex}
+                          onSelect={setSelectedIndex}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                  <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
+                    {activeDragQuestion ? (
+                      <DragOverlayItem question={activeDragQuestion} index={activeDragIndex} />
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
               </div>
             </div>
 
@@ -1259,21 +1581,21 @@ const UploadQnAModal = ({
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm text-gray-500">Editing</p>
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">Question {currentQuestionIndex + 1}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 truncate">Question {selectedIndex + 1}</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => navigateQuestion('prev')}
-                    disabled={currentQuestionIndex === 0}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${currentQuestionIndex === 0 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                    disabled={selectedIndex === 0}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${selectedIndex === 0 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-200 hover:bg-gray-50'}`}
                     type="button"
                   >
                     Prev
                   </button>
                   <button
                     onClick={() => navigateQuestion('next')}
-                    disabled={currentQuestionIndex === questions.length - 1}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${currentQuestionIndex === questions.length - 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                    disabled={selectedIndex === questions.length - 1}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${selectedIndex === questions.length - 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-200 hover:bg-gray-50'}`}
                     type="button"
                   >
                     Next
@@ -1303,11 +1625,8 @@ const UploadQnAModal = ({
                         className="question-body-quill rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-accent focus-within:border-transparent transition-all duration-200 bg-white"
                         value={activeQuestion.questionBody || ''}
                         onChange={(value) => {
-                          setQuestions(prev => prev.map(q =>
-                            q.id === activeQuestion.id
-                              ? { ...q, questionBody: value }
-                              : q
-                          ));
+                          if (suppressQuillOnChangeRef.current) return;
+                          updateQuestion(activeQuestion.id, (q) => ({ ...q, questionBody: value }));
                         }}
                         placeholder="Enter question text"
                         modules={quillModules}
@@ -1343,11 +1662,8 @@ const UploadQnAModal = ({
                           className="answer-body-quill rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-accent focus-within:border-transparent transition-all duration-200 bg-white"
                           value={activeQuestion.answerBody || ''}
                           onChange={(value) => {
-                            setQuestions(prev => prev.map(q =>
-                              q.id === activeQuestion.id
-                                ? { ...q, answerBody: value }
-                                : q
-                            ));
+                            if (suppressQuillOnChangeRef.current) return;
+                            updateQuestion(activeQuestion.id, (q) => ({ ...q, answerBody: value }));
                           }}
                           placeholder="Enter answer text"
                           modules={quillModules}
@@ -1366,13 +1682,13 @@ const UploadQnAModal = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? ({
+                          onClick={() => updateQuestion(activeQuestion.id, (q) => ({
                             ...q,
                             mcqOptions: [
                               ...(q.mcqOptions || []),
                               { optionId: getNextMcqOptionId(q.mcqOptions || []), optionBody: '' },
                             ],
-                          }) : q))}
+                          }))}
                           className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
                         >
                           <Plus className="w-4 h-4" />
@@ -1389,7 +1705,7 @@ const UploadQnAModal = ({
                                   type="radio"
                                   name={`correct-option-${activeQuestion.id}`}
                                   checked={activeQuestion.correctOptionId === option.optionId}
-                                  onChange={() => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, correctOptionId: option.optionId } : q))}
+                                  onChange={() => updateQuestion(activeQuestion.id, (q) => ({ ...q, correctOptionId: option.optionId }))}
                                   className="h-4 w-4 text-accent"
                                 />
                                 Correct Option
@@ -1397,12 +1713,11 @@ const UploadQnAModal = ({
                               {(activeQuestion.mcqOptions || []).length > 2 && (
                                 <button
                                   type="button"
-                                  onClick={() => setQuestions(prev => prev.map(q => {
-                                    if (q.id !== activeQuestion.id) return q;
+                                  onClick={() => updateQuestion(activeQuestion.id, (q) => {
                                     const nextOptions = (q.mcqOptions || []).filter((item) => item.optionId !== option.optionId);
                                     const nextCorrect = q.correctOptionId === option.optionId ? nextOptions[0]?.optionId || '' : q.correctOptionId;
                                     return { ...q, mcqOptions: nextOptions, correctOptionId: nextCorrect };
-                                  }))}
+                                  })}
                                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1413,10 +1728,13 @@ const UploadQnAModal = ({
                             <RichTextEditor
                               className="rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-accent focus-within:border-transparent transition-all duration-200 bg-white"
                               value={option.optionBody || ''}
-                              onChange={(value) => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? {
-                                ...q,
-                                mcqOptions: (q.mcqOptions || []).map((item) => item.optionId === option.optionId ? { ...item, optionBody: value } : item),
-                              } : q))}
+                              onChange={(value) => {
+                                if (suppressQuillOnChangeRef.current) return;
+                                updateQuestion(activeQuestion.id, (q) => ({
+                                  ...q,
+                                  mcqOptions: (q.mcqOptions || []).map((item) => item.optionId === option.optionId ? { ...item, optionBody: value } : item),
+                                }));
+                              }}
                               placeholder={`Option ${optionIndex + 1} (rich text, formulas supported)`}
                               modules={quillModules}
                               formats={quillFormats}
@@ -1436,13 +1754,7 @@ const UploadQnAModal = ({
                   <input
                     type="number"
                     value={activeQuestion.marks}
-                    onChange={(e) => {
-                      setQuestions(prev => prev.map(q =>
-                        q.id === activeQuestion.id
-                          ? { ...q, marks: e.target.value }
-                          : q
-                      ));
-                    }}
+                    onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, marks: e.target.value }))}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
                     placeholder="Enter max marks"
                   />
@@ -1463,13 +1775,7 @@ const UploadQnAModal = ({
                         <input
                           type="text"
                           value={activeQuestion.num_rubric_items}
-                          onChange={(e) => {
-                            setQuestions(prev => prev.map(q =>
-                              q.id === activeQuestion.id
-                                ? { ...q, num_rubric_items: e.target.value }
-                                : q
-                            ));
-                          }}
+                          onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, num_rubric_items: e.target.value }))}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
                         />
                         <p className="text-xs text-gray-500">Enter number of rubric items (1-10, default: 1)</p>
@@ -1499,13 +1805,7 @@ const UploadQnAModal = ({
                         </label>
                         <textarea
                           value={activeQuestion.professorInstructions}
-                          onChange={(e) => {
-                            setQuestions(prev => prev.map(q =>
-                              q.id === activeQuestion.id
-                                ? { ...q, professorInstructions: e.target.value }
-                                : q
-                            ));
-                          }}
+                          onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, professorInstructions: e.target.value }))}
                           maxLength={2000}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
                           rows={4}
@@ -1527,7 +1827,7 @@ const UploadQnAModal = ({
                       <input
                         type="checkbox"
                         checked={Boolean(activeQuestion.reasonRequired)}
-                        onChange={(e) => setQuestions(prev => prev.map(q => q.id === activeQuestion.id ? { ...q, reasonRequired: e.target.checked } : q))}
+                        onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, reasonRequired: e.target.checked }))}
                         className="h-4 w-4 rounded border-gray-300 text-accent"
                       />
                       Require students to provide a short reason with their selected option
@@ -1541,13 +1841,7 @@ const UploadQnAModal = ({
                           <input
                             type="number"
                             value={activeQuestion.num_rubric_items}
-                            onChange={(e) => {
-                              setQuestions(prev => prev.map(q =>
-                                q.id === activeQuestion.id
-                                  ? { ...q, num_rubric_items: e.target.value }
-                                  : q
-                              ));
-                            }}
+                            onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, num_rubric_items: e.target.value }))}
                             min="1"
                             max="10"
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
@@ -1560,13 +1854,7 @@ const UploadQnAModal = ({
                           </label>
                           <textarea
                             value={activeQuestion.professorInstructions}
-                            onChange={(e) => {
-                              setQuestions(prev => prev.map(q =>
-                                q.id === activeQuestion.id
-                                  ? { ...q, professorInstructions: e.target.value }
-                                  : q
-                              ));
-                            }}
+                            onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, professorInstructions: e.target.value }))}
                             maxLength={2000}
                             rows={3}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
@@ -1686,13 +1974,7 @@ const UploadQnAModal = ({
                   <h3 className="text-sm font-semibold text-gray-900">Custom Instruction (Optional)</h3>
                   <textarea
                     value={activeQuestion.aiCustomInstruction || ''}
-                    onChange={(e) => {
-                      setQuestions(prev => prev.map(q =>
-                        q.id === activeQuestion.id
-                          ? { ...q, aiCustomInstruction: e.target.value }
-                          : q
-                      ));
-                    }}
+                    onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, aiCustomInstruction: e.target.value }))}
                     maxLength={2000}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none resize-none transition-all duration-200"
                     rows={8}

@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { GripVertical } from "lucide-react";
 import { getConductExamQuestions, getConductExamStudentAnswers } from "./api";
 
 const OPTION_LABELS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -148,70 +149,87 @@ const OptionItem = ({ option, optionLabel, isSelected, isCorrect }) => {
   );
 };
 
+const DragHandle = () => (
+  <span
+    title="Drag to reorder"
+    aria-label="Drag handle"
+    className="cursor-grab text-gray-400 transition hover:text-gray-600 active:cursor-grabbing"
+  >
+    <GripVertical className="h-5 w-5" />
+  </span>
+);
+
 const QuestionCard = ({ answer }) => {
   const hasOptions = Array.isArray(answer.options) && answer.options.length > 0;
   const isCorrect = answer.status === "correct";
 
   return (
-    <article className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-gray-200/60">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-            Question {answer.question_number}
-          </p>
-          <h2 className="mt-3 text-lg font-semibold leading-8 text-gray-950">
-            {answer.question_text}
-          </h2>
-        </div>
-
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-            isCorrect ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          {isCorrect ? "Correct" : "Incorrect"}
-        </span>
-      </div>
-
-      {hasOptions ? (
-        <div className={`mt-6 rounded-xl border p-4 ${isCorrect ? "border-green-100 bg-green-50/50" : "border-gray-200 bg-gray-50/70"}`}>
-          <div className="space-y-3">
-            {answer.options.map((option, index) => {
-              const optionLabel = OPTION_LABELS[index] || `${index + 1}`;
-              const isSelected =
-                answer.selected_option_id
-                  ? matchesValue(option.id, answer.selected_option_id)
-                  : matchesValue(option.body, answer.student_answer);
-              const isCorrectOption =
-                answer.correct_option_ids?.length
-                  ? answer.correct_option_ids.some((correctId) => matchesValue(option.id, correctId))
-                  : matchesValue(option.body, answer.correct_answer);
-
-              return (
-                <OptionItem
-                  key={`${answer.question_id}-${optionLabel}`}
-                  option={option}
-                  optionLabel={optionLabel}
-                  isSelected={isSelected}
-                  isCorrect={isCorrectOption}
-                />
-              );
-            })}
+    <article
+      className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-gray-200/60"
+    >
+      <div className="min-w-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <DragHandle />
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                Question {answer.question_number}
+              </p>
+            </div>
+            <h2 className="mt-3 text-lg font-semibold leading-8 text-gray-950">
+              {answer.question_text}
+            </h2>
           </div>
-        </div>
-      ) : (
-        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-4 text-sm text-gray-700">
-          <span className="font-medium text-gray-900">Student Selected:</span>{" "}
-          <span>{answer.student_answer}</span>
-        </div>
-      )}
 
-      <div className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-          Correct Answer
-        </p>
-        <div className="mt-2 rounded-xl border border-green-100 bg-green-50/80 px-4 py-3">
-          <p className="text-sm font-medium text-green-900">{answer.correct_answer}</p>
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+              isCorrect ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {isCorrect ? "Correct" : "Incorrect"}
+          </span>
+        </div>
+
+        {hasOptions ? (
+          <div className={`mt-6 rounded-xl border p-4 ${isCorrect ? "border-green-100 bg-green-50/50" : "border-gray-200 bg-gray-50/70"}`}>
+            <div className="space-y-3">
+              {answer.options.map((option, index) => {
+                const optionLabel = OPTION_LABELS[index] || `${index + 1}`;
+                const isSelected =
+                  answer.selected_option_id
+                    ? matchesValue(option.id, answer.selected_option_id)
+                    : matchesValue(option.body, answer.student_answer);
+                const isCorrectOption =
+                  answer.correct_option_ids?.length
+                    ? answer.correct_option_ids.some((correctId) => matchesValue(option.id, correctId))
+                    : matchesValue(option.body, answer.correct_answer);
+
+                return (
+                  <OptionItem
+                    key={`${answer.question_id}-${optionLabel}`}
+                    option={option}
+                    optionLabel={optionLabel}
+                    isSelected={isSelected}
+                    isCorrect={isCorrectOption}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-4 text-sm text-gray-700">
+            <span className="font-medium text-gray-900">Student Selected:</span>{" "}
+            <span>{answer.student_answer}</span>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+            Correct Answer
+          </p>
+          <div className="mt-2 rounded-xl border border-green-100 bg-green-50/80 px-4 py-3">
+            <p className="text-sm font-medium text-green-900">{answer.correct_answer}</p>
+          </div>
         </div>
       </div>
     </article>
