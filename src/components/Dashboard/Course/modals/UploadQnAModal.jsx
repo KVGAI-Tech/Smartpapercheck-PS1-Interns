@@ -351,7 +351,7 @@ const parseStoredDraft = (draftKey) => {
 };
 
 const UploadQnAModal = ({
-  isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [] }) => {
+  isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [], apiPrefix = '/exams', isMasterAttached = false }) => {
 
   const isConductExam = examType === 'conduct';
 
@@ -651,7 +651,7 @@ const UploadQnAModal = ({
     setIsGeneratingAnswer(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/exams/${examId}/generate-answer`, {
+      const response = await fetch(`${API_BASE_URL}${apiPrefix}/${examId}/generate-answer`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

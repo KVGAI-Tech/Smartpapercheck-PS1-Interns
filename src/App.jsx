@@ -7,6 +7,7 @@ import Dashboard from "./components/Dashboard/DashboardHome";
 import StudentDashboard from "./components/StudentDashboard";
 import Courses from "./components/Dashboard/Courses";
 import CourseDetails from "./components/Dashboard/Course/CourseDetails";
+import MasterExamsList from "./components/Dashboard/MasterExams/MasterExamsList";
 import RoleAuth from "./components/RoleAuth";
 import LandingPage from "./components/LandingPage";
 import ResourcesPage from "./components/ResourcesPage";
@@ -138,6 +139,16 @@ function App() {
               <RoleRoute requiredRole="professor">
                 <DashboardLayout>
                   <Courses archivedView />
+                </DashboardLayout>
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/master-exams"
+            element={
+              <RoleRoute requiredRole="professor">
+                <DashboardLayout>
+                  <MasterExamsList />
                 </DashboardLayout>
               </RoleRoute>
             }

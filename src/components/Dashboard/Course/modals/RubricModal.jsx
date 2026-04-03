@@ -516,7 +516,9 @@ const RubricModal = ({
     onClose,
     examId,
     onSave = () => { },
-    questions: inputQuestions = []
+    questions: inputQuestions = [],
+    apiPrefix = '/exams',
+    isMasterAttached = false
 }) => {
     const questions = useMemo(() => {
         return Array.isArray(inputQuestions) ? inputQuestions : [];
@@ -844,7 +846,7 @@ const RubricModal = ({
         try {
             const promises = questionsWithoutRubrics.map((question, index) => 
                 fetch(
-                    `${API_BASE_URL}/exams/${examId}/questions/${question.question_number}/rubric`,
+                    `${API_BASE_URL}${apiPrefix}/${examId}/questions/${question.question_number}/rubric`,
                     {
                         method: 'GET',
                         headers: {
@@ -983,8 +985,8 @@ const RubricModal = ({
             const hasExisting = hasRubric(questionNumber);
             const response = await fetch(
                 hasExisting
-                    ? `${API_BASE_URL}/exams/${examId}/questions/${questionNumber}/rubric-settings`
-                    : `${API_BASE_URL}/exams/${examId}/questions/${questionNumber}/rubric`,
+                    ? `${API_BASE_URL}${apiPrefix}/${examId}/questions/${questionNumber}/rubric-settings`
+                    : `${API_BASE_URL}${apiPrefix}/${examId}/questions/${questionNumber}/rubric`,
                 hasExisting
                     ? {
                         method: 'PUT',
@@ -1140,7 +1142,7 @@ const RubricModal = ({
 
         try {
             const response = await fetch(
-                `${API_BASE_URL}/exams/${examId}/questions/${selectedQuestion}/rubric-settings`,
+                `${API_BASE_URL}${apiPrefix}/${examId}/questions/${selectedQuestion}/rubric-settings`,
                 {
                     method: 'PUT',
                     headers: {
@@ -1218,7 +1220,7 @@ const RubricModal = ({
         try {
             const normalizedItems = normalizeRubricItemsForSave();
             const response = await fetch(
-                `${API_BASE_URL}/exams/${examId}/questions/${selectedQuestion}/rubric`,
+                `${API_BASE_URL}${apiPrefix}/${examId}/questions/${selectedQuestion}/rubric`,
                 {
                     method: 'PUT',
                     headers: {
@@ -1301,7 +1303,7 @@ const RubricModal = ({
                 }
 
                 return fetch(
-                    `${API_BASE_URL}/exams/${examId}/questions/${q.question_number}/rubric`,
+                    `${API_BASE_URL}${apiPrefix}/${examId}/questions/${q.question_number}/rubric`,
                     {
                         method: 'PUT',
                         headers: {
@@ -1878,6 +1880,7 @@ const RubricModal = ({
                                                 >
                                                     Cancel
                                                 </motion.button>
+                                                {!isMasterAttached && (
                                                 <motion.button
                                                     whileHover={{ scale: validation.isValid ? 1.05 : 1 }}
                                                     whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
@@ -1892,6 +1895,8 @@ const RubricModal = ({
                                                     <Save className="w-4 h-4" />
                                                     <span>Save Question</span>
                                                 </motion.button>
+                                                )}
+                                                {!isMasterAttached && (
                                                 <motion.button
                                                     whileHover={{ 
                                                         scale: validation.isValid ? 1.05 : 1, 
@@ -1922,6 +1927,7 @@ const RubricModal = ({
                                                         </>
                                                     )}
                                                 </motion.button>
+                                                )}
                                             </div>
                                         </div>
                                     </motion.div>

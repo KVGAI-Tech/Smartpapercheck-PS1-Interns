@@ -6,6 +6,7 @@ import {
   Menu,
   Bell,
   HelpCircle,
+  FileText,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -441,6 +442,7 @@ const DashboardLayout = ({ children }) => {
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard" },
     { icon: BookOpen, label: "Courses", to: "/courses" },
+    { icon: FileText, label: "Master Exams", to: "/master-exams" },
     { icon: BookOpen, label: "Archived Courses", to: "/courses/archived" },
   ];
 
@@ -474,6 +476,9 @@ const DashboardLayout = ({ children }) => {
         { label: "Courses", to: "/courses" },
         { label: state.courseName || "Course" },
       ];
+    } else if (path.startsWith("/master-exams")) {
+      title = "Master Exams";
+      breadcrumbItems = [{ label: "Master Exams" }];
     } else if (path.startsWith("/courses")) {
       if (/^\/courses\//.test(path)) {
         // Course details or nested exam pages

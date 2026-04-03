@@ -2084,6 +2084,7 @@ const Toast = ({ message, type, show, onClose }) => {
             examId={selectedExamId}
             examType={selectedExamType}
             existingQuestions={existingQuestions}
+            isMasterAttached={exams?.find(e => e.id === selectedExamId)?.is_master_attached || false}
             onSubmit={async (examId, formData) => {
               try {
                 if (!examId) {
@@ -2143,6 +2144,7 @@ const Toast = ({ message, type, show, onClose }) => {
             }}
             examId={selectedExamId}
             questions={currentExamQuestions}
+            isMasterAttached={exams?.find(e => e.id === selectedExamId)?.is_master_attached || false}
             onSave={handleRubricSave}
           />
   
