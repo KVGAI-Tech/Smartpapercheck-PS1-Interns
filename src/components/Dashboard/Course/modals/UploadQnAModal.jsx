@@ -31,6 +31,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { API_BASE_URL } from '../../../../BaseURL';
+import {
+  listExamDocuments,
+  parseExamDocument,
+  fetchExamDocument
+} from '../../MasterExams/examDocumentApi';
 
 if (typeof window !== 'undefined' && !window.katex) {
   window.katex = katex;
@@ -370,6 +375,12 @@ const UploadQnAModal = ({
   const [aiGenerationError, setAiGenerationError] = useState('');
   const [aiPreviewAnswer, setAiPreviewAnswer] = useState('');
 
+  const [masterPapers, setMasterPapers] = useState([]);
+  const [selectedPaperId, setSelectedPaperId] = useState('');
+  const [selectedImportQuestionId, setSelectedImportQuestionId] = useState('');
+  const [flattenedOptions, setFlattenedOptions] = useState([]);
+  const [isParsingPaper, setIsParsingPaper] = useState(false);
+
   const [selectedIndex, setSelectedIndexRaw] = useState(0);
   const [initialized, setInitialized] = useState(false);
   const suppressQuillOnChangeRef = useRef(false);
@@ -447,6 +458,130 @@ const UploadQnAModal = ({
     if (hasFile && hasEditorContent) return 'both';
     if (hasEditorContent) return 'text';
     return 'image';
+  };
+
+  const flattenParsedExam = (parsedData) => {
+    // Extract questions — supports both legacy sections schema and new flat questions schema
+    let questionsList = [];
+    if (parsedData?.sections) {
+      questionsList = parsedData.sections.flatMap(section => section.questions || []);
+    } else if (parsedData?.questions) {
+      questionsList = parsedData.questions;
+    }
+
+    if (!questionsList || questionsList.length === 0) return [];
+
+    // ONLY main questions go into the dropdown — sub-parts (a, b, c) are rubrics, NOT selectable
+    return questionsList.map(q => {
+      let rubricsCount = 1;
+      if (q.rubrics && Array.isArray(q.rubrics)) {
+        const countLeaves = (rubs) => {
+          let c = 0;
+          rubs.forEach(r => {
+            if (r.subRubrics && r.subRubrics.length > 0) {
+              c += countLeaves(r.subRubrics);
+            } else {
+              c += 1;
+            }
+          });
+          return c;
+        };
+        const rc = countLeaves(q.rubrics);
+        if (rc > 0) rubricsCount = rc;
+      }
+
+      return {
+        id: `M_${q.id || Math.random()}`,
+        label: `Q${q.id || ''}`,
+        questionBody: q.question || '',
+        answerBody: q.answer || '',
+        marks: q.totalMarks || '',
+        rubricsCount,
+        rubrics: q.rubrics || [],
+      };
+    });
+  };  const handlePaperChange = async (e) => {
+    const paperId = e.target.value;
+    setSelectedPaperId(paperId);
+    setFlattenedOptions([]);
+    setSelectedImportQuestionId('');
+    if (!paperId) return;
+
+    try {
+      setIsParsingPaper(true);
+      const paper = masterPapers.find(p => String(p.id) === String(paperId));
+      let parsedOutput;
+
+      if (!paper.parse_status || paper.parse_status !== 'completed') {
+        const result = await parseExamDocument(paperId, { force_refresh: false });
+        parsedOutput = result.parsed_output;
+      } else {
+        const fullPaper = await fetchExamDocument(paperId);
+        parsedOutput = fullPaper.parsed_output;
+      }
+
+      if (parsedOutput) {
+        // parsed_output arrives as a JSON string from the backend — parse it into an object
+        let parsedData = parsedOutput;
+        if (typeof parsedData === 'string') {
+          try {
+            parsedData = JSON.parse(parsedData);
+          } catch (jsonErr) {
+            console.error('Failed to parse parsed_output JSON string:', jsonErr);
+            setError('Document parsing data is corrupted. Please re-parse.');
+            return;
+          }
+        }
+        console.log('Parsed exam data for dropdown:', parsedData);
+        const options = flattenParsedExam(parsedData);
+        console.log('Flattened dropdown options:', options);
+        setFlattenedOptions(options);
+      }
+    } catch (err) {
+      setError(`Failed to process master exam: ${err.message}`);
+    } finally {
+      setIsParsingPaper(false);
+    }
+  };
+
+  const handleImportQuestionChange = (e) => {
+    const qId = e.target.value;
+    setSelectedImportQuestionId(qId);
+    if (!qId) return;
+
+    const selectedOption = flattenedOptions.find(o => o.id === qId);
+    if (!selectedOption) return;
+
+    // Build composite question body: main question text + all rubric sub-parts rendered inline
+    let compositeBody = selectedOption.questionBody
+      ? `<p>${selectedOption.questionBody}</p>`
+      : '';
+
+    if (selectedOption.rubrics && selectedOption.rubrics.length > 0) {
+      const buildRubricHtml = (rubs, depth = 0) => {
+        let html = '';
+        rubs.forEach(r => {
+          const indent = depth > 0 ? `margin-left:${depth * 20}px;` : '';
+          const label = r.id || '';
+          const desc = r.description || '';
+          const marks = r.marks ? ` [${r.marks} marks]` : '';
+          html += `<p style="${indent}"><strong>(${label})</strong> ${desc}${marks}</p>`;
+          if (r.subRubrics && r.subRubrics.length > 0) {
+            html += buildRubricHtml(r.subRubrics, depth + 1);
+          }
+        });
+        return html;
+      };
+      compositeBody += buildRubricHtml(selectedOption.rubrics);
+    }
+
+    updateQuestion(questions[selectedIndex].id, (q) => ({
+      ...q,
+      questionBody: compositeBody || q.questionBody,
+      answerBody: selectedOption.answerBody ? `<p>${selectedOption.answerBody}</p>` : q.answerBody,
+      marks: selectedOption.marks ? String(selectedOption.marks) : String(q.marks || ''),
+      num_rubric_items: selectedOption.rubricsCount || q.num_rubric_items,
+    }));
   };
 
   const setQuestionsDraft = (updater) => {
@@ -786,6 +921,22 @@ const UploadQnAModal = ({
     }
     setInitialized(true);
   }, [draftStorageKey, initialized, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && uploadMode === 'standard') {
+      const fetchPapers = async () => {
+        try {
+          const papers = await listExamDocuments();
+          setMasterPapers(papers || []);
+        } catch (e) {
+          console.error("Failed to load master exams for import", e);
+        }
+      };
+      if (masterPapers.length === 0) {
+        fetchPapers();
+      }
+    }
+  }, [isOpen, uploadMode, masterPapers.length]);
 
   useEffect(() => {
     if (!isOpen || !initialized || !questions.length || typeof window === 'undefined') {
@@ -1456,9 +1607,35 @@ const UploadQnAModal = ({
                 >
                   <ArrowUp className="w-4 h-4" />
                 </button>
-                <span className="text-sm font-medium text-gray-700 px-2">
-                  Question {selectedIndex + 1} of {questions.length}
-                </span>
+                
+                <div className="flex items-center gap-2 px-3">
+                  <select
+                    className="text-sm border border-gray-300 bg-white rounded-md py-1 pl-2 pr-6 focus:ring-accent focus:border-accent text-gray-700"
+                    value={selectedPaperId}
+                    onChange={handlePaperChange}
+                    aria-label="Select Paper"
+                  >
+                    <option value="">Select Paper</option>
+                    {masterPapers.map(p => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="text-sm border border-gray-300 bg-white rounded-md py-1 pl-2 pr-6 focus:ring-accent focus:border-accent text-gray-700 disabled:opacity-50 disabled:bg-gray-100"
+                    value={selectedImportQuestionId}
+                    onChange={handleImportQuestionChange}
+                    disabled={!selectedPaperId || isParsingPaper}
+                    aria-label="Select Question"
+                  >
+                    <option value="">
+                      {isParsingPaper ? 'Parsing...' : 'Select Question'}
+                    </option>
+                    {flattenedOptions.map(o => (
+                      <option key={o.id} value={o.id}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <button
                   onClick={() => navigateQuestion('next')}
                   disabled={selectedIndex === questions.length - 1}

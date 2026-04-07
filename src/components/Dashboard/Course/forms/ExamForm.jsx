@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, Loader, FileText } from 'lucide-react';
-import { fetchMasterExams } from '../../MasterExams/masterExamApi';
+import React, { useState } from 'react';
+import { AlertCircle, Loader } from 'lucide-react';
 
 const ExamForm = ({ 
   initialData = null,
   onSubmit,
   onClose,
-  allowMasterSelection = true
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -17,38 +15,7 @@ const ExamForm = ({
     is_active: initialData?.is_active ?? false,
     allow_recheck: true,
     max_recheck_attempts: 1,
-    master_exam_id: null
   });
-
-  const [useMasterExam, setUseMasterExam] = useState(false);
-  const [masterExamsList, setMasterExamsList] = useState([]);
-  const [loadingMasters, setLoadingMasters] = useState(false);
-
-  useEffect(() => {
-    if (allowMasterSelection && useMasterExam && masterExamsList.length === 0) {
-      setLoadingMasters(true);
-      fetchMasterExams()
-        .then(setMasterExamsList)
-        .catch(err => setError('Failed to load master exams: ' + err.message))
-        .finally(() => setLoadingMasters(false));
-    }
-  }, [allowMasterSelection, useMasterExam, masterExamsList.length]);
-
-  const handleMasterExamSelect = (e) => {
-    const selectedId = e.target.value;
-    const selectedMaster = masterExamsList.find(m => m.id.toString() === selectedId);
-    if (selectedMaster) {
-      setFormData(prev => ({
-        ...prev,
-        master_exam_id: selectedMaster.id,
-        exam_name: selectedMaster.exam_name,
-        full_marks: selectedMaster.full_marks,
-        exam_type: selectedMaster.exam_type || 'evaluated'
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, master_exam_id: null }));
-    }
-  };
 
   const handleTypeChange = (e) => {
     const newType = e.target.value;
@@ -62,7 +29,7 @@ const ExamForm = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.exam_name || !formData.full_marks  === '') {
+    if (!formData.exam_name.trim() || formData.full_marks === '' || Number.isNaN(Number(formData.full_marks))) {
       setError('Please fill in all required fields');
       return;
     }
@@ -88,53 +55,6 @@ const ExamForm = ({
       )}
 
       <div className="space-y-4">
-        {!initialData && allowMasterSelection && (
-          <div className="flex gap-4 p-4 mb-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                checked={!useMasterExam} 
-                onChange={() => setUseMasterExam(false)}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Create New Exam</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                checked={useMasterExam} 
-                onChange={() => setUseMasterExam(true)}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                <FileText className="w-4 h-4 text-blue-500" />
-                Use Master Exam
-              </span>
-            </label>
-          </div>
-        )}
-
-        {allowMasterSelection && useMasterExam && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Master Exam *
-            </label>
-            <select
-              required={useMasterExam}
-              onChange={handleMasterExamSelect}
-              className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-blue-50"
-              disabled={loadingMasters}
-            >
-              <option value="">{loadingMasters ? 'Loading...' : 'Choose a Master Exam'}</option>
-              {masterExamsList.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.exam_name} ({m.exam_type === 'conduct' ? 'MCQ' : 'Evaluated'})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Exam Name *
@@ -143,9 +63,8 @@ const ExamForm = ({
             type="text"
             value={formData.exam_name}
             onChange={(e) => setFormData(prev => ({ ...prev, exam_name: e.target.value }))}
-            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${useMasterExam ? 'bg-gray-100' : ''}`}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             required
-            disabled={useMasterExam}
           />
         </div>
 
@@ -156,12 +75,11 @@ const ExamForm = ({
           <input
             type="number"
             value={formData.full_marks}
-            onChange={(e) => setFormData(prev => ({ ...prev, full_marks: parseFloat(e.target.value) }))}
-            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${useMasterExam ? 'bg-gray-100' : ''}`}
+            onChange={(e) => setFormData(prev => ({ ...prev, full_marks: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             min="1"
             step="0.1"
             required
-            disabled={useMasterExam}
           />
         </div>
 
@@ -172,9 +90,8 @@ const ExamForm = ({
           <select
             value={formData.exam_type}
             onChange={handleTypeChange}
-            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${useMasterExam ? 'bg-gray-100' : ''}`}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             required
-            disabled={useMasterExam}
           >
             <option value="evaluated">Evaluated Exam</option>
             <option value="conduct">Portal MCQ Exam</option>
