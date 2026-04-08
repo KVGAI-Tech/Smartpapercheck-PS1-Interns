@@ -11,7 +11,7 @@ import {
   FileText, ArrowUp, ArrowDown,
   CheckCircle, Maximize, Minimize,
   File, FilePlus, Upload as UploadIcon,
-  AlertCircle, Loader2, Download
+  AlertCircle, Loader2, Download, Sparkles
 } from 'lucide-react';
 import {
   DndContext,
@@ -394,6 +394,8 @@ const UploadQnAModal = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showAiAnswerModal, setShowAiAnswerModal] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
+  const [isGeneratingAllAnswers, setIsGeneratingAllAnswers] = useState(false);
+  const [bulkAnswerProgress, setBulkAnswerProgress] = useState({ current: 0, total: 0 });
   const [aiGenerationError, setAiGenerationError] = useState('');
   const [aiPreviewAnswer, setAiPreviewAnswer] = useState('');
 
@@ -476,6 +478,19 @@ const UploadQnAModal = ({
       .replace(/\s+\n/g, '\n')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
+  };
+
+  const formatGeneratedAnswerForEditor = (text = '') => {
+    const cleaned = stripMarkdown(text || '');
+    if (!cleaned) return '';
+
+    const paragraphs = cleaned
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+      .map((paragraph) => `<p>${paragraph.replace(/\n/g, '<br/>')}</p>`);
+
+    return paragraphs.join('') || `<p>${cleaned.replace(/\n/g, '<br/>')}</p>`;
   };
 
   const inferContentType = ({ body, hasFile }) => {
@@ -897,55 +912,59 @@ const UploadQnAModal = ({
     setShowAiAnswerModal(false);
   };
 
-  const handleGenerateAnswer = async () => {
-    setAiGenerationError('');
-
-    const questionImageUrl = activeQuestion.questionUrl || activeQuestion.questionPreview || '';
-    const questionBody = activeQuestion.questionBody || '';
+  const generateAiAnswerForQuestion = async (question) => {
+    const questionImageUrl = question.questionUrl || question.questionPreview || '';
+    const questionBody = question.questionBody || '';
     const questionHasInlineImage = /<img\b/i.test(questionBody);
     const questionType = inferContentType({ body: questionBody, hasFile: Boolean(questionImageUrl) });
-
     const questionBodyPlain = richTextToPlainText(questionBody);
 
     if (!questionImageUrl && !questionBodyPlain.trim() && !questionHasInlineImage) {
-      setAiGenerationError('Please provide question text or upload a question image.');
-      return;
+      throw new Error('Please provide question text or upload a question image.');
     }
+
+    const response = await fetch(`${API_BASE_URL}${apiPrefix}/${examId}/generate-answer`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        domain: question.domain || 'General',
+        question_type: questionType,
+        question_body: questionBodyPlain,
+        question_image_url: questionImageUrl || null,
+        max_marks: question.marks ? Number(question.marks) : null,
+        custom_instruction: question.aiCustomInstruction || null,
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: `Request failed with status ${response.status}` }));
+      throw new Error(errorData.message || errorData.detail || `Request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.code !== 200) {
+      throw new Error(data.message || 'Failed to generate answer');
+    }
+
+    const generatedRaw = data?.data?.answer || '';
+    const generated = formatGeneratedAnswerForEditor(generatedRaw);
+    if (!generated.trim()) {
+      throw new Error('AI returned an empty answer');
+    }
+
+    return generated;
+  };
+
+  const handleGenerateAnswer = async () => {
+    setAiGenerationError('');
 
     setIsGeneratingAnswer(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}${apiPrefix}/${examId}/generate-answer`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          domain: activeQuestion.domain || 'General',
-          question_type: questionType,
-          question_body: questionBodyPlain,
-          question_image_url: questionImageUrl || null,
-          max_marks: activeQuestion.marks ? Number(activeQuestion.marks) : null,
-          custom_instruction: activeQuestion.aiCustomInstruction || null,
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: `Request failed with status ${response.status}` }));
-        throw new Error(errorData.message || errorData.detail || `Request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.code !== 200) {
-        throw new Error(data.message || 'Failed to generate answer');
-      }
-
-      const generatedRaw = data?.data?.answer || '';
-      const generated = stripMarkdown(generatedRaw);
-      if (!generated.trim()) {
-        throw new Error('AI returned an empty answer');
-      }
+      const generated = await generateAiAnswerForQuestion(activeQuestion);
       setAiPreviewAnswer(generated);
     } catch (e) {
       setAiGenerationError(e?.message || 'Failed to generate answer');
@@ -974,6 +993,99 @@ const UploadQnAModal = ({
     setAiPreviewAnswer('');
     setAiGenerationError('');
     setShowAiAnswerModal(false);
+  };
+
+  const handleGenerateAllAnswers = async () => {
+    if (isGeneratingAllAnswers || isGeneratingAnswer) return;
+
+    if (!examId) {
+      toast.error('Please save the exam before generating answers');
+      return;
+    }
+
+    const eligibleQuestions = questions.filter((question) => {
+      const questionBody = question.questionBody || '';
+      const questionPlain = richTextToPlainText(questionBody);
+      const questionImageUrl = question.questionUrl || question.questionPreview || '';
+      return Boolean(questionImageUrl || questionPlain.trim() || /<img\b/i.test(questionBody));
+    });
+
+    if (eligibleQuestions.length === 0) {
+      toast.error('Add question content before generating answers');
+      return;
+    }
+
+    setIsGeneratingAllAnswers(true);
+    setBulkAnswerProgress({ current: 0, total: eligibleQuestions.length });
+    setError('');
+
+    const generatedAnswersById = new Map();
+    let completed = 0;
+    let failedCount = 0;
+
+    try {
+      for (const question of questions) {
+        const questionBody = question.questionBody || '';
+        const questionPlain = richTextToPlainText(questionBody);
+        const questionImageUrl = question.questionUrl || question.questionPreview || '';
+        const hasQuestionContent = Boolean(questionImageUrl || questionPlain.trim() || /<img\b/i.test(questionBody));
+
+        if (!hasQuestionContent) {
+          continue;
+        }
+
+        const currentIndex = questions.findIndex((item) => item.id === question.id);
+        if (currentIndex !== -1) {
+          setSelectedIndex(currentIndex);
+          requestAnimationFrame(() => {
+            scrollToQuestion(question.id);
+          });
+        }
+
+        setBulkAnswerProgress({
+          current: completed + 1,
+          total: eligibleQuestions.length,
+        });
+
+        try {
+          const generatedAnswer = await generateAiAnswerForQuestion(question);
+          generatedAnswersById.set(question.id, generatedAnswer);
+        } catch (generationError) {
+          failedCount += 1;
+          const visibleIndex = currentIndex !== -1 ? currentIndex + 1 : completed + 1;
+          toast.error(`Failed to generate answer for Question ${visibleIndex}`);
+          console.error(`Failed to generate answer for Question ${visibleIndex}:`, generationError);
+        }
+
+        completed += 1;
+      }
+
+      if (generatedAnswersById.size > 0) {
+        setQuestionsDraft((prevQuestions) => (
+          prevQuestions.map((question) => {
+            const generatedAnswer = generatedAnswersById.get(question.id);
+            if (!generatedAnswer) return question;
+
+            return {
+              ...question,
+              answerType: (question.answerType || 'image') === 'image' ? 'both' : (question.answerType || 'image'),
+              answerBody: generatedAnswer,
+            };
+          })
+        ));
+      }
+
+      if (generatedAnswersById.size > 0 && failedCount === 0) {
+        toast.success('All answers generated successfully');
+      } else if (generatedAnswersById.size > 0) {
+        toast.success(`${generatedAnswersById.size} answers generated`);
+      } else {
+        toast.error('Failed to generate answers. Try again.');
+      }
+    } finally {
+      setIsGeneratingAllAnswers(false);
+      setBulkAnswerProgress({ current: 0, total: 0 });
+    }
   };
 
   useEffect(() => {
@@ -1852,6 +1964,29 @@ const UploadQnAModal = ({
                     )}
                     <span>{isImportingAllQuestions ? 'Importing...' : 'Import All Questions'}</span>
                   </button>
+                  {!isConductExam && (
+                    <button
+                      type="button"
+                      onClick={handleGenerateAllAnswers}
+                      disabled={isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId}
+                      className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                        isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId
+                          ? 'cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400'
+                          : 'border border-transparent bg-gradient-to-r from-accent to-teal-500 text-white shadow-sm hover:from-accent/95 hover:to-teal-500/95'
+                      }`}
+                    >
+                      {isGeneratingAllAnswers ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      <span>
+                        {isGeneratingAllAnswers
+                          ? `Generating ${bulkAnswerProgress.current}/${bulkAnswerProgress.total}...`
+                          : 'Generate Answers'}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 <button
