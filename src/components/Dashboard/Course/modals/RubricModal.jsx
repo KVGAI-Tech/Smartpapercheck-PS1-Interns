@@ -511,6 +511,84 @@ const QuestionCard = ({
     </motion.div>
 );
 
+const clampRubricCount = (value, fallback = 1) => {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed)) return fallback;
+    return Math.min(Math.max(parsed, 1), 10);
+};
+
+const getQuestionRubricItems = (question) => {
+    if (Array.isArray(question?.rubric?.rubric_items)) return question.rubric.rubric_items;
+    if (Array.isArray(question?.rubric_items)) return question.rubric_items;
+    return [];
+};
+
+const getQuestionFeedback = (question) => {
+    if (typeof question?.rubric?.problem_feedback === 'string') return question.rubric.problem_feedback;
+    if (typeof question?.problem_feedback === 'string') return question.problem_feedback;
+    return '';
+};
+
+const normalizeQuestions = (questions) => {
+    const seen = new Set();
+
+    return (Array.isArray(questions) ? questions : [])
+        .filter((question) => question && question.question_number != null)
+        .filter((question) => {
+            const key = String(question.question_number);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .map((question) => ({
+            ...question,
+            rubric_items: getQuestionRubricItems(question),
+            problem_feedback: getQuestionFeedback(question),
+            num_rubric_items: clampRubricCount(
+                question?.num_rubric_items,
+                getQuestionRubricItems(question).length || 1
+            ),
+            professor_instructions:
+                typeof question?.professor_instructions === 'string'
+                    ? question.professor_instructions
+                    : '',
+        }));
+};
+
+const buildRubricItemShell = (defaultMarks = 1) => ({
+    description: '',
+    max_marks: Math.max(0.01, Number(defaultMarks) || 1),
+    score_options: [],
+    reasoning: '',
+    grading_guidelines: '',
+});
+
+const resizeRubricItems = (items, nextCount, questionMaxMarks) => {
+    const safeCount = clampRubricCount(nextCount, Array.isArray(items) && items.length ? items.length : 1);
+    const currentItems = (Array.isArray(items) ? items : [])
+        .slice(0, safeCount)
+        .map((item) => ({
+            ...item,
+            max_marks: Math.max(0.01, Number(item?.max_marks) || 0.01),
+        }));
+
+    if (currentItems.length >= safeCount) {
+        return currentItems;
+    }
+
+    const totalExistingMarks = currentItems.reduce((sum, item) => sum + (Number(item.max_marks) || 0), 0);
+    const remainingSlots = safeCount - currentItems.length;
+    const safeQuestionMarks = Math.abs(Number(questionMaxMarks) || safeCount || 1);
+    const suggestedMarks = Number(
+        Math.max((safeQuestionMarks - totalExistingMarks) / Math.max(remainingSlots, 1), 0.01).toFixed(2)
+    );
+
+    return [
+        ...currentItems,
+        ...Array.from({ length: remainingSlots }, () => buildRubricItemShell(suggestedMarks)),
+    ];
+};
+
 const RubricModal = ({
     isOpen,
     onClose,
@@ -520,10 +598,9 @@ const RubricModal = ({
     apiPrefix = '/exams',
     isMasterAttached = false
 }) => {
-    const questions = useMemo(() => {
-        return Array.isArray(inputQuestions) ? inputQuestions : [];
-    }, [inputQuestions]);
+    const normalizedInputQuestions = useMemo(() => normalizeQuestions(inputQuestions), [inputQuestions]);
 
+    const [questions, setQuestions] = useState(normalizedInputQuestions);
     const [selectedQuestion, setSelectedQuestion] = useState(null);
     const [rubricItems, setRubricItems] = useState([]);
     const [feedback, setFeedback] = useState('');
@@ -544,6 +621,85 @@ const RubricModal = ({
     const previousHeight = useRef(null);
     const modalContentRef = useRef(null);
     const modalRootRef = useRef(null);
+
+    const syncQuestionState = (
+        questionNumber,
+        {
+            rubric_items,
+            problem_feedback,
+            num_rubric_items,
+            professor_instructions,
+        } = {}
+    ) => {
+        if (questionNumber == null) return;
+
+        setQuestions((prevQuestions) =>
+            prevQuestions.map((question) => {
+                if (question.question_number !== questionNumber) {
+                    return question;
+                }
+
+                const nextRubricItems = Array.isArray(rubric_items)
+                    ? rubric_items
+                    : getQuestionRubricItems(question);
+                const nextFeedback =
+                    typeof problem_feedback === 'string'
+                        ? problem_feedback
+                        : getQuestionFeedback(question);
+                const nextNumRubricItems = clampRubricCount(
+                    num_rubric_items,
+                    nextRubricItems.length || question.num_rubric_items || 1
+                );
+                const nextProfessorInstructions =
+                    typeof professor_instructions === 'string'
+                        ? professor_instructions
+                        : (question.professor_instructions || '');
+
+                return {
+                    ...question,
+                    rubric_items: nextRubricItems,
+                    problem_feedback: nextFeedback,
+                    num_rubric_items: nextNumRubricItems,
+                    professor_instructions: nextProfessorInstructions,
+                    rubric: {
+                        ...(question.rubric || {}),
+                        rubric_items: nextRubricItems,
+                        problem_feedback: nextFeedback,
+                    }
+                };
+            })
+        );
+
+        setQuestionRubricSettings((prev) => ({
+            ...(prev || {}),
+            [questionNumber]: {
+                num_rubric_items: clampRubricCount(
+                    num_rubric_items,
+                    Array.isArray(rubric_items) ? rubric_items.length || 1 : numRubricItems
+                ),
+                professor_instructions:
+                    typeof professor_instructions === 'string'
+                        ? professor_instructions
+                        : (prev?.[questionNumber]?.professor_instructions || profInstructions || ''),
+            }
+        }));
+    };
+
+    const persistSelectedQuestionDraft = () => {
+        if (!selectedQuestion) return;
+        syncQuestionState(selectedQuestion, {
+            rubric_items: rubricItems,
+            problem_feedback: feedback,
+            num_rubric_items: numRubricItems,
+            professor_instructions: profInstructions,
+        });
+    };
+
+    const handleSelectQuestion = (questionNumber) => {
+        if (questionNumber === selectedQuestion) return;
+        persistSelectedQuestionDraft();
+        setSelectedQuestion(questionNumber);
+    };
     
     // Updated strict validation logic
     const validation = useMemo(() => {
@@ -613,6 +769,33 @@ const RubricModal = ({
     const anyQuestionsNeedRubrics = useMemo(() => {
         return questions.some(question => !hasRubric(question.question_number));
     }, [questions]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        setQuestions(normalizedInputQuestions);
+        setQuestionRubricSettings((prev) => {
+            const next = {};
+            normalizedInputQuestions.forEach((question) => {
+                next[question.question_number] = {
+                    num_rubric_items: clampRubricCount(
+                        prev?.[question.question_number]?.num_rubric_items,
+                        question.num_rubric_items || getQuestionRubricItems(question).length || 1
+                    ),
+                    professor_instructions:
+                        typeof prev?.[question.question_number]?.professor_instructions === 'string'
+                            ? prev[question.question_number].professor_instructions
+                            : (question.professor_instructions || '')
+                };
+            });
+            return next;
+        });
+        setSelectedQuestion((prevSelected) =>
+            normalizedInputQuestions.some((question) => question.question_number === prevSelected)
+                ? prevSelected
+                : (normalizedInputQuestions[0]?.question_number ?? null)
+        );
+    }, [isOpen, normalizedInputQuestions]);
     
     useEffect(() => {
         if (isOpen) {
@@ -666,18 +849,10 @@ const RubricModal = ({
         if (selectedQuestion) {
             const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
             if (currentQuestion) {
-                if (currentQuestion.rubric && currentQuestion.rubric.rubric_items) {
-                    setRubricItems(currentQuestion.rubric.rubric_items || []);
-                    setFeedback(currentQuestion.rubric.problem_feedback || '');
-                } else {
-                    setRubricItems(currentQuestion.rubric_items || []);
-                    setFeedback(currentQuestion.problem_feedback || '');
-                }
+                setRubricItems(getQuestionRubricItems(currentQuestion));
+                setFeedback(getQuestionFeedback(currentQuestion));
 
-                const hasRubricItems =
-                    (currentQuestion.rubric && currentQuestion.rubric.rubric_items &&
-                        currentQuestion.rubric.rubric_items.length > 0) ||
-                    (currentQuestion.rubric_items && currentQuestion.rubric_items.length > 0);
+                const hasRubricItems = getQuestionRubricItems(currentQuestion).length > 0;
 
                 setShowRubricEditor(hasRubricItems);
                 setShowRubricSettings(hasRubricItems);
@@ -693,9 +868,12 @@ const RubricModal = ({
             if (currentQuestion) {
                 const localSettings = questionRubricSettings?.[selectedQuestion];
                 setNumRubricItems(
-                    (typeof localSettings?.num_rubric_items === 'number'
-                        ? localSettings.num_rubric_items
-                        : (currentQuestion.num_rubric_items || 3))
+                    clampRubricCount(
+                        typeof localSettings?.num_rubric_items === 'number'
+                            ? localSettings.num_rubric_items
+                            : (currentQuestion.num_rubric_items || getQuestionRubricItems(currentQuestion).length || 1),
+                        getQuestionRubricItems(currentQuestion).length || 1
+                    )
                 );
                 setProfInstructions(
                     (typeof localSettings?.professor_instructions === 'string'
@@ -705,6 +883,18 @@ const RubricModal = ({
             }
         }
     }, [selectedQuestion, questions, questionRubricSettings]);
+
+    useEffect(() => {
+        if (!import.meta.env.DEV || !showRubricEditor || !selectedQuestion) return;
+        const safeConfiguredCount = clampRubricCount(numRubricItems, rubricItems.length || 1);
+        if (rubricItems.length !== safeConfiguredCount) {
+            console.warn('[RubricModal] Generated rubric count differs from configured count', {
+                selectedQuestion,
+                rubricItemsLength: rubricItems.length,
+                configuredCount: safeConfiguredCount,
+            });
+        }
+    }, [rubricItems.length, numRubricItems, showRubricEditor, selectedQuestion]);
 
     const handleDeleteRubricItem = (index) => {
         const item = rubricItems[index];
@@ -717,7 +907,11 @@ const RubricModal = ({
 
     const confirmDeleteRubricItem = () => {
         if (deleteConfirmation.index !== null) {
-            setRubricItems(items => items.filter((_, i) => i !== deleteConfirmation.index));
+            setRubricItems((items) => {
+                const nextItems = items.filter((_, i) => i !== deleteConfirmation.index);
+                setNumRubricItems(nextItems.length || 1);
+                return nextItems;
+            });
             toast.success('Rubric item deleted successfully');
         }
         setDeleteConfirmation({ show: false, index: null, itemDescription: '' });
@@ -730,24 +924,21 @@ const RubricModal = ({
     const handleAddRubricItem = () => {
         const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
         const maxMarks = Math.abs(currentQuestion?.max_marks || 10);
-        const remainingItems = 4 - rubricItems.length;
+        const targetCount = Math.max(rubricItems.length + 1, 1);
+        const remainingItems = targetCount - rubricItems.length;
         const currentTotalMarks = rubricItems.reduce((sum, item) => sum + (parseFloat(item.max_marks) || 0), 0);
         
-        const suggestedMarks = remainingItems > 0 ? parseFloat(((maxMarks - currentTotalMarks) / remainingItems).toFixed(2)) : parseFloat((maxMarks / 4).toFixed(2));
+        const suggestedMarks = remainingItems > 0 ? parseFloat(((maxMarks - currentTotalMarks) / remainingItems).toFixed(2)) : parseFloat((maxMarks / targetCount).toFixed(2));
 
         setRubricItems(prev => [
             ...prev,
-            {
-                description: '',
-                max_marks: Math.max(0.01, suggestedMarks || parseFloat((maxMarks / 4).toFixed(2))),
-                score_options: [],
-                reasoning: '',
-                grading_guidelines: ''
-            }
+            buildRubricItemShell(Math.max(0.01, suggestedMarks || parseFloat((maxMarks / targetCount).toFixed(2))))
         ]);
+        setNumRubricItems(targetCount);
 
         if (!showRubricEditor) {
             setShowRubricEditor(true);
+            setShowRubricSettings(true);
         }
     };
 
@@ -811,17 +1002,11 @@ const RubricModal = ({
     const handleEditRubric = (questionNumber) => {
         const questionData = questions.find(q => q.question_number === questionNumber);
         if (questionData) {
-            setSelectedQuestion(questionNumber);
-            
-            if (questionData.rubric && questionData.rubric.rubric_items) {
-                setRubricItems(questionData.rubric.rubric_items || []);
-                setFeedback(questionData.rubric.problem_feedback || '');
-            } else {
-                setRubricItems(questionData.rubric_items || []);
-                setFeedback(questionData.problem_feedback || '');
-            }
-            
+            handleSelectQuestion(questionNumber);
+            setRubricItems(getQuestionRubricItems(questionData));
+            setFeedback(getQuestionFeedback(questionData));
             setShowRubricEditor(true);
+            setShowRubricSettings(true);
         }
     };
 
@@ -846,13 +1031,18 @@ const RubricModal = ({
         try {
             const promises = questionsWithoutRubrics.map((question, index) => 
                 fetch(
-                    `${API_BASE_URL}${apiPrefix}/${examId}/questions/${question.question_number}/rubric`,
+                    `${API_BASE_URL}${apiPrefix}/${examId}/questions/${question.question_number}/rubric-settings`,
                     {
-                        method: 'GET',
+                        method: 'PUT',
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
                             'Content-Type': 'application/json'
-                        }
+                        },
+                        body: JSON.stringify({
+                            num_rubric_items: clampRubricCount(question?.num_rubric_items, 1),
+                            professor_instructions: question?.professor_instructions || '',
+                            regenerate_rubric: true,
+                        })
                     }
                 )
                 .then(async response => {
@@ -900,27 +1090,25 @@ const RubricModal = ({
             let successCount = 0;
             let failCount = 0;
             
-            const updatedQuestions = [...questions];
-            
             for (const result of results) {
                 if (result.success) {
                     successCount++;
-                    
-                    const questionIndex = updatedQuestions.findIndex(q => q.question_number === result.questionNumber);
-                    if (questionIndex !== -1) {
-                        updatedQuestions[questionIndex].rubric = result.data;
-                        updatedQuestions[questionIndex].rubric_items = result.data.rubric_items;
-                        updatedQuestions[questionIndex].problem_feedback = result.data.problem_feedback;
-                    }
+                    syncQuestionState(result.questionNumber, {
+                        rubric_items: result.data?.rubric_items || [],
+                        problem_feedback: result.data?.problem_feedback || '',
+                        num_rubric_items: result.data?.num_rubric_items,
+                        professor_instructions: result.data?.professor_instructions,
+                    });
                 } else {
                     failCount++;
                     
                     const fallbackRubric = createFallbackRubric(result.questionNumber);
-                    
-                    const questionIndex = updatedQuestions.findIndex(q => q.question_number === result.questionNumber);
-                    if (questionIndex !== -1 && fallbackRubric) {
-                        updatedQuestions[questionIndex].rubric_items = fallbackRubric.rubricItems;
-                        updatedQuestions[questionIndex].problem_feedback = fallbackRubric.feedback;
+                    if (fallbackRubric) {
+                        syncQuestionState(result.questionNumber, {
+                            rubric_items: fallbackRubric.rubricItems,
+                            problem_feedback: fallbackRubric.feedback,
+                            num_rubric_items: fallbackRubric.rubricItems.length,
+                        });
                     }
                 }
             }
@@ -956,13 +1144,8 @@ const RubricModal = ({
             if (questionsWithoutRubrics.length > 0) {
                 const firstQuestion = questionsWithoutRubrics[0].question_number;
                 setSelectedQuestion(firstQuestion);
-                
-                const selectedQuestionData = updatedQuestions.find(q => q.question_number === firstQuestion);
-                if (selectedQuestionData) {
-                    setRubricItems(selectedQuestionData.rubric_items || []);
-                    setFeedback(selectedQuestionData.problem_feedback || '');
-                    setShowRubricEditor(true);
-                }
+                setShowRubricEditor(true);
+                setShowRubricSettings(true);
             }
             
         } catch (err) {
@@ -982,33 +1165,20 @@ const RubricModal = ({
         const loadingToast = toast.loading('Generating smart rubric...');
 
         try {
-            const hasExisting = hasRubric(questionNumber);
             const response = await fetch(
-                hasExisting
-                    ? `${API_BASE_URL}${apiPrefix}/${examId}/questions/${questionNumber}/rubric-settings`
-                    : `${API_BASE_URL}${apiPrefix}/${examId}/questions/${questionNumber}/rubric`,
-                hasExisting
-                    ? {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            num_rubric_items: numRubricItems,
-                            // IMPORTANT: send empty string to CLEAR instructions server-side.
-                            // Sending undefined would skip updating and the old value would persist.
-                            professor_instructions: (profInstructions || '').trim(),
-                            regenerate_rubric: true
-                        })
-                    }
-                    : {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
+                `${API_BASE_URL}${apiPrefix}/${examId}/questions/${questionNumber}/rubric-settings`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        num_rubric_items: numRubricItems,
+                        professor_instructions: (profInstructions || '').trim(),
+                        regenerate_rubric: true
+                    })
+                }
             );
 
             await new Promise(resolve => setTimeout(resolve, 3000));
@@ -1028,6 +1198,7 @@ const RubricModal = ({
                 setRubricItems(rubricPayload?.rubric_items || []);
                 setFeedback(rubricPayload?.problem_feedback || '');
                 setShowRubricEditor(true);
+                setShowRubricSettings(true);
                 if (data?.data?.num_rubric_items) {
                     setNumRubricItems(data.data.num_rubric_items);
                 }
@@ -1050,6 +1221,18 @@ const RubricModal = ({
                                 : (profInstructions || '').trim(),
                     },
                 }));
+                syncQuestionState(questionNumber, {
+                    rubric_items: rubricPayload?.rubric_items || [],
+                    problem_feedback: rubricPayload?.problem_feedback || '',
+                    num_rubric_items:
+                        typeof data?.data?.num_rubric_items === 'number'
+                            ? data.data.num_rubric_items
+                            : numRubricItems,
+                    professor_instructions:
+                        typeof data?.data?.professor_instructions === 'string'
+                            ? data.data.professor_instructions
+                            : (profInstructions || '').trim(),
+                });
 
                 toast.success('Rubric generated successfully!', { id: loadingToast });
             } else {
@@ -1072,7 +1255,7 @@ const RubricModal = ({
 
         const maxMarks = Math.abs(questionData.max_marks || 10);
         
-        const n = 3;
+        const n = clampRubricCount(numRubricItems, 3);
         const step = maxMarks <= 5 ? 0.5 : (Number.isInteger(maxMarks) ? 1 : 0.5);
         const totalUnits = Math.round(maxMarks / step);
         const base = Math.floor(totalUnits / n);
@@ -1123,6 +1306,13 @@ const RubricModal = ({
             setRubricItems(fallbackRubric.rubricItems);
             setFeedback(fallbackRubric.feedback);
             setShowRubricEditor(true);
+            setShowRubricSettings(true);
+            setNumRubricItems(fallbackRubric.rubricItems.length);
+            syncQuestionState(questionNumber, {
+                rubric_items: fallbackRubric.rubricItems,
+                problem_feedback: fallbackRubric.feedback,
+                num_rubric_items: fallbackRubric.rubricItems.length,
+            });
         } catch (err) {
             setError('Failed to generate rubric. Please create a rubric manually using the "Add Item" button.');
             toast.error('Failed to generate rubric. Please create a rubric manually.');
@@ -1138,7 +1328,7 @@ const RubricModal = ({
         }
 
         setIsRegenerating(true);
-        const loadingToast = toast.loading(regenerate ? 'Regenerating rubric with new settings...' : 'Updating rubric settings...');
+        const loadingToast = toast.loading(regenerate ? 'Generating rubric...' : 'Updating rubric settings...');
 
         try {
             const response = await fetch(
@@ -1186,8 +1376,18 @@ const RubricModal = ({
                     setRubricItems(data.data.rubric.rubric_items || []);
                     setFeedback(data.data.rubric.problem_feedback || '');
                     setShowRubricEditor(true);
+                    setShowRubricSettings(true);
                 }
-                toast.success(regenerate ? 'Rubric regenerated successfully!' : 'Settings updated successfully!', { id: loadingToast });
+                syncQuestionState(selectedQuestion, {
+                    rubric_items: data?.data?.rubric?.rubric_items,
+                    problem_feedback: data?.data?.rubric?.problem_feedback,
+                    num_rubric_items: data?.data?.num_rubric_items ?? numRubricItems,
+                    professor_instructions:
+                        typeof data?.data?.professor_instructions === 'string'
+                            ? data.data.professor_instructions
+                            : (profInstructions || '').trim(),
+                });
+                toast.success(regenerate ? 'Rubric generated successfully!' : 'Settings updated successfully!', { id: loadingToast });
             } else {
                 throw new Error(data.message || 'Failed to update settings');
             }
@@ -1240,18 +1440,12 @@ const RubricModal = ({
 
             const data = await response.json();
             if (data.code === 200) {
-                
-                // Keep the mutated array up to date locally so we don't lose the save across switches
-                const questionIndex = questions.findIndex(q => q.question_number === selectedQuestion);
-                if (questionIndex !== -1) {
-                    questions[questionIndex].rubric_items = normalizedItems;
-                    questions[questionIndex].problem_feedback = feedback;
-                    if (!questions[questionIndex].rubric) {
-                        questions[questionIndex].rubric = {};
-                    }
-                    questions[questionIndex].rubric.rubric_items = normalizedItems;
-                    questions[questionIndex].rubric.problem_feedback = feedback;
-                }
+                syncQuestionState(selectedQuestion, {
+                    rubric_items: normalizedItems,
+                    problem_feedback: feedback,
+                    num_rubric_items: normalizedItems.length,
+                    professor_instructions: profInstructions,
+                });
 
                 await onSave(data.data);
                 toast.success('Question rubric saved!', { id: loadingToast });
@@ -1281,6 +1475,7 @@ const RubricModal = ({
 
         try {
             // Include latest current edits
+            persistSelectedQuestionDraft();
             const currentNormalizedItems = normalizeRubricItemsForSave();
 
             const promises = questions.map(q => {
@@ -1560,7 +1755,7 @@ const RubricModal = ({
                                                     key={question.question_number}
                                                     question={question}
                                                     isSelected={selectedQuestion === question.question_number}
-                                                    onSelect={() => setSelectedQuestion(question.question_number)}
+                                                    onSelect={() => handleSelectQuestion(question.question_number)}
                                                     onGenerate={(e) => generateRubric(question.question_number, e)}
                                                     onEditRubric={handleEditRubric}
                                                     showGenerateButton={selectedQuestion === question.question_number}
@@ -1631,17 +1826,20 @@ const RubricModal = ({
                                                                     </label>
                                                                     <input
                                                                         type="number"
-                                                                        min="2"
+                                                                        min="1"
                                                                         max="10"
                                                                         value={numRubricItems}
                                                                         onChange={(e) => {
-                                                                            const value = parseInt(e.target.value) || 3;
-                                                                            const clampedValue = Math.min(Math.max(value, 2), 10);
+                                                                            const clampedValue = clampRubricCount(e.target.value, 1);
                                                                             setNumRubricItems(clampedValue);
+                                                                            syncQuestionState(selectedQuestion, {
+                                                                                num_rubric_items: clampedValue,
+                                                                                professor_instructions: profInstructions,
+                                                                            });
                                                                         }}
                                                                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-200"
                                                                     />
-                                                                    <p className="text-xs text-gray-500">Choose between 2-10 rubric items (default: 3)</p>
+                                                                    <p className="text-xs text-gray-500">Choose between 1-10 rubric items. These settings are used directly when you generate the rubric.</p>
                                                                 </div>
 
                                                                 <div className="space-y-2 md:col-span-2">
@@ -1666,17 +1864,6 @@ const RubricModal = ({
                                                                 <motion.button
                                                                     whileHover={{ scale: 1.05 }}
                                                                     whileTap={{ scale: 0.95 }}
-                                                                    onClick={() => handleUpdateRubricSettings(false)}
-                                                                    disabled={isRegenerating}
-                                                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                >
-                                                                    <Save className="w-4 h-4" />
-                                                                    Update Settings
-                                                                </motion.button>
-
-                                                                <motion.button
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    whileTap={{ scale: 0.95 }}
                                                                     onClick={() => handleUpdateRubricSettings(true)}
                                                                     disabled={isRegenerating}
                                                                     className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-xl hover:shadow-md transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1688,12 +1875,12 @@ const RubricModal = ({
                                                                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                                                 className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
                                                                             />
-                                                                            Regenerating...
+                                                                            Generating...
                                                                         </>
                                                                     ) : (
                                                                         <>
                                                                             <Sparkles className="w-4 h-4" />
-                                                                            Regenerate with New Settings
+                                                                            Generate Rubric
                                                                         </>
                                                                     )}
                                                                 </motion.button>

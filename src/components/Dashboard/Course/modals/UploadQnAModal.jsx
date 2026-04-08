@@ -5,12 +5,13 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import toast from 'react-hot-toast';
 import { 
   X, Plus, Upload, Trash2, 
   FileText, ArrowUp, ArrowDown,
   CheckCircle, Maximize, Minimize,
   File, FilePlus, Upload as UploadIcon,
-  AlertCircle, Loader2
+  AlertCircle, Loader2, Download
 } from 'lucide-react';
 import {
   DndContext,
@@ -197,7 +198,7 @@ const DragHandleIcon = () => (
 );
 
 // ── Sortable Question Item ───────────────────────────────────
-const SortableQuestionItem = ({ question, index, isSelected, onSelect }) => {
+const SortableQuestionItem = ({ question, index, isSelected, onSelect, onDelete, isDeleting = false }) => {
   const {
     attributes,
     listeners,
@@ -211,9 +212,12 @@ const SortableQuestionItem = ({ question, index, isSelected, onSelect }) => {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.4 : (isDeleting ? 0 : 1),
     zIndex: isDragging ? 50 : 'auto',
     position: 'relative',
+    maxHeight: isDeleting ? '0px' : '96px',
+    marginBottom: isDeleting ? '0px' : undefined,
+    overflow: 'hidden',
   };
 
   return (
@@ -221,9 +225,10 @@ const SortableQuestionItem = ({ question, index, isSelected, onSelect }) => {
       <button
         type="button"
         onClick={() => onSelect(index)}
-        className={`w-full text-left rounded-xl border transition-colors px-3 py-3 flex items-start gap-2
+        className={`group w-full text-left rounded-xl border transition-all duration-200 px-3 py-3 flex items-start gap-2
           ${isSelected ? 'border-accent bg-accent/10' : 'border-gray-200 hover:bg-gray-50'}
-          ${isDragging ? 'shadow-lg ring-2 ring-accent/30' : ''}`}
+          ${isDragging ? 'shadow-lg ring-2 ring-accent/30' : ''}
+          ${isDeleting ? 'translate-y-[-8px] scale-[0.99]' : ''}`}
       >
         {/* Question number badge */}
         <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0
@@ -244,6 +249,23 @@ const SortableQuestionItem = ({ question, index, isSelected, onSelect }) => {
             {question.marks ? `${question.marks} marks` : 'Marks not set'}
           </p>
         </div>
+
+        <button
+          type="button"
+          title="Delete Question"
+          aria-label="Delete Question"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(question.id);
+          }}
+          className={`mt-1 flex-shrink-0 rounded-md p-1.5 transition-all duration-200 ${
+            isDeleting
+              ? 'pointer-events-none text-red-500 opacity-100'
+              : 'text-gray-400 opacity-70 hover:scale-105 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100'
+          }`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
 
         {/* Drag Handle */}
         <div
@@ -380,6 +402,8 @@ const UploadQnAModal = ({
   const [selectedImportQuestionId, setSelectedImportQuestionId] = useState('');
   const [flattenedOptions, setFlattenedOptions] = useState([]);
   const [isParsingPaper, setIsParsingPaper] = useState(false);
+  const [isImportingAllQuestions, setIsImportingAllQuestions] = useState(false);
+  const [deletingQuestionIds, setDeletingQuestionIds] = useState([]);
 
   const [selectedIndex, setSelectedIndexRaw] = useState(0);
   const [initialized, setInitialized] = useState(false);
@@ -390,6 +414,7 @@ const UploadQnAModal = ({
   const questionRefs = useRef({});
   const dropZoneRefs = useRef({});
   const modalRootRef = useRef(null);
+  const deleteToastStateRef = useRef(new Map());
   const draftStorageKey = React.useMemo(
     () => buildDraftStorageKey(examId, examType),
     [examId, examType]
@@ -500,19 +525,73 @@ const UploadQnAModal = ({
         rubrics: q.rubrics || [],
       };
     });
-  };  const handlePaperChange = async (e) => {
-    const paperId = e.target.value;
-    setSelectedPaperId(paperId);
-    setFlattenedOptions([]);
-    setSelectedImportQuestionId('');
-    if (!paperId) return;
+  };
+
+  const createQuestionFromImportedOption = (option, index) => {
+    let compositeBody = option.questionBody
+      ? `<p>${option.questionBody}</p>`
+      : '';
+
+    if (option.rubrics && option.rubrics.length > 0) {
+      const buildRubricHtml = (rubs, depth = 0) => {
+        let html = '';
+        rubs.forEach(r => {
+          const indent = depth > 0 ? `margin-left:${depth * 20}px;` : '';
+          const label = r.id || '';
+          const desc = r.description || '';
+          const marks = r.marks ? ` [${r.marks} marks]` : '';
+          html += `<p style="${indent}"><strong>(${label})</strong> ${desc}${marks}</p>`;
+          if (r.subRubrics && r.subRubrics.length > 0) {
+            html += buildRubricHtml(r.subRubrics, depth + 1);
+          }
+        });
+        return html;
+      };
+      compositeBody += buildRubricHtml(option.rubrics);
+    }
+
+    return {
+      ...createDefaultQuestion(),
+      id: createQuestionId(),
+      questionType: 'text',
+      answerType: option.answerBody ? 'text' : 'image',
+      questionBody: compositeBody,
+      answerBody: option.answerBody ? `<p>${option.answerBody}</p>` : '',
+      marks: option.marks ? String(option.marks) : '',
+      num_rubric_items: option.rubricsCount || 1,
+      questionNumber: index + 1,
+      isExisting: false,
+    };
+  };
+
+  const hasMeaningfulQuestionData = (question) => {
+    if (!question) return false;
+    return Boolean(
+      (question.question && question.question.size) ||
+      (question.answer && question.answer.size) ||
+      question.questionUrl ||
+      question.answerUrl ||
+      !isRichTextEmpty(question.questionBody || '') ||
+      !isRichTextEmpty(question.answerBody || '') ||
+      String(question.marks || '').trim() ||
+      String(question.questionText || '').trim() ||
+      String(question.answerText || '').trim()
+    );
+  };
+
+  const loadPaperOptions = async (paperId) => {
+    if (!paperId) {
+      setFlattenedOptions([]);
+      setSelectedImportQuestionId('');
+      return [];
+    }
 
     try {
       setIsParsingPaper(true);
       const paper = masterPapers.find(p => String(p.id) === String(paperId));
       let parsedOutput;
 
-      if (!paper.parse_status || paper.parse_status !== 'completed') {
+      if (!paper?.parse_status || paper.parse_status !== 'completed') {
         const result = await parseExamDocument(paperId, { force_refresh: false });
         parsedOutput = result.parsed_output;
       } else {
@@ -520,27 +599,41 @@ const UploadQnAModal = ({
         parsedOutput = fullPaper.parsed_output;
       }
 
-      if (parsedOutput) {
-        // parsed_output arrives as a JSON string from the backend — parse it into an object
-        let parsedData = parsedOutput;
-        if (typeof parsedData === 'string') {
-          try {
-            parsedData = JSON.parse(parsedData);
-          } catch (jsonErr) {
-            console.error('Failed to parse parsed_output JSON string:', jsonErr);
-            setError('Document parsing data is corrupted. Please re-parse.');
-            return;
-          }
-        }
-        console.log('Parsed exam data for dropdown:', parsedData);
-        const options = flattenParsedExam(parsedData);
-        console.log('Flattened dropdown options:', options);
-        setFlattenedOptions(options);
+      if (!parsedOutput) {
+        setFlattenedOptions([]);
+        return [];
       }
-    } catch (err) {
-      setError(`Failed to process master exam: ${err.message}`);
+
+      let parsedData = parsedOutput;
+      if (typeof parsedData === 'string') {
+        try {
+          parsedData = JSON.parse(parsedData);
+        } catch (jsonErr) {
+          console.error('Failed to parse parsed_output JSON string:', jsonErr);
+          throw new Error('Document parsing data is corrupted. Please re-parse.');
+        }
+      }
+
+      const options = flattenParsedExam(parsedData);
+      setFlattenedOptions(options);
+      return options;
     } finally {
       setIsParsingPaper(false);
+    }
+  };
+
+  const handlePaperChange = async (e) => {
+    const paperId = e.target.value;
+    setSelectedPaperId(paperId);
+    setFlattenedOptions([]);
+    setSelectedImportQuestionId('');
+    if (!paperId) return;
+
+    try {
+      await loadPaperOptions(paperId);
+    } catch (err) {
+      setError(`Failed to process document: ${err.message}`);
+      toast.error('Failed to load questions from the selected document');
     }
   };
 
@@ -582,6 +675,42 @@ const UploadQnAModal = ({
       marks: selectedOption.marks ? String(selectedOption.marks) : String(q.marks || ''),
       num_rubric_items: selectedOption.rubricsCount || q.num_rubric_items,
     }));
+  };
+
+  const handleImportAllQuestions = async () => {
+    if (!selectedPaperId) {
+      toast.error('Please select a document first');
+      return;
+    }
+
+    try {
+      setIsImportingAllQuestions(true);
+      setError('');
+
+      const options = flattenedOptions.length > 0 ? flattenedOptions : await loadPaperOptions(selectedPaperId);
+      if (!options.length) {
+        throw new Error('No questions found in the selected document');
+      }
+
+      const importedQuestions = options.map((option, index) => createQuestionFromImportedOption(option, index));
+      setQuestionsDraft(importedQuestions);
+      setSelectedImportQuestionId('');
+      setSelectedIndex(0);
+
+      requestAnimationFrame(() => {
+        if (importedQuestions[0]?.id) {
+          scrollToQuestion(importedQuestions[0].id);
+        }
+      });
+
+      toast.success('All questions imported successfully');
+    } catch (err) {
+      console.error('Failed to import all questions:', err);
+      setError(err.message || 'Failed to import questions. Try again.');
+      toast.error('Failed to import questions. Try again.');
+    } finally {
+      setIsImportingAllQuestions(false);
+    }
   };
 
   const setQuestionsDraft = (updater) => {
@@ -1032,16 +1161,88 @@ const UploadQnAModal = ({
   };
 
   const removeQuestion = (id) => {
-    if (questions.length > 1) {
-      const indexToRemove = questions.findIndex(q => q.id === id);
-      const newQuestions = questions.filter(q => q.id !== id);
-      
-      setQuestionsDraft(newQuestions);
-      
-      if (selectedIndex >= indexToRemove && selectedIndex > 0) {
-        setSelectedIndex(Math.max(0, selectedIndex - 1));
-      }
-    }
+    if (deletingQuestionIds.includes(id)) return;
+
+    const indexToRemove = questions.findIndex((q) => q.id === id);
+    if (indexToRemove === -1) return;
+
+    const deletedQuestion = questions[indexToRemove];
+    const selectedQuestionId = questions[selectedIndex]?.id;
+    const previousSelectedIndex = selectedIndex;
+
+    setDeletingQuestionIds((prev) => [...prev, id]);
+
+    window.setTimeout(() => {
+      setQuestionsDraft((prevQuestions) => {
+        const stillExists = prevQuestions.some((question) => question.id === id);
+        if (!stillExists) {
+          return prevQuestions;
+        }
+
+        const remainingQuestions = prevQuestions.filter((question) => question.id !== id);
+
+        if (remainingQuestions.length === 0) {
+          const fallbackQuestion = createDefaultQuestion();
+          setSelectedIndexRaw(0);
+          return [fallbackQuestion];
+        }
+
+        if (selectedQuestionId === id) {
+          const nextIndex = Math.min(indexToRemove, remainingQuestions.length - 1);
+          setSelectedIndexRaw(nextIndex);
+        } else if (previousSelectedIndex > indexToRemove) {
+          setSelectedIndexRaw(Math.max(0, previousSelectedIndex - 1));
+        }
+
+        return remainingQuestions;
+      });
+
+      setDeletingQuestionIds((prev) => prev.filter((questionId) => questionId !== id));
+
+      const deletionRecord = {
+        question: deletedQuestion,
+        index: indexToRemove,
+      };
+
+      const toastId = toast.custom(
+        (toastInstance) => (
+          <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg">
+            <span className="text-sm font-medium text-gray-800">Question deleted</span>
+            <button
+              type="button"
+              onClick={() => {
+                const activeRecord = deleteToastStateRef.current.get(toastId);
+                if (!activeRecord) return;
+
+                setQuestionsDraft((prevQuestions) => {
+                  const restoredQuestions = [...prevQuestions];
+                  const insertIndex = Math.min(activeRecord.index, restoredQuestions.length);
+                  restoredQuestions.splice(insertIndex, 0, activeRecord.question);
+                  setSelectedIndexRaw(insertIndex);
+                  return restoredQuestions;
+                });
+
+                requestAnimationFrame(() => {
+                  scrollToQuestion(activeRecord.question.id);
+                });
+
+                deleteToastStateRef.current.delete(toastId);
+                toast.dismiss(toastId);
+              }}
+              className="rounded-lg px-2.5 py-1 text-sm font-semibold text-accent transition hover:bg-accent/10"
+            >
+              Undo
+            </button>
+          </div>
+        ),
+        { duration: 5000 }
+      );
+
+      deleteToastStateRef.current.set(toastId, deletionRecord);
+      window.setTimeout(() => {
+        deleteToastStateRef.current.delete(toastId);
+      }, 5200);
+    }, 180);
   };
 
   const navigateQuestion = (direction) => {
@@ -1634,6 +1835,23 @@ const UploadQnAModal = ({
                       <option key={o.id} value={o.id}>{o.label}</option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    onClick={handleImportAllQuestions}
+                    disabled={!selectedPaperId || isParsingPaper || isImportingAllQuestions}
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
+                      !selectedPaperId || isParsingPaper || isImportingAllQuestions
+                        ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                        : 'border-accent/25 bg-accent/5 text-accent hover:bg-accent/10 hover:border-accent/35'
+                    }`}
+                  >
+                    {isImportingAllQuestions ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    <span>{isImportingAllQuestions ? 'Importing...' : 'Import All Questions'}</span>
+                  </button>
                 </div>
 
                 <button
@@ -1740,6 +1958,8 @@ const UploadQnAModal = ({
                           index={idx}
                           isSelected={idx === selectedIndex}
                           onSelect={setSelectedIndex}
+                          onDelete={removeQuestion}
+                          isDeleting={deletingQuestionIds.includes(q.id)}
                         />
                       ))}
                     </div>
