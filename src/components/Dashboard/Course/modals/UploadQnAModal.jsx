@@ -2032,29 +2032,27 @@ const UploadQnAModal = ({
                     )}
                     <span>{isImportingAllQuestions ? 'Importing...' : 'Import All Questions'}</span>
                   </button>
-                  {!isAnyConductMode && (
-                    <button
-                      type="button"
-                      onClick={handleGenerateAllAnswers}
-                      disabled={isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId}
-                      className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                        isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId
-                          ? 'cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400'
-                          : 'border border-transparent bg-gradient-to-r from-accent to-teal-500 text-white shadow-sm hover:from-accent/95 hover:to-teal-500/95'
-                      }`}
-                    >
-                      {isGeneratingAllAnswers ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4" />
-                      )}
-                      <span>
-                        {isGeneratingAllAnswers
-                          ? `Generating ${bulkAnswerProgress.current}/${bulkAnswerProgress.total}...`
-                          : 'Generate Answers'}
-                      </span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleGenerateAllAnswers}
+                    disabled={isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                      isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId
+                        ? 'cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400'
+                        : 'border border-transparent bg-gradient-to-r from-accent to-teal-500 text-white shadow-sm hover:from-accent/95 hover:to-teal-500/95'
+                    }`}
+                  >
+                    {isGeneratingAllAnswers ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    <span>
+                      {isGeneratingAllAnswers
+                        ? `Generating ${bulkAnswerProgress.current}/${bulkAnswerProgress.total}...`
+                        : 'Generate All Answers'}
+                    </span>
+                  </button>
                 </div>
 
                 <button
