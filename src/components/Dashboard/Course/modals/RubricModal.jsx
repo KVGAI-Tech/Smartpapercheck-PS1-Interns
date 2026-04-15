@@ -16,6 +16,84 @@ import { toast } from 'react-hot-toast';
 import { API_BASE_URL } from '../../../../BaseURL';
 
 /**
+ * Strip HTML tags and decode common entities to produce clean plain text.
+ * Works without a DOM parser so it is safe to call at module level.
+ */
+function htmlToPlainText(html) {
+    if (!html || typeof html !== 'string') return '';
+    return html
+        // Replace block-level tags with newlines so sub-parts on separate lines stay separate
+        .replace(/<\/?(p|div|br|li|tr|h[1-6])[^>]*>/gi, '\n')
+        // Strip all remaining tags
+        .replace(/<[^>]+>/g, '')
+        // Decode common HTML entities
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/&[a-z]+;/gi, ' ')
+        // Collapse runs of whitespace / blank lines
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+/**
+ * Parse structured sub-parts from plain-text question content.
+ *
+ * Detects patterns: (a), (b), (c) — the most common academic format.
+ * Returns an array of { label, text, marks } objects.
+ * marks is extracted from patterns like "[2 marks]", "(2 marks)", "2 marks" near the end of the part.
+ * Returns [] if no sub-parts are found.
+ */
+function parseQuestionSubparts(plainText) {
+    if (!plainText || typeof plainText !== 'string') return [];
+
+    // Match (a), (b) ... (z) as sub-part delimiters
+    const delimiterRe = /\(([a-zA-Z])\)/g;
+    const positions = [];
+    let m;
+    while ((m = delimiterRe.exec(plainText)) !== null) {
+        positions.push({ label: m[1].toLowerCase(), index: m.index, end: m.index + m[0].length });
+    }
+
+    if (positions.length < 2) return [];
+
+    const marksRe = /[\[(]?\s*(\d+(?:\.\d+)?)\s*marks?\s*[\])]?/i;
+
+    const subparts = positions.map((pos, i) => {
+        const start = pos.end;
+        const end = i + 1 < positions.length ? positions[i + 1].index : plainText.length;
+        const rawText = plainText.slice(start, end).trim();
+
+        // Extract marks if present
+        const marksMatch = rawText.match(marksRe);
+        const marks = marksMatch ? parseFloat(marksMatch[1]) : null;
+
+        // Clean text: remove the marks annotation itself
+        const text = rawText.replace(marksRe, '').trim();
+
+        return { label: `(${pos.label})`, text, marks };
+    });
+
+    return subparts;
+}
+
+/**
+ * Detect the number of sub-parts in a question text.
+ * Strips HTML first, then counts (a)/(b)/(c) style delimiters.
+ * Returns the detected count, or 0 if no sub-parts found.
+ */
+function detectSubpartCount(questionText, questionBody) {
+    const plain = htmlToPlainText(`${questionText || ''}\n${questionBody || ''}`);
+    if (!plain) return 0;
+    const subparts = parseQuestionSubparts(plain);
+    return subparts.length;
+}
+
+/**
  * Redistribute rubric item marks so they sum exactly to totalMarks.
  * Scales proportionally when the AI returns wrong totals (e.g. 16.01 vs 10),
  * then assigns the remainder to the last item to absorb rounding drift.
@@ -866,12 +944,30 @@ const RubricModal = ({
             ?? profInstructions
             ?? '';
 
+        // Strip HTML from question_body so the backend receives clean plain text.
+        // Raw HTML confuses both the regex sub-part detector and the AI prompt.
+        const cleanBody = htmlToPlainText(question.question_body || '');
+        const cleanText = htmlToPlainText(question.question_text || '');
+
+        // Parse structured sub-parts for the subpart-driven rubric path.
+        const subparts = parseQuestionSubparts(`${cleanText}\n${cleanBody}`);
+        if (subparts.length > 0) {
+            console.log('[RubricModal] Parsed Subparts:', subparts);
+        }
+
         const payload = {
-            question_text: question.question_text || '',
-            question_body: question.question_body || '',
+            question_text: cleanText,
+            question_body: cleanBody,
             marks: questionMarks > 0 ? questionMarks : 10,
             num_rubric_items: itemCount > 0 ? itemCount : 3,
             professor_instructions: instructions,
+            // mode tells the backend which generation path to use:
+            // "subpart" → one rubric per detected sub-part (structured)
+            // "context" → AI decides structure from question content
+            mode: subparts.length > 0 ? 'subpart' : 'context',
+            // Send structured subparts when detected — backend uses these to
+            // generate exactly one rubric per subpart with correct marks.
+            ...(subparts.length > 0 && { subparts }),
         };
 
         console.log('[RubricModal] Rubric payload:', payload);
@@ -1306,6 +1402,8 @@ const RubricModal = ({
                         reasoning: r.reasoning,
                         grading_guidelines: r.grading_guidelines ?? r.guidelines ?? '',
                     }));
+                    // Persist the actual count per question so settings stay in sync
+                    setQuestionSettings(qNum, { num_rubric_items: res.rubrics.length });
                     setGeneratingStatus(prev => ({ ...prev, [qNum]: 'done' }));
                 } else {
                     setGeneratingStatus(prev => ({ ...prev, [qNum]: 'error' }));
@@ -1318,6 +1416,9 @@ const RubricModal = ({
             if (firstId) {
                 setSelectedQuestion(firstId);
                 setShowRubricEditor(true);
+                // Sync count input to the first question's actual rubric count
+                const firstCount = updatedRubrics[firstId]?.length;
+                if (firstCount > 0) setNumRubricItems(firstCount);
             }
             
             toast.success('All rubrics generated successfully!', { id: loadingToast });
@@ -1353,6 +1454,10 @@ const RubricModal = ({
                     ...prev,
                     [questionNumber]: items
                 }));
+
+                // Sync the count input to the actual number of rubrics returned
+                setNumRubricItems(items.length);
+                setQuestionSettings(questionNumber, { num_rubric_items: items.length });
 
                 setSelectedQuestion(questionNumber);
                 setShowRubricEditor(true);
@@ -1886,12 +1991,18 @@ const RubricModal = ({
                                                                 <div className="space-y-2">
                                                                     <label className="block text-sm font-medium text-gray-700">
                                                                         Number of Rubric Items
+                                                                        {rubricItems.length > 0 && (
+                                                                            <span className="ml-2 text-xs text-accent font-normal">
+                                                                                (auto-set to {rubricItems.length})
+                                                                            </span>
+                                                                        )}
                                                                     </label>
                                                                     <input
                                                                         type="number"
                                                                         min="1"
                                                                         max="10"
                                                                         value={numRubricItems}
+                                                                        disabled={rubricItems.length > 0}
                                                                         onChange={(e) => {
                                                                             const clampedValue = clampRubricCount(e.target.value, 1);
                                                                             setNumRubricItems(clampedValue);
@@ -1899,9 +2010,17 @@ const RubricModal = ({
                                                                                 num_rubric_items: clampedValue,
                                                                             });
                                                                         }}
-                                                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-200"
+                                                                        className={`w-full px-4 py-2.5 border rounded-xl transition-all duration-200 ${
+                                                                            rubricItems.length > 0
+                                                                                ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                                                                : 'border-gray-300 focus:ring-2 focus:ring-accent focus:border-transparent'
+                                                                        }`}
                                                                     />
-                                                                    <p className="text-xs text-gray-500">Choose between 1-10 rubric items. These settings are used directly when you generate the rubric.</p>
+                                                                    <p className="text-xs text-gray-500">
+                                                                        {rubricItems.length > 0
+                                                                            ? 'Count is set by the generated rubric structure.'
+                                                                            : 'Choose between 1-10 rubric items. These settings are used directly when you generate the rubric.'}
+                                                                    </p>
                                                                 </div>
 
                                                                 <div className="space-y-2 md:col-span-2">
