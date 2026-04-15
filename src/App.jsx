@@ -23,11 +23,17 @@ import ProfessorRecheckDetail from "./components/Dashboard/Course/ProfessorReche
 import ProfessorExamEvaluationsPage from "./components/Dashboard/Course/ProfessorExamEvaluationsPage";
 import ProfessorExamEvaluationsDashboardPage from "./components/Dashboard/Course/ProfessorExamEvaluationsDashboardPage";
 import ProfessorConductExamEvaluatePage from "./components/Dashboard/Course/ProfessorConductExamEvaluatePage";
+import ProfessorSubjectiveConductEvaluatePage from "./components/Dashboard/Course/ProfessorSubjectiveConductEvaluatePage";
 import AnswerReviewPage from "./components/Dashboard/Course/AnswerReviewPage";
 import ProfessorNotificationsPage from "./components/Dashboard/ProfessorNotificationsPage";
 import PoliciesPage from "./components/PoliciesPage";
 import DemoPage, { DemoEvaluationPage } from "./components/Demo/DemoPage";
+import SubjectiveConductExamSession from "./components/SubjectiveConductExamSession";
 import { useAuth } from "./components/AuthContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
+
 
 function HomeRoute() {
   const { isAuthenticated, isLoading, userRole } = useAuth();
@@ -90,200 +96,223 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-        {loading && <LoadingIndicator />}
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+          {loading && <LoadingIndicator />}
 
-        <Routes>
-          <Route path="/" element={<HomeRoute />} />
-          <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/about" element={<AboutUsPage />} />
-          <Route path="/policies" element={<PoliciesPage />} />
-          <Route path="/auth" element={<AuthRoute />} />
-          <Route path="/demo" element={<DemoPage />} />
-          <Route path="/demo/evaluations" element={<DemoEvaluationPage />} />
+          <Routes>
+            <Route path="/" element={<HomeRoute />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/about" element={<AboutUsPage />} />
+            <Route path="/policies" element={<PoliciesPage />} />
+            <Route path="/auth" element={<AuthRoute />} />
+            <Route path="/demo" element={<DemoPage />} />
+            <Route path="/demo/evaluations" element={<DemoEvaluationPage />} />
 
-          <Route
-            path="/dashboard"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <Dashboard />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <ProfessorNotificationsPage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/courses"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <Courses />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/courses/archived"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <Courses archivedView />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/master-exams"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <MasterExamsList />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/master-exams/:documentId"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <ExamDocumentEditorPage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/courses/:courseId"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <CourseDetails />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/courses/:courseId/exams/:examId/evaluations"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <ProfessorExamEvaluationsPage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/courses/:courseId/exams/:examId/evaluations/dashboard"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <ProfessorExamEvaluationsDashboardPage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/courses/:courseId/exams/:examId/evaluate"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <ProfessorConductExamEvaluatePage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/courses/:courseId/exams/:examId/review/:studentId"
-            element={
-              <RoleRoute requiredRole="professor">
-                <DashboardLayout>
-                  <AnswerReviewPage />
-                </DashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/student-dashboard"
-            element={
-              <RoleRoute requiredRole="student">
-                <StudentDashboardLayout>
-                  <StudentDashboard />
-                </StudentDashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/student/courses"
-            element={
-              <RoleRoute requiredRole="student">
-                <StudentDashboardLayout>
-                  <Courses />
-                </StudentDashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/student/evaluations"
-            element={
-              <RoleRoute requiredRole="student">
-                <StudentDashboardLayout>
-                  <StudentEvaluations />
-                </StudentDashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/student/evaluations/:courseId"
-            element={
-              <RoleRoute requiredRole="student">
-                <StudentDashboardLayout>
-                  <CourseEvaluations />
-                </StudentDashboardLayout>
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/student/evaluations/:courseId/exam/:id"
-            element={
-              <RoleRoute requiredRole="student">
-                <StudentExamDetails />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/student/history/:courseId/exam/:id"
-            element={
-              <RoleRoute requiredRole="student">
-                <StudentExamDetails isHistory />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/professor/recheck-requests"
-            element={
-              <RoleRoute requiredRole="professor">
-                <ProfessorRecheckDetail />
-              </RoleRoute>
-            }
-          />
+            <Route
+              path="/dashboard"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <Dashboard />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <ProfessorNotificationsPage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <Courses />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses/archived"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <Courses archivedView />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/master-exams"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <MasterExamsList />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/master-exams/:documentId"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <ExamDocumentEditorPage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses/:courseId"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <CourseDetails />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses/:courseId/exams/:examId/evaluations"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <ProfessorExamEvaluationsPage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses/:courseId/exams/:examId/evaluations/dashboard"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <ProfessorExamEvaluationsDashboardPage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses/:courseId/exams/:examId/evaluate"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <ProfessorConductExamEvaluatePage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses/:courseId/exams/:examId/conduct-review"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <ProfessorSubjectiveConductEvaluatePage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/courses/:courseId/exams/:examId/review/:studentId"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <AnswerReviewPage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student-dashboard"
+              element={
+                <RoleRoute requiredRole="student">
+                  <StudentDashboardLayout>
+                    <StudentDashboard />
+                  </StudentDashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student/courses"
+              element={
+                <RoleRoute requiredRole="student">
+                  <StudentDashboardLayout>
+                    <Courses />
+                  </StudentDashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student/evaluations"
+              element={
+                <RoleRoute requiredRole="student">
+                  <StudentDashboardLayout>
+                    <StudentEvaluations />
+                  </StudentDashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student/evaluations/:courseId"
+              element={
+                <RoleRoute requiredRole="student">
+                  <StudentDashboardLayout>
+                    <CourseEvaluations />
+                  </StudentDashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student/evaluations/:courseId/exam/:id"
+              element={
+                <RoleRoute requiredRole="student">
+                  <StudentExamDetails />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student/history/:courseId/exam/:id"
+              element={
+                <RoleRoute requiredRole="student">
+                  <StudentExamDetails isHistory />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student/exams/:examId/conduct"
+              element={
+                <RoleRoute requiredRole="student">
+                  <StudentDashboardLayout>
+                    <SubjectiveConductExamSession />
+                  </StudentDashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/professor/recheck-requests"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <ProfessorRecheckDetail />
+                </RoleRoute>
+              }
+            />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
+
 }
 
 export default App;

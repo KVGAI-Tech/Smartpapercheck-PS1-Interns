@@ -92,6 +92,11 @@ const JobDetailsModal = ({ open, onClose, job, examId, onJobSelect, onRefresh })
 
   const statusConfig = getStatusConfig(currentJob.status);
   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+  const activeIds = Array.isArray(progress.current_enrollment_ids)
+    ? progress.current_enrollment_ids
+    : progress.current_enrollment_id
+      ? [progress.current_enrollment_id]
+      : [];
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
@@ -349,10 +354,14 @@ const JobDetailsModal = ({ open, onClose, job, examId, onJobSelect, onRefresh })
                     className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600"
                   />
                 </div>
-                {isRunning && progress.current_enrollment_id && (
+                {isRunning && activeIds.length > 0 && (
                   <div className="mt-2 text-xs text-slate-600 flex items-center gap-1">
                     <Loader className="w-3 h-3 animate-spin" />
-                    <span>Currently processing student #{progress.current_enrollment_id}</span>
+                    <span>
+                      {activeIds.length === 1
+                        ? `Currently processing student #${activeIds[0]}`
+                        : `Currently processing ${activeIds.length} students`}
+                    </span>
                   </div>
                 )}
               </div>

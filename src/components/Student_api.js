@@ -36,6 +36,31 @@ export const examsApi = {
       throw error;
     }
   },
+
+  getAllExams: async () => {
+    const token = localStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/all-exams`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(
+          await resolveApiErrorMessage(response, 'Unable to load exams. Please try again later.')
+        );
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching all exams:', error);
+      throw error;
+    }
+  },
   
   
   getExamDetails: async (examId, enrollmentId) => {
@@ -112,6 +137,116 @@ export const examsApi = {
       console.error('Error submitting conducted exam:', error);
       throw error;
     }
+  },
+
+  startSubjectiveConductExam: async (examId, sessionId) => {
+    const token = localStorage.getItem('accessToken');
+
+    const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to start conduct exam.')
+      );
+    }
+
+    return response.json();
+  },
+
+  getSubjectiveConductExamSession: async (examId, sessionId) => {
+    const token = localStorage.getItem('accessToken');
+    const url = new URL(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/session`);
+    if (sessionId) {
+      url.searchParams.set('session_id', sessionId);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to load conduct exam session.')
+      );
+    }
+
+    return response.json();
+  },
+
+  saveSubjectiveConductAnswers: async (examId, sessionId, answers) => {
+    const token = localStorage.getItem('accessToken');
+
+    const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({ session_id: sessionId, answers }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to save conduct exam answers.')
+      );
+    }
+
+    return response.json();
+  },
+
+  uploadSubjectiveConductAnswerImage: async (examId, questionId, sessionId, file) => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    formData.append('image_file', file);
+
+    const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/questions/${questionId}/image`, {
+      method: 'POST',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to upload conduct exam answer image.')
+      );
+    }
+
+    return response.json();
+  },
+
+  submitSubjectiveConductExam: async (examId, sessionId) => {
+    const token = localStorage.getItem('accessToken');
+
+    const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to submit conduct exam.')
+      );
+    }
+
+    return response.json();
   },
   
   

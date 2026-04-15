@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
   Users, PlayCircle, X, AlertCircle, CheckCircle, BarChart3,
-  Check, History
+  Check, History, Loader2
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { studentApi } from './studentApi';
 import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
 import UploadAnswersModal from '../modals/UploadAnswersModal';
 import { API_BASE_URL } from '../../../../BaseURL';
+import { getExamVariant, isPortalMcqExam, isSubjectiveConductExam } from '../../../examTypeUtils';
 
 const formatExamDate = (value) => {
   if (!value) return '-';
@@ -68,7 +71,6 @@ const Toast = ({ message, type, show, onClose }) => {
       )}
     </button>
   );
-  
   const StepConnector = ({ isActive, isCompleted }) => (
     <div className="flex-1 px-2 sm:px-6 flex items-center">
       <div className="w-full relative h-2 rounded-full bg-gray-100 overflow-hidden">
@@ -84,6 +86,7 @@ const Toast = ({ message, type, show, onClose }) => {
       </div>
     </div>
   );
+  
   
   const EditExamModal = ({ isOpen, onClose, exam, onSave }) => {
     const [examName, setExamName] = useState('');
@@ -519,7 +522,9 @@ const Toast = ({ message, type, show, onClose }) => {
     onStepChange,
   }) => {
     const [activeStep, setActiveStep] = useState(Math.min(2, initialStep || 0));
-    const isConductExam = exam?.exam_type === 'conduct';
+    const examVariant = getExamVariant(exam);
+    const isPortalExam = examVariant === 'portal_mcq';
+    const isSubjectiveConduct = examVariant === 'conduct';
 
     useEffect(() => {
       setActiveStep(Math.min(2, initialStep || 0));
@@ -529,22 +534,22 @@ const Toast = ({ message, type, show, onClose }) => {
 
     const steps = [
       {
-        label: isConductExam ? 'Build MCQ Questions' : 'Upload Q&A',
-        description: isConductExam ? 'Create portal MCQ questions and options' : 'Upload your question paper',
+        label: isPortalExam ? 'Build MCQ Questions' : isSubjectiveConduct ? 'Build Subjective Questions' : 'Upload Q&A',
+        description: isPortalExam ? 'Create portal MCQ questions and options' : isSubjectiveConduct ? 'Create and edit subjective questions' : 'Upload your question paper',
         icon: Upload,
         action: () => onUploadQnA(exam.id)
       },
       {
-        label: isConductExam ? 'Activation' : 'Generate Rubrics',
-        description: isConductExam ? `Current: ${exam?.is_active ? 'Active' : 'Inactive'}` : 'Create marking criteria',
+        label: isPortalExam ? 'Activation' : 'Generate Rubrics',
+        description: isPortalExam ? `Current: ${exam?.is_active ? 'Active' : 'Inactive'}` : 'Create marking criteria',
         icon: CheckCircle,
-        action: () => (isConductExam ? onToggleExamActive(exam) : onGenerateRubrics(exam.id))
+        action: () => (isPortalExam ? onToggleExamActive(exam) : onGenerateRubrics(exam.id))
       },
       {
-        label: isConductExam ? 'Track Attempts' : 'Upload Answer Sheets',
-        description: isConductExam ? 'Review enrollments and submissions' : 'Upload student answer files',
+        label: isPortalExam ? 'Track Attempts' : isSubjectiveConduct ? 'Review Submissions' : 'Upload Answer Sheets',
+        description: isPortalExam ? 'Review enrollments and submissions' : isSubjectiveConduct ? 'Grade submitted conduct exam answers' : 'Upload student answer files',
         icon: Upload,
-        action: () => (isConductExam ? onReviewPortalAttempts(exam.id) : onUploadAnswers(exam.id))
+        action: () => (isPortalExam ? onReviewPortalAttempts(exam.id) : isSubjectiveConduct ? onStartEvaluation(exam) : onUploadAnswers(exam.id))
       }
     ];
 
@@ -564,10 +569,10 @@ const Toast = ({ message, type, show, onClose }) => {
               <div className="w-1 h-1 rounded-full bg-gray-200" />
               <span className="font-medium">{exam.full_marks || exam.maxMarks || 100} marks</span>
               <div className="w-1 h-1 rounded-full bg-gray-200" />
-              <span className={`font-medium ${isConductExam ? 'text-blue-700' : 'text-accent'}`}>
-                {isConductExam ? 'Portal MCQ' : 'Evaluated'}
+              <span className={`font-medium ${(isPortalExam || isSubjectiveConduct) ? 'text-blue-700' : 'text-accent'}`}>
+                {isPortalExam ? 'Portal MCQ' : isSubjectiveConduct ? 'Conduct Exam' : 'Evaluated'}
               </span>
-              {isConductExam && (
+              {(isPortalExam || isSubjectiveConduct) && (
                 <>
                   <div className="w-1 h-1 rounded-full bg-gray-200" />
                   <span className={`font-medium ${exam?.is_active ? 'text-green-700' : 'text-gray-600'}`}>
@@ -588,7 +593,7 @@ const Toast = ({ message, type, show, onClose }) => {
               <span className="sm:hidden">Enroll</span>
               <span className="hidden sm:inline">Manage Enrollments</span>
             </button>
-            {isConductExam && (
+            {(isPortalExam || isSubjectiveConduct) && (
               <button
                 onClick={() => onStartEvaluation(exam)}
                 className="w-full sm:w-auto px-3 sm:px-4 py-2 text-accent bg-accent/10 hover:bg-accent/15
@@ -598,7 +603,7 @@ const Toast = ({ message, type, show, onClose }) => {
                 <span>Evaluate</span>
               </button>
             )}
-            {!isConductExam && (
+            {!(isPortalExam || isSubjectiveConduct) && (
               <button
                 onClick={() => onStartEvaluation(exam)}
                 className="w-full sm:w-auto px-3 sm:px-4 py-2 text-white bg-accent hover:bg-accent
@@ -608,7 +613,7 @@ const Toast = ({ message, type, show, onClose }) => {
                 <span>Evaluate</span>
               </button>
             )}
-            {isConductExam && (
+            {(isPortalExam || isSubjectiveConduct) && (
               <label className={`w-full sm:w-auto inline-flex items-center justify-center gap-3 px-3 sm:px-4 py-2 rounded-lg border transition-colors ${
                 isTogglingActive ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
               } ${exam?.is_active ? 'bg-green-50 border-green-200 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
@@ -671,7 +676,7 @@ const Toast = ({ message, type, show, onClose }) => {
                   {index < steps.length - 1 && (
                     <StepConnector
                       isActive={activeStep > index}
-                      isCompleted={allStepsCompleted ? true : index < activeStep - 1}
+                      isCompleted={allStepsCompleted ? true : index < activeStep}
                     />
                   )}
                 </React.Fragment>
@@ -740,171 +745,220 @@ const Toast = ({ message, type, show, onClose }) => {
     );
   };
   
-  const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChange, students = [] }) => {
+  const EnrollmentsModal = ({ isOpen, onClose, examId, courseId, onEnrollmentChange }) => {
+    if (!isOpen) return null;
+
     const [enrolledStudents, setEnrolledStudents] = useState(new Set());
     const [tempEnrolledStudents, setTempEnrolledStudents] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
     const [error, setError] = useState('');
     const [enrollmentDetails, setEnrollmentDetails] = useState([]);
     const [statusCounts, setStatusCounts] = useState({});
-    const [localStudents, setLocalStudents] = useState([]);
-  
-    
+
+    // Debounce search input
     useEffect(() => {
-      if (courseId) {
-        try {
-          const storedStudents = localStorage.getItem(`course_${courseId}_students`);
-          if (storedStudents) {
-            setLocalStudents(JSON.parse(storedStudents));
-          }
-        } catch (error) {
-          console.error("Error loading students from localStorage:", error);
-        }
-      }
-    }, [courseId]);
-  
-    
-    const combinedStudents = useMemo(() => {
-      
-      if (students && students.length > 0) {
-        return students;
-      }
-      
-      
-      if (localStudents && localStudents.length > 0) {
-        return localStudents.map(student => ({
-          id: student.id,
-          name: student.user_name || `Student ${student.id}`,
-          email: student.user_email,
-          roll_number: student.roll_number
-        }));
-      }
-      
-      
-      const studentsFromEnrollments = enrollmentDetails
-        .filter(enrollment => enrollment && (enrollment.student_name || enrollment.student_id))
-        .map(enrollment => ({
-          id: enrollment.student_id || enrollment.id,
-          name: enrollment.student_name || `Student ${enrollment.student_id || enrollment.id}`
-        }));
-        
-      return studentsFromEnrollments;
-    }, [students, localStudents, enrollmentDetails]);
-    
-    
+      const timer = setTimeout(() => {
+        setDebouncedSearch(searchQuery);
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Query for students (reverted from infinite to simple)
+    const {
+      data: studentsData = [],
+      isLoading: isLoadingStudents,
+      error: studentQueryError,
+      refetch: refetchStudents
+    } = useQuery({
+      queryKey: ['course-students', courseId],
+      queryFn: () => studentApi.getStudents(courseId),
+      enabled: isOpen && !!courseId,
+      staleTime: 5 * 60 * 1000, // Issue 3: Add caching
+    });
+
     const filteredStudents = useMemo(() => {
-      const query = searchQuery.toLowerCase();
-      return combinedStudents.filter(student => 
-        (student.name && student.name.toLowerCase().includes(query)) || 
-        (student.email && student.email.toLowerCase().includes(query)) ||
-        (student.roll_number && student.roll_number.toLowerCase().includes(query)) ||
-        String(student.id).toLowerCase().includes(query)
-      );
-    }, [combinedStudents, searchQuery]);
-  
+      let students = Array.isArray(studentsData) ? studentsData : (studentsData?.students || []);
+      if (debouncedSearch) {
+        const lSearch = debouncedSearch.toLowerCase();
+        students = students.filter(s => 
+          s.name?.toLowerCase().includes(lSearch) || 
+          s.user_name?.toLowerCase().includes(lSearch) ||
+          s.email?.toLowerCase().includes(lSearch) ||
+          s.user_email?.toLowerCase().includes(lSearch) ||
+          s.roll_number?.toLowerCase().includes(lSearch)
+        );
+      }
+      return students;
+    }, [studentsData, debouncedSearch]);
+
+    const allStudentsInCourse = useMemo(() => {
+      // For now, we'll use the loaded students. 
+      // In a real scenario, we might need a separate API to get all IDs.
+      return filteredStudents;
+    }, [filteredStudents]);
+
+    const getStudentDetails = useCallback((studentId) => {
+      return (enrollmentDetails || []).find(e => e.student_id === studentId) || {};
+    }, [enrollmentDetails]);
+
+    const handleSelectAllInCourse = useCallback(() => {
+      // This is a simplified version that selects all LOADED students.
+      const allIds = filteredStudents.map(s => s.id);
+      setTempEnrolledStudents(new Set(allIds));
+    }, [filteredStudents]);
+
+    const handleSubmit = async () => {
+      setIsFetchingMetadata(true);
+      setError('');
+      try {
+        const response = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: JSON.stringify({
+            student_ids: Array.from(tempEnrolledStudents),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to sync enrollments');
+        }
+
+        await fetchEnrollments();
+        if (onEnrollmentChange) onEnrollmentChange();
+        onClose();
+      } catch (err) {
+        console.error('Error syncing enrollments:', err);
+        setError(err.message);
+      } finally {
+        setIsFetchingMetadata(false);
+      }
+    };
+
     useEffect(() => {
       if (isOpen && examId) {
         fetchEnrollments();
+        // Since useInfiniteQuery handles its own fetching, we don't need a manual refetch here
+        // unless we want to reset the search or similar.
       }
     }, [isOpen, examId]);
-  
-    
-    useEffect(() => {
-      if (isOpen) {
-        setTempEnrolledStudents(new Set(enrolledStudents));
-      }
-    }, [isOpen, enrolledStudents]);
-  
+
     const fetchEnrollments = async () => {
-      setIsLoading(true);
+      setIsFetchingMetadata(true);
       setError('');
       try {
-        
         const enrollmentsResponse = await fetch(`${API_BASE_URL}/exams/${examId}/enrollments/list`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           },
-          credentials: 'omit'
         });
-  
-        if (!enrollmentsResponse.ok) {
-          throw new Error('Failed to fetch enrollments');
-        }
-  
+
+        if (!enrollmentsResponse.ok) throw new Error('Failed to fetch enrollments');
+
         const enrollmentsData = await enrollmentsResponse.json();
-        console.log("Raw enrollment data:", enrollmentsData);
-        
-        if (enrollmentsData.code !== 200) {
-          throw new Error(enrollmentsData.message || 'Failed to fetch enrollments');
-        }
-  
-        
+        if (enrollmentsData.code !== 200) throw new Error(enrollmentsData.message || 'Failed to fetch enrollments');
+
         let allEnrollments = [];
         let counts = {};
         
-        if (Array.isArray(enrollmentsData.data)) {
-          
-          enrollmentsData.data.forEach(item => {
-            if (item && Array.isArray(item.enrollments)) {
+        const rawData = enrollmentsData.data;
+        if (Array.isArray(rawData)) {
+          rawData.forEach(item => {
+            if (item?.enrollments) {
               allEnrollments = [...allEnrollments, ...item.enrollments];
-              if (item.status_counts) {
-                counts = item.status_counts;
-              }
-            } 
-            
-            else if (item && item.student_id) {
+              if (item.status_counts) counts = item.status_counts;
+            } else if (item?.student_id) {
               allEnrollments.push(item);
             }
           });
-        } 
-        
-        else if (enrollmentsData.data && Array.isArray(enrollmentsData.data.enrollments)) {
-          allEnrollments = enrollmentsData.data.enrollments;
-          if (enrollmentsData.data.status_counts) {
-            counts = enrollmentsData.data.status_counts;
-          }
+        } else if (rawData?.enrollments) {
+          allEnrollments = rawData.enrollments;
+          counts = rawData.status_counts || {};
         }
-        
-        else if (enrollmentsData.data && enrollmentsData.data.student_id) {
-          allEnrollments = [enrollmentsData.data];
-        }
-        
-        console.log('Processed enrollment details:', allEnrollments);
-        console.log('Status counts:', counts);
-        
-        
-        if (allEnrollments.length === 0) {
-          console.warn("No enrollments extracted from data. Using raw data as fallback.");
-          
-          if (Array.isArray(enrollmentsData.data)) {
-            allEnrollments = enrollmentsData.data;
-          } else if (enrollmentsData.data) {
-            allEnrollments = [enrollmentsData.data];
-          }
-        }
-        
+
         setEnrollmentDetails(allEnrollments);
-        setStatusCounts(counts || {});
-  
-        
+        setStatusCounts(counts);
+
         const enrolledIds = new Set(
           allEnrollments
-            .filter(enrollment => enrollment && (enrollment.student_id || enrollment.id))
-            .map(enrollment => enrollment.student_id || enrollment.id)
+            .filter(e => e?.student_id || e?.id)
+            .map(e => e.student_id || e.id)
         );
-  
+
         setEnrolledStudents(enrolledIds);
         setTempEnrolledStudents(new Set(enrolledIds));
-      } catch (error) {
-        console.error('Error fetching enrollments:', error);
-        setError(error.message);
+      } catch (err) {
+        console.error('Error fetching enrollments:', err);
+        setError(err.message);
       } finally {
-        setIsLoading(false);
+        setIsFetchingMetadata(false);
       }
     };
-  
-    const handleToggleStudent = (studentId) => {
+
+    // Memoized Enrollment Row Component
+    const EnrollmentRow = React.memo(({ 
+      student, 
+      details, 
+      isEnrolled, 
+      onToggle 
+    }) => {
+      return (
+        <div
+          className={`group flex items-center justify-between p-4 hover:bg-gray-50 transition-all ${
+            isEnrolled ? 'bg-accent/[0.02]' : ''
+          }`}
+        >
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <label className="relative flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isEnrolled}
+                onChange={() => onToggle(student.id)}
+                className="peer sr-only"
+              />
+              <div className="w-5 h-5 border-2 border-gray-300 rounded-md peer-checked:bg-accent peer-checked:border-accent transition-all flex items-center justify-center">
+                <Check className={`w-3.5 h-3.5 text-white transition-opacity ${isEnrolled ? 'opacity-100' : 'opacity-0'}`} />
+              </div>
+            </label>
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center flex-shrink-0 border border-accent/10">
+              <span className="text-sm font-bold text-accent">
+                {student.name?.charAt(0) || '?'}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 truncate">{student.name}</p>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                {student.roll_number && (
+                  <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded tracking-wide uppercase">
+                    Roll: {student.roll_number}
+                  </span>
+                )}
+                <span className="text-xs text-gray-500 truncate max-w-[150px]">{student.email}</span>
+                {details.status && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                    details.status === 'evaluated' ? 'bg-accent/10 text-accent' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {details.status}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          {details.marks_obtained !== null && details.marks_obtained !== undefined && (
+            <div className="ml-4 px-3 py-1 bg-white border border-gray-100 rounded-lg shadow-sm text-sm font-bold text-gray-700">
+              {details.marks_obtained}/{details.max_marks || 0}
+            </div>
+          )}
+        </div>
+      );
+    });
+
+    const handleToggleStudentCell = React.useCallback((studentId) => {
       setTempEnrolledStudents(prev => {
         const newSet = new Set(prev);
         if (newSet.has(studentId)) {
@@ -914,212 +968,168 @@ const Toast = ({ message, type, show, onClose }) => {
         }
         return newSet;
       });
-    };
-  
-    const handleSubmit = async () => {
-      setIsLoading(true);
-      setError('');
-      try {
-        
-        const studentsToAdd = Array.from(tempEnrolledStudents).filter(id => !enrolledStudents.has(id));
-        
-        
-        const studentsToRemove = Array.from(enrolledStudents).filter(id => !tempEnrolledStudents.has(id));
-        
-        
-        for (const studentId of studentsToAdd) {
-          await onEnrollmentChange(studentId, true);
-        }
-        
-        
-        for (const studentId of studentsToRemove) {
-          await onEnrollmentChange(studentId, false);
-        }
-        
-        
-        setEnrolledStudents(new Set(tempEnrolledStudents));
-        
-        onClose();
-      } catch (error) {
-        console.error('Error updating enrollments:', error);
-        setError(error.message || 'Failed to update enrollments');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
-    
-    const getStudentDetails = (studentId) => {
-      const details = enrollmentDetails.find(e => String(e.student_id) === String(studentId)) || {};
-      
-      
-      if (tempEnrolledStudents.has(studentId) && !details.status) {
-        return { ...details, status: 'not_uploaded' };
-      }
-      
-      return details;
-    };
-  
-    if (!isOpen) return null;
-  
+    }, []);
+
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Manage Enrollments</h2>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Manage Enrollments</h2>
+              <p className="text-sm text-gray-500">Select students to enroll in this exam</p>
+            </div>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
-              disabled={isLoading}
+              className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+              disabled={isFetchingMetadata}
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-  
-          {isLoading && (
-            <div className="flex justify-center items-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
-            </div>
-          )}
-  
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
-  
-          {!isLoading && Object.keys(statusCounts).length > 0 && (
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              <div className="bg-accent/10 p-3 rounded-lg text-center">
-                <div className="text-lg font-semibold text-accent">{statusCounts.not_uploaded || 0}</div>
-                <div className="text-xs text-gray-500">Not Uploaded</div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm font-medium">{error}</p>
               </div>
-              <div className="bg-amber-50 p-3 rounded-lg text-center">
-                <div className="text-lg font-semibold text-amber-700">{statusCounts.uploaded || 0}</div>
-                <div className="text-xs text-gray-500">Uploaded</div>
+            )}
+
+            {Object.keys(statusCounts).length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                {[
+                  { label: 'Not Uploaded', count: statusCounts.not_uploaded, color: 'text-gray-600', bg: 'bg-gray-100' },
+                  { label: 'Uploaded', count: statusCounts.uploaded, count_key: 'uploaded', color: 'text-amber-700', bg: 'bg-amber-50' },
+                  { label: 'Evaluated', count: statusCounts.evaluated, color: 'text-accent', bg: 'bg-accent/10' },
+                  { label: 'Recheck', count: statusCounts.recheck_requested, color: 'text-blue-700', bg: 'bg-blue-50' }
+                ].map((stat, i) => (
+                  <div key={i} className={`${stat.bg} ${stat.color} p-3 rounded-xl text-center border border-white/50 shadow-sm`}>
+                    <div className="text-lg font-bold">{stat.count || 0}</div>
+                    <div className="text-[10px] uppercase tracking-wider font-semibold opacity-70">{stat.label}</div>
+                  </div>
+                ))}
               </div>
-              <div className="bg-accent/10 p-3 rounded-lg text-center">
-                <div className="text-lg font-semibold text-accent">{statusCounts.evaluated || 0}</div>
-                <div className="text-xs text-gray-500">Evaluated</div>
+            )}
+
+            {/* Search & Bulk Actions */}
+            <div className="sticky top-0 z-10 bg-white pb-4 space-y-3">
+              <div className="relative group">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or roll number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-100/50 border border-transparent focus:border-accent focus:bg-white rounded-xl focus:outline-none focus:ring-4 focus:ring-accent/10 transition-all text-sm"
+                  disabled={isFetchingMetadata}
+                />
               </div>
-              <div className="bg-accent/10 p-3 rounded-lg text-center">
-                <div className="text-lg font-semibold text-accent">{statusCounts.recheck_requested || 0}</div>
-                <div className="text-xs text-gray-500">Recheck Requested</div>
-              </div>
-            </div>
-          )}
-          
-  
-          {!isLoading && combinedStudents.length === 0 && (
-            <div className="text-center py-4 text-gray-500">
-              No students found in this course.
-            </div>
-          )}
-  
-          {!isLoading && combinedStudents.length > 0 && (
-            <>
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search students..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all"
-                    disabled={isLoading}
-                  />
+              
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-3">
+                  <label className="relative flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filteredStudents.length > 0 && filteredStudents.every(s => tempEnrolledStudents.has(s.id))}
+                      onChange={() => {
+                        const visibleIds = filteredStudents.map(s => s.id);
+                        const allVisibleSelected = visibleIds.every(id => tempEnrolledStudents.has(id));
+                        setTempEnrolledStudents(prev => {
+                          const next = new Set(prev);
+                          if (allVisibleSelected) visibleIds.forEach(id => next.delete(id));
+                          else visibleIds.forEach(id => next.add(id));
+                          return next;
+                        });
+                      }}
+                      className="peer sr-only"
+                    />
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded-md peer-checked:bg-accent peer-checked:border-accent transition-all flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="ml-2 text-xs font-bold text-gray-500 uppercase tracking-wider">Select All Visible</span>
+                  </label>
                 </div>
+                <button 
+                  onClick={handleSelectAllInCourse}
+                  className="text-xs font-bold text-accent hover:bg-accent/5 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  Select All {allStudentsInCourse.length} Students
+                </button>
               </div>
-  
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-medium text-gray-600">
-                    {filteredStudents.length} students found
-                  </span>
+            </div>
+
+            {/* Student List */}
+            <div className="space-y-2">
+              {isLoadingStudents ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mb-4"></div>
+                  <p className="text-sm">Loading students...</p>
                 </div>
-                <div className="space-y-1 rounded-lg border border-gray-200 overflow-hidden bg-white">
-                  {filteredStudents.map(student => {
-                    const details = getStudentDetails(student.id);
-                    const isEnrolled = tempEnrolledStudents.has(student.id);
-                    
-                    return (
-                      <div
-                        key={student.id}
-                        className={`flex items-center justify-between p-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 ${
-                          isEnrolled ? 'bg-accent/5' : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <input
-                            type="checkbox"
-                            checked={isEnrolled}
-                            onChange={() => handleToggleStudent(student.id)}
-                            className="w-4 h-4 text-accent border-gray-300 rounded focus:ring-accent"
-                          />
-                          <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-medium text-accent">
-                              {student.name?.charAt(0) || '?'}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-800">{student.name}</p>
-                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                              {student.roll_number && <span className="px-2 py-0.5 bg-gray-100 rounded-full">Roll: {student.roll_number}</span>}
-                              {student.email && <span className="truncate max-w-[200px]">{student.email}</span>}
-                              {details.status && (
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  details.status === 'evaluated' ? 'bg-accent/10 text-accent' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {details.status}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {details.marks_obtained !== null && details.marks_obtained !== undefined && (
-                            <div className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-700">
-                              {details.marks_obtained}/{details.max_marks || 0}
-                            </div>
-                          )}
-                         </div>
-                      </div>
-                    );
-                  })}
+              ) : studentQueryError ? (
+                <div className="text-center py-12 bg-red-50 rounded-2xl border border-dashed border-red-200">
+                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+                  <p className="text-red-700 font-medium">Error loading students</p>
+                  <button onClick={() => refetchStudents()} className="text-xs text-red-600 font-bold mt-2 hover:underline">
+                    Try again
+                  </button>
                 </div>
-              </div>
-            </>
-          )}
-  
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="px-5 py-2.5 bg-accent text-white rounded-lg hover:bg-accent disabled:bg-accent/40 font-medium shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Processing...</span>
-                </>
+              ) : filteredStudents.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">No students found</p>
+                  <p className="text-xs text-gray-400 mt-1">Try a different search term</p>
+                </div>
               ) : (
-                <span>Save Changes</span>
+                <div className="border border-gray-100 rounded-2xl overflow-hidden divide-y divide-gray-50">
+                  {filteredStudents.map(student => (
+                    <EnrollmentRow
+                      key={student.id}
+                      student={student}
+                      details={getStudentDetails(student.id)}
+                      isEnrolled={tempEnrolledStudents.has(student.id)}
+                      onToggle={handleToggleStudentCell}
+                    />
+                  ))}
+                </div>
               )}
-            </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+            <div className="text-sm font-bold text-gray-600">
+              {tempEnrolledStudents.size} <span className="font-medium text-gray-400">selected</span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition-all"
+                disabled={isFetchingMetadata}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2 bg-accent text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-accent/20 active:scale-95 transition-all disabled:bg-accent/40 disabled:scale-100 flex items-center gap-2 shadow-md shadow-accent/10"
+                disabled={isFetchingMetadata}
+              >
+                {isFetchingMetadata ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
     );
   };
+
 
   const ConductAttemptsModal = ({ isOpen, onClose, examId }) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -1176,9 +1186,7 @@ const Toast = ({ message, type, show, onClose }) => {
 
           const questionsJson = await questionsResp.json();
 
-          const nextEnrollments = allEnrollments.filter(
-            (item) => String(item?.exam_type || '').toLowerCase() === 'conduct'
-          );
+          const nextEnrollments = allEnrollments.filter((item) => isPortalMcqExam(item));
           const nextQuestions = questionsJson?.data?.questions || (
             questionsJson?.data?.question_number ? [questionsJson.data] : []
           );
@@ -1413,8 +1421,6 @@ const Toast = ({ message, type, show, onClose }) => {
         return;
       }
 
-      console.log(`ExamsTab initialized with courseId: ${courseId}`);
-
       // Hydrate examSteps from localStorage so progress persists across reloads
       try {
         const stored = localStorage.getItem(`course_${courseId}_exam_steps`);
@@ -1437,7 +1443,8 @@ const Toast = ({ message, type, show, onClose }) => {
 
         exams.forEach((exam) => {
           if (!exam || !exam.id) return;
-          const isConductExam = exam.exam_type === 'conduct';
+          const examVariant = getExamVariant(exam);
+          const isConductExam = examVariant === 'portal_mcq' || examVariant === 'conduct';
 
           // Backend may provide derived progress flags; fall back to existing fields
           const backendHasQuestions = exam.has_questions;
@@ -1459,7 +1466,12 @@ const Toast = ({ message, type, show, onClose }) => {
           let derivedProgress = 0;
           if (hasQnA) {
             derivedProgress = 1;
-            if (isConductExam ? isExamActive : hasRubrics) {
+            
+            // Fix progress tracking for conduct exams: use hasRubrics for Step 2 if it's a conduct exam,
+            // but keep isExamActive for portal_mcq (MCQ) exams.
+            const step2Condition = isSubjectiveConductExam(exam) ? hasRubrics : (isPortalMcqExam(exam) ? isExamActive : hasRubrics);
+            
+            if (step2Condition) {
               derivedProgress = 2;
               if (backendHasAnswers) {
                 derivedProgress = 3;
@@ -1509,11 +1521,18 @@ const Toast = ({ message, type, show, onClose }) => {
         const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${updatedExam.id}`;
         
         console.log('Making PUT request to:', fullUrl);
-        console.log('Request payload:', {
+        const updatePayload = {
           exam_name: updatedExam.exam_name,
           full_marks: updatedExam.full_marks,
           exam_type: updatedExam.exam_type,
+          conduct_variant: updatedExam.exam_type === 'portal_mcq' ? 'portal_mcq' : undefined,
           is_active: updatedExam.is_active,
+          start_time: updatedExam.start_time || undefined,
+          end_time: updatedExam.end_time || undefined,
+          duration_minutes: updatedExam.duration_minutes || undefined,
+        };
+        console.log('Request payload:', {
+          ...updatePayload,
         });
         
         const response = await fetch(fullUrl, {
@@ -1522,12 +1541,7 @@ const Toast = ({ message, type, show, onClose }) => {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            exam_name: updatedExam.exam_name,
-            full_marks: updatedExam.full_marks,
-            exam_type: updatedExam.exam_type,
-            is_active: updatedExam.is_active,
-          })
+          body: JSON.stringify(updatePayload)
         });
   
         console.log('Response status:', response.status);
@@ -1591,6 +1605,7 @@ const Toast = ({ message, type, show, onClose }) => {
             exam_name: exam.exam_name,
             full_marks: exam.full_marks,
             exam_type: exam.exam_type,
+            conduct_variant: exam.conduct_variant,
             is_active: nextIsActive,
           }),
         });
@@ -1714,19 +1729,23 @@ const Toast = ({ message, type, show, onClose }) => {
           throw new Error('Exam ID is missing');
         }
         const examId = exam.id;
-        const isConductExam = exam.exam_type === 'conduct';
+        const examVariant = getExamVariant(exam);
+        const isPortalExam = examVariant === 'portal_mcq';
+        const isSubjectiveConduct = examVariant === 'conduct';
         
         showToast('Preparing evaluation...', 'success');
         
         navigate(
-          isConductExam
+          isPortalExam
             ? `/courses/${courseId}/exams/${examId}/evaluate`
+            : isSubjectiveConduct
+            ? `/courses/${courseId}/exams/${examId}/conduct-review`
             : `/courses/${courseId}/exams/${examId}/evaluations`,
           {
           state: {
             ...(location.state || {}),
             from: 'exams',
-            examName: exam.exam_name || (isConductExam ? 'MCQ Evaluation' : 'Exam Evaluations'),
+            examName: exam.exam_name || (isPortalExam ? 'MCQ Evaluation' : isSubjectiveConduct ? 'Conduct Exam Review' : 'Exam Evaluations'),
           },
         });
         
@@ -1818,7 +1837,7 @@ const Toast = ({ message, type, show, onClose }) => {
         }
         setExistingQuestions(questions);
         setSelectedExamId(examId);
-        setSelectedExamType(selectedExam?.exam_type || 'evaluated');
+        setSelectedExamType(isPortalMcqExam(selectedExam) ? 'conduct' : (selectedExam.exam_type === 'conduct' && selectedExam.conduct_variant === 'subjective') ? 'subjective_conduct' : 'evaluated');
         setShowUploadModal(true);
       } finally {
         setIsLoading(false);

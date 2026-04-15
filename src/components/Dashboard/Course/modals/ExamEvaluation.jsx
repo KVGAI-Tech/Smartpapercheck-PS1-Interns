@@ -664,6 +664,11 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     const status = job?.status;
     const progress = job?.progress || {};
     const running = status === 'pending' || status === 'running';
+    const activeIds = Array.isArray(progress.current_enrollment_ids)
+      ? progress.current_enrollment_ids
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id))
+      : (progress.current_enrollment_id ? [Number(progress.current_enrollment_id)] : []);
 
     setActiveEvaluationJob(job || null);
     setBatchEvaluating(running);
@@ -671,7 +676,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     setEvaluationProgress({
       completed: Number(progress.completed || 0),
       total: Number(progress.total || 0),
-      inProgress: progress.current_enrollment_id ? [Number(progress.current_enrollment_id)] : [],
+      inProgress: activeIds,
       errors: Number(progress.failed || 0),
     });
   }, []);

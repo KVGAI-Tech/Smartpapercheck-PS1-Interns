@@ -109,10 +109,10 @@ const CourseDetails = () => {
     const [showEvaluationModal, setShowEvaluationModal] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
-    const [students, setStudents] = useState([]);
-    const [instructors, setInstructors] = useState([]);
-    const [teachingAssistants, setTeachingAssistants] = useState([]);
-    const [exams, setExams] = useState([]);
+    const [students, setStudents] = useState(null);
+    const [instructors, setInstructors] = useState(null);
+    const [teachingAssistants, setTeachingAssistants] = useState(null);
+    const [exams, setExams] = useState(null);
     const [uploadStatus, setUploadStatus] = useState(null);
 
     const refreshExams = async () => {
@@ -489,7 +489,7 @@ const CourseDetails = () => {
                 return (
                     <InstructorsTab
                         courseId={courseId}
-                        instructors={getFilteredItems(instructors, 'instructor')}
+                        instructors={instructors || []}
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
                         onAdd={() => {
@@ -515,7 +515,7 @@ const CourseDetails = () => {
             case 'exams':
                 return (
                     <ExamsTab
-                        exams={getFilteredItems(exams, 'exam')}
+                        exams={exams || []}
                         courseId={courseId}
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}

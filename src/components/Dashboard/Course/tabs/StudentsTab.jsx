@@ -1,38 +1,77 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
-  Search, Upload, Plus, Edit2, Trash2,
-  Users, AlertCircle, Loader 
+  Users, Search, Plus, Upload, Trash2, 
+  Edit2, AlertCircle, Loader2 
 } from 'lucide-react';
-import { studentApi } from './studentApi'; 
-import { StudentImportModal } from '../modals/ImportModal';
+import { useQuery } from '@tanstack/react-query';
+import { studentApi } from './studentApi';
 import { API_BASE_URL } from '../../../../BaseURL';
+import { StudentImportModal } from '../modals/ImportModal';
 
-// Create a local storage service for students
-const studentsStorageService = {
-  saveStudents: (courseId, students) => {
-    if (!courseId || !students || !Array.isArray(students)) return;
-    try {
-      localStorage.setItem(`course_${courseId}_students`, JSON.stringify(students));
-    } catch (error) {
-      console.error('Failed to save students to localStorage:', error);
-    }
-  },
-  
-  getStudents: (courseId) => {
-    if (!courseId) return [];
-    try {
-      const saved = localStorage.getItem(`course_${courseId}_students`);
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('Failed to get students from localStorage:', error);
-      return [];
-    }
-  }
-};
+// Memoized Student Row Component
+const StudentRow = React.memo(({ 
+  student, 
+  isSelected, 
+  onToggle, 
+  onEdit, 
+  onDelete, 
+  onUpdate 
+}) => {
+  return (
+    <tr className="group hover:bg-gray-50/80 transition-colors">
+      <td className="p-4">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggle(student.id)}
+          className="w-5 h-5 rounded border-gray-300 text-accent focus:ring-accent accent-accent cursor-pointer"
+        />
+      </td>
+      <td className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center border border-accent/10">
+            <span className="text-sm font-bold text-accent uppercase">{student.name?.charAt(0) || '?'}</span>
+          </div>
+          <span className="text-sm font-bold text-gray-900">{student.name}</span>
+        </div>
+      </td>
+      <td className="p-4">
+        <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded tracking-wide uppercase">
+          {student.roll_number || 'N/A'}
+        </span>
+      </td>
+      <td className="p-4">
+        <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${
+          student.section ? 'bg-accent/10 text-accent' : 'bg-gray-100 text-gray-500'
+        }`}>
+          {student.section || 'Unassigned'}
+        </span>
+      </td>
+      <td className="p-4">
+        <span className="text-sm text-gray-500 font-medium">{student.email}</span>
+      </td>
+      <td className="p-4">
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={() => onEdit(student, onUpdate)}
+            className="p-2 text-gray-400 hover:text-accent hover:bg-accent/10 rounded-lg transition-all"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button 
+            onClick={() => onDelete(student)}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 const StudentsTab = ({
   courseId, 
-  students: externalStudents = null,
   sections = [],
   searchQuery = '',
   selectedSection = 'All sections',
@@ -42,24 +81,31 @@ const StudentsTab = ({
   onEdit = () => {},
   onDelete = () => {},
 }) => {
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // Simple query for all students
+  const {
+    data: allStudents = [],
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['students', courseId],
+    queryFn: () => studentApi.getStudents(courseId),
+    enabled: !!courseId,
+  });
+
   const handleExportStudents = () => {
     try {
       if (!courseId) throw new Error('Course ID is required');
-
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('No access token found');
 
       const url = `${API_BASE_URL}/professors/courses/${courseId}/students/export?token=${encodeURIComponent(token)}`;
-
       const link = document.createElement('a');
       link.href = url;
       link.download = `course_${courseId}_students.csv`;
@@ -71,77 +117,11 @@ const StudentsTab = ({
     }
   };
 
-  // Function to update students list and also save to storage
-  const updateAndSaveStudents = (newStudents) => {
-    setStudents(newStudents);
-    studentsStorageService.saveStudents(courseId, newStudents);
-  };
-
-  useEffect(() => {
-    if (externalStudents) {
-      updateAndSaveStudents(externalStudents);
-      setLoading(false);
-      return;
-    }
-
-    const fetchStudents = async () => {
-      if (!courseId) {
-        setError('Course ID is required');
-        setLoading(false);
-        return;
-      }
-      
-      // First try to get cached students to show immediately
-      const cachedStudents = studentsStorageService.getStudents(courseId);
-      if (cachedStudents.length > 0) {
-        setStudents(cachedStudents);
-      }
-      
-      try {
-        setLoading(true);
-        const fetchedStudents = await studentApi.getStudents(courseId);
-        console.log("Fetched students:", fetchedStudents);
-        
-        if (Array.isArray(fetchedStudents)) {
-          updateAndSaveStudents(fetchedStudents);
-          setError(null);
-        } else {
-          console.error("Unexpected students data format:", fetchedStudents);
-          setError('Received invalid data format from server');
-          if (!cachedStudents.length) {
-            setStudents([]);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching students:", err);
-        setError(err.message || 'Failed to load students');
-        if (!cachedStudents.length) {
-          setStudents([]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudents();
-  }, [courseId, externalStudents]);
-
-  useEffect(() => {
-    setSelectedStudentIds((prev) => {
-      const ids = new Set();
-      const validIds = new Set((students || []).map((s) => s.id));
-      prev.forEach((id) => {
-        if (validIds.has(id)) ids.add(id);
-      });
-      return ids;
-    });
-  }, [students]);
-
   const handleRemoveStudent = async (student) => {
+    if (!window.confirm(`Are you sure you want to remove ${student.name} from this course?`)) return;
     try {
       await studentApi.removeStudent(courseId, student.id);
-      const updatedStudents = students.filter(s => s.id !== student.id);
-      updateAndSaveStudents(updatedStudents);
+      refetch();
       onDelete && onDelete(student);
     } catch (err) {
       console.error('Failed to remove student:', err.message);
@@ -156,21 +136,14 @@ const StudentsTab = ({
       setUploadStatus('processing');
       studentApi.pollUploadStatus(
         result.upload_id,
-        (processedCount) => {
-          console.log(`Processed: ${processedCount}`);
-        },
+        (processedCount) => console.log(`Processed: ${processedCount}`),
         async () => {
           setUploadStatus('completed');
-          try {
-            const updatedStudents = await studentApi.getStudents(courseId);
-            updateAndSaveStudents(updatedStudents);
-            setTimeout(() => {
-              setShowImportModal(false);
-              setUploadStatus(null);
-            }, 2000);
-          } catch (err) {
-            console.error('Failed to refresh students:', err.message);
-          }
+          refetch();
+          setTimeout(() => {
+            setShowImportModal(false);
+            setUploadStatus(null);
+          }, 2000);
         },
         (error) => {
           console.error('Import failed:', error);
@@ -183,15 +156,10 @@ const StudentsTab = ({
     }
   };
 
-  // Add a new function to handle adding a student
   const handleAddStudent = async (studentData) => {
     try {
-      const newStudent = await studentApi.addStudent({
-        ...studentData,
-        courseId
-      });
-      const updatedStudents = [...students, newStudent];
-      updateAndSaveStudents(updatedStudents);
+      const newStudent = await studentApi.addStudent({ ...studentData, courseId });
+      refetch();
       return newStudent;
     } catch (err) {
       console.error('Failed to add student:', err.message);
@@ -199,14 +167,10 @@ const StudentsTab = ({
     }
   };
 
-  // Add a new function to handle updating a student
   const handleUpdateStudent = async (studentData) => {
     try {
       const updatedStudent = await studentApi.updateStudent(studentData);
-      const updatedStudents = students.map(s => 
-        s.id === updatedStudent.id ? updatedStudent : s
-      );
-      updateAndSaveStudents(updatedStudents);
+      refetch();
       return updatedStudent;
     } catch (err) {
       console.error('Failed to update student:', err.message);
@@ -214,431 +178,244 @@ const StudentsTab = ({
     }
   };
 
-  // Override the onAdd prop to use our handler that updates the stored list
-  const handleOnAdd = () => {
-    onAdd((studentData) => handleAddStudent(studentData));
-  };
-
-  // Override the onEdit prop to use our handler that updates the stored list
-  const handleOnEdit = (student) => {
-    onEdit(student, (studentData) => handleUpdateStudent(studentData));
-  };
-
-  const toggleSelectStudent = (id) => {
+  // Use useCallback if passing to memoized components for better stability
+  const toggleSelectStudent = React.useCallback((id) => {
     setSelectedStudentIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
-  };
+  }, []);
   
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = !searchQuery || 
-      [student.user_name, student.roll_number, student.user_email]
-        .filter(field => typeof field === 'string') 
-        .some(field => field.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesSection = selectedSection === 'All sections' || 
-      student.section === selectedSection;
-    
-    return matchesSearch && matchesSection;
-  });
-
-  const totalStudentCount = students.length;
-  const visibleStudentCount = filteredStudents.length;
-
-  const getSortableValue = (student, key) => {
-    switch (key) {
-      case 'name':
-        return student.user_name ?? '';
-      case 'roll_number':
-        return student.roll_number ?? '';
-      case 'tut_section':
-        return student.tut_section ?? '';
-      case 'email':
-        return student.user_email ?? '';
-      default:
-        return '';
+  // Filtering & Search
+  const filteredStudents = useMemo(() => {
+    let results = allStudents;
+    if (selectedSection !== 'All sections') {
+      results = results.filter(student => student.section === selectedSection);
     }
-  };
+    if (searchQuery) {
+      const lSearch = searchQuery.toLowerCase();
+      results = results.filter(s => 
+        s.name?.toLowerCase().includes(lSearch) || 
+        s.email?.toLowerCase().includes(lSearch) || 
+        s.roll_number?.toLowerCase().includes(lSearch)
+      );
+    }
+    return results;
+  }, [allStudents, selectedSection, searchQuery]);
 
-  const sortedStudents = (() => {
+  const sortedStudents = useMemo(() => {
     if (!sortConfig.key) return filteredStudents;
-
     const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
     return [...filteredStudents].sort((a, b) => {
-      const aVal = getSortableValue(a, sortConfig.key);
-      const bVal = getSortableValue(b, sortConfig.key);
-
-      if (typeof aVal === 'number' && typeof bVal === 'number') {
-        return (aVal - bVal) * directionMultiplier;
-      }
-
-      return String(aVal).localeCompare(String(bVal), undefined, {
-        numeric: true,
-        sensitivity: 'base',
-      }) * directionMultiplier;
+      const aVal = a[sortConfig.key === 'name' ? 'name' : sortConfig.key] || '';
+      const bVal = b[sortConfig.key === 'name' ? 'name' : sortConfig.key] || '';
+      return String(aVal).localeCompare(String(bVal), undefined, { numeric: true }) * directionMultiplier;
     });
-  })();
-
-  const visibleStudentIds = sortedStudents.map((student) => student.id);
-  const allVisibleSelected =
-    visibleStudentIds.length > 0 &&
-    visibleStudentIds.every((id) => selectedStudentIds.has(id));
+  }, [filteredStudents, sortConfig]);
 
   const toggleSelectAllVisible = () => {
-    setSelectedStudentIds((prev) => {
+    const visibleIds = sortedStudents.map(s => s.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedStudentIds.has(id));
+    
+    setSelectedStudentIds(prev => {
       const next = new Set(prev);
-      if (allVisibleSelected) {
-        visibleStudentIds.forEach((id) => next.delete(id));
-      } else {
-        visibleStudentIds.forEach((id) => next.add(id));
-      }
+      if (allSelected) visibleIds.forEach(id => next.delete(id));
+      else visibleIds.forEach(id => next.add(id));
       return next;
     });
   };
 
   const handleBulkDelete = async () => {
     if (!selectedStudentIds.size) return;
-    const confirmed = window.confirm(
-      `Delete ${selectedStudentIds.size} student${selectedStudentIds.size > 1 ? 's' : ''}? This cannot be undone.`
-    );
-    if (!confirmed) return;
+    if (!window.confirm(`Delete ${selectedStudentIds.size} students? This cannot be undone.`)) return;
 
     setBulkDeleting(true);
-    const idsToDelete = Array.from(selectedStudentIds);
-    const remaining = [];
-    const failed = [];
-
-    await Promise.allSettled(
-      idsToDelete.map(async (id) => {
-        const student = students.find((s) => s.id === id);
-        if (!student) return;
-        try {
-          await studentApi.removeStudent(courseId, id);
-        } catch (err) {
-          failed.push(student);
-        }
-      })
-    );
-
-    const failedIds = new Set(failed.map((s) => s.id));
-    students.forEach((student) => {
-      if (!selectedStudentIds.has(student.id) || failedIds.has(student.id)) {
-        remaining.push(student);
-      }
-    });
-
-    updateAndSaveStudents(remaining);
-    setSelectedStudentIds(new Set(failedIds));
-    setBulkDeleting(false);
-  };
-
-  const requestSort = (key) => {
-    setSortConfig((prev) => {
-      if (prev.key === key) {
-        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key, direction: 'asc' };
-    });
-  };
-
-  const handleSortChange = (value) => {
-    if (!value) {
-      setSortConfig({ key: null, direction: 'asc' });
-      return;
+    try {
+      await Promise.allSettled(
+        Array.from(selectedStudentIds).map(id => studentApi.removeStudent(courseId, id))
+      );
+      refetch();
+      setSelectedStudentIds(new Set());
+    } finally {
+      setBulkDeleting(false);
     }
-    setSortConfig((prev) => ({
-      key: value,
-      direction: prev.key === value ? prev.direction : 'asc',
+  };
+
+  const handleSortChange = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
 
-  const renderSortIndicator = (key) => {
-    if (sortConfig.key !== key) return null;
+  if (isLoading) {
     return (
-      <span className="ml-1 text-[10px] text-gray-400">
-        {sortConfig.direction === 'asc' ? '▲' : '▼'}
-      </span>
-    );
-  };
-
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <div className="flex justify-center items-center">
-            <Loader className="w-8 h-8 text-accent animate-spin" />
-            <span className="ml-3 text-gray-600">Loading students...</span>
-          </div>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <div className="flex flex-col items-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Error loading students
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">{error}</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (!students.length) {
-      return (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-          <div className="flex flex-col items-center">
-            <Users className="w-12 h-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No students found
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Get started by adding students to this course
-            </p>
-            <button
-              onClick={handleOnAdd}
-              className="flex items-center gap-2 px-4 py-2 text-white bg-accent rounded-lg hover:bg-accent"
-            >
-              <Plus size={20} />
-              Add First Student
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full sm:min-w-[720px] w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-2 sm:px-4 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={allVisibleSelected}
-                    onChange={toggleSelectAllVisible}
-                    aria-label="Select all students"
-                    className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
-                  />
-                </th>
-                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <button
-                    type="button"
-                    onClick={() => requestSort('name')}
-                    className="inline-flex items-center hover:text-gray-700"
-                  >
-                    Student Details
-                    {renderSortIndicator('name')}
-                  </button>
-                </th>
-
-                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <button
-                    type="button"
-                    onClick={() => requestSort('roll_number')}
-                    className="inline-flex items-center hover:text-gray-700"
-                  >
-                    Roll Number
-                    {renderSortIndicator('roll_number')}
-                  </button>
-                </th>
-                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <button
-                    type="button"
-                    onClick={() => requestSort('tut_section')}
-                    className="inline-flex items-center hover:text-gray-700"
-                  >
-                    Section
-                    {renderSortIndicator('tut_section')}
-                  </button>
-                </th>
-                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <button
-                    type="button"
-                    onClick={() => requestSort('email')}
-                    className="inline-flex items-center hover:text-gray-700"
-                  >
-                    Email
-                    {renderSortIndicator('email')}
-                  </button>
-                </th>
-                <th scope="col" className="relative px-2 sm:px-6 py-3 w-16 sm:w-20">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sortedStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-2 sm:px-4 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedStudentIds.has(student.id)}
-                      onChange={() => toggleSelectStudent(student.id)}
-                      aria-label={`Select ${student.user_name || 'student'}`}
-                      className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
-                    />
-                  </td>
-                  <td className="px-2 sm:px-6 py-4 whitespace-normal sm:whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="hidden sm:flex h-10 w-10 rounded-full bg-accent/10 items-center justify-center">
-                        <span className="text-sm font-medium text-accent">
-                          {student.user_name?.charAt(0) || '?'}
-                        </span>
-                      </div>
-                      <div className="sm:ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {student.user_name || 'Unknown'}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {student.roll_number}
-                  </td>
-                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-accent/10 text-accent">
-                      {student.tut_section || 'Unassigned'}
-                    </span>
-                  </td>
-                  <td className="hidden sm:table-cell px-6 py-4 whitespace-normal sm:whitespace-nowrap break-all sm:break-normal text-sm text-gray-500">
-                    {student.user_email}
-                  </td>
-                  <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-0.5 sm:space-x-2">
-                      <button
-                        onClick={() => handleOnEdit(student)}
-
-                        className="p-1 sm:p-1.5 text-accent hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
-                        title="Edit student"
-                      >
-                        <Edit2 size={14} className="sm:hidden" />
-                        <Edit2 size={16} className="hidden sm:block" />
-                      </button>
-                      <button
-                        onClick={() => handleRemoveStudent(student)}
-                        className="p-1 sm:p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Remove student"
-                      >
-                        <Trash2 size={14} className="sm:hidden" />
-                        <Trash2 size={16} className="hidden sm:block" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+        <Loader2 className="w-10 h-10 animate-spin text-accent mb-4" />
+        <p className="text-lg font-medium">Loading your students...</p>
       </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-100 p-10 rounded-2xl text-center">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-red-900 mb-2">Failed to load students</h3>
+        <p className="text-red-700 mb-6">{error.message}</p>
+        <button onClick={() => refetch()} className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors">
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Top Actions Bar */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
-          <div className="relative flex-1 min-w-0 max-w-3xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <div className="relative flex-1 max-w-2xl group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors" size={20} />
             <input
               type="text"
-              placeholder="Search students..."
+              placeholder="Search students by name, email, or roll number..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
-              disabled={loading}
+              className="w-full h-12 pl-12 pr-4 bg-gray-50 border-gray-200 rounded-xl focus:ring-4 focus:ring-accent/10 focus:border-accent focus:bg-white transition-all text-sm font-medium"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {sections.length > 0 && (
               <select
                 value={selectedSection}
                 onChange={(e) => onSectionChange(e.target.value)}
-                className="h-11 px-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
-                disabled={loading}
+                className="h-12 px-4 bg-gray-50 border-gray-200 rounded-xl focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all text-sm font-medium"
               >
-                <option value="All sections">All sections</option>
-                {sections.map(section => (
-                  <option key={section} value={section}>{section}</option>
-                ))}
+                <option value="All sections">All Sections</option>
+                {sections.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             )}
-            <select
-              value={sortConfig.key || ''}
-              onChange={(e) => handleSortChange(e.target.value)}
-              className="h-11 px-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent"
-              disabled={loading}
-            >
-              <option value="">Sort by</option>
-              <option value="name">Name</option>
-              <option value="roll_number">Roll Number</option>
-              <option value="tut_section">Section</option>
-              <option value="email">Email</option>
-            </select>
             <button
               onClick={handleBulkDelete}
-              disabled={loading || bulkDeleting || selectedStudentIds.size === 0}
-              className="h-11 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={selectedStudentIds.size === 0 || bulkDeleting}
+              className="h-12 px-4 rounded-xl border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50 disabled:opacity-40 disabled:grayscale transition-all flex items-center gap-2"
             >
-              Bulk Delete
+              {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 size={18} />}
+              Bulk Delete ({selectedStudentIds.size})
             </button>
             <button
               onClick={() => setShowImportModal(true)}
-              disabled={loading}
-              className="h-11 px-4 flex items-center justify-center gap-2 text-gray-700 bg-white border border-gray-300 
-                rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-12 px-4 flex items-center gap-2 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 font-bold text-sm transition-all"
             >
               <Upload size={18} />
               Import
             </button>
             <button
               onClick={handleExportStudents}
-              disabled={loading}
-              className="h-11 px-4 flex items-center justify-center gap-2 text-gray-700 bg-white border border-gray-300 
-                rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-12 px-4 flex items-center gap-2 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 font-bold text-sm transition-all"
             >
               <Upload size={18} />
               Export
             </button>
             <button
-              onClick={handleOnAdd}
-              disabled={loading}
-              className="h-11 px-4 flex items-center justify-center gap-2 text-white bg-accent rounded-lg 
-                hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => onAdd((data) => handleAddStudent(data))}
+              className="h-12 px-6 flex items-center gap-2 text-white bg-accent rounded-xl hover:bg-accent hover:shadow-lg hover:shadow-accent/20 font-bold text-sm transition-all active:scale-95"
             >
-              <Plus size={18} />
+              <Plus size={20} />
               Add Student
             </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-gray-400" />
-            <span className="font-medium text-gray-900">{totalStudentCount}</span>
-            <span>students</span>
-            <span className="text-xs text-gray-400">Showing {visibleStudentCount}</span>
+        <div className="flex items-center justify-between text-sm text-gray-500 font-medium">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              <Users size={16} className="text-gray-400" />
+              <span className="text-gray-900 font-bold">{allStudents.length}</span> Total Students
+            </span>
+            {selectedStudentIds.size > 0 && (
+              <span className="text-accent bg-accent/10 px-2 py-0.5 rounded-md text-xs font-bold">
+                {selectedStudentIds.size} selected
+              </span>
+            )}
           </div>
-          {selectedStudentIds.size > 0 && (
-            <div className="text-xs text-gray-500">
-              {selectedStudentIds.size} selected
-            </div>
+          {sortConfig.key && (
+            <span className="text-xs">
+              Sorted by <span className="text-gray-900 font-bold uppercase">{sortConfig.key}</span> ({sortConfig.direction})
+            </span>
           )}
         </div>
       </div>
 
-      {renderContent()}
+      {allStudents.length === 0 && !isLoading ? (
+        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-100 p-20 text-center">
+          <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-gray-900 mb-1">No students found</h3>
+          <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+            {searchQuery ? `No results for "${searchQuery}". Try a different search term.` : "Start by importing a CSV file or adding students manually."}
+          </p>
+          <button onClick={() => setShowImportModal(true)} className="px-8 py-3 bg-accent text-white rounded-xl font-bold shadow-lg shadow-accent/20 hover:scale-105 transition-all">
+            Import Student List
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="p-4 w-12">
+                    <input
+                      type="checkbox"
+                      checked={sortedStudents.length > 0 && sortedStudents.every(s => selectedStudentIds.has(s.id))}
+                      onChange={toggleSelectAllVisible}
+                      className="w-5 h-5 rounded border-gray-300 text-accent focus:ring-accent accent-accent cursor-pointer"
+                    />
+                  </th>
+                  {[
+                    { key: 'name', label: 'Student Details' },
+                    { key: 'roll_number', label: 'Roll Number' },
+                    { key: 'tut_section', label: 'Section' },
+                    { key: 'email', label: 'Email Address' }
+                  ].map(col => (
+                    <th 
+                      key={col.key} 
+                      onClick={() => handleSortChange(col.key)}
+                      className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-accent transition-colors group"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {col.label}
+                        {sortConfig.key === col.key ? (
+                          <span className="text-accent">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                        ) : (
+                          <span className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">↕</span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                  <th className="p-4 w-24"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {sortedStudents.map(student => (
+                  <StudentRow
+                    key={student.id}
+                    student={student}
+                    isSelected={selectedStudentIds.has(student.id)}
+                    onToggle={toggleSelectStudent}
+                    onEdit={onEdit}
+                    onDelete={handleRemoveStudent}
+                    onUpdate={handleUpdateStudent}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <StudentImportModal 
         isOpen={showImportModal}

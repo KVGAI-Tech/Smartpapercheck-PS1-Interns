@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
+import {
   ArrowLeft,
   FileText,
   Clock,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { examsApi } from './Student_api';
 import Breadcrumbs from './ui/breadcrumbs';
+import { getExamVariant } from './examTypeUtils';
 
 const ExamCard = ({ 
   id, 
@@ -21,22 +22,43 @@ const ExamCard = ({
   exam_name,
   full_marks,
   exam_type,
+  conduct_variant,
   exam_is_active,
   marks_obtained,
   start_time,
+  end_time,
   duration,
   recheck_requested,
   allow_recheck,
   upload_status,
-  evaluation_status
+  evaluation_status,
+  conduct_submission_status,
 }) => {
   const navigate = useNavigate();
   const { courseId } = useParams();
+  const examVariant = getExamVariant({ exam_type, conduct_variant });
+
+  const getSubjectiveConductAvailability = () => {
+    const now = Date.now();
+    const startMs = start_time ? new Date(start_time).getTime() : null;
+    const endMs = end_time ? new Date(end_time).getTime() : null;
+
+    if (!exam_is_active) return 'not_started';
+    if (startMs && now < startMs) return 'not_started';
+    if (endMs && now > endMs) return 'expired';
+    return 'live';
+  };
   
   const getStatus = () => {
-    if (exam_type === 'conduct' && upload_status === 'submitted') return 'submitted';
-    if (exam_type === 'conduct' && !exam_is_active) return 'inactive';
-    if (exam_type === 'conduct') return 'ready';
+    if (examVariant === 'portal_mcq' && upload_status === 'submitted') return 'submitted';
+    if (examVariant === 'portal_mcq' && !exam_is_active) return 'inactive';
+    if (examVariant === 'portal_mcq') return 'ready';
+    if (examVariant === 'conduct') {
+      if (conduct_submission_status === 'submitted' || conduct_submission_status === 'auto_submitted') {
+        return 'submitted';
+      }
+      return getSubjectiveConductAvailability();
+    }
     if (recheck_requested) return 'recheck_requested';
     if (evaluation_status === 'evaluated') return 'evaluated';
     if (upload_status === 'not_uploaded') return 'not_uploaded';
@@ -44,6 +66,7 @@ const ExamCard = ({
   };
   
   const status = getStatus();
+  const isOpenDisabled = status === 'inactive' || status === 'not_started' || status === 'expired';
   
   const getStatusColor = () => {
     switch(status) {
@@ -53,6 +76,9 @@ const ExamCard = ({
       case 'ready': return 'text-blue-700 bg-blue-50';
       case 'inactive': return 'text-gray-700 bg-gray-100';
       case 'submitted': return 'text-green-700 bg-green-50';
+      case 'live': return 'text-blue-700 bg-blue-50';
+      case 'not_started': return 'text-gray-700 bg-gray-100';
+      case 'expired': return 'text-red-700 bg-red-50';
       case 'not_uploaded': return 'text-red-600 bg-red-50';
       default: return 'text-gray-600 bg-gray-50';
     }
@@ -66,6 +92,9 @@ const ExamCard = ({
       case 'ready': return <Clock className="w-4 h-4" />;
       case 'inactive': return <AlertTriangle className="w-4 h-4" />;
       case 'submitted': return <CheckCircle className="w-4 h-4" />;
+      case 'live': return <Clock className="w-4 h-4" />;
+      case 'not_started': return <Clock className="w-4 h-4" />;
+      case 'expired': return <AlertTriangle className="w-4 h-4" />;
       case 'not_uploaded': return <AlertTriangle className="w-4 h-4" />;
       default: return <AlertTriangle className="w-4 h-4" />;
     }
@@ -79,19 +108,26 @@ const ExamCard = ({
       case 'ready': return 'Ready';
       case 'inactive': return 'Inactive';
       case 'submitted': return 'Submitted';
+      case 'live': return 'Live';
+      case 'not_started': return 'Not Started';
+      case 'expired': return 'Expired';
       case 'not_uploaded': return 'Not Uploaded';
       default: return status;
     }
   };
 
   const handleViewDetails = () => {
-    
     if (!exam_id || !id) {
       console.error('Missing exam ID or enrollment ID:', { exam_id, enrollment_id: id });
       return;
     }
-    
-    
+
+    // Subjective conduct exams go directly to the exam session page
+    if (examVariant === 'conduct') {
+      navigate(`/student/exams/${exam_id}/conduct`);
+      return;
+    }
+
     navigate(`/student/evaluations/${courseId}/exam/${exam_id}?enrollment_id=${id}`);
   };
 
@@ -122,8 +158,9 @@ const ExamCard = ({
           <div>
             <h3 className="font-semibold text-gray-900">{exam_name}</h3>
             <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-              {exam_type && <p>Type: {exam_type === 'conduct' ? 'Portal MCQ Exam' : 'Evaluated Exam'}</p>}
-              {exam_type === 'conduct' && <p>Availability: {exam_is_active ? 'Active' : 'Inactive'}</p>}
+              {exam_type && <p>Type: {examVariant === 'portal_mcq' ? 'Portal MCQ Exam' : examVariant === 'conduct' ? 'Conduct Exam' : 'Evaluated Exam'}</p>}
+              {examVariant === 'portal_mcq' && <p>Availability: {exam_is_active ? 'Active' : 'Inactive'}</p>}
+              {examVariant === 'conduct' && <p>Window: {getStatusText()}</p>}
               {duration && <p>Duration: {formatDuration(duration)}</p>}
               {start_time && <p>Exam Date: {formatDate(start_time)}</p>}
             </div>
@@ -154,15 +191,15 @@ const ExamCard = ({
         <div className="flex gap-2 flex-wrap">
           <button 
             onClick={handleViewDetails}
-            disabled={status === 'inactive'}
+            disabled={isOpenDisabled}
             className={`px-3 py-1.5 text-sm font-medium flex items-center gap-1 ${
-              status === 'inactive'
+              isOpenDisabled
                 ? 'text-gray-400 cursor-not-allowed'
                 : 'text-accent hover:text-accent/80'
             }`}
           >
             <Eye className="w-4 h-4" />
-            {exam_type === 'conduct' ? 'Open Exam' : 'View Details'}
+            {(examVariant === 'portal_mcq' || examVariant === 'conduct') ? 'Open Exam' : 'View Details'}
           </button>
           {status === 'evaluated' && (
             <button className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1">
@@ -294,14 +331,17 @@ const CourseEvaluations = () => {
               exam_name={exam.exam_name}
               full_marks={exam.full_marks}
               exam_type={exam.exam_type}
+              conduct_variant={exam.conduct_variant}
               exam_is_active={exam.exam_is_active}
               marks_obtained={exam.marks_obtained}
               start_time={exam.start_time}
+              end_time={exam.end_time}
               duration={exam.duration}
               recheck_requested={exam.recheck_requested || false}
               allow_recheck={exam.allow_recheck || false}
               upload_status={exam.upload_status || 'pending'}
               evaluation_status={exam.evaluation_status || null}
+              conduct_submission_status={exam.conduct_submission_status || null}
             />
           ))}
         </div>

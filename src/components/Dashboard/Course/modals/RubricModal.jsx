@@ -130,6 +130,78 @@ const GenerateLoader = () => (
     </motion.div>
 );
 
+const EmptyState = ({ onGenerate, onManual, isGenerating, selectedQuestion, hasRubric }) => (
+    <motion.div 
+        key="empty"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="h-full flex flex-col items-center justify-center py-12 text-center"
+    >
+        <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm max-w-md w-full space-y-6"
+        >
+            <motion.div 
+                animate={{ 
+                    rotate: [0, 5, -5, 0],
+                }}
+                transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+                className="relative w-16 h-16 mx-auto"
+            >
+                <div className="absolute inset-0 bg-accent/30 rounded-xl rotate-6"></div>
+                <div className="absolute inset-0 bg-accent/20 rounded-xl -rotate-3"></div>
+                <div className="relative bg-white rounded-xl p-4 flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-accent" />
+                </div>
+            </motion.div>
+
+            <div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Generate Smart Rubric
+                </h3>
+                <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                    Click 'Generate' to create an AI-powered grading rubric with evaluation criteria.
+                </p>
+            </div>
+
+            <div className="pt-4 flex items-center justify-center gap-4">
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={onGenerate}
+                    disabled={!selectedQuestion || isGenerating || hasRubric}
+                    className={`inline-flex items-center gap-2 px-6 py-3 ${
+                        !selectedQuestion || hasRubric 
+                        ? 'bg-gray-100 text-gray-500' 
+                        : 'bg-accent text-white shadow-md hover:shadow-lg'
+                    } rounded-xl transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                    <Sparkles className="w-4 h-4" />
+                    Generate Rubric
+                </motion.button>
+
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={onManual}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg shadow hover:bg-gray-200 
+                    transition-all font-medium text-sm"
+                >
+                    <Plus className="w-4 h-4" />
+                    Create Manually
+                </motion.button>
+            </div>
+        </motion.div>
+    </motion.div>
+);
+
 const AutoGrowTextarea = ({ value, onChange, placeholder, rows, className, ...props }) => {
     const textareaRef = useRef(null);
     
@@ -252,7 +324,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemDescription, 
     );
 };
 
-const RubricItemEditor = ({ item, index, onUpdate, onDelete, validationErrors = [] }) => {
+const RubricItemEditor = React.memo(({ item, index, onUpdate, onDelete, validationErrors = [] }) => {
     const hasErrors = validationErrors.length > 0;
     
     return (
@@ -394,9 +466,9 @@ const RubricItemEditor = ({ item, index, onUpdate, onDelete, validationErrors = 
             </Card>
         </motion.div>
     );
-};
+});
 
-const QuestionCard = ({
+const QuestionCard = React.memo(({
     question,
     isSelected,
     onSelect,
@@ -404,7 +476,8 @@ const QuestionCard = ({
     onEditRubric,
     showGenerateButton,
     isGenerating,
-    hasRubric
+    hasRubric,
+    status // 'pending' | 'generating' | 'done' | 'error'
 }) => (
     <motion.div
         initial={{ opacity: 0, x: -20 }}
@@ -412,11 +485,12 @@ const QuestionCard = ({
         transition={{ type: "spring", stiffness: 100 }}
         whileHover={{ x: 5 }}
         className={`
-            w-full rounded-lg transition-all duration-300 overflow-hidden
+            w-full rounded-lg transition-all duration-300 overflow-hidden relative
             ${isSelected
                 ? 'bg-accent/10 border border-accent/20 shadow-sm'
                 : 'hover:bg-gray-50 border border-gray-200'
             }
+            ${status === 'generating' ? 'ring-2 ring-accent ring-opacity-50' : ''}
         `}
     >
         <div className="p-4">
@@ -434,15 +508,42 @@ const QuestionCard = ({
                                 ? 'bg-accent text-white' 
                                 : 'bg-gray-100 text-gray-600'
                             }
+                            ${status === 'generating' ? 'animate-pulse' : ''}
                         `}
                     >
-                        {question.question_number}
+                        {status === 'generating' ? (
+                             <motion.div 
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
+                             />
+                        ) : status === 'done' ? (
+                            <CheckCircle className="w-4 h-4" />
+                        ) : status === 'error' ? (
+                            <AlertCircle className="w-4 h-4" />
+                        ) : (
+                            question.question_number
+                        )}
                     </motion.div>
                     <div className="flex-1">
                         <div className="flex items-center gap-2">
                             <h4 className={`font-medium ${isSelected ? 'text-accent' : 'text-gray-700'}`}>
                                 Question {question.question_number}
                             </h4>
+                            {status === 'generating' && (
+                                <motion.span 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-[10px] text-accent animate-pulse font-bold uppercase tracking-wider"
+                                >
+                                    Generating...
+                                </motion.span>
+                            )}
+                            {status === 'done' && (
+                                <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">
+                                    Ready
+                                </span>
+                            )}
                         </div>
                         {question.domain && (
                             <motion.span 
@@ -456,7 +557,7 @@ const QuestionCard = ({
                         )}
                     </div>
                 </div>
-                {showGenerateButton && (
+                {showGenerateButton && status !== 'generating' && (
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -509,7 +610,8 @@ const QuestionCard = ({
             )}
         </div>
     </motion.div>
-);
+));
+
 
 const clampRubricCount = (value, fallback = 1) => {
     const parsed = Number.parseInt(value, 10);
@@ -552,42 +654,10 @@ const normalizeQuestions = (questions) => {
                 typeof question?.professor_instructions === 'string'
                     ? question.professor_instructions
                     : '',
-        }));
+        }))
+        .sort((a, b) => Number(a.question_number) - Number(b.question_number));
 };
 
-const buildRubricItemShell = (defaultMarks = 1) => ({
-    description: '',
-    max_marks: Math.max(0.01, Number(defaultMarks) || 1),
-    score_options: [],
-    reasoning: '',
-    grading_guidelines: '',
-});
-
-const resizeRubricItems = (items, nextCount, questionMaxMarks) => {
-    const safeCount = clampRubricCount(nextCount, Array.isArray(items) && items.length ? items.length : 1);
-    const currentItems = (Array.isArray(items) ? items : [])
-        .slice(0, safeCount)
-        .map((item) => ({
-            ...item,
-            max_marks: Math.max(0.01, Number(item?.max_marks) || 0.01),
-        }));
-
-    if (currentItems.length >= safeCount) {
-        return currentItems;
-    }
-
-    const totalExistingMarks = currentItems.reduce((sum, item) => sum + (Number(item.max_marks) || 0), 0);
-    const remainingSlots = safeCount - currentItems.length;
-    const safeQuestionMarks = Math.abs(Number(questionMaxMarks) || safeCount || 1);
-    const suggestedMarks = Number(
-        Math.max((safeQuestionMarks - totalExistingMarks) / Math.max(remainingSlots, 1), 0.01).toFixed(2)
-    );
-
-    return [
-        ...currentItems,
-        ...Array.from({ length: remainingSlots }, () => buildRubricItemShell(suggestedMarks)),
-    ];
-};
 
 const RubricModal = ({
     isOpen,
@@ -601,12 +671,15 @@ const RubricModal = ({
     const normalizedInputQuestions = useMemo(() => normalizeQuestions(inputQuestions), [inputQuestions]);
 
     const [questions, setQuestions] = useState(normalizedInputQuestions);
-    const [selectedQuestion, setSelectedQuestion] = useState(null);
-    const [rubricItems, setRubricItems] = useState([]);
-    const [feedback, setFeedback] = useState('');
+    const [selectedQuestionId, setSelectedQuestionId] = useState(null);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [rubricsMap, setRubricsMap] = useState({}); // { [questionNumber]: rubricItems[] }
+    const [feedbackMap, setFeedbackMap] = useState({}); // { [questionNumber]: problem_feedback }
+    const [generationState, setGenerationState] = useState({
+        loading: false,
+        mode: null,
+    });
     const [showRubricEditor, setShowRubricEditor] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -618,87 +691,182 @@ const RubricModal = ({
     const [questionRubricSettings, setQuestionRubricSettings] = useState({});
     const [showRubricSettings, setShowRubricSettings] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
-    const previousHeight = useRef(null);
+    const [generatingStatus, setGeneratingStatus] = useState({}); // { [questionNumber]: 'pending' | 'generating' | 'done' | 'error' }
+
     const modalContentRef = useRef(null);
     const modalRootRef = useRef(null);
+    const generationLockRef = useRef(false);
 
-    const syncQuestionState = (
-        questionNumber,
-        {
-            rubric_items,
-            problem_feedback,
-            num_rubric_items,
-            professor_instructions,
-        } = {}
-    ) => {
-        if (questionNumber == null) return;
+    const selectedQuestion = selectedQuestionId;
+    const setSelectedQuestion = setSelectedQuestionId;
+    const isGenerating = generationState.loading;
+    const rubricItems = selectedQuestionId != null ? (rubricsMap[selectedQuestionId] || []) : [];
+    const feedback = selectedQuestionId != null ? (feedbackMap[selectedQuestionId] || '') : '';
 
-        setQuestions((prevQuestions) =>
-            prevQuestions.map((question) => {
-                if (question.question_number !== questionNumber) {
-                    return question;
-                }
-
-                const nextRubricItems = Array.isArray(rubric_items)
-                    ? rubric_items
-                    : getQuestionRubricItems(question);
-                const nextFeedback =
-                    typeof problem_feedback === 'string'
-                        ? problem_feedback
-                        : getQuestionFeedback(question);
-                const nextNumRubricItems = clampRubricCount(
-                    num_rubric_items,
-                    nextRubricItems.length || question.num_rubric_items || 1
-                );
-                const nextProfessorInstructions =
-                    typeof professor_instructions === 'string'
-                        ? professor_instructions
-                        : (question.professor_instructions || '');
-
-                return {
-                    ...question,
-                    rubric_items: nextRubricItems,
-                    problem_feedback: nextFeedback,
-                    num_rubric_items: nextNumRubricItems,
-                    professor_instructions: nextProfessorInstructions,
-                    rubric: {
-                        ...(question.rubric || {}),
-                        rubric_items: nextRubricItems,
-                        problem_feedback: nextFeedback,
-                    }
-                };
-            })
-        );
-
-        setQuestionRubricSettings((prev) => ({
-            ...(prev || {}),
-            [questionNumber]: {
-                num_rubric_items: clampRubricCount(
-                    num_rubric_items,
-                    Array.isArray(rubric_items) ? rubric_items.length || 1 : numRubricItems
-                ),
-                professor_instructions:
-                    typeof professor_instructions === 'string'
-                        ? professor_instructions
-                        : (prev?.[questionNumber]?.professor_instructions || profInstructions || ''),
-            }
+    const setQuestionRubricItems = (questionNumber, items) => {
+        const normalizedItems = Array.isArray(items) ? items : [];
+        setRubricsMap((prev) => ({
+            ...prev,
+            [questionNumber]: normalizedItems,
         }));
     };
 
-    const persistSelectedQuestionDraft = () => {
-        if (!selectedQuestion) return;
-        syncQuestionState(selectedQuestion, {
-            rubric_items: rubricItems,
-            problem_feedback: feedback,
-            num_rubric_items: numRubricItems,
-            professor_instructions: profInstructions,
+    const updateQuestionRubricItems = (questionNumber, updater) => {
+        if (questionNumber == null) return;
+        setRubricsMap((prev) => {
+            const currentItems = prev[questionNumber] || [];
+            const nextItems = typeof updater === 'function' ? updater(currentItems) : updater;
+            return {
+                ...prev,
+                [questionNumber]: Array.isArray(nextItems) ? nextItems : [],
+            };
         });
+    };
+
+    const setQuestionFeedback = (questionNumber, nextFeedback) => {
+        if (questionNumber == null) return;
+        setFeedbackMap((prev) => ({
+            ...prev,
+            [questionNumber]: typeof nextFeedback === 'string' ? nextFeedback : '',
+        }));
+    };
+
+    const replaceQuestionRubric = (questionNumber, items, nextFeedback = '') => {
+        setQuestionRubricItems(questionNumber, items);
+        setQuestionFeedback(questionNumber, nextFeedback);
+    };
+
+    const setQuestionSettings = (questionNumber, nextSettings) => {
+        if (questionNumber == null || !nextSettings) return;
+        setQuestionRubricSettings((prev) => ({
+            ...(prev || {}),
+            [questionNumber]: {
+                ...(prev?.[questionNumber] || {}),
+                ...nextSettings,
+            },
+        }));
+    };
+
+    const getQuestionGenerationSettings = (questionNumber) => {
+        const question = questions.find((q) => q.question_number === questionNumber);
+        const storedSettings = questionRubricSettings?.[questionNumber];
+        const configuredCount = questionNumber === selectedQuestionId
+            ? numRubricItems
+            : storedSettings?.num_rubric_items;
+        const configuredInstructions = questionNumber === selectedQuestionId
+            ? profInstructions
+            : storedSettings?.professor_instructions;
+
+        return {
+            num_rubric_items: clampRubricCount(
+                configuredCount,
+                question?.num_rubric_items || (rubricsMap[questionNumber] || []).length || 1
+            ),
+            professor_instructions:
+                typeof configuredInstructions === 'string'
+                    ? configuredInstructions.trim()
+                    : (question?.professor_instructions || ''),
+        };
+    };
+
+    const extractGeneratedRubric = (payload, expectedCount) => {
+        const rubricPayload = Array.isArray(payload?.rubric?.rubric_items) ? payload.rubric : payload;
+        const generatedItems = Array.isArray(rubricPayload?.rubric_items) ? rubricPayload.rubric_items : [];
+        const generatedFeedback = typeof rubricPayload?.problem_feedback === 'string'
+            ? rubricPayload.problem_feedback
+            : '';
+
+        if (!generatedItems.length) {
+            throw new Error('Invalid rubric');
+        }
+        if (typeof expectedCount === 'number' && generatedItems.length !== expectedCount) {
+            throw new Error('Invalid rubric count');
+        }
+
+        return {
+            items: generatedItems,
+            feedback: generatedFeedback,
+            rubricPayload,
+        };
+    };
+
+    const requestRubricGeneration = async (questionNumber, settingsOverride = null) => {
+        const generationSettings = settingsOverride || getQuestionGenerationSettings(questionNumber);
+
+        console.log('[RubricModal] Generating:', questionNumber);
+
+        const response = await fetch(
+            `${API_BASE_URL}${apiPrefix}/${examId}/questions/${questionNumber}/rubric-settings`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    num_rubric_items: generationSettings.num_rubric_items,
+                    professor_instructions: generationSettings.professor_instructions,
+                    regenerate_rubric: true
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('Failed to generate rubric');
+        }
+
+        const payload = await response.json();
+        if (payload.code !== 200) {
+            throw new Error(payload.message || 'Failed to generate rubric');
+        }
+
+        const generated = extractGeneratedRubric(payload.data, generationSettings.num_rubric_items);
+        console.log('[RubricModal] Items:', generated.items.length);
+
+        setQuestionSettings(questionNumber, {
+            num_rubric_items: payload?.data?.num_rubric_items ?? generationSettings.num_rubric_items,
+            professor_instructions:
+                typeof payload?.data?.professor_instructions === 'string'
+                    ? payload.data.professor_instructions
+                    : generationSettings.professor_instructions,
+        });
+
+        return {
+            response: payload,
+            items: generated.items,
+            feedback: generated.feedback,
+        };
+    };
+
+    const runGenerationWithLock = async (mode, runner) => {
+        if (generationLockRef.current || generationState.loading) {
+            console.warn('[RubricModal] Generation already in progress, ignoring trigger');
+            return null;
+        }
+
+        generationLockRef.current = true;
+        setGenerationState({
+            loading: true,
+            mode,
+        });
+
+        try {
+            return await runner();
+        } finally {
+            generationLockRef.current = false;
+            setGenerationState({
+                loading: false,
+                mode: null,
+            });
+        }
     };
 
     const handleSelectQuestion = (questionNumber) => {
         if (questionNumber === selectedQuestion) return;
-        persistSelectedQuestionDraft();
         setSelectedQuestion(questionNumber);
+        const questionHasRubric = (rubricsMap[questionNumber] || []).length > 0;
+        setShowRubricEditor(questionHasRubric);
+        setShowRubricSettings(questionHasRubric);
     };
     
     // Updated strict validation logic
@@ -744,12 +912,7 @@ const RubricModal = ({
         return { isValid, errors, itemErrors, totalMaxMarks };
     }, [rubricItems, selectedQuestion, questions]);
     
-    const hasRubric = (questionNumber) => {
-        const question = questions.find(q => q.question_number === questionNumber);
-        return question &&
-            ((question.rubric && question.rubric.rubric_items && question.rubric.rubric_items.length > 0) ||
-                (question.rubric_items && question.rubric_items.length > 0));
-    };
+    const hasRubric = (questionNumber) => (rubricsMap[questionNumber] || []).length > 0;
     
     const modalSpring = useSpring({
         transform: isMaximized 
@@ -768,12 +931,26 @@ const RubricModal = ({
 
     const anyQuestionsNeedRubrics = useMemo(() => {
         return questions.some(question => !hasRubric(question.question_number));
-    }, [questions]);
+    }, [questions, rubricsMap]);
 
     useEffect(() => {
         if (!isOpen) return;
 
         setQuestions(normalizedInputQuestions);
+        setRubricsMap(() => {
+            const next = {};
+            normalizedInputQuestions.forEach((question) => {
+                next[question.question_number] = getQuestionRubricItems(question);
+            });
+            return next;
+        });
+        setFeedbackMap(() => {
+            const next = {};
+            normalizedInputQuestions.forEach((question) => {
+                next[question.question_number] = getQuestionFeedback(question);
+            });
+            return next;
+        });
         setQuestionRubricSettings((prev) => {
             const next = {};
             normalizedInputQuestions.forEach((question) => {
@@ -842,47 +1019,35 @@ const RubricModal = ({
         }
     }, [isOpen, questions, selectedQuestion]);
 
-    // Load rubric contents when question changes.
-    // IMPORTANT: this must NOT depend on settings state, otherwise after generation/regeneration
-    // the effect may overwrite freshly generated rubricItems with stale `questions` props.
     useEffect(() => {
-        if (selectedQuestion) {
-            const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
-            if (currentQuestion) {
-                setRubricItems(getQuestionRubricItems(currentQuestion));
-                setFeedback(getQuestionFeedback(currentQuestion));
+        if (!selectedQuestion || !isOpen) return;
 
-                const hasRubricItems = getQuestionRubricItems(currentQuestion).length > 0;
+        const rubricData = rubricsMap[selectedQuestion] || [];
+        const localSettings = questionRubricSettings?.[selectedQuestion];
 
-                setShowRubricEditor(hasRubricItems);
-                setShowRubricSettings(hasRubricItems);
-            }
-        }
-    }, [selectedQuestion, questions]);
+        setNumRubricItems(clampRubricCount(
+            localSettings?.num_rubric_items,
+            rubricData.length || 1
+        ));
+        setProfInstructions(
+            typeof localSettings?.professor_instructions === 'string'
+                ? localSettings.professor_instructions
+                : ''
+        );
 
-    // Load rubric settings when question changes OR local settings are updated.
-    // This effect intentionally does not touch rubricItems/feedback.
+        const hasRubricItems = rubricData.length > 0;
+        setShowRubricEditor(hasRubricItems);
+        setShowRubricSettings(hasRubricItems);
+    }, [selectedQuestion, questions, rubricsMap, questionRubricSettings, isOpen]);
+
     useEffect(() => {
-        if (selectedQuestion) {
-            const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
-            if (currentQuestion) {
-                const localSettings = questionRubricSettings?.[selectedQuestion];
-                setNumRubricItems(
-                    clampRubricCount(
-                        typeof localSettings?.num_rubric_items === 'number'
-                            ? localSettings.num_rubric_items
-                            : (currentQuestion.num_rubric_items || getQuestionRubricItems(currentQuestion).length || 1),
-                        getQuestionRubricItems(currentQuestion).length || 1
-                    )
-                );
-                setProfInstructions(
-                    (typeof localSettings?.professor_instructions === 'string'
-                        ? localSettings.professor_instructions
-                        : (currentQuestion.professor_instructions || ''))
-                );
-            }
-        }
-    }, [selectedQuestion, questions, questionRubricSettings]);
+        if (!selectedQuestion || !isOpen) return;
+
+        setQuestionSettings(selectedQuestion, {
+            num_rubric_items: clampRubricCount(numRubricItems, rubricItems.length || 1),
+            professor_instructions: profInstructions,
+        });
+    }, [selectedQuestion, isOpen, numRubricItems, profInstructions, rubricItems.length]);
 
     useEffect(() => {
         if (!import.meta.env.DEV || !showRubricEditor || !selectedQuestion) return;
@@ -907,7 +1072,7 @@ const RubricModal = ({
 
     const confirmDeleteRubricItem = () => {
         if (deleteConfirmation.index !== null) {
-            setRubricItems((items) => {
+            updateQuestionRubricItems(selectedQuestion, (items) => {
                 const nextItems = items.filter((_, i) => i !== deleteConfirmation.index);
                 setNumRubricItems(nextItems.length || 1);
                 return nextItems;
@@ -921,6 +1086,14 @@ const RubricModal = ({
         setDeleteConfirmation({ show: false, index: null, itemDescription: '' });
     };
 
+    const buildRubricItemShell = (marks = 1) => ({
+        description: '',
+        max_marks: marks,
+        reasoning: '',
+        grading_guidelines: '',
+        score_options: [marks, 0]
+    });
+
     const handleAddRubricItem = () => {
         const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
         const maxMarks = Math.abs(currentQuestion?.max_marks || 10);
@@ -930,7 +1103,7 @@ const RubricModal = ({
         
         const suggestedMarks = remainingItems > 0 ? parseFloat(((maxMarks - currentTotalMarks) / remainingItems).toFixed(2)) : parseFloat((maxMarks / targetCount).toFixed(2));
 
-        setRubricItems(prev => [
+        updateQuestionRubricItems(selectedQuestion, (prev) => [
             ...prev,
             buildRubricItemShell(Math.max(0.01, suggestedMarks || parseFloat((maxMarks / targetCount).toFixed(2))))
         ]);
@@ -943,7 +1116,7 @@ const RubricModal = ({
     };
 
     const handleUpdateRubricItem = (index, updatedItem) => {
-        setRubricItems(items => {
+        updateQuestionRubricItems(selectedQuestion, (items) => {
             const newItems = [...items];
             newItems[index] = updatedItem;
             return newItems;
@@ -976,10 +1149,11 @@ const RubricModal = ({
         return Array.from(new Set(opts.map(v => Number(v)))).sort((a, b) => b - a);
     };
 
-    const normalizeRubricItemsForSave = () => {
-        const selectedQuestionData = questions.find(q => q.question_number === selectedQuestion);
+    const normalizeRubricItemsForSave = (questionNumber = selectedQuestion) => {
+        const selectedQuestionData = questions.find(q => q.question_number === questionNumber);
         const questionMaxMarks = Math.abs(selectedQuestionData?.max_marks || 10);
-        return (rubricItems || []).map((item) => {
+        const items = questionNumber != null ? (rubricsMap[questionNumber] || []) : [];
+        return items.map((item) => {
             const cleaned = { ...item };
             delete cleaned['wei' + 'ght'];
             cleaned.max_marks = Math.abs(parseFloat(cleaned.max_marks) || 0);
@@ -1000,325 +1174,123 @@ const RubricModal = ({
     };
 
     const handleEditRubric = (questionNumber) => {
-        const questionData = questions.find(q => q.question_number === questionNumber);
-        if (questionData) {
+        if (hasRubric(questionNumber)) {
             handleSelectQuestion(questionNumber);
-            setRubricItems(getQuestionRubricItems(questionData));
-            setFeedback(getQuestionFeedback(questionData));
             setShowRubricEditor(true);
             setShowRubricSettings(true);
         }
     };
 
-    const generateAllRubrics = async () => {
-        if (isGenerating) return;
-        
-        const questionsWithoutRubrics = questions.filter(question => !hasRubric(question.question_number));
-        
-        if (questionsWithoutRubrics.length === 0) {
-            toast.success('All questions already have rubrics!');
+    const handleGenerateAll = async () => {
+        if (generationState.loading) return;
+        if (questions.length === 0) {
+            toast.error('No questions available for rubric generation');
             return;
         }
-        
-        setIsGenerating(true);
-        setError('');
-        setShowRubricEditor(false);
-        
-        const loadingToast = toast.loading('Generating rubrics for all questions...');
-        setTotalQuestionsCount(questionsWithoutRubrics.length);
-        setGeneratedQuestionsCount(0);
-        
-        try {
-            const promises = questionsWithoutRubrics.map((question, index) => 
-                fetch(
-                    `${API_BASE_URL}${apiPrefix}/${examId}/questions/${question.question_number}/rubric-settings`,
-                    {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            num_rubric_items: clampRubricCount(question?.num_rubric_items, 1),
-                            professor_instructions: question?.professor_instructions || '',
-                            regenerate_rubric: true,
-                        })
-                    }
-                )
-                .then(async response => {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                    setGeneratedQuestionsCount(prev => prev + 1);
-                    
-                    if (!response.ok) {
-                        return { 
-                            questionNumber: question.question_number, 
-                            success: false,
-                            data: null
+
+        await runGenerationWithLock('bulk', async () => {
+            setError('');
+            setShowRubricEditor(false);
+            setShowRubricSettings(false);
+
+            const loadingToast = toast.loading('Starting batch rubric generation...');
+            setTotalQuestionsCount(questions.length);
+            setGeneratedQuestionsCount(0);
+            setRubricsMap({});
+            setFeedbackMap({});
+
+            const initialStatus = {};
+            questions.forEach((question) => {
+                initialStatus[question.question_number] = 'pending';
+            });
+            setGeneratingStatus(initialStatus);
+
+            let updatedRubrics = {};
+            let updatedFeedbacks = {};
+            let generatedSuccessCount = 0;
+
+            try {
+                for (const question of questions) {
+                    const qNum = question.question_number;
+                    toast.loading(`Generating rubric for Question ${qNum}...`, { id: loadingToast });
+                    setGeneratingStatus((prev) => ({ ...prev, [qNum]: 'generating' }));
+
+                    try {
+                        const result = await requestRubricGeneration(qNum);
+                        updatedRubrics = {
+                            ...updatedRubrics,
+                            [qNum]: result.items,
                         };
-                    }
-                    
-                    return response.json().then(data => {
-                        if (data.code === 200) {
-                            return {
-                                questionNumber: question.question_number,
-                                success: true,
-                                data: data.data
-                            };
-                        } else {
-                            return {
-                                questionNumber: question.question_number,
-                                success: false,
-                                data: null
-                            };
-                        }
-                    });
-                })
-                .catch(err => {
-                    console.error(`Error generating rubric for question ${question.question_number}:`, err);
-                    setGeneratedQuestionsCount(prev => prev + 1);
-                    return {
-                        questionNumber: question.question_number,
-                        success: false,
-                        data: null
-                    };
-                })
-            );
-            
-            const results = await Promise.all(promises);
-            
-            let successCount = 0;
-            let failCount = 0;
-            
-            for (const result of results) {
-                if (result.success) {
-                    successCount++;
-                    syncQuestionState(result.questionNumber, {
-                        rubric_items: result.data?.rubric_items || [],
-                        problem_feedback: result.data?.problem_feedback || '',
-                        num_rubric_items: result.data?.num_rubric_items,
-                        professor_instructions: result.data?.professor_instructions,
-                    });
-                } else {
-                    failCount++;
-                    
-                    const fallbackRubric = createFallbackRubric(result.questionNumber);
-                    if (fallbackRubric) {
-                        syncQuestionState(result.questionNumber, {
-                            rubric_items: fallbackRubric.rubricItems,
-                            problem_feedback: fallbackRubric.feedback,
-                            num_rubric_items: fallbackRubric.rubricItems.length,
-                        });
+                        updatedFeedbacks = {
+                            ...updatedFeedbacks,
+                            [qNum]: result.feedback,
+                        };
+                        setGeneratingStatus((prev) => ({ ...prev, [qNum]: 'done' }));
+                        generatedSuccessCount += 1;
+                    } catch (err) {
+                        console.error(`[RubricModal] Question ${qNum} failed:`, err);
+                        setGeneratingStatus((prev) => ({ ...prev, [qNum]: 'error' }));
+                    } finally {
+                        setGeneratedQuestionsCount((prev) => prev + 1);
                     }
                 }
-            }
 
-            // Keep local settings in sync for questions we regenerated.
-            // generateAllRubrics currently doesn't update parent `questions`, so this prevents
-            // the settings UI from snapping back on navigation.
-            if (successCount > 0) {
-                setQuestionRubricSettings(prev => {
-                    const next = { ...(prev || {}) };
-                    for (const q of questionsWithoutRubrics) {
-                        const qn = q?.question_number;
-                        if (qn == null) continue;
-                        if (!next[qn]) {
-                            next[qn] = {
-                                num_rubric_items: q?.num_rubric_items || 3,
-                                professor_instructions: q?.professor_instructions || '',
-                            };
-                        }
-                    }
-                    return next;
-                });
+                setRubricsMap(updatedRubrics);
+                setFeedbackMap(updatedFeedbacks);
+
+                if (generatedSuccessCount > 0) {
+                    toast.success(`Successfully generated ${generatedSuccessCount} rubrics!`, { id: loadingToast });
+                } else {
+                    toast.error('No valid rubrics were generated.', { id: loadingToast });
+                }
+
+                const firstGeneratedQuestion = questions.find(
+                    (question) => (updatedRubrics[question.question_number] || []).length > 0
+                );
+
+                if (firstGeneratedQuestion) {
+                    setSelectedQuestion(firstGeneratedQuestion.question_number);
+                    setShowRubricEditor(true);
+                    setShowRubricSettings(true);
+                }
+            } catch (err) {
+                console.error('[RubricModal] Batch generation crash:', err);
+                toast.error('Batch generation stopped due to an error.', { id: loadingToast });
             }
-            
-            if (successCount > 0) {
-                toast.success(`Successfully generated ${successCount} rubrics!`, { id: loadingToast });
-            }
-            
-            if (failCount > 0) {
-                toast.error(`Failed to generate ${failCount} rubrics. Using fallback generator.`);
-            }
-            
-            if (questionsWithoutRubrics.length > 0) {
-                const firstQuestion = questionsWithoutRubrics[0].question_number;
-                setSelectedQuestion(firstQuestion);
-                setShowRubricEditor(true);
-                setShowRubricSettings(true);
-            }
-            
-        } catch (err) {
-            console.error("Error generating all rubrics:", err);
-            toast.error('Failed to generate rubrics. Please try again.', { id: loadingToast });
-        } finally {
-            setIsGenerating(false);
-        }
+        });
     };
 
     const generateRubric = async (questionNumber, e) => {
         e?.preventDefault();
-        setIsGenerating(true);
-        setError('');
-        setShowRubricEditor(false);
-        
-        const loadingToast = toast.loading('Generating smart rubric...');
+        if (generationState.loading) return null;
 
-        try {
-            const response = await fetch(
-                `${API_BASE_URL}${apiPrefix}/${examId}/questions/${questionNumber}/rubric-settings`,
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        num_rubric_items: numRubricItems,
-                        professor_instructions: (profInstructions || '').trim(),
-                        regenerate_rubric: true
-                    })
-                }
-            );
+        return runGenerationWithLock('single', async () => {
+            setError('');
+            setGeneratingStatus((prev) => ({ ...prev, [questionNumber]: 'generating' }));
 
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            const loadingToast = toast.loading('Generating smart rubric...');
 
-            if (!response.ok) {
-                toast.error('Using fallback rubric generator', { id: loadingToast });
-                fallbackGenerateRubric(questionNumber);
-                return;
-            }
+            try {
+                const result = await requestRubricGeneration(
+                    questionNumber,
+                    getQuestionGenerationSettings(questionNumber)
+                );
 
-            const data = await response.json();
-            if (data.code === 200) {
-                const rubricPayload = (data?.data?.rubric && data.data.rubric.rubric_items)
-                    ? data.data.rubric
-                    : data.data;
-
-                setRubricItems(rubricPayload?.rubric_items || []);
-                setFeedback(rubricPayload?.problem_feedback || '');
+                replaceQuestionRubric(questionNumber, result.items, result.feedback);
+                setSelectedQuestion(questionNumber);
                 setShowRubricEditor(true);
                 setShowRubricSettings(true);
-                if (data?.data?.num_rubric_items) {
-                    setNumRubricItems(data.data.num_rubric_items);
-                }
-                if (typeof data?.data?.professor_instructions === 'string') {
-                    setProfInstructions(data.data.professor_instructions);
-                }
-
-                // Persist settings locally for this question so UI doesn't rehydrate stale values
-                // from parent `questions` props when switching questions.
-                setQuestionRubricSettings(prev => ({
-                    ...(prev || {}),
-                    [questionNumber]: {
-                        num_rubric_items:
-                            typeof data?.data?.num_rubric_items === 'number'
-                                ? data.data.num_rubric_items
-                                : numRubricItems,
-                        professor_instructions:
-                            typeof data?.data?.professor_instructions === 'string'
-                                ? data.data.professor_instructions
-                                : (profInstructions || '').trim(),
-                    },
-                }));
-                syncQuestionState(questionNumber, {
-                    rubric_items: rubricPayload?.rubric_items || [],
-                    problem_feedback: rubricPayload?.problem_feedback || '',
-                    num_rubric_items:
-                        typeof data?.data?.num_rubric_items === 'number'
-                            ? data.data.num_rubric_items
-                            : numRubricItems,
-                    professor_instructions:
-                        typeof data?.data?.professor_instructions === 'string'
-                            ? data.data.professor_instructions
-                            : (profInstructions || '').trim(),
-                });
+                setGeneratingStatus((prev) => ({ ...prev, [questionNumber]: 'done' }));
 
                 toast.success('Rubric generated successfully!', { id: loadingToast });
-            } else {
-                throw new Error(data.message || 'Failed to generate rubric');
+                return result.response;
+            } catch (err) {
+                console.error('[RubricModal] Generation error:', err);
+                setGeneratingStatus((prev) => ({ ...prev, [questionNumber]: 'error' }));
+                toast.error(err.message || 'Failed to generate rubric', { id: loadingToast });
+                throw err;
             }
-        } catch (err) {
-            console.error("Error generating rubric:", err);
-            toast.error('Using fallback rubric generator', { id: loadingToast });
-            fallbackGenerateRubric(questionNumber);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const createFallbackRubric = (questionNumber) => {
-        const questionData = questions.find(q => q.question_number === questionNumber);
-        if (!questionData) {
-            return null;
-        }
-
-        const maxMarks = Math.abs(questionData.max_marks || 10);
-        
-        const n = clampRubricCount(numRubricItems, 3);
-        const step = maxMarks <= 5 ? 0.5 : (Number.isInteger(maxMarks) ? 1 : 0.5);
-        const totalUnits = Math.round(maxMarks / step);
-        const base = Math.floor(totalUnits / n);
-        const rem = totalUnits % n;
-        const units = Array.from({ length: n }).map((_, idx) => base + (idx < rem ? 1 : 0));
-        const marks = units.map((u) => u * step);
-
-        const rubricItems = [
-            {
-                description: "Correct setup of the problem",
-                max_marks: Number(marks[0]),
-                score_options: buildScoreOptions(maxMarks, marks[0]),
-                reasoning: "Students need to demonstrate understanding of the fundamental concepts",
-                grading_guidelines: ""
-            },
-            {
-                description: "Mathematical accuracy",
-                max_marks: Number(marks[1]),
-                score_options: buildScoreOptions(maxMarks, marks[1]),
-                reasoning: "Computational accuracy is essential for reaching the correct solution",
-                grading_guidelines: ""
-            },
-            {
-                description: "Clear explanation and analysis",
-                max_marks: Number(marks[2]),
-                score_options: buildScoreOptions(maxMarks, marks[2]),
-                reasoning: "Students should demonstrate ability to explain their reasoning",
-                grading_guidelines: ""
-            }
-        ];
-
-        const feedback = "This question tests the student's understanding of fundamental concepts and application of mathematical principles. Look for clear problem-solving approach and accurate implementation.";
-        
-        return { rubricItems, feedback };
-    };
-
-    const fallbackGenerateRubric = (questionNumber) => {
-        try {
-            const fallbackRubric = createFallbackRubric(questionNumber);
-            
-            if (!fallbackRubric) {
-                toast.error('Question not found');
-                throw new Error('Question not found');
-            }
-            
-            toast.success('Creating default rubric items');
-
-            setRubricItems(fallbackRubric.rubricItems);
-            setFeedback(fallbackRubric.feedback);
-            setShowRubricEditor(true);
-            setShowRubricSettings(true);
-            setNumRubricItems(fallbackRubric.rubricItems.length);
-            syncQuestionState(questionNumber, {
-                rubric_items: fallbackRubric.rubricItems,
-                problem_feedback: fallbackRubric.feedback,
-                num_rubric_items: fallbackRubric.rubricItems.length,
-            });
-        } catch (err) {
-            setError('Failed to generate rubric. Please create a rubric manually using the "Add Item" button.');
-            toast.error('Failed to generate rubric. Please create a rubric manually.');
-        } finally {
-            setIsGenerating(false);
-        }
+        });
     };
 
     const handleUpdateRubricSettings = async (regenerate = false) => {
@@ -1328,72 +1300,81 @@ const RubricModal = ({
         }
 
         setIsRegenerating(true);
-        const loadingToast = toast.loading(regenerate ? 'Generating rubric...' : 'Updating rubric settings...');
 
         try {
-            const response = await fetch(
-                `${API_BASE_URL}${apiPrefix}/${examId}/questions/${selectedQuestion}/rubric-settings`,
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        num_rubric_items: numRubricItems,
-                        // IMPORTANT: send empty string to CLEAR instructions server-side.
-                        // Sending undefined would skip updating and the old value would persist.
-                        professor_instructions: (profInstructions || '').trim(),
-                        regenerate_rubric: regenerate
-                    })
-                }
-            );
+            if (regenerate) {
+                const loadingToast = toast.loading('Generating rubric...');
+                try {
+                    const result = await runGenerationWithLock('single', () =>
+                        requestRubricGeneration(selectedQuestion, getQuestionGenerationSettings(selectedQuestion))
+                    );
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+                    if (!result) {
+                        toast.dismiss(loadingToast);
+                        return;
+                    }
 
-            const data = await response.json();
-            if (data.code === 200) {
-                // Persist settings locally so switching questions doesn't rehydrate stale props.
-                setQuestionRubricSettings(prev => ({
-                    ...(prev || {}),
-                    [selectedQuestion]: {
-                        num_rubric_items: data?.data?.num_rubric_items ?? numRubricItems,
-                        professor_instructions:
-                            typeof data?.data?.professor_instructions === 'string'
-                                ? data.data.professor_instructions
-                                : (profInstructions || '').trim(),
-                    },
-                }));
-                if (typeof data?.data?.professor_instructions === 'string') {
-                    setProfInstructions(data.data.professor_instructions);
-                }
-                if (typeof data?.data?.num_rubric_items === 'number') {
-                    setNumRubricItems(data.data.num_rubric_items);
-                }
-                if (regenerate && data.data.rubric) {
-                    setRubricItems(data.data.rubric.rubric_items || []);
-                    setFeedback(data.data.rubric.problem_feedback || '');
+                    replaceQuestionRubric(selectedQuestion, result.items, result.feedback);
                     setShowRubricEditor(true);
                     setShowRubricSettings(true);
+                    toast.success('Rubric generated successfully!', { id: loadingToast });
+                } catch (err) {
+                    console.error('Error regenerating rubric:', err);
+                    toast.error('Failed to generate rubric: ' + (err.message || 'Unknown error'), { id: loadingToast });
                 }
-                syncQuestionState(selectedQuestion, {
-                    rubric_items: data?.data?.rubric?.rubric_items,
-                    problem_feedback: data?.data?.rubric?.problem_feedback,
+                return;
+            }
+
+            const loadingToast = toast.loading('Updating rubric settings...');
+            try {
+                const response = await fetch(
+                    `${API_BASE_URL}${apiPrefix}/${examId}/questions/${selectedQuestion}/rubric-settings`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            num_rubric_items: numRubricItems,
+                            // IMPORTANT: send empty string to CLEAR instructions server-side.
+                            // Sending undefined would skip updating and the old value would persist.
+                            professor_instructions: (profInstructions || '').trim(),
+                            regenerate_rubric: false
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.code !== 200) {
+                    throw new Error(data.message || 'Failed to update settings');
+                }
+
+                setQuestionSettings(selectedQuestion, {
                     num_rubric_items: data?.data?.num_rubric_items ?? numRubricItems,
                     professor_instructions:
                         typeof data?.data?.professor_instructions === 'string'
                             ? data.data.professor_instructions
                             : (profInstructions || '').trim(),
                 });
-                toast.success(regenerate ? 'Rubric generated successfully!' : 'Settings updated successfully!', { id: loadingToast });
-            } else {
-                throw new Error(data.message || 'Failed to update settings');
+                if (typeof data?.data?.professor_instructions === 'string') {
+                    setProfInstructions(data.data.professor_instructions);
+                }
+                if (typeof data?.data?.num_rubric_items === 'number') {
+                    setNumRubricItems(data.data.num_rubric_items);
+                }
+                toast.success('Settings updated successfully!', { id: loadingToast });
+            } catch (err) {
+                console.error('Error updating rubric settings:', err);
+                toast.error('Failed to update settings: ' + (err.message || 'Unknown error'), { id: loadingToast });
             }
         } catch (err) {
             console.error("Error updating rubric settings:", err);
-            toast.error('Failed to update settings: ' + (err.message || 'Unknown error'), { id: loadingToast });
+            toast.error('Failed to update settings: ' + (err.message || 'Unknown error'));
         } finally {
             setIsRegenerating(false);
         }
@@ -1440,13 +1421,6 @@ const RubricModal = ({
 
             const data = await response.json();
             if (data.code === 200) {
-                syncQuestionState(selectedQuestion, {
-                    rubric_items: normalizedItems,
-                    problem_feedback: feedback,
-                    num_rubric_items: normalizedItems.length,
-                    professor_instructions: profInstructions,
-                });
-
                 await onSave(data.data);
                 toast.success('Question rubric saved!', { id: loadingToast });
                 // We do NOT close the modal on single save anymore
@@ -1474,30 +1448,13 @@ const RubricModal = ({
         const loadingToast = toast.loading('Saving all rubrics...');
 
         try {
-            // Include latest current edits
-            persistSelectedQuestionDraft();
-            const currentNormalizedItems = normalizeRubricItemsForSave();
+            const results = [];
 
-            const promises = questions.map(q => {
-                let itemsToSave, feedbackToSave;
+            for (const q of questions) {
+                const itemsToSave = normalizeRubricItemsForSave(q.question_number);
+                const feedbackToSave = feedbackMap[q.question_number] || '';
 
-                if (q.question_number === selectedQuestion) {
-                    itemsToSave = currentNormalizedItems;
-                    feedbackToSave = feedback;
-                } else {
-                    const rawItems = q.rubric?.rubric_items || q.rubric_items || [];
-                    const qMaxMarks = Math.abs(q.max_marks || 10);
-                    itemsToSave = rawItems.map(item => {
-                        const cleaned = { ...item };
-                        delete cleaned['weight'];
-                        cleaned.max_marks = Math.abs(parseFloat(cleaned.max_marks) || 0);
-                        cleaned.score_options = buildScoreOptions(qMaxMarks, cleaned.max_marks);
-                        return cleaned;
-                    });
-                    feedbackToSave = q.rubric?.problem_feedback || q.problem_feedback || '';
-                }
-
-                return fetch(
+                const res = await fetch(
                     `${API_BASE_URL}${apiPrefix}/${examId}/questions/${q.question_number}/rubric`,
                     {
                         method: 'PUT',
@@ -1510,18 +1467,17 @@ const RubricModal = ({
                             problem_feedback: feedbackToSave
                         })
                     }
-                ).then(async (res) => {
-                    if (!res.ok) throw new Error(`Failed to save question ${q.question_number}`);
-                    const data = await res.json();
-                    return data.data;
+                );
+                if (!res.ok) throw new Error(`Failed to save question ${q.question_number}`);
+                const data = await res.json();
+                results.push({
+                    questionNumber: q.question_number,
+                    data: data.data,
                 });
-            });
-
-            await Promise.all(promises);
+            }
             
             // Just call onSave once to update exams tab (with current question's data, or just empty to trigger refresh)
-            const currentDataIdx = questions.findIndex(q => q.question_number === selectedQuestion);
-            const currentData = currentDataIdx !== -1 ? await promises[currentDataIdx] : {};
+            const currentData = results.find((result) => result.questionNumber === selectedQuestion)?.data || {};
             await onSave(currentData);
             
             toast.success('All rubrics saved successfully!', { id: loadingToast });
@@ -1703,7 +1659,7 @@ const RubricModal = ({
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
-                                        onClick={generateAllRubrics}
+                                        onClick={handleGenerateAll}
                                         disabled={isGenerating || !anyQuestionsNeedRubrics}
                                         className={`
                                             w-full mb-4 py-2 px-3 flex items-center justify-center gap-2 rounded-lg text-sm font-medium
@@ -1720,7 +1676,11 @@ const RubricModal = ({
                                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                     className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full" 
                                                 />
-                                                <span>Generating All ({generatedQuestionsCount}/{totalQuestionsCount})</span>
+                                                <span>
+                                                    {generationState.mode === 'bulk'
+                                                        ? `Generating All (${generatedQuestionsCount}/${totalQuestionsCount})`
+                                                        : 'Generating...'}
+                                                </span>
                                             </>
                                         ) : !anyQuestionsNeedRubrics ? (
                                             <>
@@ -1761,7 +1721,9 @@ const RubricModal = ({
                                                     showGenerateButton={selectedQuestion === question.question_number}
                                                     isGenerating={isGenerating}
                                                     hasRubric={hasRubric(question.question_number)}
+                                                    status={generatingStatus[question.question_number]}
                                                 />
+
                                             ))}
                                         </motion.div>
                                     </ScrollArea>
@@ -1796,17 +1758,31 @@ const RubricModal = ({
                                             )}
                                         </AnimatePresence>
 
-                                        <AnimatePresence mode="wait">
-                                            {isGenerating ? (
-                                                <GenerateLoader key="loader" />
-                                            ) : showRubricEditor ? (
-                                                <motion.div 
-                                                    key="editor"
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    exit={{ opacity: 0 }}
-                                                    className="space-y-6"
-                                                >
+                                        <div className="relative flex-1 flex flex-col min-h-0">
+                                            <AnimatePresence>
+                                                {isGenerating && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        className="absolute inset-0 z-50 bg-gray-50/80 backdrop-blur-[1px] flex items-center justify-center pointer-events-none"
+                                                    >
+                                                        <GenerateLoader />
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
+                                            <div className="flex-1 overflow-y-auto">
+                                                <div className="max-w-4xl mx-auto p-6">
+                                                    <AnimatePresence mode="wait">
+                                                        {(showRubricEditor || rubricItems.length > 0) ? (
+                                                            <motion.div 
+                                                                key="editor"
+                                                                initial={{ opacity: 0 }}
+                                                                animate={{ opacity: 1 }}
+                                                                exit={{ opacity: 0 }}
+                                                                className={`space-y-6 transition-opacity duration-300 ${isGenerating ? 'opacity-30 blur-[1px]' : 'opacity-100'}`}
+                                                            >
                                                     {/* Rubric Settings Section */}
                                                     {showRubricSettings && (
                                                         <motion.div
@@ -1832,10 +1808,7 @@ const RubricModal = ({
                                                                         onChange={(e) => {
                                                                             const clampedValue = clampRubricCount(e.target.value, 1);
                                                                             setNumRubricItems(clampedValue);
-                                                                            syncQuestionState(selectedQuestion, {
-                                                                                num_rubric_items: clampedValue,
-                                                                                professor_instructions: profInstructions,
-                                                                            });
+                                                                            // Removed redundant syncQuestionState call
                                                                         }}
                                                                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-200"
                                                                     />
@@ -1939,7 +1912,7 @@ const RubricModal = ({
                                                                 </div>
                                                                 <AutoGrowTextarea
                                                                     value={feedback}
-                                                                    onChange={(e) => setFeedback(e.target.value)}
+                                                                    onChange={(e) => setQuestionFeedback(selectedQuestion, e.target.value)}
                                                                     rows={4}
                                                                     className="w-full px-4 py-3"
                                                                     placeholder="Enter general feedback for this question..."
@@ -1948,80 +1921,19 @@ const RubricModal = ({
                                                         </Card>
                                                     </motion.div>
                                                 </motion.div>
-                                            ) : (
-                                                <motion.div 
-                                                    key="empty"
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    exit={{ opacity: 0 }}
-                                                    className="h-full flex flex-col items-center justify-center py-12 text-center"
-                                                >
-                                                    <motion.div 
-                                                        initial={{ y: 20, opacity: 0 }}
-                                                        animate={{ y: 0, opacity: 1 }}
-                                                        transition={{ delay: 0.2, type: "spring" }}
-                                                        className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm max-w-md w-full space-y-6"
-                                                    >
-                                                        <motion.div 
-                                                            animate={{ 
-                                                                rotate: [0, 5, -5, 0],
-                                                            }}
-                                                            transition={{
-                                                                duration: 4,
-                                                                repeat: Infinity,
-                                                                ease: "easeInOut"
-                                                            }}
-                                                            className="relative w-16 h-16 mx-auto"
-                                                        >
-                                                            <div className="absolute inset-0 bg-accent/30 rounded-xl rotate-6"></div>
-                                                            <div className="absolute inset-0 bg-accent/20 rounded-xl -rotate-3"></div>
-                                                            <div className="relative bg-white rounded-xl p-4 flex items-center justify-center">
-                                                                <Sparkles className="w-8 h-8 text-accent" />
-                                                            </div>
-                                                        </motion.div>
-
-                                                        <div>
-                                                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                                                                Generate Smart Rubric
-                                                            </h3>
-                                                            <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                                                                Click 'Generate' to create an AI-powered grading rubric with evaluation criteria.
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="pt-4 flex items-center justify-center gap-4">
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                onClick={(e) => selectedQuestion && !hasRubric(selectedQuestion) && generateRubric(selectedQuestion, e)}
-                                                                disabled={!selectedQuestion || isGenerating || hasRubric(selectedQuestion)}
-                                                                className={`inline-flex items-center gap-2 px-6 py-3 ${
-                                                                    !selectedQuestion || hasRubric(selectedQuestion) 
-                                                                    ? 'bg-gray-100 text-gray-500' 
-                                                                    : 'bg-accent text-white shadow-md hover:shadow-lg'
-                                                                } rounded-xl transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
-                                                            >
-                                                                <Sparkles className="w-4 h-4" />
-                                                                Generate Rubric
-                                                            </motion.button>
-
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                onClick={handleAddRubricItem}
-                                                                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg shadow hover:bg-gray-200 
-                                                                transition-all font-medium text-sm"
-                                                            >
-                                                                <Plus className="w-4 h-4" />
-                                                                Create Manually
-                                                            </motion.button>
-                                                        </div>
-                                                    </motion.div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                </div>
+                                                        ) : (
+                                                            <EmptyState
+                                                                onGenerate={(e) => selectedQuestion && !hasRubric(selectedQuestion) && generateRubric(selectedQuestion, e)}
+                                                                onManual={handleAddRubricItem}
+                                                                isGenerating={isGenerating}
+                                                                selectedQuestion={selectedQuestion}
+                                                                hasRubric={hasRubric(selectedQuestion)}
+                                                            />
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                 {showRubricEditor && (
                                     <motion.div 
@@ -2119,6 +2031,8 @@ const RubricModal = ({
                                         </div>
                                     </motion.div>
                                 )}
+                                    </div>
+                                </div>
                             </motion.div>
                         </div>
                     </animated.div>

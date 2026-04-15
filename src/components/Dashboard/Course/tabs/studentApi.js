@@ -18,17 +18,19 @@ export const studentApi = {
     try {
       if (!courseId) throw new Error('Course ID is required');
       const response = await fetchApi(`/professors/courses/${courseId}/students`);
-      
-      if (response.code === 200 && response.data) {
-        console.log("API response:", response);
-        return response.data;
+      if (response.code === 200) {
+        return (response.data || []).map(s => ({
+          ...s,
+          name: s.name || s.user_name,
+          email: s.email || s.user_email
+        }));
       }
-      
-      return response.data || [];
+      throw new Error(response.message || 'Failed to fetch students');
     } catch (error) {
       throw handleApiError(error);
     }
   },
+
   
   addStudent: async (data) => {
     try {

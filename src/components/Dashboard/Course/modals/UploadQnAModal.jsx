@@ -37,6 +37,7 @@ import {
   parseExamDocument,
   fetchExamDocument
 } from '../../MasterExams/examDocumentApi';
+import { addConductExamQuestion, updateConductQuestion, deleteConductExamQuestion, deleteExamQuestion } from '../api';
 
 if (typeof window !== 'undefined' && !window.katex) {
   window.katex = katex;
@@ -60,7 +61,7 @@ class QuillErrorBoundary extends React.Component {
   }
 }
 
-const RichTextEditor = ({ value, onChange, placeholder, className, modules, formats }) => {
+const RichTextEditor = ({ value, onChange, placeholder, className, modules, formats, allowImagePaste = true }) => {
   const reactQuillRef = useRef(null);
 
   useEffect(() => {
@@ -68,6 +69,7 @@ const RichTextEditor = ({ value, onChange, placeholder, className, modules, form
     if (!quill) return;
 
     const handlePaste = (e) => {
+      if (!allowImagePaste) return;
       const clipboardData = e.clipboardData;
       if (!clipboardData) return;
       
@@ -96,7 +98,7 @@ const RichTextEditor = ({ value, onChange, placeholder, className, modules, form
     return () => {
       quill.root.removeEventListener('paste', handlePaste);
     };
-  }, []);
+  }, [allowImagePaste]);
 
   const fallback = (
     <textarea
@@ -162,11 +164,9 @@ const createQuestionId = () => {
 
 const createDefaultQuestion = (id = createQuestionId()) => ({
   id,
-  questionType: 'image',
-  answerType: 'image',
+  questionType: 'text',
+  answerType: 'text',
   question: null,
-  questionPreview: '',
-  questionUrl: '',
   answer: null,
   answerPreview: '',
   answerUrl: '',
@@ -380,14 +380,16 @@ const parseStoredDraft = (draftKey) => {
 const UploadQnAModal = ({
   isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [], apiPrefix = '/exams', isMasterAttached = false }) => {
 
-  const isConductExam = examType === 'conduct';
+  const isPortalMcqMode = examType === 'conduct';
+  const isSubjectiveConductMode = examType === 'subjective_conduct';
+  const isAnyConductMode = isPortalMcqMode || isSubjectiveConductMode;
 
   const [questions, setQuestions] = useState([createDefaultQuestion()]);
 
   const [goldenPdfFile, setGoldenPdfFile] = useState(null);
   const [questionPdfFile, setQuestionPdfFile] = useState(null);
   const [uploadMode, setUploadMode] = useState('standard'); 
-  const isPdfUploadMode = !isConductExam && uploadMode === 'golden-pdf';
+  const isPdfUploadMode = !isAnyConductMode && uploadMode === 'golden-pdf';
 
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -913,14 +915,11 @@ const UploadQnAModal = ({
   };
 
   const generateAiAnswerForQuestion = async (question) => {
-    const questionImageUrl = question.questionUrl || question.questionPreview || '';
     const questionBody = question.questionBody || '';
-    const questionHasInlineImage = /<img\b/i.test(questionBody);
-    const questionType = inferContentType({ body: questionBody, hasFile: Boolean(questionImageUrl) });
     const questionBodyPlain = richTextToPlainText(questionBody);
 
-    if (!questionImageUrl && !questionBodyPlain.trim() && !questionHasInlineImage) {
-      throw new Error('Please provide question text or upload a question image.');
+    if (!questionBodyPlain.trim()) {
+      throw new Error('Please provide question text before generating.');
     }
 
     const response = await fetch(`${API_BASE_URL}${apiPrefix}/${examId}/generate-answer`, {
@@ -931,9 +930,9 @@ const UploadQnAModal = ({
       },
       body: JSON.stringify({
         domain: question.domain || 'General',
-        question_type: questionType,
+        question_type: 'text',
         question_body: questionBodyPlain,
-        question_image_url: questionImageUrl || null,
+        question_image_url: null,
         max_marks: question.marks ? Number(question.marks) : null,
         custom_instruction: question.aiCustomInstruction || null,
       })
@@ -1102,11 +1101,11 @@ const UploadQnAModal = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isConductExam) {
+    if (isPortalMcqMode) {
       setUploadMode('standard');
       setShowAiAnswerModal(false);
     }
-  }, [isConductExam]);
+  }, [isPortalMcqMode]);
 
   useEffect(() => {
     if (!isOpen || initialized) {
@@ -1272,18 +1271,48 @@ const UploadQnAModal = ({
     }
   };
 
-  const removeQuestion = (id) => {
+  const removeQuestion = async (id) => {
     if (deletingQuestionIds.includes(id)) return;
 
     const indexToRemove = questions.findIndex((q) => q.id === id);
     if (indexToRemove === -1) return;
 
     const deletedQuestion = questions[indexToRemove];
+    
+    // For existing questions, we need to perform a hard delete on the backend.
+    if (deletedQuestion.isExisting) {
+      const confirmDelete = window.confirm(
+        'This question is already saved on the server. Deleting it will permanently remove it from the exam. Are you sure?'
+      );
+      if (!confirmDelete) return;
+
+      setDeletingQuestionIds((prev) => [...prev, id]);
+      const loadingToast = toast.loading('Deleting question from server...');
+
+      try {
+        if (isSubjectiveConductMode || isPortalMcqMode) {
+          // For conduct/MCQ exams, we use the specific conduct delete API
+          await deleteConductExamQuestion(examId, deletedQuestion.id);
+        } else {
+          // For regular evaluated exams (MongoDB), we use the question number delete API
+          const qNum = deletedQuestion.questionNumber || (indexToRemove + 1);
+          await deleteExamQuestion(examId, qNum);
+        }
+        toast.success('Question deleted from server', { id: loadingToast });
+      } catch (err) {
+        console.error('Failed to delete question from server:', err);
+        toast.error(`Delete failed: ${err.message || 'Unknown error'}`, { id: loadingToast });
+        setDeletingQuestionIds((prev) => prev.filter((questionId) => questionId !== id));
+        return; // Don't remove from local state if backend delete failed
+      }
+    } else {
+        setDeletingQuestionIds((prev) => [...prev, id]);
+    }
+
     const selectedQuestionId = questions[selectedIndex]?.id;
     const previousSelectedIndex = selectedIndex;
 
-    setDeletingQuestionIds((prev) => [...prev, id]);
-
+    // Wait for animation
     window.setTimeout(() => {
       setQuestionsDraft((prevQuestions) => {
         const stillExists = prevQuestions.some((question) => question.id === id);
@@ -1311,49 +1340,52 @@ const UploadQnAModal = ({
 
       setDeletingQuestionIds((prev) => prev.filter((questionId) => questionId !== id));
 
-      const deletionRecord = {
-        question: deletedQuestion,
-        index: indexToRemove,
-      };
+      // ONLY show undo for non-existing (unsaved) questions
+      if (!deletedQuestion.isExisting) {
+        const deletionRecord = {
+          question: deletedQuestion,
+          index: indexToRemove,
+        };
 
-      const toastId = toast.custom(
-        (toastInstance) => (
-          <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg">
-            <span className="text-sm font-medium text-gray-800">Question deleted</span>
-            <button
-              type="button"
-              onClick={() => {
-                const activeRecord = deleteToastStateRef.current.get(toastId);
-                if (!activeRecord) return;
+        const toastId = toast.custom(
+          (toastInstance) => (
+            <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg">
+              <span className="text-sm font-medium text-gray-800">Question removed</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const activeRecord = deleteToastStateRef.current.get(toastId);
+                  if (!activeRecord) return;
 
-                setQuestionsDraft((prevQuestions) => {
-                  const restoredQuestions = [...prevQuestions];
-                  const insertIndex = Math.min(activeRecord.index, restoredQuestions.length);
-                  restoredQuestions.splice(insertIndex, 0, activeRecord.question);
-                  setSelectedIndexRaw(insertIndex);
-                  return restoredQuestions;
-                });
+                  setQuestionsDraft((prevQuestions) => {
+                    const restoredQuestions = [...prevQuestions];
+                    const insertIndex = Math.min(activeRecord.index, restoredQuestions.length);
+                    restoredQuestions.splice(insertIndex, 0, activeRecord.question);
+                    setSelectedIndexRaw(insertIndex);
+                    return restoredQuestions;
+                  });
 
-                requestAnimationFrame(() => {
-                  scrollToQuestion(activeRecord.question.id);
-                });
+                  requestAnimationFrame(() => {
+                    scrollToQuestion(activeRecord.question.id);
+                  });
 
-                deleteToastStateRef.current.delete(toastId);
-                toast.dismiss(toastId);
-              }}
-              className="rounded-lg px-2.5 py-1 text-sm font-semibold text-accent transition hover:bg-accent/10"
-            >
-              Undo
-            </button>
-          </div>
-        ),
-        { duration: 5000 }
-      );
+                  deleteToastStateRef.current.delete(toastId);
+                  toast.dismiss(toastId);
+                }}
+                className="rounded-lg px-2.5 py-1 text-sm font-semibold text-accent transition hover:bg-accent/10"
+              >
+                Undo
+              </button>
+            </div>
+          ),
+          { duration: 5000 }
+        );
 
-      deleteToastStateRef.current.set(toastId, deletionRecord);
-      window.setTimeout(() => {
-        deleteToastStateRef.current.delete(toastId);
-      }, 5200);
+        deleteToastStateRef.current.set(toastId, deletionRecord);
+        window.setTimeout(() => {
+          deleteToastStateRef.current.delete(toastId);
+        }, 5200);
+      }
     }, 180);
   };
 
@@ -1374,7 +1406,7 @@ const UploadQnAModal = ({
   };
 
   const validateQuestions = () => {
-    if (isConductExam) {
+    if (isPortalMcqMode) {
       const conductIssue = questions.find((q) => {
         const hasQuestionFile = Boolean(q.question || q.questionUrl);
         const hasQuestionContent = !isRichTextEmpty(q.questionBody) || /<img\b/i.test(q.questionBody || '');
@@ -1473,6 +1505,40 @@ const UploadQnAModal = ({
         }
 
         await onSubmit(examId, pdfFormData);
+      } else if (isSubjectiveConductMode) {
+        // For subjective conduct exams, POST/PATCH each question as JSON
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const hasContent = !isRichTextEmpty(q.questionBody) || (q.questionText && q.questionText.trim().length > 0);
+          if (!hasContent) continue;
+
+          // Distinguish between new and existing questions
+          let isExisting = q.id && !String(q.id).startsWith('new_') && !String(q.id).startsWith('existing_');
+
+          // For subjective conduct mode, existing questions in Postgres MUST have numeric IDs.
+          // If the ID is a UUID/slug (e.g. from standard exams), treat it as a new question to be added.
+          if (isSubjectiveConductMode && isExisting) {
+            const isNumericId = /^\d+$/.test(String(q.id));
+            if (!isNumericId) {
+              isExisting = false;
+            }
+          }
+          
+          const payload = {
+            question_text: q.questionText || richTextToPlainText(q.questionBody || ''),
+            question_body: q.questionBody || '',
+            marks: parseFloat(q.marks) || 0,
+            display_order: i + 1,
+            allow_text_answer: true,
+            allow_image_answer: true,
+          };
+
+          if (isExisting) {
+            await updateConductQuestion(examId, q.id, payload);
+          } else {
+            await addConductExamQuestion(examId, payload);
+          }
+        }
       } else {
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
@@ -1486,7 +1552,7 @@ const UploadQnAModal = ({
           const hasQuestionContent = !isRichTextEmpty(q.questionBody) || /<img\b/i.test(q.questionBody || '');
           const hasAnswerContent = !isRichTextEmpty(q.answerBody) || /<img\b/i.test(q.answerBody || '');
           const shouldSendQuestion = hasQuestionFile || hasQuestionContent;
-          const shouldSendAnswer = !isConductExam ? (hasAnswerFile || hasAnswerContent) : false;
+          const shouldSendAnswer = !isAnyConductMode ? (hasAnswerFile || hasAnswerContent) : false;
 
           try {
             if (shouldSendQuestion) {
@@ -1502,7 +1568,7 @@ const UploadQnAModal = ({
               questionFormData.append('domain', q.domain || 'General');
               // Optional short label for the answer
               questionFormData.append('answer_text', q.answerText || '');
-              if (isConductExam) {
+              if (isPortalMcqMode) {
                 const normalizedOptions = (q.mcqOptions || []).map((option, optionIndex) => ({
                   option_id: option.optionId || `option_${optionIndex + 1}`,
                   option_text: richTextToPlainText(option.optionBody || ''),
@@ -1520,10 +1586,10 @@ const UploadQnAModal = ({
               }
               
               // Add rubric configuration fields
-              if (!isConductExam) {
+              if (!isPortalMcqMode) {
                 questionFormData.append('num_rubric_items', (q.num_rubric_items || 1).toString());
               }
-              if (!isConductExam && q.professorInstructions && q.professorInstructions.trim()) {
+              if (!isPortalMcqMode && q.professorInstructions && q.professorInstructions.trim()) {
                 questionFormData.append('professor_instructions', q.professorInstructions.trim());
               }
               
@@ -1535,7 +1601,7 @@ const UploadQnAModal = ({
               await onSubmit(examId, questionFormData);
             }
 
-            if (!isConductExam && shouldSendAnswer) {
+            if (!isAnyConductMode && shouldSendAnswer) {
               const answerFormData = new FormData();
               answerFormData.append('question_number', questionNumber.toString());
               answerFormData.append('file_type', 'answer');
@@ -1875,11 +1941,13 @@ const UploadQnAModal = ({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
-              {isConductExam ? 'Build Portal MCQ Exam' : 'Upload Questions & Solutions'}
+              {isPortalMcqMode ? 'Build Portal MCQ Exam' : isSubjectiveConductMode ? 'Build Subjective Exam' : 'Upload Questions & Solutions'}
             </h2>
             <p className="text-sm text-gray-500">
-              {isConductExam
+              {isPortalMcqMode
                 ? 'Create MCQ questions, options, correct answers, and optional reasoning rules.'
+                : isSubjectiveConductMode
+                ? 'Create subjective questions and configure rubrics for live exams.'
                 : 'Upload question images/text, answers, marks, and rubric configuration.'}
             </p>
           </div>
@@ -1964,7 +2032,7 @@ const UploadQnAModal = ({
                     )}
                     <span>{isImportingAllQuestions ? 'Importing...' : 'Import All Questions'}</span>
                   </button>
-                  {!isConductExam && (
+                  {!isAnyConductMode && (
                     <button
                       type="button"
                       onClick={handleGenerateAllAnswers}
@@ -2148,7 +2216,7 @@ const UploadQnAModal = ({
 
               <div className="p-6 space-y-6 flex-1 min-h-0 overflow-y-auto">
                 <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-600">
                         Question Body <span className="text-red-500">*</span>
@@ -2163,11 +2231,12 @@ const UploadQnAModal = ({
                         placeholder="Enter question text"
                         modules={quillModules}
                         formats={quillFormats}
+                        allowImagePaste={false}
                       />
                     </div>
                   </div>
 
-                  {!isConductExam ? (
+                  {!isPortalMcqMode ? (
                     <div className="space-y-3">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-3">
@@ -2292,7 +2361,7 @@ const UploadQnAModal = ({
                   />
                 </div>
 
-                {!isConductExam ? (
+                {!isPortalMcqMode ? (
                   <div className="p-5 bg-accent/5 rounded-2xl border border-accent/15">
                     <div className="flex items-center gap-2 mb-4">
                       <FileText className="w-4 h-4 text-accent" />
@@ -2407,7 +2476,7 @@ const UploadQnAModal = ({
         <div className="text-sm text-gray-500">
           {isPdfUploadMode
             ? 'Ready to upload PDF files'
-            : `${questions.length} ${questions.length === 1 ? 'question' : 'questions'} ${isConductExam ? 'to save' : 'to upload'}`
+            : `${questions.length} ${questions.length === 1 ? 'question' : 'questions'} ${isAnyConductMode ? 'to save' : 'to upload'}`
           }
         </div>
         <div className="flex items-center gap-4">
@@ -2431,19 +2500,19 @@ const UploadQnAModal = ({
             {isSubmitting ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>{isConductExam ? 'Saving...' : 'Uploading...'}</span>
+                <span>{isAnyConductMode ? 'Saving...' : 'Uploading...'}</span>
               </>
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                <span>{isPdfUploadMode ? 'Upload PDFs' : `${isConductExam ? 'Save' : 'Upload'} Questions`}</span>
+                <span>{isPdfUploadMode ? 'Upload PDFs' : `${isAnyConductMode ? 'Save' : 'Upload'} Questions`}</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {!isConductExam && showAiAnswerModal && (
+      {!isPortalMcqMode && showAiAnswerModal && (
         <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col m-4"
@@ -2476,28 +2545,16 @@ const UploadQnAModal = ({
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-900">Question Preview</h3>
 
-                  {(activeQuestion.questionPreview || activeQuestion.questionUrl) && (
-                    <div className="rounded-2xl border border-gray-200 overflow-hidden bg-gray-50">
-                      <img
-                        src={activeQuestion.questionPreview || activeQuestion.questionUrl}
-                        alt="Question"
-                        className="w-full h-auto object-contain"
-                      />
-                    </div>
-                  )}
-
-                  {!isRichTextEmpty(activeQuestion.questionBody || '') && (
+                  {!isRichTextEmpty(activeQuestion.questionBody || '') ? (
                     <div className="rounded-2xl border border-gray-200 bg-white p-4">
                       <div
                         className="text-sm text-gray-800"
                         dangerouslySetInnerHTML={{ __html: activeQuestion.questionBody }}
                       />
                     </div>
-                  )}
-
-                  {!((activeQuestion.questionPreview || activeQuestion.questionUrl) || !isRichTextEmpty(activeQuestion.questionBody || '')) && (
+                  ) : (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                      <p className="text-sm text-amber-800">Please add a question image or question text before generating.</p>
+                      <p className="text-sm text-amber-800">Please provide question text before generating.</p>
                     </div>
                   )}
                 </div>

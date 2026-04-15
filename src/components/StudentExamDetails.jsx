@@ -19,6 +19,8 @@ import {
 import Toast from "./StudentExamDetails/Toast";
 import QuestionOverview from "./StudentExamDetails/QuestionOverview";
 import ConductExamSession from "./ConductExamSession";
+import SubjectiveConductExamSession from "./SubjectiveConductExamSession";
+import { getExamVariant, isSubjectiveConductExam } from "./examTypeUtils";
 
 const StatusBadge = ({ status }) => {
   const isEvaluated = status === "evaluated";
@@ -85,7 +87,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
   const [recheckDeadline, setRecheckDeadline] = useState(null);
   const [examMeta, setExamMeta] = useState(null);
   const [examMetaResolved, setExamMetaResolved] = useState(false);
-  const isConductExam = examMeta?.exam_type === "conduct";
+  const examVariant = getExamVariant(examMeta);
+  const isPortalConductExam = examVariant === "portal_mcq";
+  const isSubjectiveExam = isSubjectiveConductExam(examMeta);
 
   const mainContentRef = useRef(null);
 
@@ -198,7 +202,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
         return;
       }
 
-      if (isConductExam) {
+      if (isPortalConductExam || isSubjectiveExam) {
         setLoading(false);
         setError(null);
         return;
@@ -344,7 +348,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
         URL.revokeObjectURL(pdfFile);
       }
     };
-  }, [examId, enrollmentId, examMetaResolved, isConductExam]);
+  }, [examId, enrollmentId, examMetaResolved, isPortalConductExam, isSubjectiveExam]);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -549,12 +553,21 @@ const StudentExamDetails = ({ isHistory = false }) => {
     window.location.reload();
   };
 
-  if (isConductExam) {
+  if (isPortalConductExam) {
     return (
       <ConductExamSession
         examId={examId}
         courseId={courseId}
         enrollmentId={enrollmentId}
+      />
+    );
+  }
+
+  if (isSubjectiveExam) {
+    return (
+      <SubjectiveConductExamSession
+        examId={examId}
+        courseId={courseId}
       />
     );
   }

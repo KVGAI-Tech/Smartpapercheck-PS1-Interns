@@ -35,24 +35,39 @@ export const fetchApi = async (endpoint, options = {}) => {
 };
 export const getCourseDetails = async (courseId) => {
   try {
-    const response = await fetchApi(`/professors/courses`);
-    if (!response || !response.data) {
-      throw new Error('Invalid response data');
+    // Attempt to find in active courses first
+    let response = await fetchApi(`/professors/courses`);
+    if (response && response.data) {
+      let course = response.data.find(c => c.id.toString() === courseId.toString());
+      if (course) {
+        return {
+          code: 200,
+          message: "Course retrieved successfully",
+          data: course
+        };
+      }
     }
-    const course = response.data.find(c => c.id.toString() === courseId.toString());
-    if (!course) {
-      throw new Error('Course not found');
+
+    // Attempt to find in archived courses
+    response = await fetchApi(`/professors/archived-courses`);
+    if (response && response.data) {
+      const course = response.data.find(c => c.id.toString() === courseId.toString());
+      if (course) {
+        return {
+          code: 200,
+          message: "Course retrieved successfully",
+          data: course
+        };
+      }
     }
-    return {
-      code: 200,
-      message: "Course retrieved successfully",
-      data: course
-    };
+
+    throw new Error('Course not found');
   } catch (error) {
     console.error('Error getting course details:', error);
     throw error;
   }
 };
+
 
 export const getCourseStudents = async (courseId) => {
     if (!courseId) {
@@ -188,9 +203,102 @@ export const createExam = async (courseId, data) => {
   if (!courseId || !data) {
     throw new Error('Course ID and exam data are required');
   }
+  if (data.exam_type === 'conduct') {
+    return fetchApi(`/professors/courses/${courseId}/conduct-exams`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  const payload = {
+    ...data,
+    exam_type: data.exam_type === 'portal_mcq' ? 'conduct' : data.exam_type,
+    conduct_variant: data.exam_type === 'portal_mcq' ? 'portal_mcq' : data.conduct_variant,
+  };
+
   return fetchApi(`/professors/courses/${courseId}/exams`, {
     method: 'POST',
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
+  });
+};
+
+export const publishConductExam = async (examId) => {
+  if (!examId) {
+    throw new Error('Exam ID is required');
+  }
+  return fetchApi(`/exams/${examId}/conduct-exams/publish`, {
+    method: 'POST',
+  });
+};
+
+export const getSubjectiveConductSubmissions = async (examId) => {
+  if (!examId) {
+    throw new Error('Exam ID is required');
+  }
+  return fetchApi(`/exams/${examId}/conduct-exams/submissions`);
+};
+
+export const getSubjectiveConductSubmissionDetail = async (submissionId) => {
+  if (!submissionId) {
+    throw new Error('Submission ID is required');
+  }
+  return fetchApi(`/exams/conduct-exams/submissions/${submissionId}`);
+};
+
+export const evaluateSubjectiveConductSubmission = async (submissionId, answers) => {
+  if (!submissionId) {
+    throw new Error('Submission ID is required');
+  }
+  return fetchApi(`/exams/conduct-exams/submissions/${submissionId}/evaluate`, {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  });
+};
+
+export const addConductExamQuestion = async (examId, questionData) => {
+  if (!examId || !questionData) {
+    throw new Error('Exam ID and question data are required');
+  }
+  return fetchApi(`/exams/${examId}/conduct-exams/questions`, {
+    method: 'POST',
+    body: JSON.stringify(questionData),
+  });
+};
+
+export const updateConductQuestion = async (examId, questionId, questionData) => {
+  if (!examId || !questionId || !questionData) {
+    throw new Error('Exam ID, question ID and question data are required');
+  }
+  return fetchApi(`/exams/${examId}/conduct-exams/questions/${questionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(questionData),
+  });
+};
+
+
+
+export const listConductExamQuestions = async (examId) => {
+  if (!examId) {
+    throw new Error('Exam ID is required');
+  }
+  return fetchApi(`/exams/${examId}/conduct-exams/questions`);
+};
+
+export const deleteConductExamQuestion = async (examId, questionId) => {
+  if (!examId || !questionId) {
+    throw new Error('Exam ID and question ID are required');
+  }
+  return fetchApi(`/exams/${examId}/conduct-exams/questions/${questionId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const deleteExamQuestion = async (examId, questionNumber) => {
+  if (!examId || !questionNumber) {
+    throw new Error('Exam ID and question number are required');
+  }
+  return fetchApi(`/exams/${examId}/questions/${questionNumber}`, {
+    method: 'DELETE',
   });
 };
 
