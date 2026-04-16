@@ -14,31 +14,8 @@ import { useSpring, animated } from '@react-spring/web';
 import { toast } from 'react-hot-toast';
 
 import { API_BASE_URL } from '../../../../BaseURL';
-
-/**
- * Strip HTML tags and decode common entities to produce clean plain text.
- * Works without a DOM parser so it is safe to call at module level.
- */
-function htmlToPlainText(html) {
-    if (!html || typeof html !== 'string') return '';
-    return html
-        // Replace block-level tags with newlines so sub-parts on separate lines stay separate
-        .replace(/<\/?(p|div|br|li|tr|h[1-6])[^>]*>/gi, '\n')
-        // Strip all remaining tags
-        .replace(/<[^>]+>/g, '')
-        // Decode common HTML entities
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/&amp;/gi, '&')
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/&quot;/gi, '"')
-        .replace(/&#39;/gi, "'")
-        .replace(/&[a-z]+;/gi, ' ')
-        // Collapse runs of whitespace / blank lines
-        .replace(/[ \t]+/g, ' ')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-}
+import { withConcurrencyLimit, withRetry } from '@/lib/concurrency';
+import { htmlToPlainText } from '@/lib/utils';
 
 /**
  * Parse structured sub-parts from plain-text question content.
@@ -81,13 +58,26 @@ function parseQuestionSubparts(plainText) {
     return subparts;
 }
 
+function smartJoinContext(text1, text2) {
+    const t1 = (text1 || '').trim();
+    const t2 = (text2 || '').trim();
+    if (!t1) return t2;
+    if (!t2) return t1;
+    if (t1 === t2) return t1;
+    if (t1.includes(t2)) return t1;
+    if (t2.includes(t1)) return t2;
+    return `${t1}\n${text2}`;
+}
+
 /**
  * Detect the number of sub-parts in a question text.
  * Strips HTML first, then counts (a)/(b)/(c) style delimiters.
  * Returns the detected count, or 0 if no sub-parts found.
  */
 function detectSubpartCount(questionText, questionBody) {
-    const plain = htmlToPlainText(`${questionText || ''}\n${questionBody || ''}`);
+    const cleanText = htmlToPlainText(questionText || '');
+    const cleanBody = htmlToPlainText(questionBody || '');
+    const plain = smartJoinContext(cleanText, cleanBody);
     if (!plain) return 0;
     const subparts = parseQuestionSubparts(plain);
     return subparts.length;
@@ -957,9 +947,11 @@ const RubricModal = ({
         const cleanText = htmlToPlainText(question.question_text || '');
 
         // Parse structured sub-parts for the subpart-driven rubric path.
-        const subparts = parseQuestionSubparts(`${cleanText}\n${cleanBody}`);
+        // Use smartJoinContext to avoid duplicating content if text and body are the same.
+        const combined = smartJoinContext(cleanText, cleanBody);
+        const subparts = parseQuestionSubparts(combined);
         if (subparts.length > 0) {
-            console.log('[RubricModal] Parsed Subparts:', subparts);
+            console.log('[RubricModal] Parsed Subparts:', subparts.length, subparts);
         }
 
         const payload = {
@@ -967,6 +959,7 @@ const RubricModal = ({
             question_body: cleanBody,
             marks: questionMarks > 0 ? questionMarks : 10,
             num_rubric_items: itemCount > 0 ? itemCount : 3,
+            question_image_url: question.question_image_url,
             professor_instructions: instructions,
             // mode tells the backend which generation path to use:
             // "subpart" → one rubric per detected sub-part (structured)
@@ -1228,17 +1221,19 @@ const RubricModal = ({
 
         const questionSettings = questionRubricSettings?.[selectedQuestion];
         const question = questions.find((q) => q.question_number === selectedQuestion);
+        const actualRubricItemsCount = (rubricsMap[selectedQuestion] || []).length;
 
+        // Sync local settings from the source of truth (settings or actual rubric count)
         setNumRubricItems(clampRubricCount(
             questionSettings?.num_rubric_items,
-            question?.num_rubric_items || (rubricsMap[selectedQuestion] || []).length || 1
+            question?.num_rubric_items || actualRubricItemsCount || 1
         ));
         setProfInstructions(
             typeof questionSettings?.professor_instructions === 'string'
                 ? questionSettings.professor_instructions
                 : (question?.professor_instructions || '')
         );
-    }, [selectedQuestion, isOpen]);
+    }, [selectedQuestion, isOpen, rubricsMap, questionRubricSettings]);
 
     useEffect(() => {
         if (!selectedQuestion || !isOpen) return;
@@ -1389,53 +1384,111 @@ const RubricModal = ({
         setGenerationState({ loading: true, mode: 'bulk' });
         setError('');
 
-        const loadingToast = toast.loading('Generating all rubrics...');
-        const updatedRubrics = { ...rubricsMap };
+        const loadingToast = toast.loading('Generating all rubrics (High Speed Bulk Mode)...');
         const initialStatus = { ...generatingStatus };
         
+        // Mark all as generating in parallel
         questions.forEach(q => {
-            initialStatus[q.question_number] = 'pending';
+            initialStatus[q.question_number] = 'generating';
         });
         setGeneratingStatus(initialStatus);
 
         try {
-            for (const q of questions) {
-                const qNum = q.question_number;
-                setGeneratingStatus(prev => ({ ...prev, [qNum]: 'generating' }));
+            // 1. Prepare bulk payload
+            const bulkQuestions = questions.map(q => {
+                const cleanBody = htmlToPlainText(q.question_body || '');
+                const cleanText = htmlToPlainText(q.question_text || '');
+                const combined = smartJoinContext(cleanText, cleanBody);
+                const subparts = parseQuestionSubparts(combined);
 
-                // Use per-question stored settings for bulk generation
-                const qSettings = questionRubricSettings?.[qNum];
-                const res = await requestRubricGeneration(q, qSettings ?? null);
-                if (res && res.rubrics && res.rubrics.every(r => r.max_marks > 0)) {
-                    updatedRubrics[qNum] = res.rubrics.map(r => ({
-                        description: r.description,
-                        max_marks: r.max_marks,
-                        reasoning: r.reasoning,
-                        grading_guidelines: r.grading_guidelines ?? r.guidelines ?? '',
-                    }));
-                    // Persist the actual count per question so settings stay in sync
-                    setQuestionSettings(qNum, { num_rubric_items: res.rubrics.length });
-                    setGeneratingStatus(prev => ({ ...prev, [qNum]: 'done' }));
-                } else {
-                    setGeneratingStatus(prev => ({ ...prev, [qNum]: 'error' }));
+                // Get the configured num_rubric_items for this question
+                const questionSettings = questionRubricSettings[q.question_number] || {};
+                const desiredRubricCount = questionSettings.num_rubric_items || numRubricItems || 3;
+
+                return {
+                    question_id: q.question_number, 
+                    question_number: q.question_number,
+                    exam_id: examId, // Include exam_id for storage
+                    question_text: cleanText,
+                    question_body: cleanBody,
+                    marks: parseFloat(q.max_marks || q.marks) || 10,
+                    num_rubric_items: desiredRubricCount, // Include desired rubric count
+                    ...(subparts.length > 0 && { subparts })
+                };
+            });
+
+            // 2. Call specialized bulk API
+            const response = await fetch(`${API_BASE_URL}/rubrics/bulk-generate`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    questions: bulkQuestions,
+                    professor_instructions: profInstructions || ''
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Bulk generation failed: ${response.status}`);
+            }
+
+            const resData = await response.json();
+            if (resData.status === 'error' || !resData.data || !resData.data.results) {
+                throw new Error(resData.message || 'Bulk generation failed');
+            }
+
+            // 3. Process results and sync state
+            const results = resData.data.results;
+            const newRubricsMap = { ...rubricsMap };
+            const newStatus = { ...generatingStatus };
+
+            results.forEach(res => {
+                const qNum = parseInt(res.question_id);
+                if (!qNum) return;
+
+                const items = res.rubrics.map(r => ({
+                    description: r.description,
+                    max_marks: r.max_marks,
+                    reasoning: r.reasoning,
+                    grading_guidelines: r.grading_guidelines,
+                }));
+
+                newRubricsMap[qNum] = items;
+                // Update settings to keep UI in sync
+                setQuestionSettings(qNum, { num_rubric_items: items.length });
+                newStatus[qNum] = 'done';
+            });
+
+            // Mark any missed questions as error
+            questions.forEach(q => {
+                if (newStatus[q.question_number] === 'generating') {
+                    newStatus[q.question_number] = 'error';
                 }
+            });
+
+            setRubricsMap(newRubricsMap);
+            setGeneratingStatus(newStatus);
+
+            // Select first generated if none selected
+            if (!selectedQuestion && results.length > 0) {
+                setSelectedQuestion(parseInt(results[0].question_id));
+                setShowRubricEditor(true);
             }
 
-            setRubricsMap(updatedRubrics);
-            
-            const firstId = questions[0]?.question_number;
-            if (firstId) {
-                setSelectedQuestion(firstId);
-                setShowRubricEditor(true);
-                // Sync count input to the first question's actual rubric count
-                const firstCount = updatedRubrics[firstId]?.length;
-                if (firstCount > 0) setNumRubricItems(firstCount);
-            }
-            
-            toast.success('All rubrics generated successfully!', { id: loadingToast });
+            toast.success('Successfully generated all rubrics!', { id: loadingToast });
+
         } catch (err) {
             console.error('[RubricModal] Bulk generation failed:', err);
-            toast.error('Bulk generation failed', { id: loadingToast });
+            setError(`Bulk generation failed: ${err.message}`);
+            toast.error('Failed to generate all rubrics', { id: loadingToast });
+            
+            const errStatus = { ...generatingStatus };
+            questions.forEach(q => {
+                errStatus[q.question_number] = 'error';
+            });
+            setGeneratingStatus(errStatus);
         } finally {
             setGenerationState({ loading: false, mode: null });
         }
@@ -1452,7 +1505,8 @@ const RubricModal = ({
         const question = questions.find(q => q.question_number === questionNumber);
 
         try {
-            const res = await requestRubricGeneration(question);
+            // Addition of withRetry for better stability
+            const res = await withRetry(() => requestRubricGeneration(question));
             if (res && res.rubrics) {
                 const items = res.rubrics.map(r => ({
                     description: r.description,
@@ -1466,8 +1520,7 @@ const RubricModal = ({
                     [questionNumber]: items
                 }));
 
-                // Sync the count input to the actual number of rubrics returned
-                setNumRubricItems(items.length);
+                // settings update will trigger reactive sync via useEffect
                 setQuestionSettings(questionNumber, { num_rubric_items: items.length });
 
                 setSelectedQuestion(questionNumber);
@@ -1954,8 +2007,9 @@ const RubricModal = ({
                                 transition={{ delay: 0.2 }}
                                 className="flex-1 bg-gray-50 flex flex-col overflow-hidden"
                             >
+                                {/* Scrollable Content Area */}
                                 <div className="flex-1 overflow-y-auto">
-                                    <div className="max-w-4xl mx-auto p-6">
+                                    <div className="max-w-4xl mx-auto p-6 pb-24">
                                         <AnimatePresence>
                                             {error && (
                                                 <motion.div 
@@ -1976,11 +2030,9 @@ const RubricModal = ({
                                             )}
                                         </AnimatePresence>
 
-                                        <div className="flex-1 flex flex-col min-h-0">
-                                            <div className="flex-1 overflow-y-auto">
-                                            <div className="max-w-4xl mx-auto p-6">
-                                                <AnimatePresence mode="wait">
-                                                    {isGenerating ? (
+                                        <AnimatePresence mode="wait">
+                                                    {/* Show global loader ONLY for single generation, background bulk shows in sidebar only */}
+                                                    {isGenerating && generationState.mode === 'single' ? (
                                                         <motion.div
                                                             key="loader"
                                                             initial={{ opacity: 0 }}
@@ -2168,102 +2220,102 @@ const RubricModal = ({
                                                         />
                                                     )}
                                                 </AnimatePresence>
-                                            </div>
-                                        </div>
-                                        </div>
 
+                                {/* Sticky Action Bar - Always visible when rubric editor is shown */}
                                 {showRubricEditor && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="border-t border-gray-200 bg-white p-4 shadow-lg"
+                                        className="sticky bottom-0 left-0 right-0 border-t border-gray-200 bg-white shadow-lg z-20"
                                     >
-                                        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-                                            <div className="flex items-center gap-3 text-sm flex-wrap">
-                                                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200">
-                                                    <Circle className="w-4 h-4 text-accent" />
-                                                    <div className="leading-tight">
-                                                        <div className="text-xs text-gray-500">Items</div>
-                                                        <div className="font-semibold text-gray-900">{rubricItems.length}</div>
+                                        <div className="max-w-4xl mx-auto px-6 py-4">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3 text-sm flex-wrap">
+                                                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200">
+                                                        <Circle className="w-4 h-4 text-accent" />
+                                                        <div className="leading-tight">
+                                                            <div className="text-xs text-gray-500">Items</div>
+                                                            <div className="font-semibold text-gray-900">{rubricItems.length}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
 
-                                                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 ${
-                                                    Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? 'text-red-600' : 'text-green-600'
-                                                }`}>
-                                                    {Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? (
-                                                        <AlertTriangle className="w-4 h-4" />
-                                                    ) : (
-                                                        <CheckCircle className="w-4 h-4" />
-                                                    )}
-                                                    <div className="leading-tight">
-                                                        <div className="text-xs text-gray-500">Total Marks</div>
-                                                        <div className="font-semibold">
-                                                            {validation.totalMaxMarks?.toFixed(2) || '0.00'}
-                                                            <span className="text-xs text-gray-500 font-medium"> (Target {selectedQuestionData?.max_marks || 10})</span>
+                                                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 ${
+                                                        Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? 'text-red-600' : 'text-green-600'
+                                                    }`}>
+                                                        {Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? (
+                                                            <AlertTriangle className="w-4 h-4" />
+                                                        ) : (
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        )}
+                                                        <div className="leading-tight">
+                                                            <div className="text-xs text-gray-500">Total Marks</div>
+                                                            <div className="font-semibold">
+                                                                {validation.totalMaxMarks?.toFixed(2) || '0.00'}
+                                                                <span className="text-xs text-gray-500 font-medium"> (Target {selectedQuestionData?.max_marks || 10})</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="flex items-center gap-3 flex-shrink-0">
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={onClose}
-                                                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                                                    disabled={isLoading}
-                                                >
-                                                    Cancel
-                                                </motion.button>
-                                                {!isMasterAttached && (
-                                                <motion.button
-                                                    whileHover={{ scale: validation.isValid ? 1.05 : 1 }}
-                                                    whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
-                                                    onClick={handleSave}
-                                                    disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
-                                                    className={`inline-flex items-center gap-2 px-4 py-2 border rounded-xl transition-all duration-300 font-medium shadow-sm whitespace-nowrap ${
-                                                        isLoading || rubricItems.length === 0 || !validation.isValid
-                                                            ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                                                            : 'border-accent/40 bg-accent/5 text-accent hover:bg-accent/10'
-                                                    }`}
-                                                >
-                                                    <Save className="w-4 h-4" />
-                                                    <span>Save Question</span>
-                                                </motion.button>
-                                                )}
-                                                {!isMasterAttached && (
-                                                <motion.button
-                                                    whileHover={{ 
-                                                        scale: validation.isValid ? 1.05 : 1, 
-                                                        boxShadow: validation.isValid ? "0 4px 12px rgba(var(--accent-rgb), 0.35)" : "" 
-                                                    }}
-                                                    whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
-                                                    onClick={handleSaveAllAndEvaluate}
-                                                    disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
-                                                    className={`inline-flex items-center gap-2 px-6 py-2 rounded-xl transition-all duration-300 font-medium shadow-md whitespace-nowrap ${
-                                                        isLoading || rubricItems.length === 0 || !validation.isValid
-                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                            : 'bg-accent text-white hover:shadow-lg'
-                                                    }`}
-                                                >
-                                                    {isLoading ? (
-                                                        <>
-                                                            <motion.div 
-                                                                animate={{ rotate: 360 }}
-                                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
-                                                            />
-                                                            <span>Saving...</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <CheckCircle className="w-4 h-4" />
-                                                            <span>Save All & Evaluate</span>
-                                                        </>
+                                                <div className="flex items-center gap-3 flex-shrink-0">
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        onClick={onClose}
+                                                        className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                                                        disabled={isLoading}
+                                                    >
+                                                        Cancel
+                                                    </motion.button>
+                                                    {!isMasterAttached && (
+                                                    <motion.button
+                                                        whileHover={{ scale: validation.isValid ? 1.05 : 1 }}
+                                                        whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
+                                                        onClick={handleSave}
+                                                        disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
+                                                        className={`inline-flex items-center gap-2 px-4 py-2 border rounded-xl transition-all duration-300 font-medium shadow-sm whitespace-nowrap ${
+                                                            isLoading || rubricItems.length === 0 || !validation.isValid
+                                                                ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                                                : 'border-accent/40 bg-accent/5 text-accent hover:bg-accent/10'
+                                                        }`}
+                                                    >
+                                                        <Save className="w-4 h-4" />
+                                                        <span>Save Question</span>
+                                                    </motion.button>
                                                     )}
-                                                </motion.button>
-                                                )}
+                                                    {!isMasterAttached && (
+                                                    <motion.button
+                                                        whileHover={{ 
+                                                            scale: validation.isValid ? 1.05 : 1, 
+                                                            boxShadow: validation.isValid ? "0 4px 12px rgba(var(--accent-rgb), 0.35)" : "" 
+                                                        }}
+                                                        whileTap={{ scale: validation.isValid ? 0.95 : 1 }}
+                                                        onClick={handleSaveAllAndEvaluate}
+                                                        disabled={isLoading || rubricItems.length === 0 || !validation.isValid}
+                                                        className={`inline-flex items-center gap-2 px-6 py-2 rounded-xl transition-all duration-300 font-medium shadow-md whitespace-nowrap ${
+                                                            isLoading || rubricItems.length === 0 || !validation.isValid
+                                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                                : 'bg-accent text-white hover:shadow-lg'
+                                                        }`}
+                                                    >
+                                                        {isLoading ? (
+                                                            <>
+                                                                <motion.div 
+                                                                    animate={{ rotate: 360 }}
+                                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" 
+                                                                />
+                                                                <span>Saving...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <CheckCircle className="w-4 h-4" />
+                                                                <span>Save All & Evaluate</span>
+                                                            </>
+                                                        )}
+                                                    </motion.button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </motion.div>

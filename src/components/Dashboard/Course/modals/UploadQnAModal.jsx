@@ -6,6 +6,7 @@ import 'react-quill/dist/quill.snow.css';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 import { 
   X, Plus, Upload, Trash2, 
   FileText, ArrowUp, ArrowDown,
@@ -32,6 +33,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { API_BASE_URL } from '../../../../BaseURL';
+import { withConcurrencyLimit, withRetry } from '@/lib/concurrency';
+import { htmlToPlainText } from '@/lib/utils';
 import {
   listExamDocuments,
   parseExamDocument,
@@ -198,7 +201,7 @@ const DragHandleIcon = () => (
 );
 
 // ── Sortable Question Item ───────────────────────────────────
-const SortableQuestionItem = ({ question, index, isSelected, onSelect, onDelete, isDeleting = false }) => {
+const SortableQuestionItem = ({ question, index, isSelected, onSelect, onDelete, isDeleting = false, generationStatus = null }) => {
   const {
     attributes,
     listeners,
@@ -234,7 +237,15 @@ const SortableQuestionItem = ({ question, index, isSelected, onSelect, onDelete,
         <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0
           ${isSelected ? 'bg-accent text-white' : 'bg-gray-100 text-gray-700'}`}
         >
-          {index + 1}
+          {generationStatus === 'generating' ? (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className={`w-4 h-4 border-2 ${isSelected ? 'border-white/70' : 'border-accent/70'} border-t-transparent rounded-full`}
+            />
+          ) : (
+            index + 1
+          )}
         </div>
 
         {/* Question info */}
@@ -408,6 +419,7 @@ const UploadQnAModal = ({
   const [isParsingPaper, setIsParsingPaper] = useState(false);
   const [isImportingAllQuestions, setIsImportingAllQuestions] = useState(false);
   const [deletingQuestionIds, setDeletingQuestionIds] = useState([]);
+  const [generatingStatus, setGeneratingStatus] = useState({}); // Keyed by question.id
 
   const [selectedIndex, setSelectedIndexRaw] = useState(0);
   const [initialized, setInitialized] = useState(false);
@@ -467,20 +479,7 @@ const UploadQnAModal = ({
     return text.length === 0;
   };
 
-  const richTextToPlainText = (html = '') => {
-    if (!html) return '';
-    return html
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/\s+\n/g, '\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-  };
+  const richTextToPlainText = htmlToPlainText;
 
   const formatGeneratedAnswerForEditor = (text = '') => {
     const cleaned = stripMarkdown(text || '');
@@ -914,7 +913,11 @@ const UploadQnAModal = ({
     setShowAiAnswerModal(false);
   };
 
-  const generateAiAnswerForQuestion = async (question) => {
+  const generateAiAnswerForQuestion = async (question, index = null) => {
+    // If index is null, try to find it in the questions array to support caching
+    if (index === null && questions) {
+      index = questions.findIndex(q => q.id === question.id);
+    }
     const questionBody = question.questionBody || '';
     const questionBodyPlain = richTextToPlainText(questionBody);
 
@@ -935,6 +938,7 @@ const UploadQnAModal = ({
         question_image_url: null,
         max_marks: question.marks ? Number(question.marks) : null,
         custom_instruction: question.aiCustomInstruction || null,
+        question_number: index !== null ? (index + 1) : null,
       })
     });
 
@@ -959,14 +963,14 @@ const UploadQnAModal = ({
 
   const handleGenerateAnswer = async () => {
     setAiGenerationError('');
-
     setIsGeneratingAnswer(true);
 
     try {
-      const generated = await generateAiAnswerForQuestion(activeQuestion);
+      // Wrap with retry utility for transient error handling
+      const generated = await withRetry(() => generateAiAnswerForQuestion(activeQuestion));
       setAiPreviewAnswer(generated);
     } catch (e) {
-      setAiGenerationError(e?.message || 'Failed to generate answer');
+      setAiGenerationError(e?.message || 'Failed to generate answer after retries');
     } finally {
       setIsGeneratingAnswer(false);
     }
@@ -1018,69 +1022,44 @@ const UploadQnAModal = ({
     setBulkAnswerProgress({ current: 0, total: eligibleQuestions.length });
     setError('');
 
-    const generatedAnswersById = new Map();
     let completed = 0;
-    let failedCount = 0;
+    const initialStatus = { ...generatingStatus };
+    eligibleQuestions.forEach(q => { initialStatus[q.id] = 'pending'; });
+    setGeneratingStatus(initialStatus);
 
     try {
-      for (const question of questions) {
-        const questionBody = question.questionBody || '';
-        const questionPlain = richTextToPlainText(questionBody);
-        const questionImageUrl = question.questionUrl || question.questionPreview || '';
-        const hasQuestionContent = Boolean(questionImageUrl || questionPlain.trim() || /<img\b/i.test(questionBody));
-
-        if (!hasQuestionContent) {
-          continue;
-        }
-
-        const currentIndex = questions.findIndex((item) => item.id === question.id);
-        if (currentIndex !== -1) {
-          setSelectedIndex(currentIndex);
-          requestAnimationFrame(() => {
-            scrollToQuestion(question.id);
-          });
-        }
-
-        setBulkAnswerProgress({
-          current: completed + 1,
-          total: eligibleQuestions.length,
-        });
+      // Process questions with a concurrency limit of 3
+      await withConcurrencyLimit(eligibleQuestions, 3, async (question) => {
+        setGeneratingStatus(prev => ({ ...prev, [question.id]: 'generating' }));
 
         try {
-          const generatedAnswer = await generateAiAnswerForQuestion(question);
-          generatedAnswersById.set(question.id, generatedAnswer);
-        } catch (generationError) {
-          failedCount += 1;
-          const visibleIndex = currentIndex !== -1 ? currentIndex + 1 : completed + 1;
-          toast.error(`Failed to generate answer for Question ${visibleIndex}`);
-          console.error(`Failed to generate answer for Question ${visibleIndex}:`, generationError);
+          // Individual answer generation call
+          const generatedAnswer = await withRetry(() => generateAiAnswerForQuestion(question));
+          
+          if (generatedAnswer) {
+            updateQuestion(question.id, (q) => ({
+              ...q,
+              answerBody: formatGeneratedAnswerForEditor(generatedAnswer),
+              answerType: 'text',
+              isGenerated: true,
+            }));
+            setGeneratingStatus(prev => ({ ...prev, [question.id]: 'done' }));
+          } else {
+            setGeneratingStatus(prev => ({ ...prev, [question.id]: 'error' }));
+          }
+        } catch (err) {
+          console.error(`Failed to generate answer for question ${question.id}:`, err);
+          setGeneratingStatus(prev => ({ ...prev, [question.id]: 'error' }));
+        } finally {
+          completed++;
+          setBulkAnswerProgress({ current: completed, total: eligibleQuestions.length });
         }
+      });
 
-        completed += 1;
-      }
-
-      if (generatedAnswersById.size > 0) {
-        setQuestionsDraft((prevQuestions) => (
-          prevQuestions.map((question) => {
-            const generatedAnswer = generatedAnswersById.get(question.id);
-            if (!generatedAnswer) return question;
-
-            return {
-              ...question,
-              answerType: (question.answerType || 'image') === 'image' ? 'both' : (question.answerType || 'image'),
-              answerBody: generatedAnswer,
-            };
-          })
-        ));
-      }
-
-      if (generatedAnswersById.size > 0 && failedCount === 0) {
-        toast.success('All answers generated successfully');
-      } else if (generatedAnswersById.size > 0) {
-        toast.success(`${generatedAnswersById.size} answers generated`);
-      } else {
-        toast.error('Failed to generate answers. Try again.');
-      }
+      toast.success('Successfully finished processing all answers');
+    } catch (err) {
+      console.error('Batch answer generation had errors:', err);
+      toast.error('Multiple errors occurred during batch generation');
     } finally {
       setIsGeneratingAllAnswers(false);
       setBulkAnswerProgress({ current: 0, total: 0 });
@@ -2161,6 +2140,7 @@ const UploadQnAModal = ({
                           onSelect={setSelectedIndex}
                           onDelete={removeQuestion}
                           isDeleting={deletingQuestionIds.includes(q.id)}
+                          generationStatus={generatingStatus[q.id]}
                         />
                       ))}
                     </div>
