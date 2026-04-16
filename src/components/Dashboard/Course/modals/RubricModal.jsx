@@ -942,46 +942,45 @@ const RubricModal = ({
             ?? '';
 
         // Strip HTML from question_body so the backend receives clean plain text.
-        // Raw HTML confuses both the regex sub-part detector and the AI prompt.
         const cleanBody = htmlToPlainText(question.question_body || '');
         const cleanText = htmlToPlainText(question.question_text || '');
 
         // Parse structured sub-parts for the subpart-driven rubric path.
-        // Use smartJoinContext to avoid duplicating content if text and body are the same.
         const combined = smartJoinContext(cleanText, cleanBody);
         const subparts = parseQuestionSubparts(combined);
         if (subparts.length > 0) {
             console.log('[RubricModal] Parsed Subparts:', subparts.length, subparts);
         }
 
-        const payload = {
-            question_text: cleanText,
-            question_body: cleanBody,
-            marks: questionMarks > 0 ? questionMarks : 10,
-            num_rubric_items: itemCount > 0 ? itemCount : 3,
-            question_image_url: question.question_image_url,
-            professor_instructions: instructions,
-            // mode tells the backend which generation path to use:
-            // "subpart" → one rubric per detected sub-part (structured)
-            // "context" → AI decides structure from question content
-            mode: subparts.length > 0 ? 'subpart' : 'context',
-            // Send structured subparts when detected — backend uses these to
-            // generate exactly one rubric per subpart with correct marks.
-            ...(subparts.length > 0 && { subparts }),
+        // Use bulk endpoint with single question to get all improvements
+        // (model answers, better prompts, proper reasoning, correct count)
+        const bulkPayload = {
+            questions: [{
+                question_id: question.question_number,
+                question_number: question.question_number,
+                exam_id: examId, // Include exam_id for model answers and storage
+                question_text: cleanText,
+                question_body: cleanBody,
+                marks: questionMarks > 0 ? questionMarks : 10,
+                num_rubric_items: itemCount > 0 ? itemCount : 3, // Include desired count
+                question_image_url: question.question_image_url,
+                ...(subparts.length > 0 && { subparts }),
+            }],
+            professor_instructions: instructions || ''
         };
 
-        console.log('[RubricModal] Rubric payload:', payload);
+        console.log('[RubricModal] Single rubric payload (using bulk endpoint):', bulkPayload);
 
         try {
             const response = await fetch(
-                `${API_BASE_URL}/rubrics/generate`,
+                `${API_BASE_URL}/rubrics/bulk-generate`,
                 {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(bulkPayload)
                 }
             );
 
@@ -994,18 +993,22 @@ const RubricModal = ({
             const apiPayload = await response.json();
             console.log('[RubricModal] Rubric response:', apiPayload);
 
-            if (apiPayload.code !== 200 || !apiPayload.data?.rubrics) return null;
+            if (apiPayload.status === 'error' || !apiPayload.data?.results || apiPayload.data.results.length === 0) {
+                return null;
+            }
 
-            const data = apiPayload.data;
+            const result = apiPayload.data.results[0]; // Get first (and only) result
+            if (!result || !result.rubrics) return null;
 
-            // Normalise field names: backend returns max_marks per item
-            const rubrics = (data.rubrics || []).map(r => ({
-                ...r,
-                // support both max_marks (backend) and marks (legacy)
-                max_marks: parseFloat(r.max_marks ?? r.marks) || 0,
+            // Map rubrics to expected format
+            const rubrics = result.rubrics.map(r => ({
+                description: r.description,
+                max_marks: parseFloat(r.max_marks) || 0,
+                reasoning: r.reasoning,
+                grading_guidelines: r.grading_guidelines,
             }));
 
-            // Always normalize — corrects AI drift (e.g. 16.01 vs 10) and zero-mark items
+            // Normalize marks to ensure they sum to question marks
             const normalizedRubrics = normalizeRubricMarks(rubrics, questionMarks);
             console.log(
                 '[RubricModal] Rubric marks normalized:',
@@ -1013,7 +1016,7 @@ const RubricModal = ({
                 '(target:', questionMarks, ')'
             );
 
-            return { ...data, rubrics: normalizedRubrics };
+            return { rubrics: normalizedRubrics, problem_feedback: result.problem_feedback || '' };
         } catch (error) {
             console.error('[RubricModal] Request failed:', error);
             return null;
@@ -1164,11 +1167,27 @@ const RubricModal = ({
             });
             return next;
         });
-        setSelectedQuestion((prevSelected) =>
-            normalizedInputQuestions.some((question) => question.question_number === prevSelected)
-                ? prevSelected
-                : (normalizedInputQuestions[0]?.question_number ?? null)
-        );
+        
+        // Set selected question and determine if it has rubrics
+        const firstQuestion = normalizedInputQuestions[0];
+        const selectedQuestionNumber = normalizedInputQuestions.some((question) => question.question_number === selectedQuestion)
+            ? selectedQuestion
+            : (firstQuestion?.question_number ?? null);
+        
+        setSelectedQuestion(selectedQuestionNumber);
+        
+        // CRITICAL FIX: Set showRubricEditor based on whether selected question has rubrics
+        if (selectedQuestionNumber != null) {
+            const selectedQuestionRubrics = getQuestionRubricItems(
+                normalizedInputQuestions.find(q => q.question_number === selectedQuestionNumber)
+            );
+            const hasExistingRubric = selectedQuestionRubrics.length > 0;
+            
+            console.log(`[RubricModal] Question ${selectedQuestionNumber} has ${selectedQuestionRubrics.length} rubrics, showing editor: ${hasExistingRubric}`);
+            
+            setShowRubricEditor(hasExistingRubric);
+            setShowRubricSettings(hasExistingRubric);
+        }
     }, [isOpen, normalizedInputQuestions]);
     
     useEffect(() => {
@@ -1548,29 +1567,35 @@ const RubricModal = ({
 
         try {
             if (regenerate) {
+                // CRITICAL: Set generation state FIRST before any async operations
+                // This ensures the loader shows immediately without intermediate screens
+                setGenerationState({ loading: true, mode: 'single' });
+                
                 const loadingToast = toast.loading('Generating rubric...');
                 try {
                     // selectedQuestion is a question number — look up the full object
                     const questionObj = questions.find(q => q.question_number === selectedQuestion);
                     if (!questionObj) {
                         toast.error('Question not found', { id: loadingToast });
+                        setGenerationState({ loading: false, mode: null });
                         return;
                     }
 
-                    const result = await runGenerationWithLock('single', () =>
-                        requestRubricGeneration(questionObj, getQuestionGenerationSettings(selectedQuestion))
-                    );
+                    // Use requestRubricGeneration directly instead of runGenerationWithLock
+                    // since we already set the generation state above
+                    const result = await requestRubricGeneration(questionObj, getQuestionGenerationSettings(selectedQuestion));
 
                     if (!result) {
                         toast.dismiss(loadingToast);
+                        setGenerationState({ loading: false, mode: null });
                         return;
                     }
 
-                    replaceQuestionRubric(selectedQuestion, result.items, result.feedback);
+                    replaceQuestionRubric(selectedQuestion, result.rubrics, result.problem_feedback);
                     // Sync count to actual rubrics returned
-                    if (result.items?.length > 0) {
-                        setNumRubricItems(result.items.length);
-                        setQuestionSettings(selectedQuestion, { num_rubric_items: result.items.length });
+                    if (result.rubrics?.length > 0) {
+                        setNumRubricItems(result.rubrics.length);
+                        setQuestionSettings(selectedQuestion, { num_rubric_items: result.rubrics.length });
                     }
                     setShowRubricEditor(true);
                     setShowRubricSettings(true);
@@ -1578,6 +1603,8 @@ const RubricModal = ({
                 } catch (err) {
                     console.error('Error regenerating rubric:', err);
                     toast.error('Failed to generate rubric: ' + (err.message || 'Unknown error'), { id: loadingToast });
+                } finally {
+                    setGenerationState({ loading: false, mode: null });
                 }
                 return;
             }
@@ -2031,7 +2058,7 @@ const RubricModal = ({
                                         </AnimatePresence>
 
                                         <AnimatePresence mode="wait">
-                                                    {/* Show global loader ONLY for single generation, background bulk shows in sidebar only */}
+                                                    {/* Show global loader for single generation (both initial and regeneration) */}
                                                     {isGenerating && generationState.mode === 'single' ? (
                                                         <motion.div
                                                             key="loader"
@@ -2221,8 +2248,8 @@ const RubricModal = ({
                                                     )}
                                                 </AnimatePresence>
 
-                                {/* Sticky Action Bar - Always visible when rubric editor is shown */}
-                                {showRubricEditor && (
+                                {/* Sticky Action Bar - Only visible when rubric editor is shown AND not generating */}
+                                {showRubricEditor && !(isGenerating && generationState.mode === 'single') && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
