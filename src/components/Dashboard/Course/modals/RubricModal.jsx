@@ -785,19 +785,26 @@ const normalizeQuestions = (questions) => {
             seen.add(key);
             return true;
         })
-        .map((question) => ({
-            ...question,
-            rubric_items: getQuestionRubricItems(question),
-            problem_feedback: getQuestionFeedback(question),
-            num_rubric_items: clampRubricCount(
-                question?.num_rubric_items,
-                getQuestionRubricItems(question).length || 1
-            ),
-            professor_instructions:
-                typeof question?.professor_instructions === 'string'
-                    ? question.professor_instructions
-                    : '',
-        }))
+        .map((question) => {
+            const rItems = getQuestionRubricItems(question);
+            const feedback = getQuestionFeedback(question);
+            if (rItems.length > 0) {
+                console.log(`[RubricModal] Question ${question.question_number} normalized with ${rItems.length} rubric items`);
+            }
+            return {
+                ...question,
+                rubric_items: rItems,
+                problem_feedback: feedback,
+                num_rubric_items: clampRubricCount(
+                    question?.num_rubric_items,
+                    rItems.length || 1
+                ),
+                professor_instructions:
+                    typeof question?.professor_instructions === 'string'
+                        ? question.professor_instructions
+                        : '',
+            };
+        })
         .sort((a, b) => Number(a.question_number) - Number(b.question_number));
 };
 
@@ -1133,7 +1140,11 @@ const RubricModal = ({
         setRubricsMap(() => {
             const next = {};
             normalizedInputQuestions.forEach((question) => {
-                next[question.question_number] = getQuestionRubricItems(question);
+                const items = getQuestionRubricItems(question);
+                if (items.length > 0) {
+                    console.log(`[RubricModal] Populating rubricsMap for question ${question.question_number}:`, items.length, "items");
+                }
+                next[question.question_number] = items;
             });
             return next;
         });
@@ -1486,8 +1497,15 @@ const RubricModal = ({
             if (regenerate) {
                 const loadingToast = toast.loading('Generating rubric...');
                 try {
+                    // selectedQuestion is a question number — look up the full object
+                    const questionObj = questions.find(q => q.question_number === selectedQuestion);
+                    if (!questionObj) {
+                        toast.error('Question not found', { id: loadingToast });
+                        return;
+                    }
+
                     const result = await runGenerationWithLock('single', () =>
-                        requestRubricGeneration(selectedQuestion, getQuestionGenerationSettings(selectedQuestion))
+                        requestRubricGeneration(questionObj, getQuestionGenerationSettings(selectedQuestion))
                     );
 
                     if (!result) {
@@ -1496,6 +1514,11 @@ const RubricModal = ({
                     }
 
                     replaceQuestionRubric(selectedQuestion, result.items, result.feedback);
+                    // Sync count to actual rubrics returned
+                    if (result.items?.length > 0) {
+                        setNumRubricItems(result.items.length);
+                        setQuestionSettings(selectedQuestion, { num_rubric_items: result.items.length });
+                    }
                     setShowRubricEditor(true);
                     setShowRubricSettings(true);
                     toast.success('Rubric generated successfully!', { id: loadingToast });

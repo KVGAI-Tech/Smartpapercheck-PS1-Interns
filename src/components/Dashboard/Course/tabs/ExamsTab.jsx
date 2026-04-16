@@ -1638,7 +1638,16 @@ const Toast = ({ message, type, show, onClose }) => {
           throw new Error('Exam ID is missing');
         }
         
-        const response = await fetch(`${API_BASE_URL}/exams/${examId}/question-answer`, {
+        const exam = exams.find(e => Number(e.id) === Number(examId));
+        const useConductEndpoint = isSubjectiveConductExam(exam);
+        
+        const endpoint = useConductEndpoint 
+          ? `${API_BASE_URL}/exams/${examId}/conduct-exams/questions`
+          : `${API_BASE_URL}/exams/${examId}/question-answer`;
+          
+        console.log(`[ExamsTab] Fetching questions for exam ${examId} using ${useConductEndpoint ? 'conduct' : 'standard'} endpoint`);
+        
+        const response = await fetch(endpoint, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           }
@@ -1669,7 +1678,17 @@ const Toast = ({ message, type, show, onClose }) => {
             questionsList = data.data.questions || [];
           } else if (data.data.question_number) {
             questionsList = [data.data];
+          } else if (Array.isArray(data.data)) {
+            questionsList = data.data;
           }
+          
+          console.log(`[ExamsTab] Fetched ${questionsList.length} questions. Checking rubrics...`);
+          questionsList.forEach(q => {
+             const hasRubric = (q.rubric_items && q.rubric_items.length > 0) || (q.rubric && q.rubric.rubric_items && q.rubric.rubric_items.length > 0);
+             if (hasRubric) {
+               console.log(`[ExamsTab] Question ${q.question_number} has ${q.rubric_items?.length || q.rubric?.rubric_items?.length} rubric items`);
+             }
+          });
           
           const hasRubrics = questionsList.some(question => {
             const hasExplicitRubricItems = question.rubric_items && question.rubric_items.length > 0;
@@ -1711,6 +1730,32 @@ const Toast = ({ message, type, show, onClose }) => {
             ...prev,
             [selectedExamId]: Math.max(prev[selectedExamId] ?? 0, 2),
           }));
+        }
+
+        // Re-fetch questions so the modal's in-memory state reflects the saved
+        // rubrics. Without this, re-opening the modal shows empty rubrics because
+        // currentExamQuestions still holds the pre-save data.
+        if (selectedExamId) {
+          try {
+            console.log('[ExamsTab] Refetching questions after rubric save for exam', selectedExamId);
+            const refreshed = await fetchExamQuestions(selectedExamId);
+            if (refreshed && refreshed.length > 0) {
+              const processedQuestions = refreshed.map(question => ({
+                ...question,
+                rubric_items: question.rubric_items?.length > 0
+                  ? question.rubric_items
+                  : (question.rubric?.rubric_items || []),
+                problem_feedback: question.rubric_items?.length > 0
+                  ? (question.problem_feedback || '')
+                  : (question.rubric?.problem_feedback || ''),
+              }));
+              setCurrentExamQuestions(processedQuestions);
+              console.log('[ExamsTab] Questions refreshed after save:', processedQuestions.length);
+            }
+          } catch (fetchErr) {
+            // Non-fatal — the save succeeded, just the refresh failed
+            console.warn('[ExamsTab] Failed to refresh questions after save:', fetchErr.message);
+          }
         }
 
         if (onRefresh) {
