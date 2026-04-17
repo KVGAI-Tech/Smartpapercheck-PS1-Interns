@@ -2148,6 +2148,7 @@ const Toast = ({ message, type, show, onClose }) => {
             examId={selectedExamId}
             examType={selectedExamType}
             existingQuestions={existingQuestions}
+            exam={exams?.find(e => e.id === selectedExamId) || null}
             isMasterAttached={exams?.find(e => e.id === selectedExamId)?.is_master_attached || false}
             onSubmit={async (examId, formData) => {
               try {

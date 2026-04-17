@@ -1,53 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import React, { Suspense } from 'react';
 
 import {
-  evaluateSubjectiveConductSubmission,
-  getSubjectiveConductSubmissionDetail,
   getSubjectiveConductSubmissions,
   publishConductExam,
 } from './api';
+
+const StudentEvaluationLoader = React.lazy(() => import('./modals/StudentEvaluationLoader'));
 
 const ProfessorSubjectiveConductEvaluatePage = () => {
   const navigate = useNavigate();
   const { courseId, examId } = useParams();
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
   const [listData, setListData] = useState(null);
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
-  const [submissionDetail, setSubmissionDetail] = useState(null);
-  const [draftGrades, setDraftGrades] = useState({});
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [showEvaluationDetail, setShowEvaluationDetail] = useState(false);
 
-  const loadSubmissions = async (nextSelectedId = null) => {
+  const loadSubmissions = async () => {
     const response = await getSubjectiveConductSubmissions(examId);
     const payload = response?.data || null;
     setListData(payload);
-    const firstSubmissionId = nextSelectedId || payload?.submissions?.[0]?.submission_id || null;
-    setSelectedSubmissionId(firstSubmissionId);
-    return firstSubmissionId;
-  };
-
-  const loadSubmissionDetail = async (submissionId) => {
-    if (!submissionId) {
-      setSubmissionDetail(null);
-      setDraftGrades({});
-      return;
-    }
-    const response = await getSubjectiveConductSubmissionDetail(submissionId);
-    const payload = response?.data || null;
-    setSubmissionDetail(payload);
-    const nextDraftGrades = {};
-    for (const question of payload?.questions || []) {
-      nextDraftGrades[question.id] = {
-        marks_awarded: question.marks_awarded ?? '',
-        feedback: question.feedback || '',
-      };
-    }
-    setDraftGrades(nextDraftGrades);
+    return payload;
   };
 
   useEffect(() => {
@@ -56,10 +34,7 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
       setLoading(true);
       setError('');
       try {
-        const firstSubmissionId = await loadSubmissions();
-        if (!cancelled) {
-          await loadSubmissionDetail(firstSubmissionId);
-        }
+        await loadSubmissions();
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Failed to load conduct exam submissions.');
@@ -77,28 +52,12 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
     };
   }, [examId]);
 
-  useEffect(() => {
-    if (!selectedSubmissionId) return;
-    loadSubmissionDetail(selectedSubmissionId).catch((err) => {
-      setError(err.message || 'Failed to load submission details.');
-    });
-  }, [selectedSubmissionId]);
-
-  const scoredTotal = useMemo(
-    () => (submissionDetail?.questions || []).reduce((sum, question) => {
-      const nextValue = Number(draftGrades[question.id]?.marks_awarded || 0);
-      return sum + (Number.isNaN(nextValue) ? 0 : nextValue);
-    }, 0),
-    [draftGrades, submissionDetail]
-  );
-
   const handlePublish = async () => {
     setPublishing(true);
     setError('');
     try {
       await publishConductExam(examId);
-      const refreshedSubmissionId = await loadSubmissions(selectedSubmissionId);
-      await loadSubmissionDetail(refreshedSubmissionId);
+      await loadSubmissions();
     } catch (err) {
       setError(err.message || 'Failed to publish conduct exam.');
     } finally {
@@ -106,30 +65,26 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
     }
   };
 
-  const handleSaveEvaluation = async () => {
-    if (!selectedSubmissionId || !submissionDetail) return;
-    setSaving(true);
-    setError('');
-    try {
-      const answers = submissionDetail.questions.map((question) => ({
-        question_id: question.id,
-        marks_awarded: Number(draftGrades[question.id]?.marks_awarded || 0),
-        feedback: draftGrades[question.id]?.feedback || '',
-      }));
-      const response = await evaluateSubjectiveConductSubmission(selectedSubmissionId, answers);
-      const payload = response?.data || null;
-      setSubmissionDetail(payload);
-      const refreshedSubmissionId = await loadSubmissions(selectedSubmissionId);
-      await loadSubmissionDetail(refreshedSubmissionId);
-    } catch (err) {
-      setError(err.message || 'Failed to save conduct exam evaluation.');
-    } finally {
-      setSaving(false);
-    }
+  const handleEvaluateSubmission = (submission) => {
+    setSelectedSubmission(submission);
+    setShowEvaluationDetail(true);
+  };
+
+  const handleCloseEvaluation = () => {
+    setShowEvaluationDetail(false);
+    setSelectedSubmission(null);
+  };
+
+  const handleEvaluationComplete = async () => {
+    setShowEvaluationDetail(false);
+    setSelectedSubmission(null);
+    // Reload submissions to show updated marks
+    await loadSubmissions();
   };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* Header */}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <button
@@ -156,6 +111,7 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
         </button>
       </div>
 
+      {/* Loading State */}
       {loading && (
         <div className="flex min-h-[320px] items-center justify-center rounded-3xl border border-gray-100 bg-white shadow-sm">
           <Loader2 className="mr-3 h-6 w-6 animate-spin text-accent" />
@@ -163,6 +119,7 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
         </div>
       )}
 
+      {/* Error State */}
       {!loading && error && (
         <div className="mb-6 rounded-3xl border border-red-100 bg-red-50 p-6 text-red-700 shadow-sm">
           <h2 className="text-lg font-semibold">Unable to load conduct exam review</h2>
@@ -170,162 +127,100 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
         </div>
       )}
 
+      {/* Submissions List */}
       {!loading && !error && (
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <div className="rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-gray-100 px-5 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">Submissions</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                {(listData?.submissions || []).length} students
-              </p>
-            </div>
-            <div className="max-h-[70vh] overflow-y-auto p-3 space-y-2">
-              {(listData?.submissions || []).map((submission) => {
-                const isSelected = submission.submission_id === selectedSubmissionId;
-                return (
-                  <button
-                    key={submission.submission_id}
-                    type="button"
-                    onClick={() => setSelectedSubmissionId(submission.submission_id)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-                      isSelected ? 'border-accent bg-accent/10' : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="font-medium text-gray-900">{submission.student_name}</div>
-                    <div className="text-xs text-gray-500 mt-1">{submission.roll_number || 'No roll number'}</div>
-                    <div className="mt-3 flex items-center justify-between text-xs">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${
+        <div className="rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-gray-100 px-6 py-5">
+            <h2 className="text-xl font-semibold text-gray-900">Submissions</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {(listData?.submissions || []).length} students • Click on a submission to evaluate
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Student
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Roll Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Score
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {(listData?.submissions || []).map((submission) => (
+                  <tr key={submission.submission_id} className="hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{submission.student_name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{submission.roll_number || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         submission.status === 'submitted' || submission.status === 'auto_submitted'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-amber-100 text-amber-700'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-amber-100 text-amber-800'
                       }`}>
-                        <CheckCircle2 className="h-3 w-3" />
                         {submission.status}
                       </span>
-                      <span className="text-gray-500">
-                        {submission.marks_obtained ?? '-'} / {listData?.exam?.full_marks ?? 0}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {submission.marks_obtained !== null && submission.marks_obtained !== undefined
+                          ? `${submission.marks_obtained} / ${listData?.exam?.full_marks ?? 0}`
+                          : 'Not evaluated'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => handleEvaluateSubmission(submission)}
+                        className="text-accent hover:text-accent/80 font-medium transition"
+                      >
+                        Evaluate
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {(listData?.submissions || []).length === 0 && (
+            <div className="p-10 text-center text-gray-500">
+              No submissions yet. Students haven't submitted this exam.
             </div>
-          </div>
-
-          <div className="rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-            {!submissionDetail ? (
-              <div className="p-10 text-center text-gray-500">
-                Select a submission to start grading.
-              </div>
-            ) : (
-              <>
-                <div className="border-b border-gray-100 px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{submissionDetail.student_name}</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {submissionDetail.roll_number || 'No roll number'} • {submissionDetail.status}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">Current Score</div>
-                    <div className="text-2xl font-semibold text-accent">
-                      {scoredTotal} / {submissionDetail.total_marks}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 p-6">
-                  {(submissionDetail.questions || []).map((question, index) => (
-                    <div key={question.id} className="rounded-2xl border border-gray-200 p-5">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-lg font-semibold text-gray-900">Question {index + 1}</h3>
-                        <span className="text-sm text-gray-500">{question.marks} marks</span>
-                      </div>
-                      <p className="mt-3 whitespace-pre-wrap text-gray-800">{question.question_text}</p>
-
-                      {question.image_url && (
-                        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
-                          <img src={question.image_url} alt={`Question ${index + 1}`} className="max-h-[280px] rounded-lg object-contain" />
-                        </div>
-                      )}
-
-                      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">Student Answer</p>
-                          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 min-h-[140px]">
-                            <p className="whitespace-pre-wrap text-sm text-gray-700">
-                              {question.text_answer || 'No text answer submitted.'}
-                            </p>
-                            {question.image_answer_url && (
-                              <img
-                                src={question.image_answer_url}
-                                alt={`Student answer ${index + 1}`}
-                                className="mt-3 max-h-[220px] rounded-lg object-contain"
-                              />
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Marks Awarded
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              max={question.marks}
-                              step="0.5"
-                              value={draftGrades[question.id]?.marks_awarded ?? ''}
-                              onChange={(e) => setDraftGrades((prev) => ({
-                                ...prev,
-                                [question.id]: {
-                                  ...(prev[question.id] || {}),
-                                  marks_awarded: e.target.value,
-                                },
-                              }))}
-                              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-accent focus:outline-none"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Feedback
-                            </label>
-                            <textarea
-                              rows={5}
-                              value={draftGrades[question.id]?.feedback ?? ''}
-                              onChange={(e) => setDraftGrades((prev) => ({
-                                ...prev,
-                                [question.id]: {
-                                  ...(prev[question.id] || {}),
-                                  feedback: e.target.value,
-                                },
-                              }))}
-                              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-accent focus:outline-none"
-                              placeholder="Add feedback for this answer"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t border-gray-100 px-6 py-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSaveEvaluation}
-                    disabled={saving}
-                    className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent/90 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {saving ? 'Saving...' : 'Save Evaluation'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          )}
         </div>
+      )}
+
+      {/* Evaluation Detail Modal */}
+      {showEvaluationDetail && selectedSubmission && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent" />
+            </div>
+          }
+        >
+          <StudentEvaluationLoader
+            examId={parseInt(examId)}
+            enrollmentId={selectedSubmission.enrollment_id}
+            onClose={handleCloseEvaluation}
+            onComplete={handleEvaluationComplete}
+          />
+        </Suspense>
       )}
     </div>
   );

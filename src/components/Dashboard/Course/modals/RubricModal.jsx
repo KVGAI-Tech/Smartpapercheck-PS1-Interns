@@ -931,7 +931,12 @@ const RubricModal = ({
     };
 
     const requestRubricGeneration = async (question, overrideSettings = null) => {
-        if (!question) return null;
+        if (!question) {
+            console.error('[RubricModal] requestRubricGeneration called with no question');
+            return null;
+        }
+
+        console.log('[RubricModal] requestRubricGeneration called for question:', question);
 
         // question objects use max_marks; fall back to marks for legacy shapes
         const questionMarks = parseFloat(question.max_marks || question.marks) || 10;
@@ -984,21 +989,32 @@ const RubricModal = ({
                 }
             );
 
+            console.log('[RubricModal] API response status:', response.status, response.statusText);
+
             if (!response.ok) {
                 const errText = await response.text();
                 console.error('[RubricModal] Backend error:', response.status, errText);
-                return null;
+                throw new Error(`API error: ${response.status} - ${errText.substring(0, 200)}`);
             }
 
             const apiPayload = await response.json();
             console.log('[RubricModal] Rubric response:', apiPayload);
 
-            if (apiPayload.status === 'error' || !apiPayload.data?.results || apiPayload.data.results.length === 0) {
-                return null;
+            if (apiPayload.status === 'error') {
+                console.error('[RubricModal] API returned error status:', apiPayload);
+                throw new Error(apiPayload.message || 'API returned error status');
+            }
+            
+            if (!apiPayload.data?.results || apiPayload.data.results.length === 0) {
+                console.error('[RubricModal] No results in API response:', apiPayload);
+                throw new Error('No rubric results returned from API');
             }
 
             const result = apiPayload.data.results[0]; // Get first (and only) result
-            if (!result || !result.rubrics) return null;
+            if (!result || !result.rubrics) {
+                console.error('[RubricModal] Result missing rubrics:', result);
+                throw new Error('Result missing rubrics');
+            }
 
             // Map rubrics to expected format
             const rubrics = result.rubrics.map(r => ({
@@ -1019,7 +1035,7 @@ const RubricModal = ({
             return { rubrics: normalizedRubrics, problem_feedback: result.problem_feedback || '' };
         } catch (error) {
             console.error('[RubricModal] Request failed:', error);
-            return null;
+            throw error; // Re-throw to be caught by caller
         }
     };
 
@@ -1515,17 +1531,32 @@ const RubricModal = ({
 
     const generateRubric = async (questionNumber, e) => {
         e?.preventDefault();
-        if (generationState.loading) return;
+        if (generationState.loading) {
+            console.log('[RubricModal] Generation already in progress, ignoring');
+            return;
+        }
 
+        console.log('[RubricModal] Starting rubric generation for question', questionNumber);
         setGenerationState({ loading: true, mode: 'single' });
         setGeneratingStatus(prev => ({ ...prev, [questionNumber]: 'generating' }));
         
         const loadingToast = toast.loading('Generating rubric...');
         const question = questions.find(q => q.question_number === questionNumber);
 
+        if (!question) {
+            console.error('[RubricModal] Question not found:', questionNumber);
+            toast.error('Question not found', { id: loadingToast });
+            setGenerationState({ loading: false, mode: null });
+            setGeneratingStatus(prev => ({ ...prev, [questionNumber]: 'error' }));
+            return;
+        }
+
         try {
+            console.log('[RubricModal] Requesting rubric generation for question:', question);
             // Addition of withRetry for better stability
             const res = await withRetry(() => requestRubricGeneration(question));
+            console.log('[RubricModal] Rubric generation response:', res);
+            
             if (res && res.rubrics) {
                 const items = res.rubrics.map(r => ({
                     description: r.description,
@@ -1534,6 +1565,7 @@ const RubricModal = ({
                     grading_guidelines: r.grading_guidelines ?? r.guidelines ?? '',
                 }));
 
+                console.log('[RubricModal] Setting rubrics for question', questionNumber, ':', items);
                 setRubricsMap(prev => ({
                     ...prev,
                     [questionNumber]: items
@@ -1547,12 +1579,15 @@ const RubricModal = ({
                 setGeneratingStatus(prev => ({ ...prev, [questionNumber]: 'done' }));
                 toast.success('Rubric generated!', { id: loadingToast });
             } else {
-                throw new Error('Failed to generate rubric');
+                console.error('[RubricModal] No rubrics in response:', res);
+                throw new Error('Failed to generate rubric - no rubrics returned');
             }
         } catch (err) {
+            console.error('[RubricModal] Rubric generation error:', err);
             setGeneratingStatus(prev => ({ ...prev, [questionNumber]: 'error' }));
-            toast.error(err.message, { id: loadingToast });
+            toast.error(err.message || 'Failed to generate rubric', { id: loadingToast });
         } finally {
+            console.log('[RubricModal] Rubric generation complete, resetting loading state');
             setGenerationState({ loading: false, mode: null });
         }
     };

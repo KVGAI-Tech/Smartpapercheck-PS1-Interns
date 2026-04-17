@@ -43,7 +43,7 @@ const ExamCard = ({
     const startMs = start_time ? new Date(start_time).getTime() : null;
     const endMs = end_time ? new Date(end_time).getTime() : null;
 
-    if (!exam_is_active) return 'not_started';
+    // For conduct exams, only check time window (no is_active check)
     if (startMs && now < startMs) return 'not_started';
     if (endMs && now > endMs) return 'expired';
     return 'live';

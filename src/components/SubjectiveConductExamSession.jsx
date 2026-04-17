@@ -146,7 +146,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       if (dirtyQuestionIds.length > 0) {
         saveAnswers(dirtyQuestionIds, true).catch(() => {});
       }
-    }, 12000);
+    }, 30000); // Auto-save every 30 seconds
     return () => clearInterval(interval);
   }, [dirtyQuestionIds, session, answers]);
 

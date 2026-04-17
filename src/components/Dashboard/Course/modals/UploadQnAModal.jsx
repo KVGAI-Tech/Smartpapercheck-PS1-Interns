@@ -389,7 +389,7 @@ const parseStoredDraft = (draftKey) => {
 };
 
 const UploadQnAModal = ({
-  isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [], apiPrefix = '/exams', isMasterAttached = false }) => {
+  isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [], apiPrefix = '/exams', isMasterAttached = false, exam = null }) => {
 
   const isPortalMcqMode = examType === 'conduct';
   const isSubjectiveConductMode = examType === 'subjective_conduct';
@@ -1876,10 +1876,76 @@ const UploadQnAModal = ({
     );
   };
 
+  // ── Exam Marks Validation ────────────────────────────────────
+  // IMPORTANT: This useMemo must be BEFORE the early return to avoid React Hooks violation
+  const examMarksValidation = useMemo(() => {
+    if (!exam || !exam.total_marks) {
+      return { isValid: true, totalQuestionMarks: 0, examMarks: 0, isExceeded: false, isLess: false, isMismatch: false };
+    }
+
+    const totalQuestionMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
+    const examMarks = Number(exam.total_marks) || 0;
+    const isExceeded = totalQuestionMarks > examMarks;
+    const isLess = totalQuestionMarks < examMarks;
+    const isMismatch = totalQuestionMarks !== examMarks;
+
+    return {
+      isValid: !isMismatch,
+      totalQuestionMarks,
+      examMarks,
+      isExceeded,
+      isLess,
+      isMismatch
+    };
+  }, [questions, exam]);
+
+  const handleAdjustExamMarks = async () => {
+    if (!exam || !examId) {
+      toast.error('Exam information not available');
+      return;
+    }
+
+    const loadingToast = toast.loading('Adjusting exam marks...');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}${apiPrefix}/${examId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          total_marks: examMarksValidation.totalQuestionMarks
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update exam marks: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.code === 200) {
+        toast.success('Exam marks adjusted successfully!', { id: loadingToast });
+        
+        // Trigger parent refresh if available
+        if (window.location) {
+          window.location.reload();
+        }
+      } else {
+        throw new Error(data.message || 'Failed to adjust exam marks');
+      }
+    } catch (error) {
+      console.error('Error adjusting exam marks:', error);
+      toast.error(error.message || 'Failed to adjust exam marks', { id: loadingToast });
+    }
+  };
+
   if (!isOpen || questions.length === 0) return null;
 
   const safeIndex = Math.min(Math.max(selectedIndex, 0), questions.length - 1);
   const activeQuestion = questions[safeIndex];
+
 
   const ModalContent = (
     <div 
@@ -2064,6 +2130,78 @@ const UploadQnAModal = ({
           <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-md flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
             <p>{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Exam Marks Validation Alert */}
+      {exam && examMarksValidation.isMismatch && (
+        <div className="px-6 pt-3 pb-0 animate-slideDown">
+          <div className={`px-4 py-3 rounded-xl flex items-start gap-3 border ${
+            examMarksValidation.isExceeded
+              ? 'bg-red-50 border-red-200'
+              : 'bg-yellow-50 border-yellow-200'
+          }`}>
+            <AlertCircle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+              examMarksValidation.isExceeded ? 'text-red-500' : 'text-yellow-600'
+            }`} />
+            <div className="flex-1">
+              <p className={`text-sm font-medium ${
+                examMarksValidation.isExceeded ? 'text-red-800' : 'text-yellow-800'
+              }`}>
+                {examMarksValidation.isExceeded
+                  ? `Total question marks (${examMarksValidation.totalQuestionMarks}) exceed exam marks (${examMarksValidation.examMarks})`
+                  : `Total question marks (${examMarksValidation.totalQuestionMarks}) are less than exam marks (${examMarksValidation.examMarks})`
+                }
+              </p>
+              <p className={`text-xs mt-1 ${
+                examMarksValidation.isExceeded ? 'text-red-600' : 'text-yellow-700'
+              }`}>
+                {examMarksValidation.isExceeded
+                  ? 'You cannot save until marks are adjusted. Click the button below to update exam marks.'
+                  : 'Consider adjusting exam marks to match question marks for consistency.'}
+              </p>
+            </div>
+            <button
+              onClick={handleAdjustExamMarks}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                examMarksValidation.isExceeded
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-yellow-600 text-white hover:bg-yellow-700'
+              }`}
+            >
+              Adjust Exam Marks
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Live Marks Summary */}
+      {exam && (
+        <div className="px-6 pt-2 pb-0">
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Questions Total:</span>
+              <span className={`font-semibold ${
+                examMarksValidation.isExceeded ? 'text-red-600' : 
+                examMarksValidation.isLess ? 'text-yellow-600' : 
+                'text-green-600'
+              }`}>
+                {examMarksValidation.totalQuestionMarks}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Exam Total:</span>
+              <span className="font-semibold text-gray-900">
+                {examMarksValidation.examMarks}
+              </span>
+            </div>
+            {examMarksValidation.isValid && (
+              <div className="flex items-center gap-1 text-green-600">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-xs font-medium">Marks Match</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2468,12 +2606,13 @@ const UploadQnAModal = ({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || (exam && examMarksValidation.isExceeded)}
             className={`flex items-center gap-2 px-5 py-2 rounded-md font-medium transition-all duration-300
-              ${isSubmitting 
+              ${isSubmitting || (exam && examMarksValidation.isExceeded)
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                 : 'bg-accent text-white hover:bg-accent shadow-sm hover:shadow'}`}
             type="button"
+            title={exam && examMarksValidation.isExceeded ? 'Cannot save: Total question marks exceed exam marks' : ''}
           >
             {isSubmitting ? (
               <>

@@ -28,7 +28,7 @@ import AnswerReviewPage from "./components/Dashboard/Course/AnswerReviewPage";
 import ProfessorNotificationsPage from "./components/Dashboard/ProfessorNotificationsPage";
 import PoliciesPage from "./components/PoliciesPage";
 import DemoPage, { DemoEvaluationPage } from "./components/Demo/DemoPage";
-import SubjectiveConductExamSession from "./components/SubjectiveConductExamSession";
+import SubjectiveConductExamSessionLeetCode from "./components/SubjectiveConductExamSessionLeetCode";
 import { useAuth } from "./components/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -206,7 +206,7 @@ function App() {
               element={
                 <RoleRoute requiredRole="professor">
                   <DashboardLayout>
-                    <ProfessorConductExamEvaluatePage />
+                    <ProfessorExamEvaluationsPage />
                   </DashboardLayout>
                 </RoleRoute>
               }
@@ -216,7 +216,7 @@ function App() {
               element={
                 <RoleRoute requiredRole="professor">
                   <DashboardLayout>
-                    <ProfessorSubjectiveConductEvaluatePage />
+                    <ProfessorExamEvaluationsPage />
                   </DashboardLayout>
                 </RoleRoute>
               }
@@ -292,7 +292,7 @@ function App() {
               element={
                 <RoleRoute requiredRole="student">
                   <StudentDashboardLayout>
-                    <SubjectiveConductExamSession />
+                    <SubjectiveConductExamSessionLeetCode />
                   </StudentDashboardLayout>
                 </RoleRoute>
               }

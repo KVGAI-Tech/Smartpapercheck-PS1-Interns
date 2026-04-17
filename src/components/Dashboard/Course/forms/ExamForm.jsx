@@ -7,12 +7,31 @@ const toDatetimeLocalValue = (value) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
+  
+  // Return the datetime as-is for datetime-local input (no timezone conversion)
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const fromDatetimeLocalToISO = (datetimeLocalValue) => {
+  if (!datetimeLocalValue) return null;
+  
+  // NO TIMEZONE CONVERSION - Send datetime as-is to backend
+  // Backend will treat it as IST (naive datetime)
+  // Input: "2026-04-17T13:00" -> Output: "2026-04-17T13:00:00" (no Z suffix)
+  
+  const [datePart, timePart] = datetimeLocalValue.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+  
+  // Create ISO string WITHOUT 'Z' suffix (naive datetime, treated as IST by backend)
+  const isoString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+  
+  return isoString;
 };
 
 
@@ -30,7 +49,7 @@ const ExamForm = ({
     exam_name: initialData?.exam_name || '',
     full_marks: initialData?.full_marks || '',
     exam_type: initialExamType,
-    is_active: initialData?.is_active ?? false,
+    is_active: initialData?.is_active ?? (initialExamType === 'conduct' ? true : false),
     allow_recheck: true,
     max_recheck_attempts: 1,
     start_time: toDatetimeLocalValue(initialData?.start_time),
@@ -46,7 +65,7 @@ const ExamForm = ({
     setFormData((prev) => ({
       ...prev,
       exam_type: newType,
-      is_active: initialData ? prev.is_active : false,
+      is_active: newType === 'conduct' ? true : (initialData ? prev.is_active : false),
     }));
   };
 
@@ -78,8 +97,33 @@ const ExamForm = ({
         return;
       }
 
-      payload.start_time = new Date(formData.start_time).toISOString();
-      payload.end_time = new Date(formData.end_time).toISOString();
+      // NO TIMEZONE CONVERSION - Send datetime as-is (treated as IST by backend)
+      const startISO = fromDatetimeLocalToISO(formData.start_time);
+      const endISO = fromDatetimeLocalToISO(formData.end_time);
+      
+      if (!startISO || !endISO) {
+        setError('Invalid date/time format');
+        return;
+      }
+      
+      const startDate = new Date(startISO);
+      const endDate = new Date(endISO);
+      
+      // Validate: end must be after start
+      if (endDate <= startDate) {
+        setError('End time must be after start time. Please check your selected times.');
+        return;
+      }
+      
+      // Validate: at least 30 minutes duration
+      const durationMinutes = (endDate - startDate) / (1000 * 60);
+      if (durationMinutes < 30) {
+        setError('Exam duration must be at least 30 minutes');
+        return;
+      }
+
+      payload.start_time = startISO;
+      payload.end_time = endISO;
       payload.duration_minutes = formData.duration_minutes === '' ? null : Number(formData.duration_minutes);
     }
 
@@ -152,7 +196,7 @@ const ExamForm = ({
           </p>
         </div>
 
-        {(isPortalMcq || isSubjectiveConduct) && (
+        {isPortalMcq && (
           <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
             <label className="inline-flex items-center gap-3 text-sm text-gray-700">
               <input
@@ -171,7 +215,7 @@ const ExamForm = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Time *
+                  Start Time (IST) *
                 </label>
                 <input
                   type="datetime-local"
@@ -183,7 +227,7 @@ const ExamForm = ({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Time *
+                  End Time (IST) *
                 </label>
                 <input
                   type="datetime-local"
@@ -194,6 +238,35 @@ const ExamForm = ({
                 />
               </div>
             </div>
+            
+            {formData.start_time && formData.end_time && (
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Exam Window (IST):</strong> {
+                    (() => {
+                      // NO CONVERSION - Display times as-is (IST)
+                      const startISO = fromDatetimeLocalToISO(formData.start_time);
+                      const endISO = fromDatetimeLocalToISO(formData.end_time);
+                      
+                      if (!startISO || !endISO) return 'Invalid times';
+                      
+                      const start = new Date(startISO);
+                      const end = new Date(endISO);
+                      const duration = Math.round((end - start) / (1000 * 60));
+                      
+                      if (end <= start) {
+                        return <span className="text-red-600">⚠️ End time must be after start time!</span>;
+                      }
+                      
+                      return `${duration} minutes (${Math.floor(duration / 60)}h ${duration % 60}m)`;
+                    })()
+                  }
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  All times are in Indian Standard Time (IST) - No timezone conversions
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
