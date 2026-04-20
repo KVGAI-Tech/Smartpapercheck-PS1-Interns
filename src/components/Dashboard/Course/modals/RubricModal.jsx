@@ -516,12 +516,12 @@ const RubricItemEditor = React.memo(({ item, index, onUpdate, onDelete, validati
                                             <FileText className="w-4 h-4 text-gray-400" />
                                             Description
                                         </label>
-                                        <input
-                                            type="text"
+                                        <AutoGrowTextarea
                                             value={item.description || ''}
                                             onChange={(e) => onUpdate(index, { ...item, description: e.target.value })}
-                                            placeholder="Enter criteria description..."
-                                            className={`w-full px-4 py-2.5 bg-white border rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-300 shadow-sm ${
+                                            placeholder="Describe exactly what the student must demonstrate for this criterion..."
+                                            rows={3}
+                                            className={`min-h-[96px] ${
                                                 validationErrors.some(error => error.includes('description')) 
                                                     ? 'border-red-300 bg-red-50' 
                                                     : 'border-gray-200'
@@ -560,7 +560,7 @@ const RubricItemEditor = React.memo(({ item, index, onUpdate, onDelete, validati
                                         value={item.reasoning || ''}
                                         onChange={(e) => onUpdate(index, { ...item, reasoning: e.target.value })}
                                         placeholder="Explain the reasoning behind this criteria..."
-                                        rows={2}
+                                        rows={3}
                                     />
                                 </div>
 
@@ -573,7 +573,7 @@ const RubricItemEditor = React.memo(({ item, index, onUpdate, onDelete, validati
                                         value={item.grading_guidelines || ''}
                                         onChange={(e) => onUpdate(index, { ...item, grading_guidelines: e.target.value })}
                                         placeholder="Provide specific guidelines for grading..."
-                                        rows={3}
+                                        rows={5}
                                     />
                                 </div>
                             </div>
