@@ -517,8 +517,14 @@ const StudentEvaluationLoader = ({
     currentQuestion?.question_text || currentQuestion?.question_body
   );
   const answerHasImage = !!currentQuestion?.answer_file_url;
+  const answerKeyText =
+    currentQuestion?.answer_text ||
+    currentQuestion?.answer_body ||
+    currentQuestion?.answer_key ||
+    currentQuestion?.model_answer ||
+    "";
   const answerHasText = !!(
-    currentQuestion?.answer_text || currentQuestion?.answer_body
+    answerKeyText
   );
 
   const getTypeLabel = (hasImage, hasText) => {
@@ -969,7 +975,7 @@ const StudentEvaluationLoader = ({
                         ) : answerHasText ? (
                           <div className="w-full h-full overflow-auto p-3 text-left">
                             <p className="text-sm text-gray-700 whitespace-pre-line">
-                              {currentQuestion.answer_text || currentQuestion.answer_body}
+                              {answerKeyText}
                             </p>
                           </div>
                         ) : (

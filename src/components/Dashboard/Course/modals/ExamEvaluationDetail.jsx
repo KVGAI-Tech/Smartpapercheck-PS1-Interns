@@ -1684,7 +1684,7 @@ const ExamEvaluationDetail = ({
                         hoverEffect={false}
                       >
                         <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {currentQuestion.answer_text || 'Model answer not available'}
+                          {currentQuestion.answer_text || currentQuestion.answer_body || currentQuestion.answer_key || currentQuestion.model_answer || 'Model answer not available'}
                         </p>
                       </AnimatedCard>
                     </motion.div>

@@ -52,14 +52,25 @@ const createSessionId = () => {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-const formatCountdown = (deadlineAt) => {
-  if (!deadlineAt) return '--:--:--';
-  const remainingMs = Math.max(0, new Date(deadlineAt).getTime() - Date.now());
-  const totalSeconds = Math.floor(remainingMs / 1000);
+const formatCountdown = (totalSeconds) => {
+  if (typeof totalSeconds !== 'number' || totalSeconds < 0) return '--:--:--';
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+};
+
+const normalizeRemainingTime = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor(numericValue));
 };
 
 const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
@@ -70,6 +81,7 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const sessionIdRef = useRef(null);
   const autoSubmitRef = useRef(false);
   const autoSaveTimerRef = useRef(null);
+  const dirtyQuestionIdsRef = useRef([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,6 +89,7 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [session, setSession] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
   const [answers, setAnswers] = useState({});
   const [dirtyQuestionIds, setDirtyQuestionIds] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -147,17 +160,55 @@ Take your time and write a comprehensive answer.`,
     sessionIdRef.current = sessionStorage.getItem(storageKey);
   }, [resolvedExamId]);
 
-  const hydrateSession = (payload) => {
+  useEffect(() => {
+    dirtyQuestionIdsRef.current = dirtyQuestionIds;
+  }, [dirtyQuestionIds]);
+
+  const hydrateSession = (payload, { preserveDirtyAnswers = false } = {}) => {
     setSession(payload);
-    const nextAnswers = {};
-    for (const question of payload?.questions || []) {
-      nextAnswers[question.id] = {
-        text_answer: question.text_answer || '',
-        image_answer_url: question.image_answer_url || '',
-      };
+    setTimeLeft(normalizeRemainingTime(payload?.remaining_time));
+    setAnswers((previousAnswers) => {
+      const nextAnswers = {};
+      for (const question of payload?.questions || []) {
+        const serverAnswer = {
+          text_answer: question.text_answer || '',
+          image_answer_url: question.image_answer_url || '',
+        };
+        const shouldPreserveLocalAnswer =
+          preserveDirtyAnswers &&
+          payload?.status === 'in_progress' &&
+          dirtyQuestionIdsRef.current.includes(question.id);
+
+        nextAnswers[question.id] = shouldPreserveLocalAnswer
+          ? (previousAnswers[question.id] || serverAnswer)
+          : serverAnswer;
+      }
+      return nextAnswers;
+    });
+    if (!preserveDirtyAnswers || payload?.status !== 'in_progress') {
+      setDirtyQuestionIds([]);
     }
-    setAnswers(nextAnswers);
-    setDirtyQuestionIds([]);
+  };
+
+  const handleAutoSubmit = async () => {
+    if (autoSubmitRef.current || !resolvedExamId || !sessionIdRef.current) {
+      return;
+    }
+
+    autoSubmitRef.current = true;
+    try {
+      if (dirtyQuestionIdsRef.current.length > 0) {
+        await saveAnswers(dirtyQuestionIdsRef.current, true);
+      }
+
+      const response = await examsApi.submitSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
+      if (response?.data) {
+        hydrateSession(response.data);
+        setNotice('Time expired. Your exam was auto-submitted.');
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to auto-submit conduct exam.');
+    }
   };
 
   useEffect(() => {
@@ -168,15 +219,24 @@ Take your time and write a comprehensive answer.`,
       setLoading(true);
       setError('');
       try {
-        const response = await examsApi.startSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
+        let response;
+        try {
+          response = await examsApi.getSubjectiveConductExamSession(resolvedExamId, sessionIdRef.current);
+        } catch (err) {
+          const message = String(err?.message || '');
+          if (!message.includes('No conduct exam submission found')) {
+            throw err;
+          }
+          response = await examsApi.startSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
+        }
         if (cancelled) return;
         if (!response?.data) {
-          throw new Error(response?.message || 'Unable to start conduct exam.');
+          throw new Error(response?.message || 'Unable to load conduct exam session.');
         }
         hydrateSession(response.data);
       } catch (err) {
         if (!cancelled) {
-          setError(err.message || 'Unable to start conduct exam.');
+          setError(err.message || 'Unable to load conduct exam session.');
         }
       } finally {
         if (!cancelled) {
@@ -271,24 +331,46 @@ Take your time and write a comprehensive answer.`,
 
   // Auto-submit when time expires
   useEffect(() => {
-    if (!session?.deadline_at || session.status !== 'in_progress') return undefined;
+    if (session?.status !== 'in_progress') return undefined;
     const interval = setInterval(() => {
-      if (new Date(session.deadline_at).getTime() <= Date.now() && !autoSubmitRef.current) {
-        autoSubmitRef.current = true;
-        examsApi.submitSubjectiveConductExam(resolvedExamId, sessionIdRef.current)
-          .then((response) => {
-            if (response?.data) {
-              hydrateSession(response.data);
-              setNotice('Time expired. Your exam was auto-submitted.');
-            }
-          })
-          .catch((err) => {
-            setError(err.message || 'Unable to auto-submit conduct exam.');
-          });
-      }
+      setTimeLeft((previousTimeLeft) => {
+        if (typeof previousTimeLeft !== 'number') {
+          return previousTimeLeft;
+        }
+        return Math.max(previousTimeLeft - 1, 0);
+      });
     }, 1000);
     return () => clearInterval(interval);
-  }, [session, resolvedExamId]);
+  }, [session?.status]);
+
+  useEffect(() => {
+    if (!resolvedExamId || !sessionIdRef.current || session?.status !== 'in_progress') return undefined;
+
+    let cancelled = false;
+    const syncSession = async () => {
+      try {
+        const response = await examsApi.getSubjectiveConductExamSession(resolvedExamId, sessionIdRef.current);
+        if (!cancelled && response?.data) {
+          hydrateSession(response.data, { preserveDirtyAnswers: true });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to sync conduct exam session timer', err);
+        }
+      }
+    };
+
+    const interval = setInterval(syncSession, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [resolvedExamId, session?.status]);
+
+  useEffect(() => {
+    if (session?.status !== 'in_progress' || timeLeft !== 0 || autoSubmitRef.current) return;
+    handleAutoSubmit();
+  }, [timeLeft, session?.status]);
 
   // Keyboard navigation and shortcuts
   useEffect(() => {
@@ -353,6 +435,13 @@ Take your time and write a comprehensive answer.`,
       setSubmitting(false);
     }
   };
+
+  const timerClassName =
+    typeof timeLeft === 'number' && timeLeft < 300
+      ? 'bg-red-50 border-red-200 text-red-600'
+      : typeof timeLeft === 'number' && timeLeft < 900
+      ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+      : 'bg-emerald-50 border-emerald-200 text-emerald-700';
 
   const isQuestionAnswered = (questionId) => {
     const ans = answers[questionId];
@@ -432,13 +521,9 @@ Take your time and write a comprehensive answer.`,
               <span className="font-bold text-accent">{attemptedCount}/{session?.questions?.length}</span>
             </div>
 
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
-              new Date(session.deadline_at).getTime() - Date.now() < 300000 
-                ? "bg-red-50 border-red-200 text-red-600" 
-                : "bg-amber-50 border-amber-200 text-amber-700"
-            }`}>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${timerClassName}`}>
               <Clock className="w-4 h-4" />
-              <span className="text-sm font-mono font-bold">{formatCountdown(session?.deadline_at)}</span>
+              <span className="text-sm font-mono font-bold">{formatCountdown(timeLeft)}</span>
             </div>
 
             <button
