@@ -132,16 +132,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       setLoading(true);
       setError('');
       try {
-        let response;
-        try {
-          response = await examsApi.getSubjectiveConductExamSession(resolvedExamId, sessionIdRef.current);
-        } catch (err) {
-          const message = String(err?.message || '');
-          if (!message.includes('No conduct exam submission found')) {
-            throw err;
-          }
-          response = await examsApi.startSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
-        }
+        const response = await examsApi.startSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
         if (cancelled) return;
         if (!response?.data) {
           throw new Error(response?.message || 'Unable to load conduct exam session.');

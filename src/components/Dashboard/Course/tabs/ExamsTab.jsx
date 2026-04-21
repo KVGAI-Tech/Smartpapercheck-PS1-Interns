@@ -283,10 +283,21 @@ const Toast = ({ message, type, show, onClose }) => {
         return;
       }
   
-      if (!courseId) {
-        setError('Course ID is missing. Please try again or contact support.');
-        return;
-      }
+    if (!courseId) {
+      setError('Course ID is missing. Please try again or contact support.');
+      return;
+    }
+
+    const API_FALLBACK_MAX_BYTES = 10 * 1024 * 1024;
+    const isLikelyS3CorsError = (error) => {
+      const message = String(error?.message || '').toLowerCase();
+      return (
+        message.includes('failed to fetch') ||
+        message.includes('cors') ||
+        message.includes('preflight') ||
+        message.includes('network')
+      );
+    };
   
       setIsUploading(true);
 
@@ -357,7 +368,13 @@ const Toast = ({ message, type, show, onClose }) => {
 
           zipKey = presignedKey;
         } catch (e) {
-          // Safe fallback: use existing backend upload endpoint
+          if (file.size > API_FALLBACK_MAX_BYTES && isLikelyS3CorsError(e)) {
+            throw new Error(
+              'Direct ZIP upload to S3 was blocked by bucket CORS for this site, and this ZIP is too large for the API fallback. Please allow https://smartpapercheck.com in the S3 bucket CORS policy or increase the API upload size limit.'
+            );
+          }
+
+          // Fallback: use existing backend upload endpoint for smaller uploads.
           const formData = new FormData();
           formData.append('zip_file', file);
 
@@ -373,6 +390,11 @@ const Toast = ({ message, type, show, onClose }) => {
           );
 
           if (!uploadResp.ok) {
+            if (uploadResp.status === 413) {
+              throw new Error(
+                'The ZIP is larger than the server upload limit (413 Request Entity Too Large). Direct S3 upload also failed, likely because the bucket CORS policy does not allow https://smartpapercheck.com.'
+              );
+            }
             throw new Error(`Upload failed: ${uploadResp.status}`);
           }
 

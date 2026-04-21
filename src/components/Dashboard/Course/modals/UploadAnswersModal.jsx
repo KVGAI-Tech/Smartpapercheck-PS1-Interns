@@ -336,6 +336,19 @@ const handleUpload = async () => {
     return;
   }
 
+  const API_FALLBACK_MAX_BYTES = 10 * 1024 * 1024;
+  const isLikelyS3CorsError = (error) => {
+    const message = String(error?.message || '').toLowerCase();
+    const code = String(error?.code || '').toLowerCase();
+    return (
+      message.includes('network error') ||
+      message.includes('failed to fetch') ||
+      message.includes('cors') ||
+      message.includes('preflight') ||
+      code === 'err_network'
+    );
+  };
+
   setIsUploading(true);
   // Reset any stale progress from previous runs
   setProcessingProgress(null);
@@ -414,27 +427,44 @@ const handleUpload = async () => {
 
       zipKey = presignedKey;
     } catch (e) {
-      // Safe fallback: use existing backend upload endpoint
+      if (zipFile.size > API_FALLBACK_MAX_BYTES && isLikelyS3CorsError(e)) {
+        throw new Error(
+          'Direct ZIP upload to S3 was blocked by bucket CORS for this site, and this ZIP is too large for the API fallback. Please allow https://smartpapercheck.com in the S3 bucket CORS policy or increase the API upload size limit.'
+        );
+      }
+
+      // Fallback: use existing backend upload endpoint for smaller uploads.
       const formData = new FormData();
       formData.append('zip_file', zipFile);
 
-      const uploadResp = await axios.post(
-        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+      let uploadResp;
+      try {
+        uploadResp = await axios.post(
+          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/upload-answers-zip`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            onUploadProgress: (progressEvent) => {
+              const total = progressEvent?.total || zipFile.size;
+              const loaded = progressEvent?.loaded || 0;
+              if (total > 0) {
+                const percent = Math.round((loaded / total) * 100);
+                setUploadProgress(Math.min(100, Math.max(0, percent)));
+              }
+            },
           },
-          onUploadProgress: (progressEvent) => {
-            const total = progressEvent?.total || zipFile.size;
-            const loaded = progressEvent?.loaded || 0;
-            if (total > 0) {
-              const percent = Math.round((loaded / total) * 100);
-              setUploadProgress(Math.min(100, Math.max(0, percent)));
-            }
-          },
-        },
-      );
+        );
+      } catch (uploadError) {
+        const status = Number(uploadError?.response?.status || 0);
+        if (status === 413) {
+          throw new Error(
+            'The ZIP is larger than the server upload limit (413 Request Entity Too Large). Direct S3 upload also failed, likely because the bucket CORS policy does not allow https://smartpapercheck.com.'
+          );
+        }
+        throw uploadError;
+      }
 
       const uploadJson = uploadResp?.data;
       if (uploadJson.code !== 200 || !uploadJson.data?.zip_key) {
@@ -724,7 +754,7 @@ useEffect(() => {
 
       if (status === 'completed' || status === 'completed_with_errors') {
         setIsProcessing(false);
-        toast.success('Answer sheets processing completed.');
+        toast.success('Answer sheets imported. Use Evaluate All to start AI grading for pending submissions.');
         return;
       }
 
@@ -767,7 +797,7 @@ useEffect(() => {
   if (studentsTotal && studentsProcessed >= studentsTotal) {
     // Stop listening as an active processing run
     setIsProcessing(false);
-    toast.success('Answer sheets processing completed.');
+    toast.success('Answer sheets imported. Use Evaluate All to start AI grading for pending submissions.');
   }
 }, [processingProgress]);
 
@@ -860,7 +890,7 @@ return (
                         : processingProgress &&
                           processingProgress.studentsTotal &&
                           processingProgress.studentsProcessed >= processingProgress.studentsTotal
-                          ? 'Answer processing completed.'
+                          ? 'Answer import completed. Pending submissions can now be evaluated.'
                           : 'Processing uploaded answer sheets in the background...'}
                     </p>
                     <p className="text-[11px] text-gray-600 mt-0.5">

@@ -39,6 +39,10 @@ import {
   AlignJustify,
   Undo2,
   Redo2,
+  Image as ImageIcon,
+  FileArchive,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 
 import { examsApi } from './Student_api';
@@ -95,6 +99,11 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionPanelCollapsed, setQuestionPanelCollapsed] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState('saved'); // 'saved', 'saving', 'unsaved'
+
+  // Upload state per question: { [questionId]: { uploading, imageUrl, zipUrl, imageError, zipError } }
+  const [uploadState, setUploadState] = useState({});
+  const imageInputRef = useRef(null);
+  const zipInputRef = useRef(null);
 
   // Initialize TipTap editor for current question
   const currentQuestion = session?.questions?.[currentQuestionIndex];
@@ -173,6 +182,8 @@ Take your time and write a comprehensive answer.`,
         const serverAnswer = {
           text_answer: question.text_answer || '',
           image_answer_url: question.image_answer_url || '',
+          zip_answer_url: question.zip_answer_url || '',
+          answer_images: question.answer_images || [],
         };
         const shouldPreserveLocalAnswer =
           preserveDirtyAnswers &&
@@ -184,6 +195,21 @@ Take your time and write a comprehensive answer.`,
           : serverAnswer;
       }
       return nextAnswers;
+    });
+    // Sync upload state from server (image/zip URLs)
+    setUploadState((prev) => {
+      const next = { ...prev };
+      for (const question of payload?.questions || []) {
+        next[question.id] = {
+          ...(next[question.id] || {}),
+          images: question.answer_images || [],
+          zipUrl: question.zip_answer_url || next[question.id]?.zipUrl || null,
+          uploading: false,
+          imageError: null,
+          zipError: null,
+        };
+      }
+      return next;
     });
     if (!preserveDirtyAnswers || payload?.status !== 'in_progress') {
       setDirtyQuestionIds([]);
@@ -219,16 +245,7 @@ Take your time and write a comprehensive answer.`,
       setLoading(true);
       setError('');
       try {
-        let response;
-        try {
-          response = await examsApi.getSubjectiveConductExamSession(resolvedExamId, sessionIdRef.current);
-        } catch (err) {
-          const message = String(err?.message || '');
-          if (!message.includes('No conduct exam submission found')) {
-            throw err;
-          }
-          response = await examsApi.startSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
-        }
+        const response = await examsApi.startSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
         if (cancelled) return;
         if (!response?.data) {
           throw new Error(response?.message || 'Unable to load conduct exam session.');
@@ -401,8 +418,17 @@ Take your time and write a comprehensive answer.`,
   }, [currentQuestionIndex, session?.questions?.length, editor, dirtyQuestionIds]);
 
   const attemptedCount = useMemo(
-    () => Object.values(answers).filter((answer) => String(answer?.text_answer || '').trim() || answer?.image_answer_url).length,
-    [answers]
+    () => {
+      let count = 0;
+      for (const [qId, answer] of Object.entries(answers)) {
+        const hasText = String(answer?.text_answer || '').trim();
+        const hasImages = uploadState[qId]?.images?.length > 0;
+        const hasZip = answer?.zip_answer_url || uploadState[qId]?.zipUrl;
+        if (hasText || hasImages || hasZip) count++;
+      }
+      return count;
+    },
+    [answers, uploadState]
   );
 
   const handleTextChange = (questionId, value) => {
@@ -416,8 +442,101 @@ Take your time and write a comprehensive answer.`,
     setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
   };
 
+  const handleImageUpload = async (questionId, file) => {
+    if (!file || !resolvedExamId || !sessionIdRef.current) return;
+    setUploadState((prev) => ({
+      ...prev,
+      [questionId]: { ...(prev[questionId] || {}), uploading: 'image', imageError: null },
+    }));
+    try {
+      const response = await examsApi.uploadSubjectiveConductAnswerImage(
+        resolvedExamId, questionId, sessionIdRef.current, file
+      );
+      const newImage = {
+        id: response?.data?.image_id,
+        image_url: response?.data?.image_url,
+        original_filename: response?.data?.original_filename,
+        display_order: response?.data?.display_order,
+      };
+      setUploadState((prev) => ({
+        ...prev,
+        [questionId]: {
+          ...(prev[questionId] || {}),
+          uploading: false,
+          images: [...(prev[questionId]?.images || []), newImage],
+          imageError: null,
+        },
+      }));
+      setNotice('Image uploaded successfully');
+    } catch (err) {
+      setUploadState((prev) => ({
+        ...prev,
+        [questionId]: { ...(prev[questionId] || {}), uploading: false, imageError: err.message || 'Image upload failed' },
+      }));
+    }
+  };
+
+  const handleZipUpload = async (questionId, file) => {
+    if (!file || !resolvedExamId || !sessionIdRef.current) return;
+    setUploadState((prev) => ({
+      ...prev,
+      [questionId]: { ...(prev[questionId] || {}), uploading: 'zip', zipError: null },
+    }));
+    try {
+      const response = await examsApi.uploadSubjectiveConductAnswerZip(
+        resolvedExamId, questionId, sessionIdRef.current, file
+      );
+      const zipUrl = response?.data?.zip_url || null;
+      setUploadState((prev) => ({
+        ...prev,
+        [questionId]: { ...(prev[questionId] || {}), uploading: false, zipUrl, zipError: null },
+      }));
+      setAnswers((prev) => ({
+        ...prev,
+        [questionId]: { ...(prev[questionId] || {}), zip_answer_url: zipUrl },
+      }));
+      setNotice('Zip file uploaded successfully');
+    } catch (err) {
+      setUploadState((prev) => ({
+        ...prev,
+        [questionId]: { ...(prev[questionId] || {}), uploading: false, zipError: err.message || 'Zip upload failed' },
+      }));
+    }
+  };
+
+  const handleRemoveImage = async (questionId, imageId) => {
+    if (!resolvedExamId || !sessionIdRef.current) return;
+    try {
+      await examsApi.deleteSubjectiveConductAnswerImage(
+        resolvedExamId, questionId, imageId, sessionIdRef.current
+      );
+      setUploadState((prev) => ({
+        ...prev,
+        [questionId]: {
+          ...(prev[questionId] || {}),
+          images: (prev[questionId]?.images || []).filter(img => img.id !== imageId),
+          imageError: null,
+        },
+      }));
+      setNotice('Image removed successfully');
+    } catch (err) {
+      setError(err.message || 'Failed to remove image');
+    }
+  };
+
+  const handleRemoveZip = (questionId) => {
+    setUploadState((prev) => ({
+      ...prev,
+      [questionId]: { ...(prev[questionId] || {}), zipUrl: null, zipError: null },
+    }));
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: { ...(prev[questionId] || {}), zip_answer_url: null },
+    }));
+    setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
+  };
+
   const handleSubmit = async () => {
-    setSubmitting(true);
     setError('');
     try {
       if (dirtyQuestionIds.length > 0) {
@@ -445,7 +564,8 @@ Take your time and write a comprehensive answer.`,
 
   const isQuestionAnswered = (questionId) => {
     const ans = answers[questionId];
-    return !!(ans?.text_answer?.trim() || ans?.image_answer_url);
+    const up = uploadState[questionId];
+    return !!(ans?.text_answer?.trim() || (up?.images && up.images.length > 0) || up?.zipUrl);
   };
 
   // Toolbar button component
@@ -603,9 +723,20 @@ Take your time and write a comprehensive answer.`,
       )}
 
       {/* Split Panel Layout - Professional Writing Workspace */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Left Panel - Question (35% or hidden) */}
-        <div className={`${questionPanelCollapsed ? 'w-0' : 'w-[35%]'} border-r border-gray-200 bg-white overflow-hidden transition-all duration-300 relative`}>
+        <div className={`${questionPanelCollapsed ? 'w-0' : 'w-[35%]'} border-r border-gray-200 bg-white overflow-hidden transition-all duration-300 relative flex-shrink-0`}>
+          {/* Toggle button pinned to the right edge of the question panel */}
+          {!questionPanelCollapsed && (
+            <button
+              onClick={() => setQuestionPanelCollapsed(true)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-white border-2 border-gray-300 rounded-full p-1.5 hover:bg-gray-50 hover:border-accent transition-all z-20 shadow-md"
+              title="Hide Question"
+            >
+              <PanelLeftClose className="w-4 h-4 text-gray-600" />
+            </button>
+          )}
+
           {!questionPanelCollapsed && (
             <div className="p-6 h-full overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
@@ -743,6 +874,166 @@ Take your time and write a comprehensive answer.`,
 Take your time and write a comprehensive answer."
                     className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-accent focus:border-accent disabled:bg-gray-100 resize-none transition-all placeholder:text-gray-400 text-[15px] leading-relaxed"
                   />
+                </div>
+              )}
+
+              {/* Image & Zip Upload Section */}
+              {currentQuestion?.allow_image_answer && (
+                <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-accent" />
+                    File Uploads
+                  </h4>
+
+                  {/* Image Upload - Multiple */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      Image Answers (PNG, JPG, JPEG) - Upload multiple
+                    </label>
+
+                    {/* Show uploaded images */}
+                    {uploadState[currentQuestion?.id]?.images && uploadState[currentQuestion.id].images.length > 0 && (
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        {uploadState[currentQuestion.id].images.map((img, idx) => (
+                          <div key={img.id} className="relative group">
+                            <img
+                              src={img.image_url}
+                              alt={`Answer ${idx + 1}`}
+                              className="w-full h-32 object-cover rounded-lg border-2 border-green-200"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
+                              {session?.status === 'in_progress' && (
+                                <button
+                                  onClick={() => handleRemoveImage(currentQuestion.id, img.id)}
+                                  className="opacity-0 group-hover:opacity-100 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-all"
+                                  title="Remove image"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 truncate">{img.original_filename || `Image ${idx + 1}`}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Upload button */}
+                    <div>
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        className="hidden"
+                        disabled={session?.status !== 'in_progress'}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(currentQuestion.id, file);
+                          e.target.value = '';
+                        }}
+                      />
+                      <button
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={
+                          session?.status !== 'in_progress' ||
+                          uploadState[currentQuestion?.id]?.uploading === 'image'
+                        }
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-accent hover:text-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                      >
+                        {uploadState[currentQuestion?.id]?.uploading === 'image' ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            Uploading image...
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="w-4 h-4" />
+                            {uploadState[currentQuestion?.id]?.images?.length > 0 ? 'Add another image' : 'Click to upload image'}
+                          </>
+                        )}
+                      </button>
+                      {uploadState[currentQuestion?.id]?.imageError && (
+                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          {uploadState[currentQuestion.id].imageError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Zip Upload */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
+                      <FileArchive className="w-3.5 h-3.5" />
+                      Zip File Answer (.zip, max 50 MB)
+                    </label>
+
+                    {uploadState[currentQuestion?.id]?.zipUrl ? (
+                      <div className="flex items-center gap-3 p-3 bg-white border border-green-200 rounded-lg">
+                        <FileArchive className="w-8 h-8 text-accent flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-green-700 font-medium flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Zip file uploaded
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5 truncate">
+                            {uploadState[currentQuestion.id].zipUrl.split('/').pop()?.split('?')[0]}
+                          </p>
+                        </div>
+                        {session?.status === 'in_progress' && (
+                          <button
+                            onClick={() => handleRemoveZip(currentQuestion.id)}
+                            className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                            title="Remove zip"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          ref={zipInputRef}
+                          type="file"
+                          accept=".zip,application/zip,application/x-zip-compressed"
+                          className="hidden"
+                          disabled={session?.status !== 'in_progress'}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleZipUpload(currentQuestion.id, file);
+                            e.target.value = '';
+                          }}
+                        />
+                        <button
+                          onClick={() => zipInputRef.current?.click()}
+                          disabled={
+                            session?.status !== 'in_progress' ||
+                            uploadState[currentQuestion?.id]?.uploading === 'zip'
+                          }
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-accent hover:text-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                        >
+                          {uploadState[currentQuestion?.id]?.uploading === 'zip' ? (
+                            <>
+                              <Loader className="w-4 h-4 animate-spin" />
+                              Uploading zip...
+                            </>
+                          ) : (
+                            <>
+                              <FileArchive className="w-4 h-4" />
+                              Click to upload zip file
+                            </>
+                          )}
+                        </button>
+                        {uploadState[currentQuestion?.id]?.zipError && (
+                          <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            {uploadState[currentQuestion.id].zipError}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

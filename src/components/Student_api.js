@@ -228,6 +228,50 @@ export const examsApi = {
     return response.json();
   },
 
+  deleteSubjectiveConductAnswerImage: async (examId, questionId, imageId, sessionId) => {
+    const token = localStorage.getItem('accessToken');
+    const url = new URL(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/questions/${questionId}/images/${imageId}`);
+    url.searchParams.set('session_id', sessionId);
+
+    const response = await fetch(url.toString(), {
+      method: 'DELETE',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to delete conduct exam answer image.')
+      );
+    }
+
+    return response.json();
+  },
+
+  uploadSubjectiveConductAnswerZip: async (examId, questionId, sessionId, file) => {
+    const token = localStorage.getItem('accessToken');
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    formData.append('zip_file', file);
+
+    const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/questions/${questionId}/zip`, {
+      method: 'POST',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to upload conduct exam answer zip.')
+      );
+    }
+
+    return response.json();
+  },
+
   submitSubjectiveConductExam: async (examId, sessionId) => {
     const token = localStorage.getItem('accessToken');
 
