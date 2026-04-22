@@ -617,26 +617,34 @@ useEffect(() => {
 
 // Listen for background processing progress over WebSocket once processing has started
 useEffect(() => {
-  if (!isOpen || !examId || !isProcessing) return;
+  if (!isOpen || !isProcessing || !processingJobId) return;
 
+  const token = localStorage.getItem('accessToken');
+  if (!token) {
+    console.warn('[UploadAnswersModal] No auth token for WebSocket');
+    return;
+  }
+
+  // Connect to professor notifications WebSocket (same as DashboardLayout)
+  // This is where the backend publishes job updates via notifications_manager
   let wsUrl;
   try {
     const base = new URL(API_BASE_URL);
     base.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
-    // exams router is typically mounted at /api/exams, and websocket path is /ws/exams/{exam_id}/progress
-    base.pathname = `${base.pathname.replace(/\/+$/, '')}/exams/ws/exams/${examId}/progress`;
-    base.search = '';
+    base.pathname = `${base.pathname.replace(/\/+$/, '')}/exams/ws/professor/notifications`;
+    base.search = `?token=${encodeURIComponent(token)}`;
     wsUrl = base.toString();
   } catch {
-    const httpBase = API_BASE_URL.replace(/^https?/, 'ws');
-    wsUrl = `${httpBase}/exams/ws/exams/${examId}/progress`;
+    const wsBase = API_BASE_URL.replace(/^http/, 'ws');
+    wsUrl = `${wsBase}/exams/ws/professor/notifications?token=${encodeURIComponent(token)}`;
   }
 
   let socket;
   try {
     socket = new WebSocket(wsUrl);
+    console.log('[UploadAnswersModal] Connecting to WebSocket:', wsUrl);
   } catch (e) {
-    console.error('Failed to open progress WebSocket:', e);
+    console.error('[UploadAnswersModal] Failed to open WebSocket:', e);
     return;
   }
 
@@ -650,30 +658,71 @@ useEffect(() => {
     }
   }, 25000);
 
+  socket.onopen = () => {
+    console.log('[UploadAnswersModal] WebSocket connected');
+  };
+
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      if (data?.event === 'upload_progress' && Number(data.exam_id) === Number(examId)) {
-        setProcessingProgress({
-          studentsTotal: data.students_total,
-          studentsProcessed: data.students_processed,
-          totalProcessed: data.total_processed,
-          totalFailed: data.total_failed,
-        });
-        if (typeof data?.current_roll_number !== 'undefined') {
-          setCurrentProcessingRoll(data.current_roll_number);
+      console.log('[UploadAnswersModal] Received WebSocket message:', data);
+      
+      // Listen for job updates (published by notifications_manager)
+      if (data?.event === 'job_update' && data?.job?.id === processingJobId) {
+        const job = data.job;
+        const status = String(job?.status || '').toLowerCase();
+        const progress = job?.progress;
+        
+        console.log('[UploadAnswersModal] Job update received:', { status, progress });
+        
+        // Update stage
+        if (status) {
+          setProcessingStage(status);
         }
-        if (typeof data?.stage !== 'undefined') {
-          setProcessingStage(data.stage);
+        
+        // Update progress from job document
+        if (progress) {
+          const newProgress = {
+            studentsTotal: progress.students_total || 0,
+            studentsProcessed: progress.students_processed || 0,
+            totalProcessed: progress.students_processed || 0,
+            totalFailed: 0,
+            stage: progress.stage || status
+          };
+          console.log('[UploadAnswersModal] Updating progress:', newProgress);
+          setProcessingProgress(newProgress);
+        }
+        
+        // Handle completion
+        if (status === 'completed' || status === 'completed_with_errors') {
+          console.log('[UploadAnswersModal] Job completed');
+          setIsProcessing(false);
+          toast.success('Answer sheets imported. Use Evaluate All to start AI grading for pending submissions.');
+          // Trigger dashboard refresh so enrollments show updated status
+          if (onUploadSuccess) {
+            try { onUploadSuccess({ mode: 'bulk', job_id: processingJobId, status }); } catch { /* ignore */ }
+          }
+        }
+        
+        // Handle failure
+        if (status === 'failed' || status === 'canceled' || status === 'cancelled') {
+          console.log('[UploadAnswersModal] Job failed:', job?.error);
+          setIsProcessing(false);
+          const errMsg = job?.error ? String(job.error) : 'Processing failed.';
+          toast.error(errMsg);
         }
       }
     } catch (err) {
-      console.error('Error parsing progress message:', err);
+      console.error('[UploadAnswersModal] Error parsing WebSocket message:', err);
     }
   };
 
   socket.onerror = (err) => {
-    console.error('Progress WebSocket error:', err);
+    console.error('[UploadAnswersModal] WebSocket error:', err);
+  };
+
+  socket.onclose = () => {
+    console.log('[UploadAnswersModal] WebSocket closed');
   };
 
   return () => {
@@ -688,7 +737,7 @@ useEffect(() => {
       // ignore
     }
   };
-}, [isOpen, examId, isProcessing]);
+}, [isOpen, isProcessing, processingJobId]);
 
 // Poll job status as a fallback (robust even if WebSocket progress doesn't arrive)
 useEffect(() => {
@@ -696,9 +745,9 @@ useEffect(() => {
 
   let isCancelled = false;
   const startedAt = Date.now();
-  const timeoutMs = 4 * 60 * 1000; // 4 minutes total watchdog
+  const timeoutMs = 15 * 60 * 1000; // 15 minutes total watchdog (increased for large batches)
   const pendingFailFastMs = 45 * 1000; // if job never leaves pending, fail fast
-  const runningNoProgressFailFastMs = 2 * 60 * 1000; // if running but no WS progress seen, fail fast
+  const runningNoProgressFailFastMs = 5 * 60 * 1000; // if running but no WS progress seen, fail fast (increased to 5 min)
   const intervalMs = 3000;
 
   const poll = async () => {
@@ -741,13 +790,38 @@ useEffect(() => {
 
       // If the job is running but we never receive progress events, fail fast with a clear error.
       if (status === 'running') {
+        // Check if job document has progress info (fallback for WebSocket failures)
+        const jobProgress = job?.progress;
+        if (jobProgress) {
+          console.log('[UploadAnswersModal] Polling: Job progress from document:', jobProgress);
+          
+          // Update progress from job document
+          const newProgress = {
+            studentsTotal: jobProgress.students_total || 0,
+            studentsProcessed: jobProgress.students_processed || 0,
+            totalProcessed: jobProgress.students_processed || 0,
+            totalFailed: 0,
+            stage: jobProgress.stage || 'processing'
+          };
+          
+          setProcessingProgress(newProgress);
+          
+          // Update stage
+          if (jobProgress.stage) {
+            setProcessingStage(jobProgress.stage);
+          }
+        }
+        
         const localStart = processingJobStartedAt || startedAt;
         const hasAnyProgress =
-          !!processingProgress &&
-          (Number(processingProgress.studentsTotal) > 0 || Number(processingProgress.totalProcessed) > 0);
+          (!!processingProgress &&
+          (Number(processingProgress.studentsTotal) > 0 || Number(processingProgress.totalProcessed) > 0)) ||
+          (jobProgress && jobProgress.students_total > 0);
+        
         if (!hasAnyProgress && Date.now() - localStart > runningNoProgressFailFastMs) {
+          console.error('[UploadAnswersModal] Timeout: No progress after', runningNoProgressFailFastMs, 'ms');
           setIsProcessing(false);
-          toast.error('Processing is taking too long without progress updates. Please try again.');
+          toast.error('Processing is taking too long without progress updates. Please check backend logs and try again.');
           return;
         }
       }
@@ -755,6 +829,10 @@ useEffect(() => {
       if (status === 'completed' || status === 'completed_with_errors') {
         setIsProcessing(false);
         toast.success('Answer sheets imported. Use Evaluate All to start AI grading for pending submissions.');
+        // Trigger dashboard refresh so enrollments show updated status
+        if (onUploadSuccess) {
+          try { onUploadSuccess({ mode: 'bulk', job_id: processingJobId, status }); } catch { /* ignore */ }
+        }
         return;
       }
 
@@ -798,6 +876,10 @@ useEffect(() => {
     // Stop listening as an active processing run
     setIsProcessing(false);
     toast.success('Answer sheets imported. Use Evaluate All to start AI grading for pending submissions.');
+    // Trigger dashboard refresh so enrollments show updated status
+    if (onUploadSuccess) {
+      try { onUploadSuccess({ mode: 'bulk', job_id: processingJobId, status: 'completed' }); } catch { /* ignore */ }
+    }
   }
 }, [processingProgress]);
 
