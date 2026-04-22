@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, useEditor, NodeViewWrapper, ReactNodeViewRenderer, Node } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -40,9 +44,20 @@ import {
   Undo2,
   Redo2,
   Image as ImageIcon,
-  FileArchive,
   Upload,
   Trash2,
+  Plus,
+  Type,
+  Palette,
+  Table as TableIcon,
+  Columns,
+  Rows,
+  Maximize2,
+  Minimize2,
+  Grid3X3,
+  Split,
+  Settings,
+  Type as TypeIcon,
 } from 'lucide-react';
 
 import { examsApi } from './Student_api';
@@ -63,6 +78,7 @@ const formatCountdown = (totalSeconds) => {
   const seconds = totalSeconds % 60;
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
 };
+
 
 const normalizeRemainingTime = (value) => {
   if (value === null || value === undefined || value === '') {
@@ -100,10 +116,9 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const [questionPanelCollapsed, setQuestionPanelCollapsed] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState('saved'); // 'saved', 'saving', 'unsaved'
 
-  // Upload state per question: { [questionId]: { uploading, imageUrl, zipUrl, imageError, zipError } }
   const [uploadState, setUploadState] = useState({});
+  const [showUploadPanel, setShowUploadPanel] = useState(false);
   const imageInputRef = useRef(null);
-  const zipInputRef = useRef(null);
 
   // Initialize TipTap editor for current question
   const currentQuestion = session?.questions?.[currentQuestionIndex];
@@ -122,6 +137,13 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
       }),
       Subscript,
       Superscript,
+      Table.configure({
+        resizable: true,
+        allowTableNodeSelection: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
       Placeholder.configure({
         placeholder: `Write your answer here...
 
@@ -152,12 +174,6 @@ Take your time and write a comprehensive answer.`,
     }
   }, [currentQuestion?.id, editor]);
 
-  // Word count
-  const wordCount = useMemo(() => {
-    if (!editor) return 0;
-    const text = editor.getText();
-    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
-  }, [editor?.state.doc]);
 
   useEffect(() => {
     if (!resolvedExamId) return;
@@ -173,7 +189,7 @@ Take your time and write a comprehensive answer.`,
     dirtyQuestionIdsRef.current = dirtyQuestionIds;
   }, [dirtyQuestionIds]);
 
-  const hydrateSession = (payload, { preserveDirtyAnswers = false } = {}) => {
+  const hydrateSession = (payload, { preserveDirtyAnswers = false, clearDirtyIds = [] } = {}) => {
     setSession(payload);
     setTimeLeft(normalizeRemainingTime(payload?.remaining_time));
     setAnswers((previousAnswers) => {
@@ -181,14 +197,12 @@ Take your time and write a comprehensive answer.`,
       for (const question of payload?.questions || []) {
         const serverAnswer = {
           text_answer: question.text_answer || '',
-          image_answer_url: question.image_answer_url || '',
-          zip_answer_url: question.zip_answer_url || '',
           answer_images: question.answer_images || [],
         };
         const shouldPreserveLocalAnswer =
           preserveDirtyAnswers &&
           payload?.status === 'in_progress' &&
-          dirtyQuestionIdsRef.current.includes(question.id);
+          (dirtyQuestionIdsRef.current.includes(question.id) || clearDirtyIds.includes(question.id));
 
         nextAnswers[question.id] = shouldPreserveLocalAnswer
           ? (previousAnswers[question.id] || serverAnswer)
@@ -196,22 +210,38 @@ Take your time and write a comprehensive answer.`,
       }
       return nextAnswers;
     });
-    // Sync upload state from server (image/zip URLs)
+
+    // Sync upload state from server (image URLs)
     setUploadState((prev) => {
       const next = { ...prev };
       for (const question of payload?.questions || []) {
+        const localState = next[question.id] || {};
+        const isUploading = localState.uploading === 'image';
+        
+        // CRITICAL FIX: During auto-sync/save (preserveDirtyAnswers=true),
+        // only trust the server image list if our local list is empty.
+        // This prevents 'vanishing' images during the race condition
+        // where a sync happens right after an upload but before DB commit.
+        const serverImages = question.answer_images || [];
+        const localImages = localState.images || [];
+        
+        const shouldTrustServerImages = !preserveDirtyAnswers || localImages.length === 0 || (serverImages.length >= localImages.length && !isUploading);
+
         next[question.id] = {
-          ...(next[question.id] || {}),
-          images: question.answer_images || [],
-          zipUrl: question.zip_answer_url || next[question.id]?.zipUrl || null,
-          uploading: false,
-          imageError: null,
+          ...localState,
+          images: shouldTrustServerImages ? serverImages : localImages,
+          uploading: isUploading ? 'image' : false,
+          imageError: isUploading ? localState.imageError : null,
+          zipUrl: question.zip_answer_url || null,
           zipError: null,
         };
       }
       return next;
     });
-    if (!preserveDirtyAnswers || payload?.status !== 'in_progress') {
+
+    if (clearDirtyIds.length > 0) {
+      setDirtyQuestionIds(prev => prev.filter(id => !clearDirtyIds.includes(id)));
+    } else if (!preserveDirtyAnswers || payload?.status !== 'in_progress') {
       setDirtyQuestionIds([]);
     }
   };
@@ -289,7 +319,7 @@ Take your time and write a comprehensive answer.`,
       if (!response?.data) {
         throw new Error(response?.message || 'Unable to save answers.');
       }
-      hydrateSession(response.data);
+      hydrateSession(response.data, { preserveDirtyAnswers: true, clearDirtyIds: questionIds });
       if (!silent) {
         setNotice('Answers saved');
       }
@@ -442,32 +472,46 @@ Take your time and write a comprehensive answer.`,
     setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
   };
 
-  const handleImageUpload = async (questionId, file) => {
-    if (!file || !resolvedExamId || !sessionIdRef.current) return;
+  const handleImageUpload = async (questionId, files) => {
+    if (!files || files.length === 0 || !resolvedExamId || !sessionIdRef.current) return;
+    
+    // files could be a FileList or array
+    const fileArray = Array.from(files);
+    
     setUploadState((prev) => ({
       ...prev,
       [questionId]: { ...(prev[questionId] || {}), uploading: 'image', imageError: null },
     }));
+
     try {
-      const response = await examsApi.uploadSubjectiveConductAnswerImage(
-        resolvedExamId, questionId, sessionIdRef.current, file
-      );
-      const newImage = {
-        id: response?.data?.image_id,
-        image_url: response?.data?.image_url,
-        original_filename: response?.data?.original_filename,
-        display_order: response?.data?.display_order,
-      };
+      // For multiple images, we keep track of successful uploads to update state at the end or incrementally
+      // Let's do it incrementally for better UX feedback
+      for (const file of fileArray) {
+        const response = await examsApi.uploadSubjectiveConductAnswerImage(
+          resolvedExamId, questionId, sessionIdRef.current, file
+        );
+        
+        const newImage = {
+          id: response?.data?.image_id,
+          image_url: response?.data?.image_url,
+          original_filename: response?.data?.original_filename,
+          display_order: response?.data?.display_order,
+        };
+
+        setUploadState((prev) => ({
+          ...prev,
+          [questionId]: {
+            ...(prev[questionId] || {}),
+            images: [...(prev[questionId]?.images || []), newImage],
+          },
+        }));
+      }
+      
       setUploadState((prev) => ({
         ...prev,
-        [questionId]: {
-          ...(prev[questionId] || {}),
-          uploading: false,
-          images: [...(prev[questionId]?.images || []), newImage],
-          imageError: null,
-        },
+        [questionId]: { ...(prev[questionId] || {}), uploading: false, imageError: null },
       }));
-      setNotice('Image uploaded successfully');
+      setNotice(`Successfully uploaded ${fileArray.length} image(s)`);
     } catch (err) {
       setUploadState((prev) => ({
         ...prev,
@@ -476,33 +520,6 @@ Take your time and write a comprehensive answer.`,
     }
   };
 
-  const handleZipUpload = async (questionId, file) => {
-    if (!file || !resolvedExamId || !sessionIdRef.current) return;
-    setUploadState((prev) => ({
-      ...prev,
-      [questionId]: { ...(prev[questionId] || {}), uploading: 'zip', zipError: null },
-    }));
-    try {
-      const response = await examsApi.uploadSubjectiveConductAnswerZip(
-        resolvedExamId, questionId, sessionIdRef.current, file
-      );
-      const zipUrl = response?.data?.zip_url || null;
-      setUploadState((prev) => ({
-        ...prev,
-        [questionId]: { ...(prev[questionId] || {}), uploading: false, zipUrl, zipError: null },
-      }));
-      setAnswers((prev) => ({
-        ...prev,
-        [questionId]: { ...(prev[questionId] || {}), zip_answer_url: zipUrl },
-      }));
-      setNotice('Zip file uploaded successfully');
-    } catch (err) {
-      setUploadState((prev) => ({
-        ...prev,
-        [questionId]: { ...(prev[questionId] || {}), uploading: false, zipError: err.message || 'Zip upload failed' },
-      }));
-    }
-  };
 
   const handleRemoveImage = async (questionId, imageId) => {
     if (!resolvedExamId || !sessionIdRef.current) return;
@@ -524,17 +541,6 @@ Take your time and write a comprehensive answer.`,
     }
   };
 
-  const handleRemoveZip = (questionId) => {
-    setUploadState((prev) => ({
-      ...prev,
-      [questionId]: { ...(prev[questionId] || {}), zipUrl: null, zipError: null },
-    }));
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: { ...(prev[questionId] || {}), zip_answer_url: null },
-    }));
-    setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
-  };
 
   const handleSubmit = async () => {
     setError('');
@@ -557,15 +563,15 @@ Take your time and write a comprehensive answer.`,
 
   const timerClassName =
     typeof timeLeft === 'number' && timeLeft < 300
-      ? 'bg-red-50 border-red-200 text-red-600'
+      ? 'bg-red-50 border-red-200 text-red-600 shadow-sm shadow-red-100'
       : typeof timeLeft === 'number' && timeLeft < 900
-      ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
-      : 'bg-emerald-50 border-emerald-200 text-emerald-700';
+      ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm shadow-amber-100'
+      : 'bg-accent/10 border-accent/20 text-accent shadow-sm shadow-accent/5';
 
   const isQuestionAnswered = (questionId) => {
     const ans = answers[questionId];
     const up = uploadState[questionId];
-    return !!(ans?.text_answer?.trim() || (up?.images && up.images.length > 0) || up?.zipUrl);
+    return !!(ans?.text_answer?.trim() || (up?.images && up.images.length > 0));
   };
 
   // Toolbar button component
@@ -617,79 +623,183 @@ Take your time and write a comprehensive answer.`,
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top Bar */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+    <div className="h-screen flex flex-col bg-white overflow-hidden select-none">
+      <style>{`
+        .ProseMirror table {
+          border-collapse: collapse;
+          table-layout: fixed;
+          width: 100%;
+          margin: 1.5rem 0;
+          overflow: hidden;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+        }
+        .ProseMirror td, .ProseMirror th {
+          min-width: 1em;
+          border: 1px solid #e2e8f0;
+          padding: 12px 16px;
+          vertical-align: top;
+          box-sizing: border-box;
+          position: relative;
+        }
+        .ProseMirror th {
+          font-weight: bold;
+          text-align: left;
+          background-color: #f8fafc;
+          color: #1e293b;
+        }
+        .ProseMirror .selectedCell:after {
+          z-index: 2;
+          position: absolute;
+          content: "";
+          left: 0; right: 0; top: 0; bottom: 0;
+          background: rgba(22, 109, 112, 0.05);
+          pointer-events: none;
+        }
+        .ProseMirror .column-resize-handle {
+          position: absolute;
+          right: -2px;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background-color: #166D70;
+          pointer-events: none;
+        }
+        .ProseMirror p {
+          margin: 0.5em 0;
+        }
+        .ProseMirror ul {
+          list-style-type: disc !important;
+          padding-left: 1.5rem !important;
+          margin: 1rem 0 !important;
+        }
+        .ProseMirror ol {
+          list-style-type: decimal !important;
+          padding-left: 1.5rem !important;
+          margin: 1rem 0 !important;
+        }
+        .ProseMirror li {
+          margin: 0.25rem 0;
+        }
+      `}</style>
+      {/* Top Bar - Clean Branded Header */}
+      <header className="bg-white text-gray-900 px-6 py-4 flex-shrink-0 z-50 shadow-sm border-b border-gray-200">
+        <div className="max-w-[1920px] mx-auto flex items-center justify-between gap-8">
+          <div className="flex items-center gap-6 overflow-hidden min-w-0">
             <button
-              onClick={() => navigate(`/student/dashboard`)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Back"
+              onClick={() => {
+                if (window.confirm('Are you sure you want to exit? Your progress is saved.')) {
+                  navigate(`/student-dashboard`);
+                }
+              }}
+              className="p-2.5 hover:bg-gray-100 rounded-xl transition-all group shrink-0 border border-gray-100 shadow-sm"
+              title="Save & Exit"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-gray-400 group-hover:text-accent transition-colors" />
             </button>
-            <div>
-              <h1 className="text-base font-bold text-gray-900">{session?.exam_name}</h1>
-              <p className="text-xs text-gray-500">Subjective Exam</p>
+            <div className="h-8 w-px bg-gray-100 shrink-0 hidden sm:block" />
+            <div className="min-w-0">
+              <h1 className="text-lg font-black truncate tracking-tight text-gray-900">{session?.exam_name}</h1>
+              <div className="flex items-center gap-3 mt-0.5">
+                <span className="text-[10px] uppercase font-black tracking-widest text-[#166D70] bg-[#166D70]/5 px-2 py-0.5 rounded border border-[#166D70]/10">Conduct Mode</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-8 px-6 py-1.5 bg-gray-50/50 rounded-2xl border border-gray-100 shadow-inner">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Progress</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-sm font-black text-accent">{attemptedCount}</span>
+                <span className="text-xs text-gray-400">/</span>
+                <span className="text-xs text-gray-400">{session?.questions?.length}</span>
+              </div>
+            </div>
+            <div className="w-px h-8 bg-gray-200" />
+            <div className="flex flex-col items-center min-w-[100px]">
+              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Time Remaining</span>
+              <div className={`flex items-center gap-2 mt-0.5 ${typeof timeLeft === 'number' && timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-accent'}`}>
+                <Clock className="w-4 h-4 shrink-0" />
+                <span className="text-base font-mono font-black leading-none">{formatCountdown(timeLeft)}</span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 text-sm">
-              <span className="text-gray-500">Progress:</span>
-              <span className="font-bold text-accent">{attemptedCount}/{session?.questions?.length}</span>
+            <div className="flex items-center gap-3 mr-2">
+               <div className="flex flex-col items-end mr-4">
+                <div className="flex items-center gap-2 text-[11px] font-bold">
+                  {autoSaveStatus === 'saving' ? (
+                    <span className="text-amber-500 flex items-center gap-1"><Loader className="w-3 h-3 animate-spin" /> Syncing...</span>
+                  ) : (
+                    <span className="text-accent flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Auto-saved</span>
+                  )}
+                </div>
+              </div>
             </div>
-
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${timerClassName}`}>
-              <Clock className="w-4 h-4" />
-              <span className="text-sm font-mono font-bold">{formatCountdown(timeLeft)}</span>
-            </div>
-
+            
             <button
               onClick={handleSubmit}
               disabled={submitting || session?.status !== 'in_progress'}
-              className="bg-accent text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-accent/90 disabled:opacity-50 transition-all text-sm"
+              className="bg-accent hover:bg-accent/90 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-accent/20 hover:shadow-accent/40 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-40 disabled:grayscale overflow-hidden relative group"
             >
-              {submitting ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Submit
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              <span className="relative z-10 flex items-center gap-2">
+                {submitting ? <Loader className="w-4 h-4 animate-spin text-white" /> : <Send className="w-4 h-4" />}
+                Submit Exam
+              </span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Question Tabs - LeetCode Style */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex-shrink-0 overflow-x-auto">
-        <div className="flex items-center gap-2">
+      {/* Tabs & Navigation Header */}
+      <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex-shrink-0">
+        <div className="max-w-[1920px] mx-auto flex items-center gap-4">
           <button
             onClick={() => setQuestionPanelCollapsed(!questionPanelCollapsed)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 mr-2"
-            title={questionPanelCollapsed ? "Show Question" : "Hide Question"}
+            className={`p-2.5 rounded-xl transition-all shadow-sm border ${
+              questionPanelCollapsed 
+                ? 'bg-accent text-white border-accent shadow-accent/20' 
+                : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100 hover:text-accent'
+            }`}
+            title={questionPanelCollapsed ? "Show Question Panel" : "Maximize Editor"}
           >
             {questionPanelCollapsed ? <PanelLeft className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
           </button>
-          
-          {(session?.questions || []).map((q, idx) => {
-            const isAnswered = isQuestionAnswered(q.id);
-            const isCurrent = idx === currentQuestionIndex;
 
-            return (
-              <button
-                key={q.id}
-                onClick={() => setCurrentQuestionIndex(idx)}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-2 ${
-                  isCurrent
-                    ? 'bg-accent text-white'
-                    : isAnswered
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                Q{idx + 1}
-                {isAnswered && !isCurrent && <CheckCircle2 className="w-3.5 h-3.5" />}
-              </button>
-            );
-          })}
+          <div className="h-6 w-px bg-gray-200 mx-2" />
+
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            {(session?.questions || []).map((q, idx) => {
+              const isAnswered = isQuestionAnswered(q.id);
+              const isCurrent = idx === currentQuestionIndex;
+
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => setCurrentQuestionIndex(idx)}
+                  className={`group relative h-10 px-5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                    isCurrent
+                      ? 'bg-gray-900 text-white shadow-xl translate-y-[-2px]'
+                      : isAnswered
+                      ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
+                      : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-300 hover:text-gray-600 active:scale-95'
+                  }`}
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Q{idx + 1}
+                    {isAnswered && !isCurrent && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                    )}
+                  </span>
+                  {isCurrent && (
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-accent rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -709,12 +819,12 @@ Take your time and write a comprehensive answer.`,
           )}
 
           {notice && (
-            <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+            <div className="bg-accent/5 border border-accent/10 text-accent rounded-lg px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 <p className="text-sm font-medium">{notice}</p>
               </div>
-              <button onClick={() => setNotice('')} className="text-green-400 hover:text-green-600">
+              <button onClick={() => setNotice('')} className="text-accent/40 hover:text-accent transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -723,319 +833,335 @@ Take your time and write a comprehensive answer.`,
       )}
 
       {/* Split Panel Layout - Professional Writing Workspace */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Panel - Question (35% or hidden) */}
-        <div className={`${questionPanelCollapsed ? 'w-0' : 'w-[35%]'} border-r border-gray-200 bg-white overflow-hidden transition-all duration-300 relative flex-shrink-0`}>
-          {/* Toggle button pinned to the right edge of the question panel */}
+      <div className="flex-1 flex overflow-hidden relative bg-white">
+        {/* Left Panel - Question (40% or hidden) */}
+        <div className={`${questionPanelCollapsed ? 'w-0 opacity-0' : 'w-[40%] opacity-100'} border-r border-gray-100 bg-gray-50/30 overflow-hidden transition-all duration-500 ease-in-out relative flex-shrink-0 flex flex-col`}>
           {!questionPanelCollapsed && (
-            <button
-              onClick={() => setQuestionPanelCollapsed(true)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-white border-2 border-gray-300 rounded-full p-1.5 hover:bg-gray-50 hover:border-accent transition-all z-20 shadow-md"
-              title="Hide Question"
-            >
-              <PanelLeftClose className="w-4 h-4 text-gray-600" />
-            </button>
-          )}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="p-8 h-full overflow-y-auto custom-scrollbar">
+                <div className="flex items-start justify-between mb-8">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-accent tracking-[0.2em]">Context</span>
+                    <h2 className="text-2xl font-black text-gray-900 leading-tight">
+                      Question {currentQuestionIndex + 1}
+                    </h2>
+                  </div>
+                  <div className="px-4 py-2 bg-white border border-gray-200 shadow-sm rounded-2xl flex flex-col items-center min-w-[70px]">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Marks</span>
+                    <span className="text-base font-black text-gray-900">{currentQuestion?.marks}</span>
+                  </div>
+                </div>
 
-          {!questionPanelCollapsed && (
-            <div className="p-6 h-full overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Question {currentQuestionIndex + 1}
-                </h2>
-                <div className="px-3 py-1 bg-accent/10 text-accent rounded-lg text-sm font-bold">
-                  {currentQuestion?.marks} marks
+                <div className="bg-white/50 backdrop-blur-sm rounded-3xl p-6 border border-gray-100 shadow-sm mb-8">
+                  <div className="prose prose-slate max-w-none">
+                    <p className="text-gray-800 text-[16px] leading-[1.625] font-normal whitespace-pre-wrap selection:bg-accent/20">
+                      {currentQuestion?.question_text}
+                    </p>
+                  </div>
+
+                  {currentQuestion?.question_body && (
+                    <div 
+                      className="mt-6 pt-6 border-t border-gray-100 prose prose-slate max-w-none text-gray-700"
+                      dangerouslySetInnerHTML={{ __html: currentQuestion.question_body }}
+                    />
+                  )}
+                </div>
+
+                {currentQuestion?.image_url && (
+                  <div className="mb-8 rounded-3xl border border-gray-200 overflow-hidden bg-gray-50 shadow-inner group">
+                    <img
+                      src={currentQuestion.image_url}
+                      alt={`Question ${currentQuestionIndex + 1}`}
+                      className="w-full h-auto object-contain max-h-[600px] transition-transform duration-500 group-hover:scale-[1.02]"
+                    />
+                  </div>
+                )}
+
+                {/* Navigation Buttons Pinned to bottom of question info */}
+                <div className="flex items-center justify-between mt-auto pt-8 border-t border-gray-100">
+                  <button
+                    onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+                    disabled={currentQuestionIndex === 0}
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-accent hover:border-accent disabled:opacity-30 disabled:grayscale transition-all active:scale-95"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Prev
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-gray-900">{currentQuestionIndex + 1}</span>
+                    <div className="w-8 h-1 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-accent transition-all duration-500" 
+                        style={{ width: `${((currentQuestionIndex + 1) / (session?.questions?.length || 1)) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-gray-400">{session?.questions?.length}</span>
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+                    disabled={currentQuestionIndex === (session?.questions?.length || 0) - 1}
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-accent hover:border-accent disabled:opacity-30 disabled:grayscale transition-all active:scale-95"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-
-              <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 text-[15px] leading-relaxed whitespace-pre-wrap">
-                  {currentQuestion?.question_text}
-                </p>
-              </div>
-
-            {currentQuestion?.question_body && (
-              <div 
-                className="mt-4 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: currentQuestion.question_body }}
-              />
-            )}
-
-            {currentQuestion?.image_url && (
-              <div className="mt-6 rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
-                <img
-                  src={currentQuestion.image_url}
-                  alt={`Question ${currentQuestionIndex + 1}`}
-                  className="w-full h-auto object-contain max-h-[500px]"
-                />
-              </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-              <button
-                onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-                disabled={currentQuestionIndex === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-
-              <span className="text-sm text-gray-500">
-                {currentQuestionIndex + 1} of {session?.questions?.length}
-              </span>
-
-              <button
-                onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-                disabled={currentQuestionIndex === (session?.questions?.length || 0) - 1}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
             </div>
           )}
         </div>
 
 
-        {/* Right Panel - Answer Editor (65% or 100%) */}
-        <div className={`${questionPanelCollapsed ? 'w-full' : 'w-[65%]'} bg-white overflow-y-auto transition-all duration-300`}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-bold text-gray-900">Your Answer</h3>
+        {/* Right Panel - Answer Editor (60%) */}
+        <div className={`${questionPanelCollapsed ? 'w-full' : 'w-[60%]'} bg-white overflow-y-auto transition-all duration-500 ease-in-out custom-scrollbar`}>
+          <div className="p-8 max-w-4xl mx-auto min-h-full flex flex-col">
+            <div className="flex items-center justify-between mb-6 shrink-0">
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">Your Answer</h3>
                 {questionPanelCollapsed && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      Question {currentQuestionIndex + 1}
+                  <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-xl border border-gray-200">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Q{currentQuestionIndex + 1}
                     </span>
                     <button
                       onClick={() => setQuestionPanelCollapsed(false)}
-                      className="text-xs text-accent hover:text-accent/80 font-medium flex items-center gap-1"
+                      className="text-[10px] text-accent hover:text-accent/80 font-bold uppercase tracking-widest flex items-center gap-1 transition-all"
                     >
                       <PanelLeft className="w-3 h-3" />
-                      Show Question
+                      Show Context
                     </button>
                   </div>
                 )}
               </div>
               
-              {/* Auto-save Status */}
-              <div className="flex items-center gap-2 text-xs">
-                {autoSaveStatus === 'saving' && (
-                  <>
-                    <Loader className="w-3 h-3 animate-spin text-amber-600" />
-                    <span className="text-amber-600 font-medium">Saving...</span>
-                  </>
-                )}
-                {autoSaveStatus === 'saved' && (
-                  <>
-                    <CheckCircle2 className="w-3 h-3 text-green-600" />
-                    <span className="text-green-600 font-medium">Saved</span>
-                  </>
-                )}
-                {autoSaveStatus === 'unsaved' && (
-                  <>
-                    <Clock className="w-3 h-3 text-gray-400" />
-                    <span className="text-gray-400 font-medium">Unsaved changes</span>
-                  </>
-                )}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div className={`w-1.5 h-1.5 rounded-full ${autoSaveStatus === 'saving' ? 'bg-amber-500 animate-pulse' : 'bg-accent'}`} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                    {autoSaveStatus === 'saving' ? 'Syncing...' : 'Encrypted & Saved'}
+                  </span>
+                </div>
               </div>
             </div>
 
             {session?.status !== 'in_progress' && (
-              <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-3 mb-4">
-                <p className="text-sm font-medium">
-                  This exam has been {session?.status === 'auto_submitted' ? 'auto-submitted' : 'submitted'}.
+              <div className="bg-accent/5 border border-accent/10 text-accent rounded-2xl px-6 py-4 mb-8 flex items-center gap-4">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm font-bold uppercase tracking-wide">
+                  This exam was {session?.status === 'auto_submitted' ? 'auto-submitted' : 'finalized'} and is now in read-only mode.
                 </p>
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="flex-1 flex flex-col min-h-0 gap-8">
               {currentQuestion?.allow_text_answer && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Text Answer
-                  </label>
-                  <textarea
-                    value={currentAnswer?.text_answer || ''}
-                    onChange={(e) => handleTextChange(currentQuestion.id, e.target.value)}
-                    disabled={session?.status !== 'in_progress'}
-                    rows={24}
-                    placeholder="Write your detailed answer here...
-
-• Explain your reasoning step by step
-• Show all calculations and formulas  
-• Use proper formatting for clarity
-• Structure your answer logically
-
-Take your time and write a comprehensive answer."
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-accent focus:border-accent disabled:bg-gray-100 resize-none transition-all placeholder:text-gray-400 text-[15px] leading-relaxed"
-                  />
-                </div>
-              )}
-
-              {/* Image & Zip Upload Section */}
-              {currentQuestion?.allow_image_answer && (
-                <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-accent" />
-                    File Uploads
-                  </h4>
-
-                  {/* Image Upload - Multiple */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
-                      <ImageIcon className="w-3.5 h-3.5" />
-                      Image Answers (PNG, JPG, JPEG) - Upload multiple
-                    </label>
-
-                    {/* Show uploaded images */}
-                    {uploadState[currentQuestion?.id]?.images && uploadState[currentQuestion.id].images.length > 0 && (
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        {uploadState[currentQuestion.id].images.map((img, idx) => (
-                          <div key={img.id} className="relative group">
-                            <img
-                              src={img.image_url}
-                              alt={`Answer ${idx + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border-2 border-green-200"
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
-                              {session?.status === 'in_progress' && (
-                                <button
-                                  onClick={() => handleRemoveImage(currentQuestion.id, img.id)}
-                                  className="opacity-0 group-hover:opacity-100 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-all"
-                                  title="Remove image"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1 truncate">{img.original_filename || `Image ${idx + 1}`}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Upload button */}
-                    <div>
-                      <input
-                        ref={imageInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg"
-                        className="hidden"
-                        disabled={session?.status !== 'in_progress'}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload(currentQuestion.id, file);
-                          e.target.value = '';
-                        }}
-                      />
-                      <button
-                        onClick={() => imageInputRef.current?.click()}
-                        disabled={
-                          session?.status !== 'in_progress' ||
-                          uploadState[currentQuestion?.id]?.uploading === 'image'
-                        }
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-accent hover:text-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                <div className="flex-1 flex flex-col min-h-0 min-h-[500px]">
+                  {/* TipTap Toolbar - MS Word Style */}
+                  <div className="flex flex-wrap items-center gap-1 p-2 mb-2 bg-gray-50 border border-gray-200 rounded-2xl shrink-0 shadow-sm">
+                    {/* Basic Formatting */}
+                    <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleBold().run()} 
+                        active={editor?.isActive('bold')}
+                        title="Bold (Ctrl+B)"
                       >
-                        {uploadState[currentQuestion?.id]?.uploading === 'image' ? (
-                          <>
-                            <Loader className="w-4 h-4 animate-spin" />
-                            Uploading image...
-                          </>
-                        ) : (
-                          <>
-                            <ImageIcon className="w-4 h-4" />
-                            {uploadState[currentQuestion?.id]?.images?.length > 0 ? 'Add another image' : 'Click to upload image'}
-                          </>
-                        )}
-                      </button>
-                      {uploadState[currentQuestion?.id]?.imageError && (
-                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" />
-                          {uploadState[currentQuestion.id].imageError}
-                        </p>
+                        <BoldIcon size={16} />
+                      </ToolbarButton>
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleItalic().run()} 
+                        active={editor?.isActive('italic')}
+                        title="Italic (Ctrl+I)"
+                      >
+                        <ItalicIcon size={16} />
+                      </ToolbarButton>
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleUnderline().run()} 
+                        active={editor?.isActive('underline')}
+                        title="Underline (Ctrl+U)"
+                      >
+                        <UnderlineIcon size={16} />
+                      </ToolbarButton>
+                    </div>
+
+                    <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                    {/* Alignment */}
+                    <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().setTextAlign('left').run()} 
+                        active={editor?.isActive({ textAlign: 'left' })}
+                        title="Align Left"
+                      >
+                        <AlignLeft size={16} />
+                      </ToolbarButton>
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().setTextAlign('center').run()} 
+                        active={editor?.isActive({ textAlign: 'center' })}
+                        title="Align Center"
+                      >
+                        <AlignCenter size={16} />
+                      </ToolbarButton>
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().setTextAlign('right').run()} 
+                        active={editor?.isActive({ textAlign: 'right' })}
+                        title="Align Right"
+                      >
+                        <AlignRight size={16} />
+                      </ToolbarButton>
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().setTextAlign('justify').run()} 
+                        active={editor?.isActive({ textAlign: 'justify' })}
+                        title="Align Justify"
+                      >
+                        <AlignJustify size={16} />
+                      </ToolbarButton>
+                    </div>
+
+                    <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                    {/* Lists */}
+                    <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleBulletList().run()} 
+                        active={editor?.isActive('bulletList')}
+                        title="Bullet List"
+                      >
+                        <List size={16} />
+                      </ToolbarButton>
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleOrderedList().run()} 
+                        active={editor?.isActive('orderedList')}
+                        title="Ordered List"
+                      >
+                        <ListOrdered size={16} />
+                      </ToolbarButton>
+                    </div>
+
+                    <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                    {/* Tables */}
+                    <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                        title="Insert 3x3 Table"
+                      >
+                        <TableIcon size={16} />
+                      </ToolbarButton>
+                      {editor?.isActive('table') && (
+                        <>
+                          <ToolbarButton onClick={() => editor.chain().focus().addColumnBefore().run()} title="Add Column Before"><Columns size={16} className="rotate-180" /></ToolbarButton>
+                          <ToolbarButton onClick={() => editor.chain().focus().addColumnAfter().run()} title="Add Column After"><Columns size={16} /></ToolbarButton>
+                          <ToolbarButton onClick={() => editor.chain().focus().addRowBefore().run()} title="Add Row Before"><Rows size={16} className="rotate-180" /></ToolbarButton>
+                          <ToolbarButton onClick={() => editor.chain().focus().addRowAfter().run()} title="Add Row After"><Rows size={16} /></ToolbarButton>
+                          <ToolbarButton onClick={() => editor.chain().focus().deleteTable().run()} title="Delete Table"><Trash2 size={14} className="text-red-500" /></ToolbarButton>
+                        </>
                       )}
+                    </div>
+
+                    <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                    {/* Undo/Redo */}
+                    <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().undo().run()}
+                        disabled={!editor?.can().undo()}
+                        title="Undo"
+                      >
+                        <Undo2 size={16} />
+                      </ToolbarButton>
+                      <ToolbarButton 
+                        onClick={() => editor.chain().focus().redo().run()}
+                        disabled={!editor?.can().redo()}
+                        title="Redo"
+                      >
+                        <Redo2 size={16} />
+                      </ToolbarButton>
+                    </div>
+                    {/* Uploads Trigger */}
+                    <div className="ml-auto px-4 flex items-center">
+                      <button
+                        onClick={() => setShowUploadPanel(!showUploadPanel)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                          showUploadPanel 
+                            ? 'bg-accent text-white shadow-lg shadow-accent/20' 
+                            : 'bg-accent/5 text-accent hover:bg-accent/10 border border-accent/10'
+                        }`}
+                      >
+                        <Upload size={14} className={uploadState[currentQuestion?.id]?.uploading ? 'animate-bounce' : ''} />
+                        Uploads {uploadState[currentQuestion?.id]?.images?.length > 0 && `(${uploadState[currentQuestion.id].images.length})`}
+                      </button>
                     </div>
                   </div>
 
-                  {/* Zip Upload */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
-                      <FileArchive className="w-3.5 h-3.5" />
-                      Zip File Answer (.zip, max 50 MB)
-                    </label>
-
-                    {uploadState[currentQuestion?.id]?.zipUrl ? (
-                      <div className="flex items-center gap-3 p-3 bg-white border border-green-200 rounded-lg">
-                        <FileArchive className="w-8 h-8 text-accent flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-green-700 font-medium flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Zip file uploaded
-                          </p>
-                          <p className="text-xs text-gray-400 mt-0.5 truncate">
-                            {uploadState[currentQuestion.id].zipUrl.split('/').pop()?.split('?')[0]}
-                          </p>
+                  {/* Expandable Upload Panel */}
+                  <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showUploadPanel ? 'max-h-[300px] opacity-100 mb-4' : 'max-h-0 opacity-0'}`}>
+                    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-inner">
+                      <div className="flex items-center justify-between mb-4 px-2">
+                        <div className="flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-accent" />
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">Image Workspace</h4>
                         </div>
+                        <button onClick={() => setShowUploadPanel(false)} className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-accent transition-colors">Close Panel</button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 overflow-y-auto max-h-[200px] p-2 no-scrollbar">
+                        {uploadState[currentQuestion?.id]?.images?.map((img) => (
+                          <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+                            <img src={img.image_url} alt="Uploaded Work" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                              {session?.status === 'in_progress' && (
+                                <button
+                                  onClick={() => handleRemoveImage(currentQuestion.id, img.id)}
+                                  className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                         {session?.status === 'in_progress' && (
                           <button
-                            onClick={() => handleRemoveZip(currentQuestion.id)}
-                            className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
-                            title="Remove zip"
+                            onClick={() => imageInputRef.current?.click()}
+                            disabled={uploadState[currentQuestion?.id]?.uploading === 'image'}
+                            className="aspect-square flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-accent hover:bg-accent/5 text-gray-400 hover:text-accent transition-all group"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            {uploadState[currentQuestion?.id]?.uploading === 'image' ? (
+                              <Loader className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <>
+                                <Plus size={20} className="group-hover:scale-110 transition-transform" />
+                                <span className="text-[10px] font-bold uppercase tracking-tighter">Add More</span>
+                              </>
+                            )}
                           </button>
                         )}
                       </div>
-                    ) : (
-                      <div>
-                        <input
-                          ref={zipInputRef}
-                          type="file"
-                          accept=".zip,application/zip,application/x-zip-compressed"
-                          className="hidden"
-                          disabled={session?.status !== 'in_progress'}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleZipUpload(currentQuestion.id, file);
-                            e.target.value = '';
-                          }}
-                        />
-                        <button
-                          onClick={() => zipInputRef.current?.click()}
-                          disabled={
-                            session?.status !== 'in_progress' ||
-                            uploadState[currentQuestion?.id]?.uploading === 'zip'
-                          }
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-accent hover:text-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white"
-                        >
-                          {uploadState[currentQuestion?.id]?.uploading === 'zip' ? (
-                            <>
-                              <Loader className="w-4 h-4 animate-spin" />
-                              Uploading zip...
-                            </>
-                          ) : (
-                            <>
-                              <FileArchive className="w-4 h-4" />
-                              Click to upload zip file
-                            </>
-                          )}
-                        </button>
-                        {uploadState[currentQuestion?.id]?.zipError && (
-                          <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            {uploadState[currentQuestion.id].zipError}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                      
+                      <input 
+                        ref={imageInputRef} 
+                        type="file" 
+                        multiple 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          if (e.target.files) handleImageUpload(currentQuestion.id, e.target.files);
+                          e.target.value = '';
+                        }} 
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-h-0 border border-gray-100 rounded-3xl overflow-hidden shadow-inner bg-gray-50/20 group focus-within:ring-2 focus-within:ring-accent/10 focus-within:border-accent/40 transition-all">
+                    <EditorContent 
+                      editor={editor} 
+                      className="h-full overflow-y-auto no-scrollbar"
+                    />
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         </div>

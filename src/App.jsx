@@ -291,9 +291,7 @@ function App() {
               path="/student/exams/:examId/conduct"
               element={
                 <RoleRoute requiredRole="student">
-                  <StudentDashboardLayout>
-                    <SubjectiveConductExamSessionLeetCode />
-                  </StudentDashboardLayout>
+                  <SubjectiveConductExamSessionLeetCode />
                 </RoleRoute>
               }
             />

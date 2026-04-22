@@ -389,7 +389,7 @@ const parseStoredDraft = (draftKey) => {
 };
 
 const UploadQnAModal = ({
-  isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [], apiPrefix = '/exams', isMasterAttached = false, exam = null }) => {
+  isOpen, onClose, examId, examType = 'evaluated', onSubmit, existingQuestions = [], apiPrefix = '/exams', isMasterAttached = false, exam = null, onRefresh }) => {
 
   const isPortalMcqMode = examType === 'conduct';
   const isSubjectiveConductMode = examType === 'subjective_conduct';
@@ -1879,12 +1879,12 @@ const UploadQnAModal = ({
   // ── Exam Marks Validation ────────────────────────────────────
   // IMPORTANT: This useMemo must be BEFORE the early return to avoid React Hooks violation
   const examMarksValidation = useMemo(() => {
-    if (!exam || !exam.total_marks) {
+    if (!exam || !exam.full_marks) {
       return { isValid: true, totalQuestionMarks: 0, examMarks: 0, isExceeded: false, isLess: false, isMismatch: false };
     }
 
     const totalQuestionMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
-    const examMarks = Number(exam.total_marks) || 0;
+    const examMarks = Number(exam.full_marks) || 0;
     const isExceeded = totalQuestionMarks > examMarks;
     const isLess = totalQuestionMarks < examMarks;
     const isMismatch = totalQuestionMarks !== examMarks;
@@ -1908,14 +1908,14 @@ const UploadQnAModal = ({
     const loadingToast = toast.loading('Adjusting exam marks...');
     
     try {
-      const response = await fetch(`${API_BASE_URL}${apiPrefix}/${examId}`, {
-        method: 'PATCH',
+      const response = await fetch(`${API_BASE_URL}/professors/courses/${exam.course_id}/exams/${examId}`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          total_marks: examMarksValidation.totalQuestionMarks
+          full_marks: examMarksValidation.totalQuestionMarks
         })
       });
 
@@ -1929,7 +1929,9 @@ const UploadQnAModal = ({
         toast.success('Exam marks adjusted successfully!', { id: loadingToast });
         
         // Trigger parent refresh if available
-        if (window.location) {
+        if (onRefresh) {
+          onRefresh();
+        } else if (window.location) {
           window.location.reload();
         }
       } else {

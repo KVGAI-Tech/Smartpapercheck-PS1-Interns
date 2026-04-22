@@ -2093,8 +2093,8 @@ const RubricModal = ({
                                         </AnimatePresence>
 
                                         <AnimatePresence mode="wait">
-                                                    {/* Show global loader for single generation (both initial and regeneration) */}
-                                                    {isGenerating && generationState.mode === 'single' ? (
+                                                    {/* Show global loader for single generation and bulk generation */}
+                                                    {isGenerating ? (
                                                         <motion.div
                                                             key="loader"
                                                             initial={{ opacity: 0 }}
@@ -2283,12 +2283,15 @@ const RubricModal = ({
                                                     )}
                                                 </AnimatePresence>
 
-                                {/* Sticky Action Bar - Only visible when rubric editor is shown AND not generating */}
-                                {showRubricEditor && !(isGenerating && generationState.mode === 'single') && (
+                                            </div>
+                                        </div>
+                                        
+                                {/* Static Action Bar - Only visible when rubric editor is shown AND not generating */}
+                                {showRubricEditor && !isGenerating && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="sticky bottom-0 left-0 right-0 border-t border-gray-200 bg-white shadow-lg z-20"
+                                        className="border-t border-gray-200 bg-white shadow-lg z-20 flex-shrink-0"
                                     >
                                         <div className="max-w-4xl mx-auto px-6 py-4">
                                             <div className="flex items-center justify-between gap-4">
@@ -2382,8 +2385,6 @@ const RubricModal = ({
                                         </div>
                                     </motion.div>
                                 )}
-                                    </div>
-                                </div>
                             </motion.div>
                         </div>
                     </animated.div>

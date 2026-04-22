@@ -18,49 +18,55 @@ const StudentRow = React.memo(({
   onUpdate 
 }) => {
   return (
-    <tr className="group hover:bg-gray-50/80 transition-colors">
-      <td className="p-4">
+    <tr className="group hover:bg-accent/[0.02] transition-all duration-300">
+      <td className="py-5 px-4 w-12">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => onToggle(student.id)}
-          className="w-5 h-5 rounded border-gray-300 text-accent focus:ring-accent accent-accent cursor-pointer"
+          className="w-5 h-5 rounded-md border-gray-300 text-accent focus:ring-accent/20 accent-accent cursor-pointer transition-all"
         />
       </td>
-      <td className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center border border-accent/10">
+      <td className="py-5 px-4">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/10 to-accent/5 flex items-center justify-center border border-accent/10 shadow-sm transition-transform group-hover:scale-105">
             <span className="text-sm font-bold text-accent uppercase">{student.name?.charAt(0) || '?'}</span>
           </div>
-          <span className="text-sm font-bold text-gray-900">{student.name}</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-900 group-hover:text-accent transition-colors">{student.name}</span>
+          </div>
         </div>
       </td>
-      <td className="p-4">
-        <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded tracking-wide uppercase">
-          {student.roll_number || 'N/A'}
+      <td className="py-5 px-4">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-accent/[0.03] text-accent/70 border border-accent/10 tracking-wider uppercase">
+          {student.roll_number || 'No Roll #'}
         </span>
       </td>
-      <td className="p-4">
-        <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${
-          student.section ? 'bg-accent/10 text-accent' : 'bg-gray-100 text-gray-500'
+      <td className="py-5 px-4">
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wider uppercase border transition-colors ${
+          student.section 
+            ? 'bg-accent/[0.03] text-accent/80 border-accent/10' 
+            : 'bg-gray-50 text-gray-400 border-gray-200/50'
         }`}>
           {student.section || 'Unassigned'}
         </span>
       </td>
-      <td className="p-4">
-        <span className="text-sm text-gray-500 font-medium">{student.email}</span>
+      <td className="py-5 px-4">
+        <span className="text-sm text-gray-500 font-normal group-hover:text-gray-700 transition-colors uppercase tracking-tight">{student.email}</span>
       </td>
-      <td className="p-4">
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <td className="py-5 px-4 text-right">
+        <div className="flex items-center justify-end gap-1 px-1 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0">
           <button 
             onClick={() => onEdit(student, onUpdate)}
-            className="p-2 text-gray-400 hover:text-accent hover:bg-accent/10 rounded-lg transition-all"
+            className="p-2 text-gray-400 hover:text-accent hover:bg-accent/5 rounded-xl transition-all"
+            title="Edit Student"
           >
             <Edit2 size={16} />
           </button>
           <button 
             onClick={() => onDelete(student)}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+            title="Delete Student"
           >
             <Trash2 size={16} />
           </button>
@@ -278,21 +284,21 @@ const StudentsTab = ({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
           <div className="relative flex-1 max-w-2xl group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors" size={20} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-all duration-300" size={18} />
             <input
               type="text"
               placeholder="Search students by name, email, or roll number..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full h-12 pl-12 pr-4 bg-gray-50 border-gray-200 rounded-xl focus:ring-4 focus:ring-accent/10 focus:border-accent focus:bg-white transition-all text-sm font-medium"
+              className="w-full h-11 pl-11 pr-4 bg-gray-50/50 border-gray-200 rounded-xl focus:ring-4 focus:ring-accent/5 focus:border-accent focus:bg-white transition-all text-sm font-medium placeholder:text-gray-400"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          <div className="flex flex-wrap items-center gap-2.5 lg:justify-end">
             {sections.length > 0 && (
               <select
                 value={selectedSection}
                 onChange={(e) => onSectionChange(e.target.value)}
-                className="h-12 px-4 bg-gray-50 border-gray-200 rounded-xl focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all text-sm font-medium"
+                className="h-11 px-4 bg-gray-50/50 border-gray-200 rounded-xl focus:border-accent focus:ring-4 focus:ring-accent/5 transition-all text-sm font-medium cursor-pointer"
               >
                 <option value="All sections">All Sections</option>
                 {sections.map(s => <option key={s} value={s}>{s}</option>)}
@@ -301,51 +307,56 @@ const StudentsTab = ({
             <button
               onClick={handleBulkDelete}
               disabled={selectedStudentIds.size === 0 || bulkDeleting}
-              className="h-12 px-4 rounded-xl border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50 disabled:opacity-40 disabled:grayscale transition-all flex items-center gap-2"
+              className="h-11 px-4 rounded-xl border border-red-100 text-red-500 font-bold text-xs hover:bg-red-50 disabled:opacity-40 disabled:grayscale transition-all flex items-center gap-2"
             >
-              {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 size={18} />}
+              {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 size={16} />}
               Bulk Delete ({selectedStudentIds.size})
             </button>
+            <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block" />
             <button
               onClick={() => setShowImportModal(true)}
-              className="h-12 px-4 flex items-center gap-2 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 font-bold text-sm transition-all"
+              className="h-11 px-4 flex items-center gap-2 text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 font-bold text-xs transition-all shadow-sm active:scale-95"
             >
-              <Upload size={18} />
+              <Upload size={16} />
               Import
             </button>
             <button
               onClick={handleExportStudents}
-              className="h-12 px-4 flex items-center gap-2 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 font-bold text-sm transition-all"
+              className="h-11 px-4 flex items-center gap-2 text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 font-bold text-xs transition-all shadow-sm active:scale-95"
             >
-              <Upload size={18} />
+              <Upload size={16} className="rotate-180" />
               Export
             </button>
             <button
               onClick={() => onAdd((data) => handleAddStudent(data))}
-              className="h-12 px-6 flex items-center gap-2 text-white bg-accent rounded-xl hover:bg-accent hover:shadow-lg hover:shadow-accent/20 font-bold text-sm transition-all active:scale-95"
+              className="h-11 px-6 flex items-center gap-2 text-white bg-accent rounded-xl hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/20 font-bold text-xs transition-all active:scale-95"
             >
-              <Plus size={20} />
+              <Plus size={18} />
               Add Student
             </button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-sm text-gray-500 font-medium">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <Users size={16} className="text-gray-400" />
-              <span className="text-gray-900 font-bold">{allStudents.length}</span> Total Students
-            </span>
+        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-gray-400">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 bg-accent/[0.04] px-3 py-1.5 rounded-lg border border-accent/10">
+              <Users size={14} className="text-accent/60" />
+              <span className="text-accent font-bold">{allStudents.length}</span>
+              <span className="text-accent/60 font-medium">Students</span>
+            </div>
             {selectedStudentIds.size > 0 && (
-              <span className="text-accent bg-accent/10 px-2 py-0.5 rounded-md text-xs font-bold">
-                {selectedStudentIds.size} selected
-              </span>
+              <div className="flex items-center gap-2 bg-accent/5 text-accent px-3 py-1.5 rounded-lg border border-accent/10">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                <span>{selectedStudentIds.size} Selected</span>
+              </div>
             )}
           </div>
           {sortConfig.key && (
-            <span className="text-xs">
-              Sorted by <span className="text-gray-900 font-bold uppercase">{sortConfig.key}</span> ({sortConfig.direction})
-            </span>
+            <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+              <span className="text-gray-400">Sorted by</span>
+              <span className="text-gray-700">{sortConfig.key === 'tut_section' ? 'Section' : sortConfig.key}</span>
+              <span className="text-accent">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+            </div>
           )}
         </div>
       </div>
@@ -384,19 +395,24 @@ const StudentsTab = ({
                     <th 
                       key={col.key} 
                       onClick={() => handleSortChange(col.key)}
-                      className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-accent transition-colors group"
+                      className="py-5 px-4 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em] cursor-pointer hover:text-accent transition-colors group select-none"
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         {col.label}
-                        {sortConfig.key === col.key ? (
-                          <span className="text-accent">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                        ) : (
-                          <span className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">↕</span>
-                        )}
+                        <div className="flex flex-col gap-0.5">
+                          {sortConfig.key === col.key ? (
+                            <span className="text-accent text-[10px] leading-none">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                          ) : (
+                            <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-gray-300 text-[8px] leading-none">▲</span>
+                              <span className="text-gray-300 text-[8px] leading-none">▼</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </th>
                   ))}
-                  <th className="p-4 w-24"></th>
+                  <th className="py-5 px-4 w-24"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">

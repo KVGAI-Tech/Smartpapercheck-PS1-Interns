@@ -4,9 +4,10 @@ import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
   Users, PlayCircle, X, AlertCircle, CheckCircle, BarChart3,
-  Check, History, Loader2
+  Check, History, Loader2, Layout, FileText, Brain, ClipboardList
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { studentApi } from './studentApi';
 import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
@@ -544,6 +545,7 @@ const Toast = ({ message, type, show, onClose }) => {
     onStepChange,
   }) => {
     const [activeStep, setActiveStep] = useState(Math.min(2, initialStep || 0));
+    const [showTooltip, setShowTooltip] = useState(false);
     const examVariant = getExamVariant(exam);
     const isPortalExam = examVariant === 'portal_mcq';
     const isSubjectiveConduct = examVariant === 'conduct';
@@ -576,32 +578,51 @@ const Toast = ({ message, type, show, onClose }) => {
     ];
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100
         transition-all duration-300 hover:shadow-lg">
         <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-50">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 min-w-0">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words min-w-0">
-              {exam.exam_name}
-            </h3>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                {formatExamDate(exam.created_at || exam.start_time || exam.date)}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 min-w-0 flex-1">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
+              <div className="relative">
+                <div 
+                  className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-all bg-accent/10 text-accent cursor-help hover:bg-accent hover:text-white group shadow-sm"
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                >
+                  {isPortalExam ? <ClipboardList className="w-5 h-5 transition-transform group-hover:scale-110" /> : 
+                   isSubjectiveConduct ? <FileText className="w-5 h-5 transition-transform group-hover:scale-110" /> : 
+                   <Brain className="w-5 h-5 transition-transform group-hover:scale-110" />}
+                </div>
+
+                <AnimatePresence>
+                  {showTooltip && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                      className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] font-bold rounded-lg shadow-2xl whitespace-nowrap pointer-events-none border border-white/10"
+                    >
+                      <span className="relative z-10">{isPortalExam ? 'MCQ Exam' : isSubjectiveConduct ? 'Conduct Exam' : 'Evaluated Exam'}</span>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[5px] border-transparent border-t-gray-900/95" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-              <div className="w-1 h-1 rounded-full bg-gray-200" />
-              <span className="font-medium">{exam.full_marks || exam.maxMarks || 100} marks</span>
-              <div className="w-1 h-1 rounded-full bg-gray-200" />
-              <span className={`font-medium ${(isPortalExam || isSubjectiveConduct) ? 'text-blue-700' : 'text-accent'}`}>
-                {isPortalExam ? 'Portal MCQ' : isSubjectiveConduct ? 'Conduct Exam' : 'Evaluated'}
-              </span>
-              {(isPortalExam || isSubjectiveConduct) && (
-                <>
-                  <div className="w-1 h-1 rounded-full bg-gray-200" />
-                  <span className={`font-medium ${exam?.is_active ? 'text-green-700' : 'text-gray-600'}`}>
-                    {exam?.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </>
-              )}
+              
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 min-w-0">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">
+                  {exam.exam_name}
+                </h3>
+                
+                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                    {formatExamDate(exam.created_at || exam.start_time || exam.date)}
+                  </div>
+                  <div className="w-px h-3 bg-gray-300 hidden sm:block" />
+                  <span className="font-semibold text-gray-600">{exam.full_marks || exam.maxMarks || 100} marks</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -615,26 +636,14 @@ const Toast = ({ message, type, show, onClose }) => {
               <span className="sm:hidden">Enroll</span>
               <span className="hidden sm:inline">Manage Enrollments</span>
             </button>
-            {(isPortalExam || isSubjectiveConduct) && (
-              <button
-                onClick={() => onStartEvaluation(exam)}
-                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-accent bg-accent/10 hover:bg-accent/15
-                  rounded-lg flex items-center justify-center gap-2 transition-colors border border-accent/20"
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span>Evaluate</span>
-              </button>
-            )}
-            {!(isPortalExam || isSubjectiveConduct) && (
-              <button
-                onClick={() => onStartEvaluation(exam)}
-                className="w-full sm:w-auto px-3 sm:px-4 py-2 text-white bg-accent hover:bg-accent
-                  rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
-              >
-                <PlayCircle className="w-4 h-4" />
-                <span>Evaluate</span>
-              </button>
-            )}
+            <button
+              onClick={() => onStartEvaluation(exam)}
+              className="w-full sm:w-auto px-3 sm:px-4 py-2 text-white bg-accent hover:bg-accent/90
+                rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              <PlayCircle className="w-4 h-4" />
+              <span>Evaluate</span>
+            </button>
             {(isPortalExam || isSubjectiveConduct) && (
               <label className={`w-full sm:w-auto inline-flex items-center justify-center gap-3 px-3 sm:px-4 py-2 rounded-lg border transition-colors ${
                 isTogglingActive ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
@@ -2172,6 +2181,7 @@ const Toast = ({ message, type, show, onClose }) => {
             existingQuestions={existingQuestions}
             exam={exams?.find(e => e.id === selectedExamId) || null}
             isMasterAttached={exams?.find(e => e.id === selectedExamId)?.is_master_attached || false}
+            onRefresh={onRefresh}
             onSubmit={async (examId, formData) => {
               try {
                 if (!examId) {
