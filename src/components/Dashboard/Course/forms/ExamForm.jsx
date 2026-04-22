@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Loader, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Loader, Plus, Trash2, Brain, ClipboardList, FileText } from 'lucide-react';
 
 import { getExamVariant } from '../../../examTypeUtils';
 
@@ -178,20 +178,50 @@ const ExamForm = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-3">
             Exam Type *
           </label>
-          <select
-            value={formData.exam_type}
-            onChange={handleTypeChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-          >
-            <option value="evaluated">Evaluated Exam</option>
-            <option value="portal_mcq">Portal MCQ Exam</option>
-            <option value="conduct">Conduct Exam</option>
-          </select>
-          <p className="mt-1 text-xs text-gray-500">
+          <div className="exam-type-container">
+            {[
+              {
+                value: 'evaluated',
+                label: 'Evaluated Exam',
+                icon: Brain
+              },
+              {
+                value: 'portal_mcq',
+                label: 'MCQ Exam',
+                icon: ClipboardList
+              },
+              {
+                value: 'conduct',
+                label: 'Conduct Exam',
+                icon: FileText
+              }
+            ].map((type) => {
+              const IconComponent = type.icon;
+              return (
+                <div
+                  key={type.value}
+                  className={`exam-card ${formData.exam_type === type.value ? 'active' : ''}`}
+                  onClick={() => {
+                    const newType = type.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      exam_type: newType,
+                      is_active: newType === 'conduct' ? true : (initialData ? prev.is_active : false),
+                    }));
+                  }}
+                >
+                  <div className="exam-card-icon">
+                    <IconComponent className="w-8 h-8" strokeWidth={1.5} />
+                  </div>
+                  <div className="exam-card-title">{type.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs text-gray-500">
             Evaluated exams keep the current answer-sheet workflow. Portal MCQ and Conduct Exam stay fully inside the portal.
           </p>
         </div>

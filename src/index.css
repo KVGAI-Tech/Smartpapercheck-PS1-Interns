@@ -372,3 +372,83 @@ section {
     background-size: 60px 60px;
   }
 }
+
+/* Exam Type Card Selection */
+.exam-type-container {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.exam-card {
+  flex: 1;
+  padding: 20px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  position: relative;
+}
+
+.exam-card:hover {
+  border-color: #10b981;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.exam-card.active {
+  border-color: #10b981;
+  background: #ecfdf5;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.exam-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.exam-card:hover .exam-card-icon {
+  color: #10b981;
+}
+
+.exam-card.active .exam-card-icon {
+  color: #059669;
+}
+
+.exam-card-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1f2937;
+  margin-bottom: 6px;
+}
+
+.exam-card-desc {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.exam-card.active .exam-card-title {
+  color: #059669;
+}
+
+.exam-card.active .exam-card-desc {
+  color: #047857;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .exam-type-container {
+    flex-direction: column;
+  }
+  
+  .exam-card {
+    width: 100%;
+  }
+}

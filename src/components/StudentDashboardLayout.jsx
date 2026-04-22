@@ -180,7 +180,7 @@ const StudentDashboardLayout = ({ children }) => {
 
       <aside
         className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300
-          ${isSidebarOpen ? "w-64" : "w-16"} 
+          ${isSidebarOpen ? "w-72" : "w-16"} 
           bg-white border-r border-gray-100 shadow-lg
           ${
             isMobile
@@ -197,11 +197,11 @@ const StudentDashboardLayout = ({ children }) => {
           >
             <div
               className={`overflow-hidden transition-all duration-300 ${
-                isSidebarOpen ? "w-40" : "w-0"
+                isSidebarOpen ? "w-52" : "w-0"
               }`}
             >
-              <h1 className="text-xl font-bold text-accent">
-                Smart QnA
+              <h1 className="text-lg font-bold text-accent">
+                Smart Paper Check
               </h1>
             </div>
             <button
@@ -280,7 +280,7 @@ const StudentDashboardLayout = ({ children }) => {
 
       <div
         className={`flex-1 transition-all duration-300
-        ${isSidebarOpen ? "md:ml-64" : "md:ml-16"} ${isMobile ? "ml-0" : ""}`}
+        ${isSidebarOpen ? "md:ml-72" : "md:ml-16"} ${isMobile ? "ml-0" : ""}`}
       >
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 h-16">
