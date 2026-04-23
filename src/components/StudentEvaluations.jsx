@@ -292,7 +292,7 @@ const StudentEvaluations = () => {
               name={course.course_name || "Untitled Course"}
               instructor={course.instructor_name || "Not assigned"}
               semester={`${course.year || "N/A"}-${course.semester || "N/A"}`}
-              examCount={course.exam_count || 0}
+              examCount={course.exams_count || 0}
               startDate={course.start_date}
               endDate={course.end_date}
             />
