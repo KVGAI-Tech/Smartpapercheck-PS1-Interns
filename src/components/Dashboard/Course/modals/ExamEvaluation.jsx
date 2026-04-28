@@ -541,6 +541,58 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     }
   }, [examId, retryCount, page, pageSize, resultsModel, debouncedSearch, evaluationStatusFilter, uploadStatusFilter, sortConfig]);
 
+  const fetchAllMatchingEnrollmentIds = useCallback(async ({ evaluationStatus, uploadStatus } = {}) => {
+    if (!examId) {
+      throw new Error('Exam ID is missing');
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const search = String(debouncedSearch || '').trim();
+    const evalFilter = String((evaluationStatus ?? evaluationStatusFilter) || '').trim();
+    const uploadFilter = String((uploadStatus ?? uploadStatusFilter) || '').trim();
+    const queryParams = [
+      'include_all_matching_ids=true',
+      'page=1',
+      'page_size=1',
+      `model=${encodeURIComponent(resultsModel)}`
+    ];
+
+    if (search) queryParams.push(`search=${encodeURIComponent(search)}`);
+    if (evalFilter && evalFilter !== 'all') queryParams.push(`evaluation_status=${encodeURIComponent(evalFilter)}`);
+    if (uploadFilter && uploadFilter !== 'all') queryParams.push(`upload_status=${encodeURIComponent(uploadFilter)}`);
+    if (sortConfig?.key) queryParams.push(`sort_key=${encodeURIComponent(sortConfig.key)}`);
+    if (sortConfig?.direction) queryParams.push(`sort_dir=${encodeURIComponent(sortConfig.direction)}`);
+
+    const response = await fetch(
+      `${API_BASE_URL}/exams/${examId}/enrollments/list?${queryParams.join('&')}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors'
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    if (!data || data.code !== 200) {
+      throw new Error(data?.message || 'Failed to fetch all matching students');
+    }
+
+    const ids = Array.isArray(data?.data?.matching_enrollment_ids) ? data.data.matching_enrollment_ids : [];
+    return ids.map((id) => Number(id)).filter((id) => Number.isFinite(id));
+  }, [examId, debouncedSearch, evaluationStatusFilter, uploadStatusFilter, resultsModel, sortConfig]);
+
   const fetchOverallProgress = useCallback(async () => {
     try {
       if (!examId || !courseId) return;
@@ -692,6 +744,9 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         stopEvaluationJobPolling();
         setActiveEvaluationJobId(null);
         setActiveEvaluationJob(null);
+        setEvaluationProgress({ completed: 0, total: 0, inProgress: [], errors: 0 });
+        setEvaluatingStudent(null);
+        setEvaluationError({});
 
         const failed = Number(job?.progress?.failed || 0);
         const completed = Number(job?.progress?.completed || 0);
@@ -812,42 +867,46 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     if (!Array.isArray(enrollmentIds) || enrollmentIds.length === 0) {
       throw new Error('No students selected');
     }
+    try {
+      const response = await fetch(`${API_BASE_URL}/celery/${examId}/evaluations/jobs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          enrollment_ids: enrollmentIds,
+          force_reevaluate: Boolean(forceReevaluate),
+          model: model || 'current',
+        }),
+        mode: 'cors'
+      });
 
-    const response = await fetch(`${API_BASE_URL}/exams/${examId}/evaluations/jobs`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        enrollment_ids: enrollmentIds,
-        force_reevaluate: Boolean(forceReevaluate),
-        model: model || 'current',
-      }),
-      mode: 'cors'
-    });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`API error (${response.status}): ${errorText}`);
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`API error (${response.status}): ${errorText}`);
+      const data = await response.json();
+      const jobId = data?.data?.job_id;
+      if (!jobId) {
+        throw new Error(data?.message || 'Failed to start evaluation');
+      }
+
+      setActiveEvaluationJobId(jobId);
+      setBatchEvaluating(true);
+      setEvaluationProgress({ completed: 0, total: enrollmentIds.length, inProgress: [], errors: 0 });
+      stopEvaluationJobPolling();
+      evaluationJobPollRef.current = setInterval(() => {
+        pollEvaluationJob(jobId);
+      }, 4000);
+
+      await pollEvaluationJob(jobId);
+      return jobId;
+    } catch (e) {
+      console.error('Failed to start evaluation job:', e);
+      throw e;
     }
-
-    const data = await response.json();
-    const jobId = data?.data?.job_id;
-    if (!jobId) {
-      throw new Error(data?.message || 'Failed to start evaluation');
-    }
-
-    setActiveEvaluationJobId(jobId);
-    setBatchEvaluating(true);
-    setEvaluationProgress({ completed: 0, total: enrollmentIds.length, inProgress: [], errors: 0 });
-    stopEvaluationJobPolling();
-    evaluationJobPollRef.current = setInterval(() => {
-      pollEvaluationJob(jobId);
-    }, 4000);
-
-    await pollEvaluationJob(jobId);
-    return jobId;
   }, [examId, pollEvaluationJob, stopEvaluationJobPolling]);
 
   const openModelSelector = useCallback((action, payload) => {
@@ -1288,19 +1347,17 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         throw new Error('Exam ID is missing');
       }
 
-      const candidates = students.filter(student =>
-        student &&
-        student.status !== 'not_uploaded' &&
-        student.marks_obtained === null &&
-        !isEvaluationInProgress(student)
-      );
+      const candidates = await fetchAllMatchingEnrollmentIds({
+        evaluationStatus: 'pending',
+        uploadStatus: 'uploaded',
+      });
 
       if (candidates.length === 0) {
         showToast('No pending uploaded submissions to evaluate.', 'warning', 4000);
         return;
       }
 
-      openModelSelector('evaluate_all', { enrollmentIds: candidates.map(s => s.enrollment_id) });
+      openModelSelector('evaluate_all', { enrollmentIds: candidates });
     } catch (e) {
       console.error('Evaluate all error:', e);
       showToast(e.message || 'Failed to evaluate all students', 'error', 6000);

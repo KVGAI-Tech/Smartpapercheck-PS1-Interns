@@ -255,7 +255,10 @@ const StudentExamDetails = ({ isHistory = false }) => {
               
               // Get max_marks from questions data, fallback to 0 if not found
               const questionInfo = questionsData[key] || {};
-              const maxMarks = questionInfo.max_marks || 0;
+              const maxMarks =
+                parseFloat(questionInfo.max_marks) ||
+                parseFloat(questionData.max_marks) ||
+                0;
 
               questions.push({
                 question_number: questionNumber,

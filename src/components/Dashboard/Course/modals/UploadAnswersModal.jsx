@@ -478,7 +478,7 @@ const handleUpload = async () => {
 
     // Step 2: start async processing of the uploaded ZIP from S3
     const processResp = await fetch(
-      `${API_BASE_URL}/exams/${courseId}/exams/${examId}/process-uploaded-answers-async`,
+      `${API_BASE_URL}/celery/${courseId}/exams/${examId}/process-answers`,
       {
         method: 'POST',
         headers: {
@@ -602,7 +602,50 @@ useEffect(() => {
   return () => window.removeEventListener('paste', onPaste);
 }, [isOpen, activeTab, activeQuestionForPaste, studentEntries]);
 
-useEffect(() => {
+  const handleUploadComplete = (status, finalProgress) => {
+    setIsProcessing(false);
+    
+    if (finalProgress) {
+      setProcessingProgress(prev => ({
+        ...prev,
+        ...finalProgress,
+        stage: 'completed',
+        studentsProcessed: finalProgress.studentsTotal || prev?.studentsTotal || 0
+      }));
+    }
+
+    const total = finalProgress?.studentsTotal || processingProgress?.studentsTotal || 0;
+    const failed = finalProgress?.totalFailed || processingProgress?.totalFailed || 0;
+    const successCount = total - failed;
+
+    if (failed === 0) {
+      toast.success(`Upload complete: ${total} student answer sheets processed successfully!`);
+    } else if (successCount > 0) {
+      toast.warning(`Partial success: ${successCount} processed, ${failed} failed.`);
+    } else {
+      toast.error(`Upload failed: All ${failed} student imports encountered errors.`);
+    }
+
+    // Auto-close after a short delay for visual confirmation
+    setTimeout(() => {
+      if (onUploadSuccess) {
+        try {
+          onUploadSuccess({ 
+            mode: 'bulk', 
+            job_id: processingJobId, 
+            status, 
+            progress: finalProgress || processingProgress,
+            autoClosed: true 
+          });
+        } catch (err) {
+          console.error('[UploadAnswersModal] onUploadSuccess callback error:', err);
+        }
+      }
+      handleClose();
+    }, 2000);
+  };
+
+  useEffect(() => {
   const handleEscKey = (e) => {
     if (e.key === 'Escape' && isFullscreen) {
       setIsFullscreen(false);
@@ -683,10 +726,11 @@ useEffect(() => {
         // Update progress from job document
         if (progress) {
           const newProgress = {
-            studentsTotal: progress.students_total || 0,
-            studentsProcessed: progress.students_processed || 0,
-            totalProcessed: progress.students_processed || 0,
-            totalFailed: 0,
+            studentsTotal: progress.total_students || progress.students_total || progress.total || 0,
+            studentsProcessed: progress.processed_students || progress.students_processed || progress.completed || 0,
+            totalFiles: progress.total_files || 0,
+            processedFiles: progress.processed_files || 0,
+            totalFailed: progress.failed || 0,
             stage: progress.stage || status
           };
           console.log('[UploadAnswersModal] Updating progress:', newProgress);
@@ -695,13 +739,8 @@ useEffect(() => {
         
         // Handle completion
         if (status === 'completed' || status === 'completed_with_errors') {
-          console.log('[UploadAnswersModal] Job completed');
-          setIsProcessing(false);
-          toast.success('Answer sheets imported. Use Evaluate All to start AI grading for pending submissions.');
-          // Trigger dashboard refresh so enrollments show updated status
-          if (onUploadSuccess) {
-            try { onUploadSuccess({ mode: 'bulk', job_id: processingJobId, status }); } catch { /* ignore */ }
-          }
+          console.log('[UploadAnswersModal] Job completed via WebSocket');
+          handleUploadComplete(status, newProgress);
         }
         
         // Handle failure
@@ -789,50 +828,42 @@ useEffect(() => {
       }
 
       // If the job is running but we never receive progress events, fail fast with a clear error.
-      if (status === 'running') {
-        // Check if job document has progress info (fallback for WebSocket failures)
-        const jobProgress = job?.progress;
-        if (jobProgress) {
-          console.log('[UploadAnswersModal] Polling: Job progress from document:', jobProgress);
-          
-          // Update progress from job document
-          const newProgress = {
-            studentsTotal: jobProgress.students_total || 0,
-            studentsProcessed: jobProgress.students_processed || 0,
-            totalProcessed: jobProgress.students_processed || 0,
-            totalFailed: 0,
-            stage: jobProgress.stage || 'processing'
-          };
-          
-          setProcessingProgress(newProgress);
-          
-          // Update stage
-          if (jobProgress.stage) {
-            setProcessingStage(jobProgress.stage);
-          }
-        }
-        
-        const localStart = processingJobStartedAt || startedAt;
-        const hasAnyProgress =
-          (!!processingProgress &&
+      // Update progress from job document if available (fallback for WebSocket failures)
+      const jobProgress = job?.progress;
+      if (jobProgress) {
+        const newProgress = {
+          studentsTotal: jobProgress.total_students || jobProgress.students_total || jobProgress.total || 0,
+          studentsProcessed: jobProgress.processed_students || jobProgress.students_processed || jobProgress.completed || 0,
+          totalFiles: jobProgress.total_files || 0,
+          processedFiles: jobProgress.processed_files || 0,
+          totalFailed: jobProgress.failed || 0,
+          stage: jobProgress.stage || status
+        };
+        console.log('[UploadAnswersModal] Polling: Updating progress:', newProgress);
+        setProcessingProgress(newProgress);
+        if (jobProgress.stage) setProcessingStage(jobProgress.stage);
+      }
+
+      const localStart = processingJobStartedAt || startedAt;
+      const hasAnyProgress =
+        (!!processingProgress &&
           (Number(processingProgress.studentsTotal) > 0 || Number(processingProgress.totalProcessed) > 0)) ||
-          (jobProgress && jobProgress.students_total > 0);
-        
-        if (!hasAnyProgress && Date.now() - localStart > runningNoProgressFailFastMs) {
-          console.error('[UploadAnswersModal] Timeout: No progress after', runningNoProgressFailFastMs, 'ms');
-          setIsProcessing(false);
-          toast.error('Processing is taking too long without progress updates. Please check backend logs and try again.');
-          return;
-        }
+        (jobProgress && jobProgress.students_total > 0);
+
+      if (!hasAnyProgress && Date.now() - localStart > runningNoProgressFailFastMs) {
+        console.error('[UploadAnswersModal] Timeout: No progress after', runningNoProgressFailFastMs, 'ms');
+        setIsProcessing(false);
+        toast.error('Processing is taking too long without progress updates. Please check backend logs and try again.');
+        return;
       }
 
       if (status === 'completed' || status === 'completed_with_errors') {
-        setIsProcessing(false);
-        toast.success('Answer sheets imported. Use Evaluate All to start AI grading for pending submissions.');
-        // Trigger dashboard refresh so enrollments show updated status
-        if (onUploadSuccess) {
-          try { onUploadSuccess({ mode: 'bulk', job_id: processingJobId, status }); } catch { /* ignore */ }
-        }
+        console.log('[UploadAnswersModal] Job completed via Polling');
+        handleUploadComplete(status, {
+          studentsTotal: jobProgress?.total_students || jobProgress?.students_total || 0,
+          studentsProcessed: jobProgress?.processed_students || jobProgress?.students_processed || 0,
+          totalFailed: jobProgress?.failed || 0
+        });
         return;
       }
 
@@ -958,9 +989,8 @@ return (
           <>
             {activeTab === 'bulk' && (isUploading || isProcessing || processingProgress) && (
               <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  {processingProgress && processingProgress.studentsTotal &&
-                    processingProgress.studentsProcessed >= processingProgress.studentsTotal ? (
+                <div className="flex items-center gap-3 mb-2">
+                  {(processingProgress?.stage === 'completed' || processingProgress?.stage === 'completed_with_errors') ? (
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   ) : (
                     <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
@@ -968,68 +998,79 @@ return (
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">
                       {isUploading
-                        ? 'Uploading ZIP and starting answer processing...'
-                        : processingProgress &&
-                          processingProgress.studentsTotal &&
-                          processingProgress.studentsProcessed >= processingProgress.studentsTotal
-                          ? 'Answer import completed. Pending submissions can now be evaluated.'
-                          : 'Processing uploaded answer sheets in the background...'}
+                        ? 'Uploading ZIP...'
+                        : processingProgress?.stage === 'unzipping'
+                          ? 'Processing ZIP...'
+                          : processingProgress?.stage === 'parsing'
+                            ? 'Identifying students...'
+                            : (processingProgress?.stage === 'syncing_to_database' || processingProgress?.stage === 'processing')
+                              ? 'Processing students...'
+                              : (processingProgress?.stage === 'completed' || processingProgress?.stage === 'completed_with_errors')
+                                ? 'Import completed successfully'
+                                : 'Starting answer processing...'}
                     </p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">
-                      You can keep this window open to monitor progress. Large exams may take a few minutes.
-                    </p>
-                    {!isUploading && isProcessing && processingStage === 'preprocessing' && (
-                      <p className="text-[11px] text-gray-700 mt-1">
-                        Preparing ZIP for processing...
-                      </p>
-                    )}
-                    {!isUploading && isProcessing && currentProcessingRoll && (
-                      <p className="text-[11px] text-gray-700 mt-1">
-                        Currently processing roll number: <span className="font-semibold">{currentProcessingRoll}</span>
-                      </p>
-                    )}
-                    {isUploading && typeof uploadProgress === 'number' && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
-                          <span>Upload progress: {uploadProgress}%</span>
-                          <span>{zipFile ? `${(zipFile.size / 1024 / 1024).toFixed(2)} MB` : ''}</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-accent rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, Math.max(0, uploadProgress))}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {(processingProgress || isProcessing) && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
-                          <span>
-                            Students processed: {processingProgress?.studentsProcessed || 0}
-                            {processingProgress?.studentsTotal ? ` / ${processingProgress.studentsTotal}` : ''}
-                          </span>
-                          <span>
-                            Failed: {processingProgress?.totalFailed || 0}
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-accent rounded-full transition-all duration-300"
-                            style={{
-                              width:
-                                processingProgress?.studentsTotal && processingProgress.studentsTotal > 0
-                                  ? `${Math.min(
-                                    100,
-                                    ((processingProgress?.studentsProcessed || 0) / processingProgress.studentsTotal) * 100,
-                                  ).toFixed(0)}%`
-                                  : '0%',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
+                </div>
+
+                <div className="space-y-3 pl-8">
+                  {/* ZIP Progress Bar (Uploading or Unzipping) */}
+                  {(isUploading || processingProgress?.stage === 'unzipping') && (
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
+                        <span>
+                          {isUploading ? 'Upload Progress' : 'Extracting Files'}
+                          {processingProgress?.totalFiles ? `: ${processingProgress.processedFiles} / ${processingProgress.totalFiles}` : ''}
+                        </span>
+                        <span>{isUploading ? `${uploadProgress || 0}%` : `${Math.round(((processingProgress?.processedFiles || 0) / Math.max(processingProgress?.totalFiles || 1, 1)) * 100)}%`}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all duration-300"
+                          style={{
+                            width: isUploading
+                              ? `${uploadProgress || 0}%`
+                              : `${((processingProgress?.processedFiles || 0) / Math.max(processingProgress?.totalFiles || 1, 1)) * 100}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parsing Stage Message */}
+                  {processingProgress?.stage === 'parsing' && (
+                    <div className="flex items-center gap-2 text-[11px] text-green-700 font-medium py-1">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Found {processingProgress.studentsTotal} students in ZIP</span>
+                    </div>
+                  )}
+
+                  {/* Students Processing Progress Bar */}
+                  {(processingProgress?.stage === 'syncing_to_database' || processingProgress?.stage === 'processing' || (processingProgress?.stage === 'completed' || processingProgress?.stage === 'completed_with_errors')) && (
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-gray-600 mb-1">
+                        <span>
+                          Students Processed: {processingProgress?.studentsProcessed || 0} / {processingProgress?.studentsTotal || 0}
+                        </span>
+                        <span className="text-red-500">
+                          {processingProgress?.totalFailed > 0 ? `Failed: ${processingProgress.totalFailed}` : ''}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all duration-300"
+                          style={{
+                            width: `${((processingProgress?.studentsProcessed || 0) / Math.max(processingProgress?.studentsTotal || 1, 1)) * 100}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-gray-500 pt-1">
+                    {processingProgress?.stage === 'completed' || processingProgress?.stage === 'completed_with_errors'
+                      ? 'Answer sheets imported. Use Evaluate All to start AI grading.'
+                      : 'You can keep this window open to monitor progress. Large exams may take a few minutes.'}
+                  </p>
                 </div>
               </div>
             )}

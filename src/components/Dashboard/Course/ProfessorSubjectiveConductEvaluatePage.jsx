@@ -8,7 +8,7 @@ import {
   publishConductExam,
 } from './api';
 
-const StudentEvaluationLoader = React.lazy(() => import('./modals/StudentEvaluationLoader'));
+const ExamEvaluationDetail = React.lazy(() => import('./modals/ExamEvaluationDetail'));
 
 const ProfessorSubjectiveConductEvaluatePage = () => {
   const navigate = useNavigate();
@@ -214,9 +214,12 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
             </div>
           }
         >
-          <StudentEvaluationLoader
-            examId={parseInt(examId)}
+          <ExamEvaluationDetail
+            examId={parseInt(examId, 10)}
             enrollmentId={selectedSubmission.enrollment_id}
+            studentInfo={selectedSubmission}
+            isConductExam={true}
+            conductSubmissionId={selectedSubmission.submission_id}
             onClose={handleCloseEvaluation}
             onComplete={handleEvaluationComplete}
           />

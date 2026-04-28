@@ -63,6 +63,7 @@ import {
 import { examsApi } from './Student_api';
 
 const getSessionStorageKey = (examId) => `conduct_exam_session_${examId}`;
+const getSyncChannelName = (examId) => `conduct_exam_sync_${examId}`;
 
 const createSessionId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -102,6 +103,7 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const autoSubmitRef = useRef(false);
   const autoSaveTimerRef = useRef(null);
   const dirtyQuestionIdsRef = useRef([]);
+  const syncChannelRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -185,6 +187,65 @@ Take your time and write a comprehensive answer.`,
     sessionIdRef.current = sessionStorage.getItem(storageKey);
   }, [resolvedExamId]);
 
+  const syncSessionFromServer = async () => {
+    if (!resolvedExamId || !sessionIdRef.current) return;
+    const response = await examsApi.getSubjectiveConductExamSession(resolvedExamId, sessionIdRef.current);
+    if (response?.data) {
+      hydrateSession(response.data, { preserveDirtyAnswers: true });
+    }
+  };
+
+  const broadcastSessionSync = () => {
+    if (!resolvedExamId) return;
+    const payload = {
+      type: 'conduct_exam_sync',
+      examId: String(resolvedExamId),
+      at: Date.now(),
+    };
+    try {
+      syncChannelRef.current?.postMessage(payload);
+    } catch {
+      // ignore
+    }
+    try {
+      localStorage.setItem(`conduct_exam_sync_ping_${resolvedExamId}`, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (!resolvedExamId) return undefined;
+
+    const handleSyncSignal = (payload) => {
+      if (!payload || String(payload.examId) !== String(resolvedExamId)) return;
+      syncSessionFromServer().catch(() => {});
+    };
+
+    if (typeof BroadcastChannel !== 'undefined') {
+      syncChannelRef.current = new BroadcastChannel(getSyncChannelName(resolvedExamId));
+      syncChannelRef.current.onmessage = (event) => handleSyncSignal(event.data);
+    }
+
+    const onStorage = (event) => {
+      if (event.key !== `conduct_exam_sync_ping_${resolvedExamId}` || !event.newValue) return;
+      try {
+        handleSyncSignal(JSON.parse(event.newValue));
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      if (syncChannelRef.current) {
+        syncChannelRef.current.close();
+        syncChannelRef.current = null;
+      }
+    };
+  }, [resolvedExamId]);
+
   useEffect(() => {
     dirtyQuestionIdsRef.current = dirtyQuestionIds;
   }, [dirtyQuestionIds]);
@@ -260,6 +321,7 @@ Take your time and write a comprehensive answer.`,
       const response = await examsApi.submitSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
       if (response?.data) {
         hydrateSession(response.data);
+        broadcastSessionSync();
         setNotice('Time expired. Your exam was auto-submitted.');
       }
     } catch (err) {
@@ -320,6 +382,7 @@ Take your time and write a comprehensive answer.`,
         throw new Error(response?.message || 'Unable to save answers.');
       }
       hydrateSession(response.data, { preserveDirtyAnswers: true, clearDirtyIds: questionIds });
+      broadcastSessionSync();
       if (!silent) {
         setNotice('Answers saved');
       }
@@ -511,6 +574,7 @@ Take your time and write a comprehensive answer.`,
         ...prev,
         [questionId]: { ...(prev[questionId] || {}), uploading: false, imageError: null },
       }));
+      broadcastSessionSync();
       setNotice(`Successfully uploaded ${fileArray.length} image(s)`);
     } catch (err) {
       setUploadState((prev) => ({
@@ -535,6 +599,7 @@ Take your time and write a comprehensive answer.`,
           imageError: null,
         },
       }));
+      broadcastSessionSync();
       setNotice('Image removed successfully');
     } catch (err) {
       setError(err.message || 'Failed to remove image');
@@ -553,6 +618,7 @@ Take your time and write a comprehensive answer.`,
         throw new Error(response?.message || 'Unable to submit conduct exam.');
       }
       hydrateSession(response.data);
+      broadcastSessionSync();
       setNotice('Conduct exam submitted successfully');
     } catch (err) {
       setError(err.message || 'Unable to submit conduct exam.');

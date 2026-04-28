@@ -409,7 +409,7 @@ const Toast = ({ message, type, show, onClose }) => {
 
         // Step 2: start async processing of the uploaded ZIP from S3
         const processResp = await fetch(
-          `${API_BASE_URL}/exams/${courseId}/exams/${examId}/process-uploaded-answers-async`,
+          `${API_BASE_URL}/celery/${courseId}/exams/${examId}/process-answers`,
           {
             method: 'POST',
             headers: {

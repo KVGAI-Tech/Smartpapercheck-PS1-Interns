@@ -14,6 +14,7 @@ import {
 import { examsApi } from './Student_api';
 
 const getSessionStorageKey = (examId) => `conduct_exam_session_${examId}`;
+const getSyncChannelName = (examId) => `conduct_exam_sync_${examId}`;
 
 const createSessionId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -52,6 +53,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
   const sessionIdRef = useRef(null);
   const autoSubmitRef = useRef(false);
   const dirtyQuestionIdsRef = useRef([]);
+  const syncChannelRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,6 +77,65 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       sessionStorage.setItem(storageKey, createSessionId());
     }
     sessionIdRef.current = sessionStorage.getItem(storageKey);
+  }, [resolvedExamId]);
+
+  const syncSessionFromServer = async () => {
+    if (!resolvedExamId || !sessionIdRef.current) return;
+    const response = await examsApi.getSubjectiveConductExamSession(resolvedExamId, sessionIdRef.current);
+    if (response?.data) {
+      hydrateSession(response.data, { preserveDirtyAnswers: true });
+    }
+  };
+
+  const broadcastSessionSync = () => {
+    if (!resolvedExamId) return;
+    const payload = {
+      type: 'conduct_exam_sync',
+      examId: String(resolvedExamId),
+      at: Date.now(),
+    };
+    try {
+      syncChannelRef.current?.postMessage(payload);
+    } catch {
+      // ignore
+    }
+    try {
+      localStorage.setItem(`conduct_exam_sync_ping_${resolvedExamId}`, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (!resolvedExamId) return undefined;
+
+    const handleSyncSignal = (payload) => {
+      if (!payload || String(payload.examId) !== String(resolvedExamId)) return;
+      syncSessionFromServer().catch(() => {});
+    };
+
+    if (typeof BroadcastChannel !== 'undefined') {
+      syncChannelRef.current = new BroadcastChannel(getSyncChannelName(resolvedExamId));
+      syncChannelRef.current.onmessage = (event) => handleSyncSignal(event.data);
+    }
+
+    const onStorage = (event) => {
+      if (event.key !== `conduct_exam_sync_ping_${resolvedExamId}` || !event.newValue) return;
+      try {
+        handleSyncSignal(JSON.parse(event.newValue));
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      if (syncChannelRef.current) {
+        syncChannelRef.current.close();
+        syncChannelRef.current = null;
+      }
+    };
   }, [resolvedExamId]);
 
   const hydrateSession = (payload, { preserveDirtyAnswers = false } = {}) => {
@@ -117,6 +178,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       const response = await examsApi.submitSubjectiveConductExam(resolvedExamId, sessionIdRef.current);
       if (response?.data) {
         hydrateSession(response.data);
+        broadcastSessionSync();
         setNotice('Time expired. Your exam was auto-submitted.');
       }
     } catch (err) {
@@ -177,6 +239,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
         throw new Error(response?.message || 'Unable to save answers.');
       }
       hydrateSession(response.data);
+      broadcastSessionSync();
       if (!silent) {
         setNotice('Answers saved');
       }
@@ -284,6 +347,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
           image_answer_url: imageUrl,
         },
       }));
+      broadcastSessionSync();
       setNotice('Answer image uploaded');
     } catch (err) {
       setError(err.message || 'Unable to upload answer image.');
@@ -302,6 +366,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
         throw new Error(response?.message || 'Unable to submit conduct exam.');
       }
       hydrateSession(response.data);
+      broadcastSessionSync();
       setNotice('Conduct exam submitted successfully');
     } catch (err) {
       setError(err.message || 'Unable to submit conduct exam.');

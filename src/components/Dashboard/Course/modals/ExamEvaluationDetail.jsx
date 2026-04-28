@@ -438,7 +438,212 @@ const ExamEvaluationDetail = ({
   const [darkMode, setDarkMode] = useState(false); 
   const [previewMode, setPreviewMode] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [activeJobId, setActiveJobId] = useState(null);
   const answerScriptRef = useRef(null);
+  const pollingTimerRef = useRef(null);
+
+  const clearPollingTimer = () => {
+    if (pollingTimerRef.current) {
+      clearTimeout(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+  };
+
+  const normalizeConductQuestion = (question, fallbackIndex) => ({
+    ...question,
+    question_number: question.question_number || fallbackIndex + 1,
+    max_marks: question.max_marks ?? question.marks ?? 0,
+    rubric_items: question.rubric_items || [],
+  });
+
+  const buildEvaluationFromMarks = (questionList, marksMap) => {
+    const evaluations = {};
+    let totalMarks = 0;
+
+    questionList.forEach((question) => {
+      const questionMarks = marksMap[question.question_number];
+      if (!questionMarks) {
+        return;
+      }
+
+      const questionTotal = parseFloat(questionMarks.total || 0);
+      totalMarks += questionTotal;
+      evaluations[`question_${question.question_number}`] = {
+        item_grades: questionMarks.itemGrades || [],
+        total_marks: questionTotal,
+        overall_feedback: questionMarks.feedback || '',
+        max_marks: question.max_marks || 0,
+      };
+    });
+
+    return {
+      total_marks: totalMarks,
+      evaluations,
+      evaluation_status: Object.keys(evaluations).length > 0 ? 'completed' : 'pending',
+      overall_feedback: Object.values(evaluations)
+        .map((item) => item.overall_feedback)
+        .filter(Boolean),
+    };
+  };
+
+  const hydrateConductSubmissionDetail = (detail) => {
+    const detailQuestions = (detail?.questions || []).map((question, index) =>
+      normalizeConductQuestion(question, index)
+    );
+
+    setStudent({
+      enrollment_id: detail?.enrollment_id ?? enrollmentId,
+      student_name: detail?.student_name || studentInfo?.student_name || 'Student Name',
+      roll_number: detail?.roll_number || studentInfo?.roll_number || '',
+      marks_obtained: detail?.awarded_total_marks ?? studentInfo?.marks_obtained ?? null,
+      feedback: (detail?.overall_feedback || []).join('\n'),
+    });
+
+    setQuestions(detailQuestions);
+    setAnswerScript({
+      isConductExam: true,
+      questions: detailQuestions,
+    });
+
+    const nextMarks = {};
+    detailQuestions.forEach((question) => {
+      const evaluationData =
+        question.evaluation ||
+        detail?.evaluations?.[String(question.question_number)] ||
+        detail?.evaluations?.[`question_${question.question_number}`] ||
+        null;
+
+      const itemGrades = Array.isArray(evaluationData?.item_grades) && evaluationData.item_grades.length > 0
+        ? evaluationData.item_grades.map((grade, index) => ({
+            item_number: grade.item_number ?? index + 1,
+            marks_awarded: parseFloat(grade.marks_awarded || 0),
+            feedback: grade.feedback || '',
+            max_marks: grade.max_marks ?? question.rubric_items?.[index]?.max_marks ?? 0,
+          }))
+        : (question.rubric_items || []).map((item, index) => ({
+            item_number: item.description || index + 1,
+            marks_awarded: 0,
+            feedback: '',
+            max_marks: item.max_marks ?? 0,
+          }));
+
+      nextMarks[question.question_number] = {
+        total: parseFloat(evaluationData?.total_marks ?? question.marks_awarded ?? 0),
+        feedback: evaluationData?.overall_feedback ?? question.feedback ?? '',
+        itemGrades,
+      };
+    });
+
+    setMarks(nextMarks);
+
+    const firstQuestion = detailQuestions[0];
+    if (firstQuestion) {
+      const firstMarks = nextMarks[firstQuestion.question_number] || { feedback: '', itemGrades: [] };
+      setRubrics((firstQuestion.rubric_items || []).map((item, index) => ({
+        ...item,
+        marks_awarded: firstMarks.itemGrades[index]?.marks_awarded || 0,
+        feedback: firstMarks.itemGrades[index]?.feedback || '',
+      })));
+      setFeedback(firstMarks.feedback || '');
+    } else {
+      setRubrics([]);
+      setFeedback('');
+    }
+
+    const normalizedEvaluations = {};
+    Object.entries(detail?.evaluations || {}).forEach(([key, value]) => {
+      const normalizedKey = String(key).startsWith('question_') ? String(key) : `question_${key}`;
+      normalizedEvaluations[normalizedKey] = value;
+    });
+
+    if (Object.keys(normalizedEvaluations).length > 0) {
+      setEvaluation({
+        total_marks: parseFloat(detail?.awarded_total_marks ?? 0),
+        evaluations: normalizedEvaluations,
+        evaluation_status: detail?.evaluation_status || 'completed',
+        overall_feedback: detail?.overall_feedback || [],
+      });
+      setActiveTab('result');
+    } else {
+      setEvaluation(null);
+      setActiveTab('script');
+    }
+  };
+
+  const fetchConductSubmissionDetail = async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/exams/conduct-exams/submissions/${conductSubmissionId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch conduct submission: ${response.status}`);
+    }
+
+    const detail = await response.json();
+    hydrateConductSubmissionDetail(detail.data || {});
+    return detail.data || {};
+  };
+
+  const pollConductEvaluationJob = async (jobId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/exams/professor/jobs/evaluations/${jobId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to poll evaluation job: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const job = result.data || {};
+      const jobStatus = String(job.status || '').toLowerCase();
+
+      if (['completed', 'completed_with_errors'].includes(jobStatus)) {
+        clearPollingTimer();
+        setActiveJobId(null);
+        setIsAIEvaluating(false);
+        await fetchConductSubmissionDetail();
+        setToast({
+          show: true,
+          message: 'AI evaluation completed successfully!',
+          type: 'success'
+        });
+        onComplete && onComplete(job);
+        return;
+      }
+
+      if (['failed', 'canceled', 'cancelled'].includes(jobStatus)) {
+        clearPollingTimer();
+        setActiveJobId(null);
+        setIsAIEvaluating(false);
+        throw new Error(job.error || 'AI evaluation failed');
+      }
+
+      pollingTimerRef.current = setTimeout(() => {
+        pollConductEvaluationJob(jobId);
+      }, 1500);
+    } catch (err) {
+      clearPollingTimer();
+      setActiveJobId(null);
+      setIsAIEvaluating(false);
+      setError(err.message || 'AI evaluation failed. Please try again.');
+      setToast({
+        show: true,
+        message: err.message || 'AI evaluation failed. Please try again.',
+        type: 'error'
+      });
+    }
+  };
 
   
   const questionScores = questions.map((q, idx) => {
@@ -455,6 +660,10 @@ const ExamEvaluationDetail = ({
       setError(null);
       
       try {
+        if (isConductExam && conductSubmissionId) {
+          await fetchConductSubmissionDetail();
+          return;
+        }
         
         if (!studentInfo) {
           try {
@@ -645,34 +854,7 @@ const ExamEvaluationDetail = ({
             setMarks(initialMarks);
           }
           
-          // Fetch student answers - DIFFERENT for conduct exams
-          if (isConductExam && conductSubmissionId) {
-            // NEW: Fetch conduct exam submission detail
-            const answersResponse = await fetch(
-              `${API_BASE_URL}/exams/conduct-exams/submissions/${conductSubmissionId}`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-              }
-            );
-            
-            if (answersResponse.ok) {
-              const answersData = await answersResponse.json();
-              
-              // For now, just set a placeholder - we'll handle answer display differently
-              // Conduct exams have text and image answers per question
-              setAnswerScript({
-                isConductExam: true,
-                questions: answersData.data.questions || []
-              });
-            } else {
-              setAnswerScript(null);
-            }
-          } else {
-            // Existing: Use placeholder for evaluated exams
-            setAnswerScript("/api/placeholder/800/1200");
-          }
+          setAnswerScript("/api/placeholder/800/1200");
           
         } catch (err) {
           console.error("Error fetching questions:", err);
@@ -688,6 +870,9 @@ const ExamEvaluationDetail = ({
     };
     
     fetchEvaluationData();
+    return () => {
+      clearPollingTimer();
+    };
   }, [examId, enrollmentId, studentInfo, isConductExam, conductSubmissionId]);
   
   
@@ -920,19 +1105,40 @@ const ExamEvaluationDetail = ({
       let response;
       
       if (isConductExam && conductSubmissionId) {
-        // NEW: Call conduct exam AI evaluation endpoint
         response = await fetch(
-          `${API_BASE_URL}/exams/conduct-exams/submissions/${conductSubmissionId}/ai-evaluate`,
+          `${API_BASE_URL}/exams/${examId}/evaluations/jobs`,
           {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
               'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({
+              enrollment_ids: [parseInt(enrollmentId, 10)],
+              force_reevaluate: true,
+              model: 'current'
+            })
           }
         );
+        if (!response.ok) {
+          throw new Error(`AI evaluation failed: ${response.status}`);
+        }
+
+        const result = await response.json();
+        const jobId = result?.data?.job_id;
+        if (!jobId) {
+          throw new Error(result?.message || 'Failed to start AI evaluation');
+        }
+
+        setActiveJobId(jobId);
+        setToast({
+          show: true,
+          message: 'AI evaluation started. We are scoring this submission in the background.',
+          type: 'info'
+        });
+        await pollConductEvaluationJob(jobId);
+        return;
       } else {
-        // Existing: Call evaluated exam AI evaluation endpoint (if it exists)
         response = await fetch(
           `${API_BASE_URL}/exams/${examId}/evaluate/${enrollmentId}/ai-evaluate`,
           {
@@ -944,11 +1150,11 @@ const ExamEvaluationDetail = ({
           }
         );
       }
-      
+
       if (!response.ok) {
         throw new Error(`AI evaluation failed: ${response.status}`);
       }
-      
+
       const result = await response.json();
       
       if (result.code === 200) {
@@ -958,7 +1164,6 @@ const ExamEvaluationDetail = ({
           type: 'success' 
         });
         
-        // Update marks from AI evaluation result
         if (result.data && result.data.evaluations) {
           const updatedMarks = {};
           
@@ -978,7 +1183,6 @@ const ExamEvaluationDetail = ({
           
           setMarks(updatedMarks);
           
-          // Update current question rubrics
           const currentQuestion = questions[currentQuestionIndex];
           if (currentQuestion && updatedMarks[currentQuestion.question_number]) {
             const currentMarks = updatedMarks[currentQuestion.question_number];
@@ -1006,7 +1210,9 @@ const ExamEvaluationDetail = ({
         type: 'error' 
       });
     } finally {
-      setIsAIEvaluating(false);
+      if (!isConductExam) {
+        setIsAIEvaluating(false);
+      }
     }
   };
   
@@ -1017,10 +1223,16 @@ const ExamEvaluationDetail = ({
     try {
       // Prepare evaluation data
       const evaluationData = {
-        answers: Object.keys(marks).map(questionNumber => ({
-          question_id: parseInt(questionNumber),
-          marks_obtained: marks[questionNumber].total,
-          feedback: marks[questionNumber].feedback || ''
+        answers: questions.map((question) => ({
+          question_id: question.id,
+          marks_awarded: parseFloat(marks[question.question_number]?.total || 0),
+          feedback: marks[question.question_number]?.feedback || '',
+          item_grades: (marks[question.question_number]?.itemGrades || []).map((grade, index) => ({
+            item_number: grade.item_number ?? index + 1,
+            marks_awarded: parseFloat(grade.marks_awarded || 0),
+            feedback: grade.feedback || '',
+            max_marks: grade.max_marks || 0
+          }))
         }))
       };
       
@@ -1071,7 +1283,12 @@ const ExamEvaluationDetail = ({
         const result = await response.json();
         
         if (result.code === 200) {
-          setEvaluation(result.data);
+          if (isConductExam) {
+            hydrateConductSubmissionDetail(result.data);
+            setEvaluation(buildEvaluationFromMarks(questions, marks));
+          } else {
+            setEvaluation(result.data);
+          }
           setToast({ 
             show: true, 
             message: 'Evaluation submitted successfully!', 
@@ -1510,17 +1727,44 @@ const ExamEvaluationDetail = ({
                           </div>
                         )}
                         
-                        {answerScript.questions[currentQuestionIndex].image_answer_url && (
+                        {Array.isArray(answerScript.questions[currentQuestionIndex].answer_images) &&
+                          answerScript.questions[currentQuestionIndex].answer_images.length > 0 && (
+                          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'} border rounded-lg p-4`}>
+                            <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                              Uploaded Images:
+                            </h4>
+                            <div className="space-y-4">
+                              {answerScript.questions[currentQuestionIndex].answer_images.map((imageItem) => (
+                                <motion.div
+                                  key={imageItem.id || imageItem.image_url}
+                                  className="relative cursor-zoom-in"
+                                  animate={{ scale: zoomLevel }}
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  <img
+                                    src={imageItem.image_url}
+                                    alt={imageItem.original_filename || 'Student Answer'}
+                                    className="max-w-full object-contain"
+                                  />
+                                </motion.div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {answerScript.questions[currentQuestionIndex].image_answer_url &&
+                          (!Array.isArray(answerScript.questions[currentQuestionIndex].answer_images) ||
+                            answerScript.questions[currentQuestionIndex].answer_images.length === 0) && (
                           <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'} border rounded-lg p-4`}>
                             <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                               Image Answer:
                             </h4>
-                            <motion.div 
+                            <motion.div
                               className="relative cursor-zoom-in"
                               animate={{ scale: zoomLevel }}
                               transition={{ duration: 0.3 }}
                             >
-                              <img 
+                              <img
                                 src={answerScript.questions[currentQuestionIndex].image_answer_url}
                                 alt="Student Answer"
                                 className="max-w-full object-contain"
@@ -1528,9 +1772,28 @@ const ExamEvaluationDetail = ({
                             </motion.div>
                           </div>
                         )}
+
+                        {answerScript.questions[currentQuestionIndex].zip_answer_url && (
+                          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'} border rounded-lg p-4`}>
+                            <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                              ZIP Answer:
+                            </h4>
+                            <a
+                              href={answerScript.questions[currentQuestionIndex].zip_answer_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm text-blue-600 hover:text-blue-700 underline"
+                            >
+                              Open uploaded ZIP file
+                            </a>
+                          </div>
+                        )}
                         
                         {!answerScript.questions[currentQuestionIndex].text_answer && 
-                         !answerScript.questions[currentQuestionIndex].image_answer_url && (
+                         !answerScript.questions[currentQuestionIndex].image_answer_url &&
+                         !(Array.isArray(answerScript.questions[currentQuestionIndex].answer_images) &&
+                           answerScript.questions[currentQuestionIndex].answer_images.length > 0) &&
+                         !answerScript.questions[currentQuestionIndex].zip_answer_url && (
                           <div className={`text-center p-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             No answer provided for this question
                           </div>
@@ -1684,7 +1947,7 @@ const ExamEvaluationDetail = ({
                         hoverEffect={false}
                       >
                         <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {currentQuestion.answer_text || currentQuestion.answer_body || currentQuestion.answer_key || currentQuestion.model_answer || 'Model answer not available'}
+                          {currentQuestion.problem_feedback || currentQuestion.answer_text || currentQuestion.answer_body || currentQuestion.answer_key || currentQuestion.model_answer || 'Model answer not available'}
                         </p>
                       </AnimatedCard>
                     </motion.div>

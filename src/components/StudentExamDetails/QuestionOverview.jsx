@@ -17,6 +17,12 @@ const QuestionOverview = ({ questions, detailedFeedback }) => {
     );
   }
 
+  const getItemMaxMarks = (item, question) =>
+    item?.total_marks ??
+    item?.max_marks ??
+    question?.max_marks ??
+    0;
+
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Question Overview</h2>
@@ -69,7 +75,7 @@ const QuestionOverview = ({ questions, detailedFeedback }) => {
                       <ul className="list-disc list-inside text-sm text-gray-700 mt-1 space-y-1">
                         {detailedFeedback[question.question_number].items.map((item, index) => (
                           <li key={index}>
-                            {item.feedback} (Marks: {item.marks_obtained}/{item.total_marks})
+                            {item.feedback} (Marks: {item.marks_obtained ?? item.marks_awarded ?? 0}/{getItemMaxMarks(item, question)})
                           </li>
                         ))}
                       </ul>

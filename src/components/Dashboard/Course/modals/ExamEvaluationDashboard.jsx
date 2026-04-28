@@ -747,6 +747,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
   const loadMoreSentinelRef = useRef(null);
   const loadMoreObserverRef = useRef(null);
   const manualPageChangeRef = useRef(false);
+  const latestRequestIdRef = useRef(0);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -1122,6 +1123,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
   }, [searchQuery]);
 
   const fetchEnrollments = useCallback(async (opts = {}) => {
+    const requestId = ++latestRequestIdRef.current;
     try {
       if (!examId) throw new Error("Exam ID is missing");
 
@@ -1166,6 +1168,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       }
 
       const data = await resp.json();
+      if (requestId !== latestRequestIdRef.current) return;
       const enrollments = data?.data?.enrollments;
       if (!Array.isArray(enrollments)) {
         throw new Error("Invalid response format from API");
@@ -1211,9 +1214,11 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
         return next;
       });
     } catch (e) {
+      if (requestId !== latestRequestIdRef.current) return;
       console.error("Dashboard fetch enrollments error:", e);
       setError(e.message || "Failed to load enrollments");
     } finally {
+      if (requestId !== latestRequestIdRef.current) return;
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
@@ -1233,8 +1238,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
     setPage(1);
     setTotalPages(1);
     setTotalStudents(0);
-    fetchEnrollments({ pageOverride: 1, replace: true });
-  }, [debouncedSearch, fetchEnrollments]);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     if (!loadMoreSentinelRef.current) return;
@@ -1358,8 +1362,8 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
 
       const ids = Array.isArray(enrollmentIds) ? enrollmentIds : [];
       if (ids.length === 0) throw new Error("No students selected");
-
-      const resp = await fetch(`${API_BASE_URL}/exams/${examId}/evaluations/jobs`, {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/celery/${examId}/evaluations/jobs`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1408,6 +1412,10 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
       await pollEvaluationJob(jobId);
       
       return jobId;
+    } catch (e) {
+      console.error("Failed to start evaluation job:", e);
+      throw e;
+    }
     },
     [examId, pollEvaluationJob, stopEvaluationJobPolling]
   );

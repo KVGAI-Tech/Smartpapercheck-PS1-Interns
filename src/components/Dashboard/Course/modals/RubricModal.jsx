@@ -1170,11 +1170,17 @@ const RubricModal = ({
         setQuestionRubricSettings((prev) => {
             const next = {};
             normalizedInputQuestions.forEach((question) => {
+                // Always prefer the database value (question.num_rubric_items) over previous state
+                // This ensures we use the detected subpart count from the backend
+                const dbValue = question.num_rubric_items;
+                const existingRubricsCount = getQuestionRubricItems(question).length;
+                const previousValue = prev?.[question.question_number]?.num_rubric_items;
+                
+                // Priority: Database value > Previous UI state > Existing rubrics > Default 1
+                const initialCount = dbValue || previousValue || existingRubricsCount || 1;
+                
                 next[question.question_number] = {
-                    num_rubric_items: clampRubricCount(
-                        prev?.[question.question_number]?.num_rubric_items,
-                        question.num_rubric_items || getQuestionRubricItems(question).length || 1
-                    ),
+                    num_rubric_items: clampRubricCount(initialCount, 1),
                     professor_instructions:
                         typeof prev?.[question.question_number]?.professor_instructions === 'string'
                             ? prev[question.question_number].professor_instructions
@@ -1437,8 +1443,12 @@ const RubricModal = ({
                 const subparts = parseQuestionSubparts(combined);
 
                 // Get the configured num_rubric_items for this question
+                // Priority: Database value (detected subparts) > UI override > Default
                 const questionSettings = questionRubricSettings[q.question_number] || {};
-                const desiredRubricCount = questionSettings.num_rubric_items || numRubricItems || 3;
+                const desiredRubricCount = q.num_rubric_items  // Use database value (detected subparts)
+                    || questionSettings.num_rubric_items  // Or UI override
+                    || numRubricItems  // Or global setting
+                    || 3;  // Or default
 
                 return {
                     question_id: q.question_number, 
