@@ -524,9 +524,16 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
                       </div>
                     </div>
 
-                    <h2 className="text-xl font-bold text-gray-900 leading-relaxed mb-6 whitespace-pre-wrap">
-                      {question.question_text}
-                    </h2>
+                    {question.question_body ? (
+                      <div
+                        className="prose prose-sm max-w-none text-lg font-semibold text-gray-900"
+                        dangerouslySetInnerHTML={{ __html: question.question_body }}
+                      />
+                    ) : (
+                      <h2 className="text-xl font-bold text-gray-900 leading-relaxed mb-6 whitespace-pre-wrap">
+                        {question.question_text}
+                      </h2>
+                    )}
 
                     {question.image_url && (
                       <div className="rounded-2xl border border-gray-100 bg-gray-50 overflow-hidden mb-8">

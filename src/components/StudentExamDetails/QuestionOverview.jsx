@@ -61,7 +61,31 @@ const QuestionOverview = ({ questions, detailedFeedback }) => {
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="px-4 pb-4"
               >
-                <div className="border-t border-gray-200 pt-4">
+                <div className="border-t border-gray-200 pt-4 space-y-4">
+                  {/* Question Content */}
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <h4 className="text-xs uppercase tracking-wider text-gray-500 font-bold mb-2">Question:</h4>
+                    {question.image_url && (
+                      <div className="mb-4 rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm max-w-md mx-auto">
+                        <img 
+                          src={question.image_url} 
+                          alt={`Question ${question.question_number}`}
+                          className="w-full h-auto object-contain"
+                        />
+                      </div>
+                    )}
+                    {question.question_body ? (
+                      <div 
+                        className="prose prose-sm max-w-none text-gray-800"
+                        dangerouslySetInnerHTML={{ __html: question.question_body }}
+                      />
+                    ) : (
+                      <p className="text-gray-800 text-sm whitespace-pre-wrap">
+                        {question.question_text}
+                      </p>
+                    )}
+                  </div>
+
                   {question.feedback && (
                     <div className="mb-4">
                       <h4 className="text-md font-medium text-gray-800">Overall Feedback:</h4>

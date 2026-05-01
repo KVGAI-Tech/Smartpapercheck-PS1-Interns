@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useAnimation, useMotionValue, useTransform } from 'framer-motion';
 import { API_BASE_URL } from '../../../../BaseURL';
+import { getSafeImageUrl } from '../../../../lib/utils';
 
 const AnimatedButton = ({ 
   children, 
@@ -1921,9 +1922,28 @@ const ExamEvaluationDetail = ({
                         className={`p-4 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}
                         hoverEffect={false}
                       >
-                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {currentQuestion.question_text || 'No question text available'}
-                        </p>
+                        <div className="space-y-4">
+                          {currentQuestion.question_file_url && (
+                            <div className="rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm group relative">
+                              <img
+                                src={getSafeImageUrl(currentQuestion.question_file_url)}
+                                alt={`Question ${currentQuestionNumber}`}
+                                className="w-full h-auto object-contain max-h-64 transition-transform duration-300 group-hover:scale-[1.01]"
+                              />
+                            </div>
+                          )}
+                          
+                          {currentQuestion.question_body ? (
+                            <div 
+                              className={`prose prose-sm max-w-none ${darkMode ? 'prose-invert prose-p:text-gray-300' : 'prose-p:text-gray-700'}`}
+                              dangerouslySetInnerHTML={{ __html: currentQuestion.question_body }}
+                            />
+                          ) : (
+                            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {currentQuestion.question_text || 'No question text available'}
+                            </p>
+                          )}
+                        </div>
                       </AnimatedCard>
                     </motion.div>
                     
@@ -1943,12 +1963,28 @@ const ExamEvaluationDetail = ({
                       </div>
                       
                       <AnimatedCard 
-                        className={`p-4 ${darkMode ? 'bg-green-800/20 border-green-700/30' : 'bg-green-50 border-green-100'}`}
+                        className={`p-4 overflow-auto max-h-[400px] ${darkMode ? 'bg-green-900/10 border-green-700/30' : 'bg-green-50/50 border-green-100'}`}
                         hoverEffect={false}
                       >
-                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {currentQuestion.problem_feedback || currentQuestion.answer_text || currentQuestion.answer_body || currentQuestion.answer_key || currentQuestion.model_answer || 'Model answer not available'}
-                        </p>
+                        {(() => {
+                          const answerHtml = currentQuestion.answer_body || currentQuestion.answer_key || currentQuestion.model_answer || currentQuestion.answer_text || currentQuestion.problem_feedback;
+                          if (!answerHtml) return <p className={`italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Model answer not available</p>;
+                          
+                          // Check if it looks like HTML
+                          if (typeof answerHtml === 'string' && (answerHtml.includes('<p>') || answerHtml.includes('<div>') || answerHtml.includes('<img'))) {
+                            return (
+                              <div 
+                                className={`prose prose-sm max-w-none ${darkMode ? 'prose-invert prose-p:text-gray-300' : 'prose-p:text-gray-700'} prose-img:rounded-lg prose-img:shadow-sm prose-img:max-h-64 prose-img:w-auto prose-img:object-contain`}
+                                dangerouslySetInnerHTML={{ __html: answerHtml }} 
+                              />
+                            );
+                          }
+                          return (
+                            <p className={`whitespace-pre-wrap ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {answerHtml}
+                            </p>
+                          );
+                        })()}
                       </AnimatedCard>
                     </motion.div>
                     

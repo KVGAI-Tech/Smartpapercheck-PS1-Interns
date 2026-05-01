@@ -285,6 +285,39 @@ const StudentEvaluationLoader = ({
     };
   };
 
+  // Helper function to get rubric item by item_number
+  const getRubricItemByNumber = (itemNumber) => {
+    const currentQ = getCurrentQuestion();
+    if (!currentQ?.rubric_items) return null;
+    
+    return currentQ.rubric_items.find(r => r.item_number === itemNumber);
+  };
+
+  // Helper function to get max marks for a rubric item
+  const getItemMaxMarks = (itemNumber) => {
+    const currentQ = getCurrentQuestion();
+    if (!currentQ) return 0;
+    
+    // Try rubric items first - find by item_number, not index
+    const rubricItem = getRubricItemByNumber(itemNumber);
+    const rubricMax = rubricItem?.max_marks;
+    if (rubricMax && rubricMax > 0) return rubricMax;
+    
+    // Try item itself from evaluation
+    const evaluation = getEffectiveEvaluation();
+    const gradeItem = evaluation?.item_grades?.find(g => g.item_number === itemNumber);
+    const itemMax = gradeItem?.max_marks;
+    if (itemMax && itemMax > 0) return itemMax;
+    
+    // Calculate from question max_marks divided by number of items
+    const questionMax = Math.abs(currentQ.max_marks || 0);
+    const numItems = evaluation?.item_grades?.length || 1;
+    const divided = questionMax / numItems;
+    
+    // Round to nearest 0.5 to avoid decimals like 3.33
+    return Math.round(divided * 2) / 2;
+  };
+
   const handleSaveManualMarks = async () => {
     const effective = getEffectiveEvaluation();
     const currentQ = getCurrentQuestion();
@@ -752,24 +785,48 @@ const StudentEvaluationLoader = ({
             className="flex-1 overflow-auto bg-slate-100"
             onScroll={handleScroll}
           >
-            {currentPage && currentPage.imageUrl ? (
-              <PageViewer
-                url={currentPage.imageUrl}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomReset={handleZoomReset}
-                zoomLevel={zoomLevel}
-              />
+            {currentPage && (currentPage.imageUrl || currentPage.type === 'text') ? (
+              currentPage.imageUrl ? (
+                <PageViewer
+                  url={currentPage.imageUrl}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onZoomReset={handleZoomReset}
+                  zoomLevel={zoomLevel}
+                />
+              ) : (
+                <div className="p-4 md:p-8 max-w-4xl mx-auto h-full overflow-auto">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-2xl shadow-xl p-6 md:p-10 border border-slate-200 min-h-[500px]"
+                  >
+                    <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                      <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                        <Pencil className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900">Student's Written Answer</h3>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">Typed response</p>
+                      </div>
+                    </div>
+                    <div 
+                      className="prose prose-slate max-w-none text-slate-700 leading-relaxed ql-editor" 
+                      dangerouslySetInnerHTML={{ __html: currentPage.text || currentPage.text_answer || "" }} 
+                    />
+                  </motion.div>
+                </div>
+              )
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center p-8 text-slate-400">
                   <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                  <p className="text-lg font-medium">
-                    No answer sheet available
+                  <p className="text-lg font-medium text-slate-600">
+                    No answer content available
                   </p>
-                  <p className="text-sm mt-2 max-w-md">
-                    The student may not have submitted their answer yet or there
-                    might be an issue loading the document.
+                  <p className="text-sm mt-2 max-w-md text-slate-500">
+                    The student may not have submitted their answer for this question yet or there
+                    might be an issue loading the content.
                   </p>
                 </div>
               </div>
@@ -893,41 +950,38 @@ const StudentEvaluationLoader = ({
                           </span>
                         </h4>
                       </div>
-                      <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden p-2">
-                        {questionHasImage ? (
+                      <div className="w-full h-full overflow-auto p-3 text-left space-y-4">
+                        {questionHasImage && (
                           <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="cursor-pointer relative w-full h-full flex items-center justify-center"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="cursor-pointer relative w-full flex items-center justify-center bg-gray-50 rounded-lg border border-gray-100 overflow-hidden group"
                             onClick={handleOpenQuestionImage}
                           >
                             <img
-                              src={getSafeImageUrl(
-                                currentQuestion.question_file_url
-                              )}
+                              src={getSafeImageUrl(currentQuestion.question_file_url)}
                               alt={`Question ${questionNumber}`}
-                              className="max-h-full object-contain rounded shadow-sm"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                              }}
+                              className="max-h-64 object-contain transition-transform duration-300 group-hover:scale-[1.01]"
+                              onError={(e) => { e.target.onerror = null; }}
                             />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 flex items-center justify-center opacity-0 hover:opacity-100 transition-all rounded">
-                              <div className="bg-accent text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center">
+                            <div className="absolute inset-0 bg-black/0 hover:bg-black/5 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
+                              <div className="bg-accent text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center shadow-lg">
                                 <ZoomIn className="w-3.5 h-3.5 mr-1" />
                                 Zoom
                               </div>
                             </div>
                           </motion.div>
-                        ) : questionHasText ? (
-                          <div className="w-full h-full overflow-auto p-3 text-left">
-                            <p className="text-sm text-gray-700 whitespace-pre-line">
-                              {currentQuestion.question_text || currentQuestion.question_body}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center text-gray-400">
+                        )}
+                        
+                        {questionHasText ? (
+                          <div 
+                            className="text-sm text-gray-700 ql-editor prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{ __html: currentQuestion.question_body || currentQuestion.question_text }}
+                          />
+                        ) : !questionHasImage && (
+                          <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                             <FileText className="w-10 h-10 mb-2" />
-                            <span className="text-sm">No question available</span>
+                            <span className="text-sm">No question content available</span>
                           </div>
                         )}
                       </div>
@@ -974,9 +1028,11 @@ const StudentEvaluationLoader = ({
                           </motion.div>
                         ) : answerHasText ? (
                           <div className="w-full h-full overflow-auto p-3 text-left">
-                            <p className="text-sm text-gray-700 whitespace-pre-line">
-                              {answerKeyText}
-                            </p>
+                            <div 
+                              className="text-sm text-gray-700 ql-editor"
+                              style={{ whiteSpace: 'pre-wrap' }}
+                              dangerouslySetInnerHTML={{ __html: answerKeyText }}
+                            />
                           </div>
                         ) : (
                           <div className="flex flex-col items-center text-gray-400">
@@ -1018,7 +1074,7 @@ const StudentEvaluationLoader = ({
                           <h5 className="text-xs uppercase text-accent font-medium mb-1">
                             Overall Feedback
                           </h5>
-                          <div className="text-sm text-gray-700 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                          <div className="text-sm text-gray-700 p-3 bg-white rounded-lg border border-gray-200 shadow-sm leading-relaxed">
                             {getEffectiveEvaluation().overall_feedback}
                           </div>
                         </div>
@@ -1037,7 +1093,7 @@ const StudentEvaluationLoader = ({
                   exit="exit"
                   className="space-y-6"
                 >
-                  {getEffectiveEvaluation() ? (
+                  {getEffectiveEvaluation() && (getEffectiveEvaluation().item_grades?.length > 0 || getEffectiveEvaluation().overall_feedback !== "Evaluation pending") ? (
                     <>
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -1096,7 +1152,11 @@ const StudentEvaluationLoader = ({
                             </span>
                           </div>
 
-                          {getEffectiveEvaluation().item_grades?.map((item, index) => (
+                          {getEffectiveEvaluation().item_grades?.map((item, index) => {
+                            const rubricItem = getRubricItemByNumber(item.item_number);
+                            const itemMaxMarks = getItemMaxMarks(item.item_number);
+                            
+                            return (
                             <motion.div
                               key={index}
                               initial={{ opacity: 0, y: 10 }}
@@ -1110,8 +1170,7 @@ const StudentEvaluationLoader = ({
                                     {item.item_number}
                                   </div>
                                   <h5 className="text-sm font-medium text-gray-900 line-clamp-1">
-                                    {currentQuestion?.rubric_items?.[index]
-                                      ?.description || "No description available"}
+                                    {rubricItem?.description || item.feedback?.split('.')[0] + '.' || "No description available"}
                                   </h5>
                                 </div>
                                 <div className="flex items-center gap-1 text-sm px-3 py-1.5 bg-accent/5 rounded-lg shadow-sm whitespace-nowrap">
@@ -1122,18 +1181,11 @@ const StudentEvaluationLoader = ({
                                       value={item.marks_awarded ?? ""}
                                       min={0}
                                       step={0.5}
-                                      max={
-                                        currentQuestion?.rubric_items?.[index]?.max_marks ??
-                                        item.max_marks ??
-                                        0
-                                      }
+                                      max={itemMaxMarks}
                                       onChange={(e) => {
                                         const raw = e.target.value;
                                         const parsed = parseFloat(raw);
-                                        const maxVal =
-                                          currentQuestion?.rubric_items?.[index]?.max_marks ??
-                                          item.max_marks ??
-                                          0;
+                                        const maxVal = itemMaxMarks;
                                         const safe = isNaN(parsed)
                                           ? 0
                                           : Math.min(Math.max(parsed, 0), maxVal);
@@ -1179,20 +1231,20 @@ const StudentEvaluationLoader = ({
                                   )}
                                   <span className="text-gray-400">/</span>
                                   <span className="text-gray-600">
-                                    {currentQuestion?.rubric_items?.[index]?.max_marks ?? item.max_marks ?? 0}
+                                    {itemMaxMarks}
                                   </span>
                                 </div>
                               </div>
 
                               <div className="relative">
-                                {currentQuestion?.rubric_items?.[index]?.grading_guidelines && (
+                                {rubricItem?.grading_guidelines && (
                                   <details className="mb-2 bg-gray-50 border border-gray-200 rounded-md">
                                     <summary className="cursor-pointer px-3 py-1.5 text-xs font-medium text-gray-700 flex items-center justify-between">
                                       <span>Marking guidelines</span>
                                       <span className="text-gray-400 text-[10px]">Click to view</span>
                                     </summary>
                                     <div className="px-3 pb-2 pt-1 text-xs text-gray-600 whitespace-pre-line">
-                                      {currentQuestion.rubric_items[index].grading_guidelines}
+                                      {rubricItem.grading_guidelines}
                                     </div>
                                   </details>
                                 )}
@@ -1208,24 +1260,38 @@ const StudentEvaluationLoader = ({
                                     className="h-full bg-accent rounded-full"
                                     style={{
                                       width: `${
-                                        ((item.marks_awarded || 0) /
-                                          ((currentQuestion?.rubric_items?.[index]?.max_marks ||
-                                            item.max_marks ||
-                                            1))) * 100
+                                        ((item.marks_awarded || 0) / itemMaxMarks) * 100
                                       }%`,
                                     }}
                                   ></div>
                                 </div>
                               </div>
                             </motion.div>
-                          ))}
+                          );
+                          })}
                         </motion.div>
                       </div>
                     </>
                   ) : (
-                    <p className="text-gray-500 max-w-md mx-auto px-4">
-                      Evaluation will be available after submission is complete.
-                    </p>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex flex-col items-center justify-center py-16 px-4 text-center"
+                    >
+                      <div className="w-20 h-20 bg-accent/5 rounded-full flex items-center justify-center mb-6 relative">
+                        <div className="absolute inset-0 border-2 border-dashed border-accent/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                        <Clock className="w-10 h-10 text-accent/40" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-slate-900 mb-2">Evaluation in Progress</h3>
+                      <p className="text-slate-500 max-w-sm mx-auto leading-relaxed">
+                        The AI evaluation for this question is currently pending. 
+                        Results will appear here automatically once the process is complete.
+                      </p>
+                      <div className="mt-8 flex items-center gap-2 text-xs font-medium text-accent bg-accent/5 px-4 py-2 rounded-full border border-accent/10">
+                        <Loader className="w-3.5 h-3.5 animate-spin" />
+                        <span>Awaiting AI response...</span>
+                      </div>
+                    </motion.div>
                   )}
                 </motion.div>
               )}
@@ -1334,14 +1400,13 @@ const StudentEvaluationLoader = ({
 
                         <div className="space-y-4">
                           {currentEvaluation.item_grades?.map((item, index) => {
-                            const rubricMax =
-                              currentQuestion?.rubric_items?.[index]?.max_marks || 0;
-                            const safeMax = rubricMax > 0 ? rubricMax : 1;
+                            const rubricItem = getRubricItemByNumber(item.item_number);
+                            const itemMax = getItemMaxMarks(item.item_number);
                             const percentage = Math.max(
                               0,
                               Math.min(
                                 100,
-                                (Number(item.marks_awarded || 0) / safeMax) * 100
+                                (Number(item.marks_awarded || 0) / itemMax) * 100
                               )
                             );
 
@@ -1350,10 +1415,11 @@ const StudentEvaluationLoader = ({
                                 <div className="flex justify-between items-center">
                                   <div className="text-sm text-gray-700 flex items-center gap-1.5">
                                     <div className="w-5 h-5 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-medium">
-                                      {index + 1}
+                                      {item.item_number}
                                     </div>
                                     <span className="line-clamp-1">
-                                      {currentQuestion?.rubric_items?.[index]?.description ||
+                                      {rubricItem?.description ||
+                                        item.feedback?.split('.')[0] + '.' ||
                                         `Criterion ${item.item_number}`}
                                     </span>
                                   </div>
@@ -1363,7 +1429,7 @@ const StudentEvaluationLoader = ({
                                     </span>
                                     <span className="text-gray-400">/</span>
                                     <span className="text-gray-600">
-                                      {rubricMax || 1}
+                                      {itemMax}
                                     </span>
                                   </div>
                                 </div>

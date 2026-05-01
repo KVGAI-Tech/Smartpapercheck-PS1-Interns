@@ -41,6 +41,8 @@ export default function fetchStudentEvaluation(
               pageNumber: page.page_number,
               totalPages: page.total_pages,
               imageUrl: page.presigned_url || page.url,
+              type: page.type || (page.text_answer ? "text" : "image"),
+              text_answer: page.text_answer,
               // Preserve question_number so UI can map pages to questions precisely
               questionNumber: page.question_number,
             }));
@@ -66,7 +68,39 @@ export default function fetchStudentEvaluation(
 
           setFeedbackEdits(initialFeedback);
 
-          fetchQuestions(examId, setQuestions, onError);
+          if (data.questions) {
+            console.log("Processing questions from feedback data:", typeof data.questions);
+            let questionsArray = [];
+            
+            if (Array.isArray(data.questions)) {
+              questionsArray = data.questions;
+            } else if (typeof data.questions === 'object') {
+              questionsArray = Object.entries(data.questions).map(([key, qData]) => {
+                const qNumFromKey = parseInt(key.replace('question_', ''));
+                const qNum = !isNaN(qNumFromKey) ? qNumFromKey : (qData.question_number || qData.number || 0);
+                return {
+                  ...qData,
+                  question_number: qNum,
+                  max_marks: Math.abs(qData.max_marks || qData.marks || 0)
+                };
+              });
+            }
+
+            questionsArray = questionsArray.filter(q => q != null).sort((a, b) => 
+              (a.question_number || 0) - (b.question_number || 0)
+            );
+
+            if (questionsArray.length > 0) {
+              console.log(`Successfully processed ${questionsArray.length} questions from feedback data`);
+              setQuestions(questionsArray);
+            } else {
+              console.log("No valid questions found in feedback data, falling back to fetchQuestions");
+              fetchQuestions(examId, setQuestions, onError);
+            }
+          } else {
+            console.log("No questions field in feedback data, calling fetchQuestions");
+            fetchQuestions(examId, setQuestions, onError);
+          }
         } else {
           console.error("Unexpected response structure:", response.data);
           const errorMessage = response.data?.message || "Failed to load student evaluation - unexpected response structure";

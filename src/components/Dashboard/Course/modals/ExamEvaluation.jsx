@@ -600,7 +600,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       if (!token) return;
 
       const resp = await fetch(
-        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/evaluation-stats?marks_mode=marks&bin_size=10`,
+        `${API_BASE_URL}/exams/${courseId}/exams/${examId}/evaluation-stats?marks_mode=marks&bin_size=10&model=${encodeURIComponent(resultsModel)}`,
         {
           method: 'GET',
           headers: {
@@ -667,7 +667,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     } catch (e) {
       // ignore; stats can fall back to pagination totals
     }
-  }, [courseId, examId]);
+  }, [courseId, examId, resultsModel]);
 
   useEffect(() => {
     if (overallProgress) lastOverallProgressRef.current = overallProgress;

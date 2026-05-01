@@ -3,12 +3,15 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../BaseURL";
 import { useAuth } from "./AuthContext";
 import Breadcrumbs from "./ui/breadcrumbs";
+import ProfileModal from "./profile/ProfileModal";
 import {
   Menu,
   LayoutDashboard,
   FileText,
   LogOut,
   AlertCircle,
+  User,
+  ChevronDown,
 } from "lucide-react";
 
 const StudentDashboardLayout = ({ children }) => {
@@ -18,6 +21,8 @@ const StudentDashboardLayout = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -305,15 +310,51 @@ const StudentDashboardLayout = ({ children }) => {
             <div className="flex items-center space-x-4">
               {/* <PaymentModal /> */}
               <div className="h-8 w-px bg-gray-200" />
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-accent">
-                    {getUserInitial()}
+              <div className="relative">
+                <button
+                  onClick={() => setIsAvatarDropdownOpen(!isAvatarDropdownOpen)}
+                  className="flex items-center gap-3 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+                    <span className="text-sm font-medium text-accent">
+                      {getUserInitial()}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 hidden lg:block">
+                    {userData?.user_name || "Student"}
                   </span>
-                </div>
-                <span className="text-sm font-medium text-gray-700 hidden lg:block">
-                  {userData?.user_name || "Student"}
-                </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
+
+                {/* Avatar Dropdown */}
+                {isAvatarDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsAvatarDropdownOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+                      <button
+                        onClick={() => {
+                          setIsAvatarDropdownOpen(false);
+                          setIsProfileModalOpen(true);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <User className="w-4 h-4" />
+                        Profile
+                      </button>
+                      <div className="border-t border-gray-100 my-1" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -323,6 +364,12 @@ const StudentDashboardLayout = ({ children }) => {
           <div className="p-4 md:p-6 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </div>
   );
 };

@@ -262,10 +262,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
 
               questions.push({
                 question_number: questionNumber,
-                question_text:
-                  apiData.problem_feedback?.[key] ||
-                  questionInfo.question_text ||
-                  `Question ${questionNumber}`,
+                question_text: questionInfo.question_text || apiData.problem_feedback?.[key] || `Question ${questionNumber}`,
+                question_body: questionInfo.question_body || null,
+                image_url: questionInfo.image_url || null,
                 max_marks: maxMarks,
                 marks_obtained: totalMarks,
                 feedback: questionData.overall_feedback || "",

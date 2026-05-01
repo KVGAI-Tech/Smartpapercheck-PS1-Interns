@@ -7,12 +7,15 @@ import {
   Bell,
   HelpCircle,
   FileText,
+  User,
+  ChevronDown,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../BaseURL";
 import { useAuth } from "../AuthContext";
 import Breadcrumbs from "../ui/breadcrumbs";
+import ProfileModal from "../profile/ProfileModal";
 // import PaymentModal from "../Payments/PaymentModal"; // Temporarily disabled credits UI
 
 const DashboardLayout = ({ children }) => {
@@ -25,6 +28,8 @@ const DashboardLayout = ({ children }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [allJobs, setAllJobs] = useState([]);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
   const [notificationsBaselineAt, setNotificationsBaselineAt] = useState(() => {
     try {
       const raw = localStorage.getItem("notificationsBaselineAt");
@@ -831,16 +836,51 @@ const DashboardLayout = ({ children }) => {
                   )}
                 </div>
                 <div className="relative">
-                  <div className="w-8 h-8 rounded-full border border-gray-200 bg-accent text-white flex items-center justify-center font-medium text-sm">
-                    {userData?.name
-                      ? userData.name.charAt(0).toUpperCase()
-                      : "G"}
-                  </div>
-                  <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 rounded-full border border-white" />
+                  <button
+                    onClick={() => setIsAvatarDropdownOpen(!isAvatarDropdownOpen)}
+                    className="flex items-center gap-3 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full border border-gray-200 bg-accent text-white flex items-center justify-center font-medium text-sm">
+                      {userData?.name
+                        ? userData.name.charAt(0).toUpperCase()
+                        : "G"}
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                      {userData?.name || "Guest User"}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
+                  </button>
+
+                  {/* Avatar Dropdown */}
+                  {isAvatarDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setIsAvatarDropdownOpen(false)}
+                      />
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+                        <button
+                          onClick={() => {
+                            setIsAvatarDropdownOpen(false);
+                            setIsProfileModalOpen(true);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          <User className="w-4 h-4" />
+                          Profile
+                        </button>
+                        <div className="border-t border-gray-100 my-1" />
+                        <button
+                          onClick={handleLogout}
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Logout
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                  {userData?.name || "Guest User"}
-                </span>
               </div>
             </div>
           </div>
@@ -896,6 +936,12 @@ const DashboardLayout = ({ children }) => {
           </div>
         )}
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </div>
   );
 };

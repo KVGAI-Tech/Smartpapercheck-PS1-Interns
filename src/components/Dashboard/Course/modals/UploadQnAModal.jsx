@@ -471,6 +471,10 @@ const UploadQnAModal = ({
 
   const isRichTextEmpty = (html = '') => {
     if (!html) return true;
+    
+    // If it has an image, it's not empty
+    if (html.includes('<img')) return false;
+
     const text = html
       .replace(/<[^>]*>/g, ' ')
       .replace(/&nbsp;/g, ' ')
@@ -482,16 +486,60 @@ const UploadQnAModal = ({
   const richTextToPlainText = htmlToPlainText;
 
   const formatGeneratedAnswerForEditor = (text = '') => {
-    const cleaned = stripMarkdown(text || '');
+    if (!text) return '';
+
+    // If the text contains code blocks (like mermaid or logic circuits), 
+    // we want to preserve them as code/pre blocks instead of stripping them.
+    let processed = text;
+    
+    // Replace markdown code blocks with <pre> tags
+    processed = processed.replace(/```(?:mermaid|html|)?([\s\S]*?)```/g, (match, code) => {
+      return `<pre class="ql-syntax" spellcheck="false">${code.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+    });
+
+    // Strip other common markdown symbols but keep the structure
+    const cleaned = processed
+      .replace(/#{1,6}\s?/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/__/g, '')
+      .replace(/_/g, '')
+      // .replace(/`{1,3}/g, '') // Handled above for blocks
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      .replace(/!\[[^\]]*\]\([^\)]+\)/g, '')
+      .replace(/>\s?/g, '')
+      .trim();
+
     if (!cleaned) return '';
 
-    const paragraphs = cleaned
-      .split(/\n{2,}/)
-      .map((paragraph) => paragraph.trim())
-      .filter(Boolean)
-      .map((paragraph) => `<p>${paragraph.replace(/\n/g, '<br/>')}</p>`);
+    // Split by double newlines for paragraphs, but respect the <pre> blocks we just made
+    const parts = cleaned.split(/(<pre[\s\S]*?<\/pre>)/);
+    
+    const formattedParts = parts.map(part => {
+      if (part.startsWith('<pre')) return part;
+      
+      // Split into paragraphs by double newlines
+      return part
+        .split(/\n{2,}/)
+        .map((paragraph) => {
+          // If a paragraph looks like an ASCII diagram or table (lots of spaces or symbols)
+          // we wrap it in a pre block.
+          const lines = paragraph.split('\n');
+          const hasSignificantWhitespace = lines.some(line => line.startsWith('  ') || line.startsWith('\t'));
+          const hasTableSymbols = (paragraph.match(/[|_+\-]{3,}/g) || []).length > 1;
+          
+          if (hasSignificantWhitespace || hasTableSymbols) {
+            return `<pre class="ql-syntax" spellcheck="false">${paragraph.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+          }
 
-    return paragraphs.join('') || `<p>${cleaned.replace(/\n/g, '<br/>')}</p>`;
+          // Normal paragraph handling
+          return `<p>${paragraph.trim().replace(/\n/g, '<br/>')}</p>`;
+        })
+        .filter(Boolean)
+        .join('');
+    });
+
+    return formattedParts.join('');
   };
 
   const inferContentType = ({ body, hasFile }) => {
@@ -921,9 +969,25 @@ const UploadQnAModal = ({
     const questionBody = question.questionBody || '';
     const questionBodyPlain = richTextToPlainText(questionBody);
 
-    if (!questionBodyPlain.trim()) {
-      throw new Error('Please provide question text before generating.');
+    // Detect whether the HTML body has embedded images (<img> tags).
+    // We send the FULL HTML to the backend so `extract_base64_images_from_html`
+    // can extract and upload them to S3 before passing to the AI.
+    const hasEmbeddedImages = questionBody.includes('<img') && questionBody.includes('src=');
+
+    // The explicit question file URL (separately uploaded image/PDF), not embedded body images.
+    const questionFileUrl = question.questionUrl || question.questionPreview || null;
+
+    const hasImages = hasEmbeddedImages || Boolean(questionFileUrl);
+    const hasText = Boolean(questionBodyPlain.trim());
+
+    if (!hasText && !hasImages) {
+      throw new Error('Please provide question text or image before generating.');
     }
+
+    // "both"  → text + embedded/file images (best context)
+    // "image" → only file image, no text
+    // "text"  → only text, no images
+    const questionType = hasText && hasImages ? 'both' : hasImages ? 'image' : 'text';
 
     const response = await fetch(`${API_BASE_URL}${apiPrefix}/${examId}/generate-answer`, {
       method: 'POST',
@@ -933,9 +997,13 @@ const UploadQnAModal = ({
       },
       body: JSON.stringify({
         domain: question.domain || 'General',
-        question_type: 'text',
-        question_body: questionBodyPlain,
-        question_image_url: null,
+        question_type: questionType,
+        // Send full HTML so the backend can extract and process embedded images.
+        // If there's no meaningful HTML (only whitespace), send null.
+        question_body: hasText || hasEmbeddedImages ? questionBody : null,
+        // Only send a separate image URL for explicitly uploaded question files,
+        // NOT for images embedded in the body (the backend handles those from the HTML).
+        question_image_url: questionFileUrl || null,
         max_marks: question.marks ? Number(question.marks) : null,
         custom_instruction: question.aiCustomInstruction || null,
         question_number: index !== null ? (index + 1) : null,
@@ -1037,12 +1105,21 @@ const UploadQnAModal = ({
           const generatedAnswer = await withRetry(() => generateAiAnswerForQuestion(question));
           
           if (generatedAnswer) {
-            updateQuestion(question.id, (q) => ({
-              ...q,
-              answerBody: formatGeneratedAnswerForEditor(generatedAnswer),
-              answerType: 'text',
-              isGenerated: true,
-            }));
+            updateQuestion(question.id, (q) => {
+              const currentAnswerType = q.answerType || 'text';
+              const nextAnswerType = (currentAnswerType === 'image') ? 'both' : currentAnswerType;
+              const plainText = generatedAnswer.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+              
+              return {
+                ...q,
+                answerBody: generatedAnswer,
+                answer_body: generatedAnswer,
+                answerText: plainText,
+                answer_text: plainText,
+                answerType: nextAnswerType,
+                isGenerated: true,
+              };
+            });
             setGeneratingStatus(prev => ({ ...prev, [question.id]: 'done' }));
           } else {
             setGeneratingStatus(prev => ({ ...prev, [question.id]: 'error' }));
@@ -1510,6 +1587,7 @@ const UploadQnAModal = ({
             display_order: i + 1,
             allow_text_answer: true,
             allow_image_answer: true,
+            num_rubric_items: parseInt(q.num_rubric_items) || 1,
           };
 
           if (isExisting) {
@@ -2344,7 +2422,15 @@ const UploadQnAModal = ({
                         value={activeQuestion.questionBody || ''}
                         onChange={(value) => {
                           if (suppressQuillOnChangeRef.current) return;
-                          updateQuestion(activeQuestion.id, (q) => ({ ...q, questionBody: value }));
+                          // Synchronize plain text fields with the rich text body
+                          const strippedText = value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                          updateQuestion(activeQuestion.id, (q) => ({ 
+                            ...q, 
+                            questionBody: value,
+                            question_body: value,
+                            questionText: strippedText,
+                            question_text: strippedText
+                          }));
                         }}
                         placeholder="Enter question text"
                         modules={quillModules}
@@ -2382,7 +2468,15 @@ const UploadQnAModal = ({
                           value={activeQuestion.answerBody || ''}
                           onChange={(value) => {
                             if (suppressQuillOnChangeRef.current) return;
-                            updateQuestion(activeQuestion.id, (q) => ({ ...q, answerBody: value }));
+                            // Synchronize plain text fields with the rich text body
+                            const strippedText = value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                            updateQuestion(activeQuestion.id, (q) => ({ 
+                              ...q, 
+                              answerBody: value,
+                              answer_body: value,
+                              answerText: strippedText,
+                              answer_text: strippedText
+                            }));
                           }}
                           placeholder="Enter answer text"
                           modules={quillModules}

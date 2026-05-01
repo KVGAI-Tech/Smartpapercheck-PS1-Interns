@@ -919,17 +919,17 @@ Take your time and write a comprehensive answer.`,
                 </div>
 
                 <div className="bg-white/50 backdrop-blur-sm rounded-3xl p-6 border border-gray-100 shadow-sm mb-8">
-                  <div className="prose prose-slate max-w-none">
-                    <p className="text-gray-800 text-[16px] leading-[1.625] font-normal whitespace-pre-wrap selection:bg-accent/20">
-                      {currentQuestion?.question_text}
-                    </p>
-                  </div>
-
-                  {currentQuestion?.question_body && (
+                  {currentQuestion?.question_body ? (
                     <div 
-                      className="mt-6 pt-6 border-t border-gray-100 prose prose-slate max-w-none text-gray-700"
+                      className="prose prose-slate max-w-none text-gray-700"
                       dangerouslySetInnerHTML={{ __html: currentQuestion.question_body }}
                     />
+                  ) : (
+                    <div className="prose prose-slate max-w-none">
+                      <p className="text-gray-800 text-[16px] leading-[1.625] font-normal whitespace-pre-wrap selection:bg-accent/20">
+                        {currentQuestion?.question_text}
+                      </p>
+                    </div>
                   )}
                 </div>
 
