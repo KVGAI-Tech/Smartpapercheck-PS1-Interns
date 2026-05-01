@@ -41,8 +41,9 @@ export default function fetchStudentEvaluation(
               pageNumber: page.page_number,
               totalPages: page.total_pages,
               imageUrl: page.presigned_url || page.url,
-              type: page.type || (page.text_answer ? "text" : "image"),
-              text_answer: page.text_answer,
+              type: page.type || (page.text || page.text_answer ? "text" : "image"),
+              text: page.text || page.text_answer,
+              text_answer: page.text_answer || page.text,
               // Preserve question_number so UI can map pages to questions precisely
               questionNumber: page.question_number,
             }));
