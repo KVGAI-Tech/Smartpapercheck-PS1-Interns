@@ -10,13 +10,21 @@ import {
   User,
   ChevronDown,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../BaseURL";
 import { useAuth } from "../AuthContext";
 import Breadcrumbs from "../ui/breadcrumbs";
 import ProfileModal from "../profile/ProfileModal";
 // import PaymentModal from "../Payments/PaymentModal"; // Temporarily disabled credits UI
+
+const FINISHED_JOB_STATUSES = new Set([
+  "completed",
+  "completed_with_errors",
+  "failed",
+  "canceled",
+  "cancelled",
+]);
 
 const DashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -30,22 +38,13 @@ const DashboardLayout = ({ children }) => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
-  const [notificationsBaselineAt, setNotificationsBaselineAt] = useState(() => {
+  const [notificationsBaselineAt] = useState(() => {
     try {
       const raw = localStorage.getItem("notificationsBaselineAt");
       const n = raw ? Number(raw) : NaN;
       return Number.isFinite(n) ? n : Date.now();
     } catch {
       return Date.now();
-    }
-  });
-  const [seenJobIds, setSeenJobIds] = useState(() => {
-    try {
-      const raw = localStorage.getItem("seenJobIds");
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
     }
   });
   const [unreadJobIds, setUnreadJobIds] = useState(() => {
@@ -73,21 +72,37 @@ const DashboardLayout = ({ children }) => {
 
   useEffect(() => {
     try {
-      localStorage.setItem("seenJobIds", JSON.stringify(seenJobIds));
-    } catch {
-      // ignore
-    }
-  }, [seenJobIds]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem("notificationsBaselineAt", String(notificationsBaselineAt));
     } catch {
       // ignore
     }
   }, [notificationsBaselineAt, notificationsWsConnected]);
 
-  const getJobKey = (job) => job?.job_id || job?.id || `${job?.exam_id || ""}-${job?.created_at || ""}`;
+  const getJobKey = useCallback((job) => job?.job_id || job?.id || `${job?.exam_id || ""}-${job?.created_at || ""}`, []);
+  const isFinishedJob = useCallback((job) => {
+    const status = (job?.status || "").toLowerCase();
+    return FINISHED_JOB_STATUSES.has(status);
+  }, []);
+  const getJobTimeMs = useCallback((job) => {
+    const raw =
+      job?.finished_at ||
+      job?.finishedAt ||
+      job?.finished ||
+      job?.updated_at ||
+      job?.updatedAt ||
+      job?.created_at ||
+      job?.createdAt;
+    const time = raw ? new Date(raw).getTime() : NaN;
+    return Number.isFinite(time) ? time : 0;
+  }, []);
+  const recentNotificationJobs = useMemo(
+    () =>
+      [...allJobs]
+        .filter(isFinishedJob)
+        .sort((a, b) => getJobTimeMs(b) - getJobTimeMs(a))
+        .slice(0, 2),
+    [allJobs, getJobTimeMs, isFinishedJob]
+  );
 
   const handleNavClick = () => {
     if (isMobile) setIsSidebarOpen(false);
@@ -140,11 +155,6 @@ const DashboardLayout = ({ children }) => {
         const token = localStorage.getItem("accessToken");
         if (!token) return;
 
-        // New page load baseline: do not show historical notifications.
-        const baseline = Date.now();
-        setNotificationsBaselineAt(baseline);
-        setUnreadJobIds([]);
-
         const resp = await fetch(`${API_BASE_URL}/exams/professor/jobs/answers-processing`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -160,20 +170,25 @@ const DashboardLayout = ({ children }) => {
 
         setAllJobs(jobs);
 
-        // Baseline on refresh: historical completed/failed jobs should NOT become unread.
-        // Only jobs completed after this baseline (via WebSocket) should be marked unread.
-        setSeenJobIds((prevSeen) => {
-          const seenSet = new Set(Array.isArray(prevSeen) ? prevSeen : []);
-          jobs.forEach((j) => {
-            const s = (j.status || "").toLowerCase();
+        const fetchedUnreadKeys = jobs
+          .filter(isFinishedJob)
+          .map((j) => {
             const key = getJobKey(j);
-            if (!key) return;
-            if (s === "completed" || s === "failed") {
-              seenSet.add(key);
+            const finishedMs = getJobTimeMs(j);
+            if (!key || !finishedMs || finishedMs <= notificationsBaselineAt) {
+              return null;
             }
+            return key;
+          })
+          .filter(Boolean);
+
+        if (fetchedUnreadKeys.length > 0) {
+          setUnreadJobIds((prevUnread) => {
+            const unreadSet = new Set(Array.isArray(prevUnread) ? prevUnread : []);
+            fetchedUnreadKeys.forEach((key) => unreadSet.add(key));
+            return Array.from(unreadSet);
           });
-          return Array.from(seenSet);
-        });
+        }
 
         // Clean unread keys to only those that still exist in the fetched jobs list,
         // and only if the job is actually completed/failed.
@@ -182,10 +197,7 @@ const DashboardLayout = ({ children }) => {
           if (!unreadArr.length) return unreadArr;
           const completedKeys = new Set(
             jobs
-              .filter((j) => {
-                const s = (j.status || "").toLowerCase();
-                return s === "completed" || s === "failed";
-              })
+              .filter(isFinishedJob)
               .map((j) => getJobKey(j))
               .filter(Boolean)
           );
@@ -197,7 +209,7 @@ const DashboardLayout = ({ children }) => {
     };
 
     fetchInitialJobs();
-  }, []);
+  }, [getJobKey, getJobTimeMs, isFinishedJob, notificationsBaselineAt]);
 
   useEffect(() => {
     // Polling fallback: if WS is missed, detect jobs that finished after page load and mark unread.
@@ -224,31 +236,19 @@ const DashboardLayout = ({ children }) => {
         setAllJobs(jobs);
 
         const nowUnread = [];
-        const nowSeen = [];
 
         jobs.forEach((j) => {
-          const status = (j.status || "").toLowerCase();
-          if (status !== "completed" && status !== "failed") return;
+          if (!isFinishedJob(j)) return;
 
           const key = getJobKey(j);
           if (!key) return;
 
-          const finishedRaw = j.finished_at || j.finishedAt || j.finished;
-          const finishedMs = finishedRaw ? new Date(finishedRaw).getTime() : NaN;
-          if (!Number.isFinite(finishedMs)) return;
+          const finishedMs = getJobTimeMs(j);
+          if (!finishedMs) return;
 
           if (finishedMs > notificationsBaselineAt) {
             nowUnread.push(key);
           }
-          nowSeen.push(key);
-        });
-
-        if (!nowSeen.length) return;
-
-        setSeenJobIds((prev) => {
-          const s = new Set(Array.isArray(prev) ? prev : []);
-          nowSeen.forEach((k) => s.add(k));
-          return Array.from(s);
         });
 
         if (nowUnread.length) {
@@ -270,7 +270,7 @@ const DashboardLayout = ({ children }) => {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [notificationsBaselineAt, notificationsWsConnected]);
+  }, [getJobKey, getJobTimeMs, isFinishedJob, notificationsBaselineAt, notificationsWsConnected]);
 
   useEffect(() => {
     // Open a WebSocket for professor notifications when logged in
@@ -339,21 +339,13 @@ const DashboardLayout = ({ children }) => {
             });
 
             // If a job has just completed or failed, treat it as a new unread notification
-            const status = (job.status || "").toLowerCase();
-            if (status === "completed" || status === "failed") {
+            if (isFinishedJob(job)) {
               const key = getJobKey(job);
               if (key) {
-                setSeenJobIds((prevSeen) => {
-                  const seenSet = new Set(Array.isArray(prevSeen) ? prevSeen : []);
-                  if (!seenSet.has(key)) {
-                    setUnreadJobIds((prevUnread) => {
-                      const unreadSet = new Set(Array.isArray(prevUnread) ? prevUnread : []);
-                      unreadSet.add(key);
-                      return Array.from(unreadSet);
-                    });
-                  }
-                  seenSet.add(key);
-                  return Array.from(seenSet);
+                setUnreadJobIds((prevUnread) => {
+                  const unreadSet = new Set(Array.isArray(prevUnread) ? prevUnread : []);
+                  unreadSet.add(key);
+                  return Array.from(unreadSet);
                 });
               }
             }
@@ -425,7 +417,7 @@ const DashboardLayout = ({ children }) => {
       console.error("Failed to connect to notifications WebSocket:", error);
       setNotificationsWsConnected(false);
     }
-  }, []);
+  }, [getJobKey, isFinishedJob]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -739,9 +731,7 @@ const DashboardLayout = ({ children }) => {
                   >
                     <Bell className="w-5 h-5 text-gray-500" />
                     {unreadJobs > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold">
-                        {unreadJobs}
-                      </span>
+                      <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
                     )}
                   </button>
                   {isNotificationsOpen && (
@@ -753,28 +743,18 @@ const DashboardLayout = ({ children }) => {
                         )}
                       </div>
                       <div className="max-h-64 overflow-y-auto">
-                        {allJobs.length === 0 || unreadJobIds.length === 0 ? (
+                        {recentNotificationJobs.length === 0 ? (
                           <div className="px-3 py-2 text-xs text-gray-500">
-                            No new notifications.
+                            No notifications yet.
                           </div>
                         ) : (
-                          [...allJobs]
-                            .filter((job) => {
-                              const s = (job.status || "").toLowerCase();
-                              if (s !== "completed" && s !== "failed") return false;
-                              return unreadJobIds.includes(getJobKey(job));
-                            })
-                            .sort((a, b) => {
-                              const ad = new Date(a.created_at || 0).getTime();
-                              const bd = new Date(b.created_at || 0).getTime();
-                              return bd - ad;
-                            })
-                            .slice(0, 5)
-                            .map((job) => (
+                          recentNotificationJobs.map((job) => (
                             <button
                               key={getJobKey(job)}
                               type="button"
-                              className="w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 text-xs text-gray-700 hover:bg-gray-50"
+                              className={`w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 text-xs text-gray-700 hover:bg-gray-50 ${
+                                unreadJobIds.includes(getJobKey(job)) ? "bg-red-50/50" : ""
+                              }`}
                               onClick={() => {
                                 const key = getJobKey(job);
                                 setUnreadJobIds((prev) => (Array.isArray(prev) ? prev.filter((id) => id !== key) : []));
@@ -788,13 +768,20 @@ const DashboardLayout = ({ children }) => {
                               }}
                             >
                               <div className="flex items-center justify-between mb-0.5">
-                                <span className="font-medium text-gray-800 truncate">
-                                  Exam #{job.exam_id}
-                                </span>
+                                <div className="flex min-w-0 items-center gap-2">
+                                  {unreadJobIds.includes(getJobKey(job)) && (
+                                    <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                                  )}
+                                  <span className="font-medium text-gray-800 truncate">
+                                    Exam #{job.exam_id}
+                                  </span>
+                                </div>
                                 <span
                                   className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
                                     job.status === "completed"
                                       ? "bg-emerald-50 text-emerald-700"
+                                      : job.status === "completed_with_errors"
+                                      ? "bg-amber-50 text-amber-700"
                                       : job.status === "failed"
                                       ? "bg-red-50 text-red-700"
                                       : "bg-gray-50 text-gray-600"

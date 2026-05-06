@@ -3,12 +3,23 @@ import { AlertCircle, CheckCircle, Clock, RefreshCw, XCircle } from "lucide-reac
 import { API_BASE_URL } from "../../BaseURL";
 import { useLocation } from "react-router-dom";
 
+const FINISHED_JOB_STATUSES = new Set([
+  "completed",
+  "completed_with_errors",
+  "failed",
+  "canceled",
+  "cancelled",
+]);
+
 const StatusBadge = ({ status }) => {
   const map = {
     pending: { label: "Pending", className: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock },
     running: { label: "Running", className: "bg-blue-50 text-blue-700 border-blue-200", icon: RefreshCw },
     completed: { label: "Completed", className: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle },
+    completed_with_errors: { label: "Completed with errors", className: "bg-amber-50 text-amber-700 border-amber-200", icon: AlertCircle },
     failed: { label: "Failed", className: "bg-red-50 text-red-700 border-red-200", icon: XCircle },
+    canceled: { label: "Canceled", className: "bg-gray-100 text-gray-700 border-gray-200", icon: XCircle },
+    cancelled: { label: "Canceled", className: "bg-gray-100 text-gray-700 border-gray-200", icon: XCircle },
   };
   const conf = map[status] || map.pending;
   const Icon = conf.icon;
@@ -29,7 +40,34 @@ const ProfessorNotificationsPage = () => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [studentsError, setStudentsError] = useState(null);
   const [progress, setProgress] = useState(null);
+  const [unreadJobIds, setUnreadJobIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem("unreadJobIds");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const location = useLocation();
+
+  const getJobKey = (j) => j?.id || j?.job_id || `${j?.exam_id || ""}-${j?.created_at || ""}`;
+  const isUnread = (job) => unreadJobIds.includes(getJobKey(job));
+
+  const markJobAsRead = (jobOrKey) => {
+    const key = typeof jobOrKey === "string" ? jobOrKey : getJobKey(jobOrKey);
+    if (!key) return;
+
+    setUnreadJobIds((prev) => {
+      const next = Array.isArray(prev) ? prev.filter((id) => id !== key) : [];
+      try {
+        localStorage.setItem("unreadJobIds", JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   const fetchJobs = async () => {
     try {
@@ -72,28 +110,13 @@ const ProfessorNotificationsPage = () => {
     if (!selectedJobId && !examId) return;
     if (!Array.isArray(jobs) || jobs.length === 0) return;
 
-    const jobKey = (j) => j?.id || j?.job_id || `${j?.exam_id || ""}-${j?.created_at || ""}`;
-
     const job = selectedJobId
-      ? jobs.find((j) => jobKey(j) === selectedJobId)
+      ? jobs.find((j) => getJobKey(j) === selectedJobId)
       : jobs.find((j) => Number(j.exam_id) === Number(examId));
 
     if (job) {
       openJob(job);
-
-      // Best-effort mark as read in bell badge storage.
-      try {
-        const raw = localStorage.getItem("unreadJobIds");
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(parsed) && selectedJobId) {
-          localStorage.setItem(
-            "unreadJobIds",
-            JSON.stringify(parsed.filter((k) => k !== selectedJobId))
-          );
-        }
-      } catch {
-        // ignore
-      }
+      markJobAsRead(selectedJobId || job);
     }
   }, [location?.state, jobs]);
 
@@ -176,7 +199,7 @@ const ProfessorNotificationsPage = () => {
     }
 
     const status = (selectedJob.status || "").toLowerCase();
-    if (status === "completed" || status === "failed") {
+    if (FINISHED_JOB_STATUSES.has(status)) {
       // No need for live progress for finished jobs
       setProgress(null);
       return;
@@ -216,6 +239,7 @@ const ProfessorNotificationsPage = () => {
 
   const openJob = async (job) => {
     setSelectedJob(job);
+    markJobAsRead(job);
     setStudents([]);
     setStudentsError(null);
     try {
@@ -291,11 +315,23 @@ const ProfessorNotificationsPage = () => {
                 key={job.id}
                 onClick={() => openJob(job)}
                 className={`w-full text-left p-4 rounded-xl border transition-all text-sm shadow-sm hover:shadow-md hover:border-accent/50 ${
-                  selectedJob?.id === job.id ? "border-accent bg-accent/5" : "border-gray-200 bg-white"
+                  selectedJob?.id === job.id
+                    ? "border-accent bg-accent/5"
+                    : isUnread(job)
+                    ? "border-red-200 bg-red-50/60"
+                    : "border-gray-200 bg-white"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-medium text-gray-900">Exam #{job.exam_id}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isUnread(job) && <span className="h-2.5 w-2.5 rounded-full bg-red-500 shrink-0" />}
+                    <span className="font-medium text-gray-900 truncate">Exam #{job.exam_id}</span>
+                    {isUnread(job) && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                        Unread
+                      </span>
+                    )}
+                  </div>
                   <StatusBadge status={job.status} />
                 </div>
                 <p className="text-xs text-gray-500 mb-1">Course ID: {job.course_id}</p>
