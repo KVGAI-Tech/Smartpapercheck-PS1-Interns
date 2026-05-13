@@ -46,6 +46,8 @@ export default function fetchStudentEvaluation(
               text_answer: page.text_answer || page.text,
               // Preserve question_number so UI can map pages to questions precisely
               questionNumber: page.question_number,
+              selected_option_ids: page.selected_option_ids,
+              is_correct: page.is_correct,
             }));
             setAnswerScriptPages(processedPages);
           } else {

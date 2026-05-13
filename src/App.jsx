@@ -172,6 +172,16 @@ function App() {
               }
             />
             <Route
+              path="/master-exams/view/:documentId"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <ExamDocumentEditorPage />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
               path="/courses/:courseId"
               element={
                 <RoleRoute requiredRole="professor">

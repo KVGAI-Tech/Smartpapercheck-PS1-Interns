@@ -966,7 +966,11 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     };
   }, [stopEvaluationJobPolling]);
 
+  const hasResumedModalRef = useRef(false);
   useEffect(() => {
+    if (hasResumedModalRef.current) return;
+    hasResumedModalRef.current = true;
+
     const resume = async () => {
       try {
         if (!examId) return;
@@ -1010,7 +1014,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     };
 
     resume();
-  }, [examId, pollEvaluationJob, stopEvaluationJobPolling]);
+  }, [examId]);
 
   const toggleSelectedEnrollment = useCallback((enrollmentId) => {
     setSelectedEnrollmentIds(prev => {

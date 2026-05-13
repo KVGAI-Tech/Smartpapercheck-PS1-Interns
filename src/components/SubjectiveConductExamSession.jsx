@@ -16,6 +16,16 @@ import { examsApi } from './Student_api';
 const getSessionStorageKey = (examId) => `conduct_exam_session_${examId}`;
 const getSyncChannelName = (examId) => `conduct_exam_sync_${examId}`;
 
+const isMcqQuestion = (question) => question?.question_type === 'mcq' || question?.question_type === 'mcq_reasoning';
+const needsReasoningEditor = (question) => (
+  question?.question_type === 'mcq_reasoning'
+  || (question?.question_type === 'mcq' && Boolean(question?.reason_required))
+);
+const needsTextEditor = (question) => (
+  needsReasoningEditor(question)
+  || (!isMcqQuestion(question) && Boolean(question?.allow_text_answer))
+);
+
 const createSessionId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -57,10 +67,10 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [session, setSession] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
   const [answers, setAnswers] = useState({});
   const [dirtyQuestionIds, setDirtyQuestionIds] = useState([]);
@@ -147,6 +157,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
         const serverAnswer = {
           text_answer: question.text_answer || '',
           image_answer_url: question.image_answer_url || '',
+          selected_option_ids: question.selected_option_ids || null,
         };
         const shouldPreserveLocalAnswer =
           preserveDirtyAnswers &&
@@ -226,6 +237,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       question_id: Number(questionId),
       text_answer: answers[questionId]?.text_answer || '',
       image_url: answers[questionId]?.image_answer_url || null,
+      selected_option_ids: answers[questionId]?.selected_option_ids || null,
     }));
 
     if (!silent) {
@@ -312,6 +324,15 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
     handleAutoSubmit();
   }, [timeLeft, session?.status]);
 
+  useEffect(() => {
+    if (isSubmitted) {
+      const timer = setTimeout(() => {
+        navigate('/student/dashboard');
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmitted, navigate]);
+
   const attemptedCount = useMemo(
     () => Object.values(answers).filter((answer) => String(answer?.text_answer || '').trim() || answer?.image_answer_url).length,
     [answers]
@@ -323,6 +344,17 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       [questionId]: {
         ...(prev[questionId] || {}),
         text_answer: value,
+      },
+    }));
+    setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
+  };
+
+  const handleOptionSelect = (questionId, optionId) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...(prev[questionId] || {}),
+        selected_option_ids: [optionId],
       },
     }));
     setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
@@ -367,6 +399,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       }
       hydrateSession(response.data);
       broadcastSessionSync();
+      setIsSubmitted(true);
       setNotice('Conduct exam submitted successfully');
     } catch (err) {
       setError(err.message || 'Unable to submit conduct exam.');
@@ -420,6 +453,10 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
 
   const isQuestionAnswered = (questionId) => {
     const ans = answers[questionId];
+    const q = session?.questions?.find(it => String(it.id) === String(questionId));
+    if (isMcqQuestion(q)) {
+      return !!(ans?.selected_option_ids?.length > 0);
+    }
     return !!(ans?.text_answer?.trim() || ans?.image_answer_url);
   };
 
@@ -516,7 +553,9 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
                         </span>
                         <div>
                           <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Question</p>
-                          <div className="text-sm font-bold text-gray-600">Subjective Part</div>
+                          <div className="text-sm font-bold text-gray-600">
+                            {isMcqQuestion(question) ? (needsReasoningEditor(question) ? 'MCQ with Reasoning' : 'Multiple Choice') : 'Subjective'}
+                          </div>
                         </div>
                       </div>
                       <div className="px-3 py-1 bg-gray-50 rounded-lg text-xs font-bold text-gray-500 border border-gray-100">
@@ -536,7 +575,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
                     )}
 
                     {question.image_url && (
-                      <div className="rounded-2xl border border-gray-100 bg-gray-50 overflow-hidden mb-8">
+                      <div className="rounded-2xl border border-gray-100 bg-gray-50 overflow-hidden mb-6">
                         <img
                           src={question.image_url}
                           alt={`Question ${index + 1}`}
@@ -545,15 +584,100 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
                       </div>
                     )}
 
+                    {isMcqQuestion(question) && (
+                      <div className="space-y-3 mb-8">
+                        {(question.mcq_options || []).map((option) => {
+                          const isSelected = (questionAnswer.selected_option_ids || []).includes(option.option_id);
+                          return (
+                            <button
+                              key={option.option_id}
+                              onClick={() => handleOptionSelect(question.id, option.option_id)}
+                              disabled={session?.status !== 'in_progress'}
+                              className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-start gap-4 ${
+                                isSelected 
+                                ? "border-accent bg-accent/5 ring-4 ring-accent/5" 
+                                : "border-gray-100 hover:border-gray-200 bg-white"
+                              }`}
+                            >
+                              <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                isSelected ? "border-accent bg-accent" : "border-gray-300"
+                              }`}>
+                                {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                              </div>
+                              <div className="flex-grow">
+                                <div className="text-xs font-bold text-gray-400 mb-1">{option.option_id}</div>
+                                {option.option_body ? (
+                                  <div 
+                                    className="prose prose-sm max-w-none text-gray-700 font-medium"
+                                    dangerouslySetInnerHTML={{ __html: option.option_body }}
+                                  />
+                                ) : (
+                                  <div className="text-gray-700 font-medium">{option.option_text}</div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {isSubmitted && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-white/90 backdrop-blur-sm"
+                      >
+                        <div className="text-center">
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1, rotate: 360 }}
+                            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                            className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6"
+                          >
+                            <CheckCircle2 className="w-12 h-12" />
+                          </motion.div>
+                          <motion.h2
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-3xl font-bold text-gray-900 mb-2"
+                          >
+                            Exam Submitted!
+                          </motion.h2>
+                          <motion.p
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-gray-500"
+                          >
+                            Redirecting to your dashboard...
+                          </motion.p>
+                          <div className="mt-8 flex justify-center">
+                            <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: 3.5 }}
+                                className="h-full bg-green-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
                     <div className="space-y-6">
-                      {question.allow_text_answer && (
+                      {needsTextEditor(question) && (
                         <div className="relative">
+                            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                              {isMcqQuestion(question) ? 'Reason for Answer' : 'Your Answer'}
+                            </div>
                             <textarea
                                 value={questionAnswer.text_answer || ''}
                                 onChange={(e) => handleTextChange(question.id, e.target.value)}
                                 disabled={session?.status !== 'in_progress'}
-                                rows={8}
-                                placeholder="Type your detailed answer here..."
+                                rows={isMcqQuestion(question) ? 4 : 8}
+                                placeholder={isMcqQuestion(question) ? "Briefly explain the reason for your choice..." : "Type your detailed answer here..."}
                                 className="w-full rounded-2xl border border-gray-200 px-6 py-5 focus:ring-4 focus:ring-accent/5 focus:border-accent disabled:bg-gray-50/50 resize-none transition-all placeholder:text-gray-300 font-medium text-gray-700"
                             />
                             {dirtyQuestionIds.includes(question.id) && (
@@ -693,6 +817,87 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
 
         </div>
       </div>
+      {/* Success Animation Overlay */}
+      <AnimatePresence>
+        {isSubmitted && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 text-center"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", damping: 15, stiffness: 200, delay: 0.2 }}
+              className="relative"
+            >
+              <div className="absolute inset-0 bg-emerald-100 rounded-full blur-2xl animate-pulse scale-150 opacity-40" />
+              <div className="relative w-32 h-32 bg-emerald-500 rounded-full flex items-center justify-center shadow-xl shadow-emerald-200">
+                <motion.div
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.8, ease: "easeInOut", delay: 0.5 }}
+                >
+                  <CheckCircle className="w-16 h-16 text-white" strokeWidth={3} />
+                </motion.div>
+              </div>
+
+              {/* Sparkles */}
+              {[...Array(6)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
+                  animate={{ 
+                    scale: [0, 1, 0], 
+                    opacity: [0, 1, 0],
+                    x: Math.cos(i * 60 * Math.PI / 180) * 80,
+                    y: Math.sin(i * 60 * Math.PI / 180) * 80
+                  }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.8 + (i * 0.1) }}
+                  className="absolute top-1/2 left-1/2 w-3 h-3 bg-yellow-400 rounded-full"
+                />
+              ))}
+            </motion.div>
+
+            <motion.h2
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="text-4xl font-black text-gray-900 mt-10 mb-4 tracking-tight"
+            >
+              Great Job!
+            </motion.h2>
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 1 }}
+              className="text-xl text-gray-500 max-w-md mx-auto leading-relaxed"
+            >
+              Your exam has been submitted successfully. Your hard work is now being processed.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 2 }}
+              className="mt-12 flex flex-col items-center gap-4"
+            >
+              <div className="flex items-center gap-2 text-sm font-bold text-accent uppercase tracking-widest bg-accent/5 px-4 py-2 rounded-full">
+                <div className="w-2 h-2 bg-accent rounded-full animate-ping" />
+                Redirecting to dashboard...
+              </div>
+              
+              <button 
+                onClick={() => navigate('/student/dashboard')}
+                className="text-gray-400 hover:text-gray-600 text-sm font-medium underline underline-offset-4"
+              >
+                Click here if you're not redirected
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

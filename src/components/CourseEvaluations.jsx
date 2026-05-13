@@ -158,7 +158,7 @@ const ExamCard = ({
           <div>
             <h3 className="font-semibold text-gray-900">{exam_name}</h3>
             <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-              {exam_type && <p>Type: {examVariant === 'portal_mcq' ? 'Portal MCQ Exam' : examVariant === 'conduct' ? 'Conduct Exam' : 'Evaluated Exam'}</p>}
+              {exam_type && <p>Type: {examVariant === 'portal_mcq' ? 'MCQ Exam' : examVariant === 'conduct' ? 'Online Exam' : 'Offline Exam'}</p>}
               {examVariant === 'portal_mcq' && <p>Availability: {exam_is_active ? 'Active' : 'Inactive'}</p>}
               {examVariant === 'conduct' && <p>Window: {getStatusText()}</p>}
               {duration && <p>Duration: {formatDuration(duration)}</p>}

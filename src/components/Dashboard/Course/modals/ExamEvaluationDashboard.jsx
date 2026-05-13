@@ -1487,7 +1487,11 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
     [examId]
   );
 
+  const hasResumedDashboardRef = useRef(false);
   useEffect(() => {
+    if (hasResumedDashboardRef.current) return;
+    hasResumedDashboardRef.current = true;
+
     const resume = async () => {
       try {
         if (!examId) return;
@@ -1526,7 +1530,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
     };
 
     resume();
-  }, [examId, pollEvaluationJob, stopEvaluationJobPolling]);
+  }, [examId]);
 
   // T@GS
   const computeAutoTags = useCallback(

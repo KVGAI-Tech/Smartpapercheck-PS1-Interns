@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
-import ReactDOM from 'react-dom'; 
+import ReactDOM from 'react-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { 
-  X, Plus, Upload, Trash2, 
+import {
+  X, Plus, Upload, Trash2,
   FileText, ArrowUp, ArrowDown,
   CheckCircle, Maximize, Minimize,
   File, FilePlus, Upload as UploadIcon,
@@ -38,7 +38,9 @@ import { htmlToPlainText } from '@/lib/utils';
 import {
   listExamDocuments,
   parseExamDocument,
-  fetchExamDocument
+  fetchExamDocument,
+  listMasterExams,
+  fetchMasterExamQuestions
 } from '../../MasterExams/examDocumentApi';
 import { addConductExamQuestion, updateConductQuestion, deleteConductExamQuestion, deleteExamQuestion } from '../api';
 
@@ -75,7 +77,7 @@ const RichTextEditor = ({ value, onChange, placeholder, className, modules, form
       if (!allowImagePaste) return;
       const clipboardData = e.clipboardData;
       if (!clipboardData) return;
-      
+
       const items = clipboardData.items;
       if (!items) return;
 
@@ -167,7 +169,7 @@ const createQuestionId = () => {
 
 const createDefaultQuestion = (id = createQuestionId()) => ({
   id,
-  questionType: 'text',
+  questionType: 'subjective',
   answerType: 'text',
   question: null,
   answer: null,
@@ -186,6 +188,8 @@ const createDefaultQuestion = (id = createQuestionId()) => ({
   mcqOptions: [createEmptyMcqOption(0), createEmptyMcqOption(1)],
   correctOptionId: 'option_1',
   reasonRequired: false,
+  selectionMarks: '',
+  reasoningMarks: '',
 });
 
 // ── Drag Handle Icon (⋮⋮) ───────────────────────────────────
@@ -269,11 +273,10 @@ const SortableQuestionItem = ({ question, index, isSelected, onSelect, onDelete,
             e.stopPropagation();
             onDelete(question.id);
           }}
-          className={`mt-1 flex-shrink-0 rounded-md p-1.5 transition-all duration-200 ${
-            isDeleting
+          className={`mt-1 flex-shrink-0 rounded-md p-1.5 transition-all duration-200 ${isDeleting
               ? 'pointer-events-none text-red-500 opacity-100'
               : 'text-gray-400 opacity-70 hover:scale-105 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100'
-          }`}
+            }`}
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -342,9 +345,9 @@ const serializeQuestionDraft = (question) => ({
   aiCustomInstruction: question.aiCustomInstruction || '',
   mcqOptions: Array.isArray(question.mcqOptions)
     ? question.mcqOptions.map((option, optionIndex) => ({
-        optionId: option.optionId || `option_${optionIndex + 1}`,
-        optionBody: option.optionBody || '',
-      }))
+      optionId: option.optionId || `option_${optionIndex + 1}`,
+      optionBody: option.optionBody || '',
+    }))
     : [createEmptyMcqOption(0), createEmptyMcqOption(1)],
   correctOptionId: question.correctOptionId || 'option_1',
   reasonRequired: Boolean(question.reasonRequired),
@@ -370,9 +373,9 @@ const parseStoredDraft = (draftKey) => {
         id: question?.id || createQuestionId(),
         mcqOptions: Array.isArray(question?.mcqOptions) && question.mcqOptions.length > 0
           ? question.mcqOptions.map((option, optionIndex) => ({
-              optionId: option?.optionId || `option_${optionIndex + 1}`,
-              optionBody: option?.optionBody || '',
-            }))
+            optionId: option?.optionId || `option_${optionIndex + 1}`,
+            optionBody: option?.optionBody || '',
+          }))
           : [createEmptyMcqOption(0), createEmptyMcqOption(1)],
         correctOptionId: question?.correctOptionId || 'option_1',
         reasonRequired: Boolean(question?.reasonRequired),
@@ -399,7 +402,7 @@ const UploadQnAModal = ({
 
   const [goldenPdfFile, setGoldenPdfFile] = useState(null);
   const [questionPdfFile, setQuestionPdfFile] = useState(null);
-  const [uploadMode, setUploadMode] = useState('standard'); 
+  const [uploadMode, setUploadMode] = useState('standard');
   const isPdfUploadMode = !isAnyConductMode && uploadMode === 'golden-pdf';
 
   const [error, setError] = useState('');
@@ -413,6 +416,7 @@ const UploadQnAModal = ({
   const [aiPreviewAnswer, setAiPreviewAnswer] = useState('');
 
   const [masterPapers, setMasterPapers] = useState([]);
+  const [finalizedMasterExams, setFinalizedMasterExams] = useState([]);
   const [selectedPaperId, setSelectedPaperId] = useState('');
   const [selectedImportQuestionId, setSelectedImportQuestionId] = useState('');
   const [flattenedOptions, setFlattenedOptions] = useState([]);
@@ -471,7 +475,7 @@ const UploadQnAModal = ({
 
   const isRichTextEmpty = (html = '') => {
     if (!html) return true;
-    
+
     // If it has an image, it's not empty
     if (html.includes('<img')) return false;
 
@@ -491,7 +495,7 @@ const UploadQnAModal = ({
     // If the text contains code blocks (like mermaid or logic circuits), 
     // we want to preserve them as code/pre blocks instead of stripping them.
     let processed = text;
-    
+
     // Replace markdown code blocks with <pre> tags
     processed = processed.replace(/```(?:mermaid|html|)?([\s\S]*?)```/g, (match, code) => {
       return `<pre class="ql-syntax" spellcheck="false">${code.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
@@ -514,10 +518,10 @@ const UploadQnAModal = ({
 
     // Split by double newlines for paragraphs, but respect the <pre> blocks we just made
     const parts = cleaned.split(/(<pre[\s\S]*?<\/pre>)/);
-    
+
     const formattedParts = parts.map(part => {
       if (part.startsWith('<pre')) return part;
-      
+
       // Split into paragraphs by double newlines
       return part
         .split(/\n{2,}/)
@@ -527,7 +531,7 @@ const UploadQnAModal = ({
           const lines = paragraph.split('\n');
           const hasSignificantWhitespace = lines.some(line => line.startsWith('  ') || line.startsWith('\t'));
           const hasTableSymbols = (paragraph.match(/[|_+\-]{3,}/g) || []).length > 1;
-          
+
           if (hasSignificantWhitespace || hasTableSymbols) {
             return `<pre class="ql-syntax" spellcheck="false">${paragraph.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
           }
@@ -592,9 +596,20 @@ const UploadQnAModal = ({
   };
 
   const createQuestionFromImportedOption = (option, index) => {
-    let compositeBody = option.questionBody
-      ? `<p>${option.questionBody}</p>`
-      : '';
+    let compositeBody = option.questionBody || option.questionText || '';
+
+    // Ensure it's wrapped in a paragraph if it's plain text
+    if (compositeBody && !compositeBody.startsWith('<')) {
+      compositeBody = `<p>${compositeBody}</p>`;
+    }
+
+    // Append images if present
+    const imageUrls = option.imageUrls || option.image_urls || [];
+    if (imageUrls.length > 0) {
+      imageUrls.forEach(url => {
+        compositeBody += `<p><img src="${url}" alt="Imported Image" style="max-width: 100%; height: auto;" /></p>`;
+      });
+    }
 
     if (option.rubrics && option.rubrics.length > 0) {
       const buildRubricHtml = (rubs, depth = 0) => {
@@ -614,15 +629,18 @@ const UploadQnAModal = ({
       compositeBody += buildRubricHtml(option.rubrics);
     }
 
+    // Preserve marks
+    const marksValue = option.marks || option.max_marks || '';
+
     return {
       ...createDefaultQuestion(),
       id: createQuestionId(),
       questionType: 'text',
-      answerType: option.answerBody ? 'text' : 'image',
+      answerType: (option.answerBody || option.answerText) ? 'text' : 'image',
       questionBody: compositeBody,
-      answerBody: option.answerBody ? `<p>${option.answerBody}</p>` : '',
-      marks: option.marks ? String(option.marks) : '',
-      num_rubric_items: option.rubricsCount || 1,
+      answerBody: (option.answerBody || option.answerText) ? `<p>${option.answerBody || option.answerText}</p>` : '',
+      marks: String(marksValue),
+      num_rubric_items: option.rubricsCount || option.num_rubric_items || 1,
       questionNumber: index + 1,
       isExisting: false,
     };
@@ -652,6 +670,26 @@ const UploadQnAModal = ({
 
     try {
       setIsParsingPaper(true);
+      // First check if it's a finalized Master Exam
+      const masterExam = finalizedMasterExams.find(e => String(e.id) === String(paperId));
+      if (masterExam) {
+        const questionsData = await fetchMasterExamQuestions(paperId);
+        // Map Master Exam questions to the format expected by the flatten logic
+        // Master Exam questions are already flattened in MongoDB
+        const options = (questionsData || []).map((q, idx) => ({
+          id: q.id || q._id,
+          label: `Q${q.question_number || (idx + 1)}: ${q.question_text?.substring(0, 50) || 'Untitled Question'}...`,
+          questionBody: q.question_text || q.question_body,
+          answerBody: q.answer_text || q.answer_body,
+          marks: q.max_marks,
+          imageUrls: q.image_urls || [],
+          num_rubric_items: q.num_rubric_items,
+          rubrics: q.rubric_items || []
+        }));
+        setFlattenedOptions(options);
+        return options;
+      }
+
       const paper = masterPapers.find(p => String(p.id) === String(paperId));
       let parsedOutput;
 
@@ -855,7 +893,7 @@ const UploadQnAModal = ({
     if (isOpen) {
       if (!modalRootRef.current) {
         const modalRoot = document.createElement('div');
-        
+
         Object.assign(modalRoot.style, {
           position: 'fixed',
           top: '0',
@@ -869,23 +907,23 @@ const UploadQnAModal = ({
           justifyContent: 'center',
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)', 
-          zIndex: '9999', 
+          WebkitBackdropFilter: 'blur(4px)',
+          zIndex: '9999',
         });
-        
+
         document.body.appendChild(modalRoot);
         modalRootRef.current = modalRoot;
       }
-      
+
       const originalStyle = window.getComputedStyle(document.body).overflow;
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         if (modalRootRef.current) {
           document.body.removeChild(modalRootRef.current);
           modalRootRef.current = null;
         }
-        
+
         document.body.style.overflow = originalStyle;
       };
     }
@@ -1103,13 +1141,13 @@ const UploadQnAModal = ({
         try {
           // Individual answer generation call
           const generatedAnswer = await withRetry(() => generateAiAnswerForQuestion(question));
-          
+
           if (generatedAnswer) {
             updateQuestion(question.id, (q) => {
               const currentAnswerType = q.answerType || 'text';
               const nextAnswerType = (currentAnswerType === 'image') ? 'both' : currentAnswerType;
               const plainText = generatedAnswer.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-              
+
               return {
                 ...q,
                 answerBody: generatedAnswer,
@@ -1183,7 +1221,9 @@ const UploadQnAModal = ({
       const formattedQuestions = currentExisting.map((q, index) => ({
         ...createDefaultQuestion(),
         id: q.id || q.question_id || `existing_${q.question_number || index + 1}`,
-        questionType: q.question_type || q.question_format || (q.question_file_url ? 'image' : 'text'),
+        questionType: q.question_type === 'mcq' && q.reason_required
+          ? 'mcq_reasoning'
+          : (q.question_type || q.question_format || (q.question_file_url ? 'image' : 'text')),
         answerType: q.answer_type || (q.answer_file_url ? 'image' : 'text'),
         questionUrl: q.question_file_url || '',
         answerUrl: q.answer_file_url || '',
@@ -1193,19 +1233,23 @@ const UploadQnAModal = ({
         answerText: q.answer_text || '',
         answerBody: q.answer_body || '',
         domain: q.domain || 'General',
-        isExisting: true, 
+        isExisting: true,
         questionNumber: q.question_number,
         aiCustomInstruction: '',
         mcqOptions: Array.isArray(q.mcq_options) && q.mcq_options.length > 0
           ? q.mcq_options.map((option, optionIndex) => ({
-              optionId: option.option_id || `option_${optionIndex + 1}`,
-              optionBody: option.option_body || option.option_text || '',
-            }))
+            optionId: option.option_id || `option_${optionIndex + 1}`,
+            optionBody: option.option_body || option.option_text || '',
+          }))
           : [createEmptyMcqOption(0), createEmptyMcqOption(1)],
         correctOptionId: Array.isArray(q.correct_option_ids) && q.correct_option_ids.length > 0
           ? q.correct_option_ids[0]
           : 'option_1',
+        negative_marks: q.negative_marks || '',
+        shuffle_options: Boolean(q.shuffle_options),
         reasonRequired: Boolean(q.reason_required),
+        selectionMarks: q.selection_marks ?? '',
+        reasoningMarks: q.reasoning_marks ?? '',
         num_rubric_items: q.reason_num_rubric_items || q.num_rubric_items || 1,
         professorInstructions: q.reason_professor_instructions || q.professor_instructions || '',
       }));
@@ -1222,17 +1266,26 @@ const UploadQnAModal = ({
     if (isOpen && uploadMode === 'standard') {
       const fetchPapers = async () => {
         try {
-          const papers = await listExamDocuments();
-          setMasterPapers(papers || []);
+          const [papers, finalizedExams] = await Promise.all([
+            listExamDocuments(),
+            listMasterExams()
+          ]);
+
+          // Filter out raw documents that are already finalized to avoid duplicates
+          const finalizedIds = new Set(finalizedExams.map(e => String(e.id)));
+          const rawPapers = (papers || []).filter(p => !p.published_master_exam_id);
+
+          setMasterPapers(rawPapers);
+          setFinalizedMasterExams(finalizedExams || []);
         } catch (e) {
           console.error("Failed to load master exams for import", e);
         }
       };
-      if (masterPapers.length === 0) {
+      if (masterPapers.length === 0 && finalizedMasterExams.length === 0) {
         fetchPapers();
       }
     }
-  }, [isOpen, uploadMode, masterPapers.length]);
+  }, [isOpen, uploadMode, masterPapers.length, finalizedMasterExams.length]);
 
   useEffect(() => {
     if (!isOpen || !initialized || !questions.length || typeof window === 'undefined') {
@@ -1312,7 +1365,7 @@ const UploadQnAModal = ({
     ]);
 
     setSelectedIndex(nextIndex);
-    
+
     setTimeout(() => {
       scrollToQuestion(newQuestion.id);
     }, 100);
@@ -1320,9 +1373,9 @@ const UploadQnAModal = ({
 
   const scrollToQuestion = (id) => {
     if (questionRefs.current[id]) {
-      questionRefs.current[id].scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
+      questionRefs.current[id].scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
       });
     }
   };
@@ -1334,7 +1387,7 @@ const UploadQnAModal = ({
     if (indexToRemove === -1) return;
 
     const deletedQuestion = questions[indexToRemove];
-    
+
     // For existing questions, we need to perform a hard delete on the backend.
     if (deletedQuestion.isExisting) {
       const confirmDelete = window.confirm(
@@ -1362,7 +1415,7 @@ const UploadQnAModal = ({
         return; // Don't remove from local state if backend delete failed
       }
     } else {
-        setDeletingQuestionIds((prev) => [...prev, id]);
+      setDeletingQuestionIds((prev) => [...prev, id]);
     }
 
     const selectedQuestionId = questions[selectedIndex]?.id;
@@ -1447,23 +1500,25 @@ const UploadQnAModal = ({
 
   const navigateQuestion = (direction) => {
     let newIndex;
-    
+
     if (direction === 'prev') {
       newIndex = Math.max(0, selectedIndex - 1);
     } else {
       newIndex = Math.min(questions.length - 1, selectedIndex + 1);
     }
-    
+
     setSelectedIndex(newIndex);
-    
+
     if (questionRefs.current[questions[newIndex].id]) {
       scrollToQuestion(questions[newIndex].id);
     }
   };
 
   const validateQuestions = () => {
-    if (isPortalMcqMode) {
+    if (isPortalMcqMode || isSubjectiveConductMode) {
       const conductIssue = questions.find((q) => {
+        const normalizedQuestionType = q.questionType === 'mcq_reasoning' ? 'mcq_reasoning' : (q.questionType || (isPortalMcqMode ? 'mcq' : 'subjective'));
+        const isMcqLike = normalizedQuestionType === 'mcq' || normalizedQuestionType === 'mcq_reasoning';
         const hasQuestionFile = Boolean(q.question || q.questionUrl);
         const hasQuestionContent = !isRichTextEmpty(q.questionBody) || /<img\b/i.test(q.questionBody || '');
         const marksValue = Number(q.marks);
@@ -1472,15 +1527,26 @@ const UploadQnAModal = ({
         const invalidOptions = validOptions.length < 2;
         const missingCorrectOption = !validOptions.some((option) => option.optionId === q.correctOptionId);
         const rubricCount = parseInt(q.num_rubric_items);
-        const invalidReasonRubricCount = Boolean(q.reasonRequired) && (
+        const invalidReasonRubricCount = normalizedQuestionType === 'mcq_reasoning' && (
           isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10
+        );
+        const invalidSubjectiveRubricCount = normalizedQuestionType === 'subjective' && (
+          isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10
+        );
+        const splitProvided = q.selectionMarks !== '' || q.reasoningMarks !== '';
+        const invalidSplit = normalizedQuestionType === 'mcq_reasoning' && splitProvided && (
+          Number(q.selectionMarks || 0) < 0
+          || Number(q.reasoningMarks || 0) < 0
+          || Math.abs((Number(q.selectionMarks || 0) + Number(q.reasoningMarks || 0)) - marksValue) > 0.001
         );
 
         if (!hasQuestionFile && !hasQuestionContent) return { question: q, message: 'Question content is required.' };
         if (invalidMarks) return { question: q, message: 'Max marks must be greater than 0.' };
-        if (invalidOptions) return { question: q, message: 'Add at least 2 MCQ options with content.' };
-        if (missingCorrectOption) return { question: q, message: 'Select a correct option among the non-empty options.' };
+        if (isMcqLike && invalidOptions) return { question: q, message: 'Add at least 2 MCQ options with content.' };
+        if (isMcqLike && missingCorrectOption) return { question: q, message: 'Select a correct option among the non-empty options.' };
         if (invalidReasonRubricCount) return { question: q, message: 'Reason rubric item count must be between 1 and 10.' };
+        if (invalidSubjectiveRubricCount) return { question: q, message: 'Rubric item count must be between 1 and 10.' };
+        if (invalidSplit) return { question: q, message: 'Selection marks plus reasoning marks must equal total marks.' };
         return null;
       });
 
@@ -1521,26 +1587,26 @@ const UploadQnAModal = ({
 
       return !hasQuestionFile && !hasQuestionContent || !hasAnswerFile && !hasAnswerContent || !q.marks || invalidRubricCount;
     });
-    
+
     if (invalidQuestions.length > 0) {
       const firstInvalidIndex = questions.findIndex(q => q.id === invalidQuestions[0].id);
       const invalidQuestion = invalidQuestions[0];
-      
+
       // Check if the issue is specifically with rubric count
       const rubricCount = parseInt(invalidQuestion.num_rubric_items);
       const invalidRubricCount = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
-      
+
       if (invalidRubricCount) {
         setError(`Number of rubric items must be between 1 and 10 (current: ${invalidQuestion.num_rubric_items || 'empty'})`);
       } else {
         setError('Please fill in all required fields for each question');
       }
-      
+
       setSelectedIndex(firstInvalidIndex);
       scrollToQuestion(invalidQuestions[0].id);
       return false;
     }
-    
+
     setError('');
     return true;
   };
@@ -1549,7 +1615,7 @@ const UploadQnAModal = ({
     if (!validateQuestions()) return;
     setIsSubmitting(true);
     setError('');
-    
+
     try {
       if (isPdfUploadMode) {
         const pdfFormData = new FormData();
@@ -1569,29 +1635,64 @@ const UploadQnAModal = ({
           if (!hasContent) continue;
 
           // Distinguish between new and existing questions
-          let isExisting = q.id && !String(q.id).startsWith('new_') && !String(q.id).startsWith('existing_');
+          // A question is existing if it has a numeric ID OR a string ID starting with 'existing_'
+          const idStr = String(q.id || '');
+          let isExisting = q.id && !idStr.startsWith('new_');
+
+          // For subjective conduct mode, existing questions in Postgres MUST have numeric IDs eventually.
+          // If the ID is 'existing_123', we'll extract the '123' part.
+          let targetId = q.id;
+          if (idStr.startsWith('existing_')) {
+            const numericPart = idStr.replace('existing_', '');
+            if (/^\d+$/.test(numericPart)) {
+              targetId = parseInt(numericPart);
+              isExisting = true;
+            }
+          }
 
           // For subjective conduct mode, existing questions in Postgres MUST have numeric IDs.
           // If the ID is a UUID/slug (e.g. from standard exams), treat it as a new question to be added.
           if (isSubjectiveConductMode && isExisting) {
-            const isNumericId = /^\d+$/.test(String(q.id));
+            const isNumericId = /^\d+$/.test(String(targetId));
             if (!isNumericId) {
               isExisting = false;
             }
           }
-          
+
+          const normalizedQuestionType = q.questionType === 'mcq_reasoning' ? 'mcq_reasoning' : (q.questionType || 'subjective');
+          const isMcqLike = normalizedQuestionType === 'mcq' || normalizedQuestionType === 'mcq_reasoning';
           const payload = {
             question_text: q.questionText || richTextToPlainText(q.questionBody || ''),
             question_body: q.questionBody || '',
             marks: parseFloat(q.marks) || 0,
             display_order: i + 1,
-            allow_text_answer: true,
-            allow_image_answer: true,
+            allow_text_answer: !isMcqLike || normalizedQuestionType === 'mcq_reasoning',
+            allow_image_answer: !isMcqLike || normalizedQuestionType === 'mcq_reasoning',
             num_rubric_items: parseInt(q.num_rubric_items) || 1,
+            question_type: normalizedQuestionType,
+            reason_required: normalizedQuestionType === 'mcq_reasoning',
           };
 
+          if (isMcqLike) {
+            payload.mcq_options = (q.mcqOptions || []).map((option, optionIndex) => ({
+              option_id: option.optionId || `option_${optionIndex + 1}`,
+              option_text: richTextToPlainText(option.optionBody || ''),
+              option_body: option.optionBody || '',
+            }));
+            payload.correct_option_ids = [q.correctOptionId].filter(Boolean);
+            payload.negative_marks = Math.abs(parseFloat(q.negative_marks)) || 0;
+            if (normalizedQuestionType === 'mcq_reasoning') {
+              if (q.selectionMarks !== '') payload.selection_marks = Number(q.selectionMarks);
+              if (q.reasoningMarks !== '') payload.reasoning_marks = Number(q.reasoningMarks);
+            }
+            // Only send num_rubric_items if reasoning is required for this MCQ
+            if (normalizedQuestionType !== 'mcq_reasoning') {
+              delete payload.num_rubric_items;
+            }
+          }
+
           if (isExisting) {
-            await updateConductQuestion(examId, q.id, payload);
+            await updateConductQuestion(examId, targetId, payload);
           } else {
             await addConductExamQuestion(examId, payload);
           }
@@ -1641,7 +1742,7 @@ const UploadQnAModal = ({
                   }
                 }
               }
-              
+
               // Add rubric configuration fields
               if (!isPortalMcqMode) {
                 questionFormData.append('num_rubric_items', (q.num_rubric_items || 1).toString());
@@ -1649,7 +1750,7 @@ const UploadQnAModal = ({
               if (!isPortalMcqMode && q.professorInstructions && q.professorInstructions.trim()) {
                 questionFormData.append('professor_instructions', q.professorInstructions.trim());
               }
-              
+
               if (['image', 'both'].includes(inferredQuestionType) && q.question) {
                 questionFormData.append('file', q.question);
               } else if (['image', 'both'].includes(inferredQuestionType) && !hasQuestionFile) {
@@ -1684,9 +1785,12 @@ const UploadQnAModal = ({
           }
         }
       }
-  
+
       if (typeof window !== 'undefined') {
         window.sessionStorage.removeItem(draftStorageKey);
+      }
+      if (onRefresh) {
+        onRefresh();
       }
       onClose();
     } catch (error) {
@@ -1695,7 +1799,7 @@ const UploadQnAModal = ({
       setIsSubmitting(false);
     }
   };
-  
+
   const QuestionDisplay = ({ type, data, onFileChange, questionId }) => {
     const [isDragActive, setIsDragActive] = useState(false);
     const [isActive, setIsActive] = useState(false);
@@ -1703,7 +1807,7 @@ const UploadQnAModal = ({
     const url = data[`${type}Url`];
     const title = type === 'question' ? 'Question' : 'Answer';
     const dropZoneId = `${type}-${questionId}`;
-    
+
     const dropZoneRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -1722,7 +1826,7 @@ const UploadQnAModal = ({
     const handleDragLeave = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget)) {
         setIsDragActive(false);
       }
@@ -1732,10 +1836,10 @@ const UploadQnAModal = ({
       e.preventDefault();
       e.stopPropagation();
       setIsDragActive(false);
-      
+
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
         const file = e.dataTransfer.files[0];
-        
+
         if (file.type.match('image.*')) {
           onFileChange(questionId, type, file);
         } else {
@@ -1757,7 +1861,7 @@ const UploadQnAModal = ({
         onFileChange(questionId, type, pastedFile);
       }
     };
-    
+
     if (url || preview) {
       const src = preview || url;
       return (
@@ -1786,7 +1890,7 @@ const UploadQnAModal = ({
 
     return (
       <div className="space-y-3">
-        <div 
+        <div
           ref={dropZoneRef}
           className={`w-full min-h-[200px] border ${isDragActive || isActive ? 'border-accent bg-accent/10' : 'border-dashed border-gray-300 bg-gray-50'} 
             rounded-lg hover:border-accent hover:bg-accent/5 transition-all duration-300 
@@ -1866,7 +1970,7 @@ const UploadQnAModal = ({
     const handleDragLeave = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget)) {
         setIsDragActive(false);
       }
@@ -1876,7 +1980,7 @@ const UploadQnAModal = ({
       e.preventDefault();
       e.stopPropagation();
       setIsDragActive(false);
-      
+
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
         const file = e.dataTransfer.files[0];
         if (file.type === 'application/pdf') {
@@ -1984,7 +2088,7 @@ const UploadQnAModal = ({
     }
 
     const loadingToast = toast.loading('Adjusting exam marks...');
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/professors/courses/${exam.course_id}/exams/${examId}`, {
         method: 'PUT',
@@ -2002,10 +2106,10 @@ const UploadQnAModal = ({
       }
 
       const data = await response.json();
-      
+
       if (data.code === 200) {
         toast.success('Exam marks adjusted successfully!', { id: loadingToast });
-        
+
         // Trigger parent refresh if available
         if (onRefresh) {
           onRefresh();
@@ -2028,11 +2132,11 @@ const UploadQnAModal = ({
 
 
   const ModalContent = (
-    <div 
+    <div
       className={`upload-qna-modal relative bg-white shadow-xl w-full flex flex-col
         transform transition-all duration-300 ease-in-out 
-        ${isFullscreen 
-          ? 'max-w-full h-screen rounded-none' 
+        ${isFullscreen
+          ? 'max-w-full h-screen rounded-none'
           : 'max-w-6xl max-h-[92vh] h-[92vh] rounded-2xl m-4 sm:m-6'}`}
       style={{ zIndex: 10000 }}
       onClick={(e) => e.stopPropagation()}
@@ -2066,14 +2170,14 @@ const UploadQnAModal = ({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
-              {isPortalMcqMode ? 'Build Portal MCQ Exam' : isSubjectiveConductMode ? 'Build Subjective Exam' : 'Upload Questions & Solutions'}
+              {isPortalMcqMode ? 'Build MCQ Exam' : isSubjectiveConductMode ? 'Build Online Exam' : 'Upload Questions & Solutions'}
             </h2>
             <p className="text-sm text-gray-500">
               {isPortalMcqMode
                 ? 'Create MCQ questions, options, correct answers, and optional reasoning rules.'
                 : isSubjectiveConductMode
-                ? 'Create subjective questions and configure rubrics for live exams.'
-                : 'Upload question images/text, answers, marks, and rubric configuration.'}
+                  ? 'Mix MCQ and Subjective questions, and configure rubrics for live exams.'
+                  : 'Upload question images/text, answers, marks, and rubric configuration.'}
             </p>
           </div>
         </div>
@@ -2104,16 +2208,15 @@ const UploadQnAModal = ({
                 <button
                   onClick={() => navigateQuestion('prev')}
                   disabled={selectedIndex === 0}
-                  className={`flex items-center justify-center p-1 rounded transition-colors ${
-                    selectedIndex === 0 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center justify-center p-1 rounded transition-colors ${selectedIndex === 0
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                   aria-label="Go to previous question"
                 >
                   <ArrowUp className="w-4 h-4" />
                 </button>
-                
+
                 <div className="flex items-center gap-2 px-3">
                   <select
                     className="text-sm border border-gray-300 bg-white rounded-md py-1 pl-2 pr-6 focus:ring-accent focus:border-accent text-gray-700"
@@ -2121,10 +2224,23 @@ const UploadQnAModal = ({
                     onChange={handlePaperChange}
                     aria-label="Select Paper"
                   >
-                    <option value="">Select Paper</option>
-                    {masterPapers.map(p => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
-                    ))}
+                    <option value="">Select Paper/Exam</option>
+                    {finalizedMasterExams.length > 0 && (
+                      <optgroup label="Finalized Master Exams">
+                        {finalizedMasterExams.map(exam => (
+                          <option key={exam.id} value={exam.id}>
+                            🏆 {exam.exam_name || exam.title} ({exam.full_marks || exam.total_marks}M)
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="Raw Documents">
+                      {masterPapers.map(p => (
+                        <option key={p.id} value={p.id}>
+                          📄 {p.original_filename || p.title}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                   <select
                     className="text-sm border border-gray-300 bg-white rounded-md py-1 pl-2 pr-6 focus:ring-accent focus:border-accent text-gray-700 disabled:opacity-50 disabled:bg-gray-100"
@@ -2144,11 +2260,10 @@ const UploadQnAModal = ({
                     type="button"
                     onClick={handleImportAllQuestions}
                     disabled={!selectedPaperId || isParsingPaper || isImportingAllQuestions}
-                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
-                      !selectedPaperId || isParsingPaper || isImportingAllQuestions
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${!selectedPaperId || isParsingPaper || isImportingAllQuestions
                         ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
                         : 'border-accent/25 bg-accent/5 text-accent hover:bg-accent/10 hover:border-accent/35'
-                    }`}
+                      }`}
                   >
                     {isImportingAllQuestions ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -2161,11 +2276,10 @@ const UploadQnAModal = ({
                     type="button"
                     onClick={handleGenerateAllAnswers}
                     disabled={isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId}
-                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                      isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${isParsingPaper || isImportingAllQuestions || isGeneratingAllAnswers || isSubmitting || !examId
                         ? 'cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400'
                         : 'border border-transparent bg-gradient-to-r from-accent to-teal-500 text-white shadow-sm hover:from-accent/95 hover:to-teal-500/95'
-                    }`}
+                      }`}
                   >
                     {isGeneratingAllAnswers ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -2183,11 +2297,10 @@ const UploadQnAModal = ({
                 <button
                   onClick={() => navigateQuestion('next')}
                   disabled={selectedIndex === questions.length - 1}
-                  className={`flex items-center justify-center p-1 rounded transition-colors ${
-                    selectedIndex === questions.length - 1 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center justify-center p-1 rounded transition-colors ${selectedIndex === questions.length - 1
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                   aria-label="Go to next question"
                 >
                   <ArrowDown className="w-4 h-4" />
@@ -2217,26 +2330,22 @@ const UploadQnAModal = ({
       {/* Exam Marks Validation Alert */}
       {exam && examMarksValidation.isMismatch && (
         <div className="px-6 pt-3 pb-0 animate-slideDown">
-          <div className={`px-4 py-3 rounded-xl flex items-start gap-3 border ${
-            examMarksValidation.isExceeded
+          <div className={`px-4 py-3 rounded-xl flex items-start gap-3 border ${examMarksValidation.isExceeded
               ? 'bg-red-50 border-red-200'
               : 'bg-yellow-50 border-yellow-200'
-          }`}>
-            <AlertCircle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-              examMarksValidation.isExceeded ? 'text-red-500' : 'text-yellow-600'
-            }`} />
+            }`}>
+            <AlertCircle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${examMarksValidation.isExceeded ? 'text-red-500' : 'text-yellow-600'
+              }`} />
             <div className="flex-1">
-              <p className={`text-sm font-medium ${
-                examMarksValidation.isExceeded ? 'text-red-800' : 'text-yellow-800'
-              }`}>
+              <p className={`text-sm font-medium ${examMarksValidation.isExceeded ? 'text-red-800' : 'text-yellow-800'
+                }`}>
                 {examMarksValidation.isExceeded
                   ? `Total question marks (${examMarksValidation.totalQuestionMarks}) exceed exam marks (${examMarksValidation.examMarks})`
                   : `Total question marks (${examMarksValidation.totalQuestionMarks}) are less than exam marks (${examMarksValidation.examMarks})`
                 }
               </p>
-              <p className={`text-xs mt-1 ${
-                examMarksValidation.isExceeded ? 'text-red-600' : 'text-yellow-700'
-              }`}>
+              <p className={`text-xs mt-1 ${examMarksValidation.isExceeded ? 'text-red-600' : 'text-yellow-700'
+                }`}>
                 {examMarksValidation.isExceeded
                   ? 'You cannot save until marks are adjusted. Click the button below to update exam marks.'
                   : 'Consider adjusting exam marks to match question marks for consistency.'}
@@ -2244,11 +2353,10 @@ const UploadQnAModal = ({
             </div>
             <button
               onClick={handleAdjustExamMarks}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                examMarksValidation.isExceeded
+              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${examMarksValidation.isExceeded
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-yellow-600 text-white hover:bg-yellow-700'
-              }`}
+                }`}
             >
               Adjust Exam Marks
             </button>
@@ -2262,11 +2370,10 @@ const UploadQnAModal = ({
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-gray-500">Questions Total:</span>
-              <span className={`font-semibold ${
-                examMarksValidation.isExceeded ? 'text-red-600' : 
-                examMarksValidation.isLess ? 'text-yellow-600' : 
-                'text-green-600'
-              }`}>
+              <span className={`font-semibold ${examMarksValidation.isExceeded ? 'text-red-600' :
+                  examMarksValidation.isLess ? 'text-yellow-600' :
+                    'text-green-600'
+                }`}>
                 {examMarksValidation.totalQuestionMarks}
               </span>
             </div>
@@ -2298,21 +2405,21 @@ const UploadQnAModal = ({
               <div className="bg-accent/10 text-gray-800 text-sm p-4 rounded-xl flex items-start animate-fadeIn border border-accent/15">
                 <span className="text-accent mr-2">💡</span>
                 <span>
-                  <strong>Tip:</strong> Upload a complete PDF question paper and a corresponding 
+                  <strong>Tip:</strong> Upload a complete PDF question paper and a corresponding
                   golden answer script. The system will use these PDFs for automated grading.
                 </span>
               </div>
 
               <div className="grid grid-cols-1 gap-6">
-                <PdfUploader 
-                  title="Question Paper PDF" 
+                <PdfUploader
+                  title="Question Paper PDF"
                   file={questionPdfFile}
                   setFile={setQuestionPdfFile}
                   icon={FileText}
                 />
 
-                <PdfUploader 
-                  title="Golden Answer Script PDF" 
+                <PdfUploader
+                  title="Golden Answer Script PDF"
                   file={goldenPdfFile}
                   setFile={setGoldenPdfFile}
                   icon={File}
@@ -2412,6 +2519,46 @@ const UploadQnAModal = ({
 
               <div className="p-6 space-y-6 flex-1 min-h-0 overflow-y-auto">
                 <div className="grid grid-cols-1 gap-6">
+                  {isSubjectiveConductMode && (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-600">
+                        Question Type
+                      </label>
+                      <div className="flex bg-slate-100/80 p-1.5 rounded-xl w-full max-w-md gap-1">
+                        <button
+                          type="button"
+                          onClick={() => updateQuestion(activeQuestion.id, (q) => ({ ...q, questionType: 'subjective', reasonRequired: false }))}
+                          className={`flex-1 py-2 px-4 text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${activeQuestion.questionType === 'subjective'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                            }`}
+                        >
+                          Subjective
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateQuestion(activeQuestion.id, (q) => ({ ...q, questionType: 'mcq' }))}
+                          className={`flex-1 py-2 px-4 text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${activeQuestion.questionType === 'mcq'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                            }`}
+                        >
+                          MCQ Only
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateQuestion(activeQuestion.id, (q) => ({ ...q, questionType: 'mcq_reasoning', reasonRequired: true }))}
+                          className={`flex-1 py-2 px-4 text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${activeQuestion.questionType === 'mcq_reasoning'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                            }`}
+                        >
+                          MCQ + Reason
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-600">
@@ -2424,8 +2571,8 @@ const UploadQnAModal = ({
                           if (suppressQuillOnChangeRef.current) return;
                           // Synchronize plain text fields with the rich text body
                           const strippedText = value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-                          updateQuestion(activeQuestion.id, (q) => ({ 
-                            ...q, 
+                          updateQuestion(activeQuestion.id, (q) => ({
+                            ...q,
                             questionBody: value,
                             question_body: value,
                             questionText: strippedText,
@@ -2440,7 +2587,7 @@ const UploadQnAModal = ({
                     </div>
                   </div>
 
-                  {!isPortalMcqMode ? (
+                  {(!isPortalMcqMode && activeQuestion.questionType !== 'mcq' && activeQuestion.questionType !== 'mcq_reasoning') ? (
                     <div className="space-y-3">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-3">
@@ -2470,8 +2617,8 @@ const UploadQnAModal = ({
                             if (suppressQuillOnChangeRef.current) return;
                             // Synchronize plain text fields with the rich text body
                             const strippedText = value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-                            updateQuestion(activeQuestion.id, (q) => ({ 
-                              ...q, 
+                            updateQuestion(activeQuestion.id, (q) => ({
+                              ...q,
                               answerBody: value,
                               answer_body: value,
                               answerText: strippedText,
@@ -2560,20 +2707,36 @@ const UploadQnAModal = ({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Max Marks <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={activeQuestion.marks}
-                    onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, marks: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
-                    placeholder="Enter max marks"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Max Marks <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={activeQuestion.marks}
+                      onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, marks: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
+                      placeholder="Enter max marks"
+                    />
+                  </div>
+                  {(isPortalMcqMode || activeQuestion.questionType === 'mcq' || activeQuestion.questionType === 'mcq_reasoning') && (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Negative Marks (Optional)
+                      </label>
+                      <input
+                        type="number"
+                        value={activeQuestion.negative_marks || ''}
+                        onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, negative_marks: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
+                        placeholder="e.g. 1"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {!isPortalMcqMode ? (
+                {(!isPortalMcqMode && activeQuestion.questionType !== 'mcq' && activeQuestion.questionType !== 'mcq_reasoning') ? (
                   <div className="p-5 bg-accent/5 rounded-2xl border border-accent/15">
                     <div className="flex items-center gap-2 mb-4">
                       <FileText className="w-4 h-4 text-accent" />
@@ -2599,9 +2762,9 @@ const UploadQnAModal = ({
                             return (
                               <p className="text-xs text-amber-600 flex items-center gap-1">
                                 <AlertCircle className="w-3 h-3" />
-                                {isNaN(rubricCount) 
-                                  ? 'Please enter a valid number' 
-                                  : rubricCount < 1 
+                                {isNaN(rubricCount)
+                                  ? 'Please enter a valid number'
+                                  : rubricCount < 1
                                     ? `Minimum 1 rubric item required (current: ${rubricCount})`
                                     : `Maximum 10 rubric items allowed (current: ${rubricCount})`
                                 }
@@ -2636,17 +2799,31 @@ const UploadQnAModal = ({
                       <CheckCircle className="w-4 h-4 text-blue-700" />
                       <h4 className="text-sm font-semibold text-gray-900">Portal Exam Rules</h4>
                     </div>
-                    <label className="inline-flex items-center gap-3 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(activeQuestion.reasonRequired)}
-                        onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, reasonRequired: e.target.checked }))}
-                        className="h-4 w-4 rounded border-gray-300 text-accent"
-                      />
-                      Require students to provide a short reason with their selected option
-                    </label>
-                    {Boolean(activeQuestion.reasonRequired) && (
+                    {activeQuestion.questionType === 'mcq' && (
+                      <p className="text-sm text-gray-600">Standard MCQ: selection is checked automatically and no AI rubric is generated.</p>
+                    )}
+                    {activeQuestion.questionType === 'mcq_reasoning' && (
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">Selection Marks</label>
+                          <input
+                            type="number"
+                            value={activeQuestion.selectionMarks || ''}
+                            onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, selectionMarks: e.target.value }))}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
+                            placeholder="Auto-split if blank"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">Reasoning Marks</label>
+                          <input
+                            type="number"
+                            value={activeQuestion.reasoningMarks || ''}
+                            onChange={(e) => updateQuestion(activeQuestion.id, (q) => ({ ...q, reasoningMarks: e.target.value }))}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent focus:outline-none transition-all duration-200"
+                            placeholder="Auto-split if blank"
+                          />
+                        </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-700">
                             Rubric Items for Reason
@@ -2705,7 +2882,7 @@ const UploadQnAModal = ({
             disabled={isSubmitting || (exam && examMarksValidation.isExceeded)}
             className={`flex items-center gap-2 px-5 py-2 rounded-md font-medium transition-all duration-300
               ${isSubmitting || (exam && examMarksValidation.isExceeded)
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-accent text-white hover:bg-accent shadow-sm hover:shadow'}`}
             type="button"
             title={exam && examMarksValidation.isExceeded ? 'Cannot save: Total question marks exceed exam marks' : ''}

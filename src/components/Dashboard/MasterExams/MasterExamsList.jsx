@@ -4,12 +4,13 @@ import { FilePlus2, FileText, Trash2, Edit3, Clock, Loader2 } from 'lucide-react
 import toast from 'react-hot-toast';
 import {
   listExamDocuments,
+  listMasterExams,
   createExamDocument,
   deleteExamDocument
 } from './examDocumentApi';
 
 const MasterExamsList = () => {
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState({ workspaces: [], finalized: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
@@ -17,10 +18,19 @@ const MasterExamsList = () => {
   const loadDocuments = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await listExamDocuments();
-      setDocuments(Array.isArray(data) ? data : []);
+      const [workspaces, finalized] = await Promise.all([
+        listExamDocuments(),
+        listMasterExams()
+      ]);
+      
+      // Merge them into a single list or handle separately
+      // For now, let's keep workspaces that AREN'T finalized yet separately or mark them
+      setDocuments({
+        workspaces: Array.isArray(workspaces) ? workspaces : [],
+        finalized: Array.isArray(finalized) ? finalized : []
+      });
     } catch (err) {
-      toast.error('Failed to load documents');
+      toast.error('Failed to load library');
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +66,10 @@ const MasterExamsList = () => {
 
     try {
       await deleteExamDocument(docId);
-      setDocuments(prev => prev.filter(d => d.id !== docId));
+      setDocuments(prev => ({
+        ...prev,
+        workspaces: prev.workspaces.filter(d => d.id !== docId)
+      }));
       toast.success('Document deleted');
     } catch (err) {
       toast.error('Failed to delete document');
@@ -86,14 +99,15 @@ const MasterExamsList = () => {
         <div className="flex justify-center p-20">
           <Loader2 className="h-8 w-8 animate-spin text-accent" />
         </div>
-      ) : documents.length === 0 ? (
+      ) : (documents.workspaces?.length === 0 && documents.finalized?.length === 0) ? (
         <div className="flex flex-col items-center justify-center rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-center shadow-sm">
+          {/* ... (empty state content) ... */}
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100">
             <FileText className="h-8 w-8 text-accent" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900">No documents yet</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Your library is empty</h3>
           <p className="mt-2 mb-6 max-w-sm text-sm text-slate-500">
-            Start drafting your first exam paper entirely in our distraction-free editor.
+            Start by creating a new paper or uploading documents to build your master exam database.
           </p>
           <button
             onClick={handleCreateNew}
@@ -105,44 +119,99 @@ const MasterExamsList = () => {
           </button>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              onClick={() => navigate(`/master-exams/${doc.id}`)}
-              className="group relative flex cursor-pointer flex-col rounded-[12px] border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
-            >
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-accent ring-1 ring-slate-100 transition-colors group-hover:bg-accent/5">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium capitalize text-slate-600">
-                     {(doc.status || 'draft').replace('_', ' ')}
-                  </span>
-                  <button
-                    onClick={(e) => handleDelete(e, doc.id, doc.title)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-                    title="Delete"
+        <div className="space-y-10">
+          {/* Finalized Master Exams Section */}
+          {documents.finalized?.length > 0 && (
+            <section>
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
+                <FileText className="h-4 w-4" />
+                Finalized Master Exams
+              </h3>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {documents.finalized.map((exam) => (
+                  <div
+                    key={exam.id}
+                    className="group relative flex flex-col rounded-[12px] border border-green-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-green-300"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600 ring-1 ring-green-100 transition-colors">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                          Finalized
+                        </span>
+                      </div>
+                    </div>
+                    <h4 className="mb-2 line-clamp-2 text-base font-semibold text-slate-900">
+                      {exam.exam_name || exam.title}
+                    </h4>
+                    <p className="mb-4 text-xs text-slate-500 line-clamp-1">
+                      {exam.full_marks} Marks • Ready for import
+                    </p>
+                    <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4 text-xs font-medium text-slate-400">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        {exam.created_at ? new Date(exam.created_at).toLocaleDateString() : 'Ready'}
+                      </div>
+                      <span className="text-green-600 font-semibold">Locked 🔒</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h4 className="mb-2 line-clamp-2 text-base font-semibold text-slate-900 group-hover:text-accent">
-                {doc.title || 'Untitled Document'}
-              </h4>
-              <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4 text-xs font-medium text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : 'Just now'}
-                </div>
-                <span className="flex items-center gap-1 text-accent opacity-0 transition-opacity group-hover:opacity-100">
-                  <Edit3 className="h-3.5 w-3.5" /> Edit
-                </span>
+            </section>
+          )}
+
+          {/* Draft Workspaces Section */}
+          {documents.workspaces?.filter(d => !d.published_master_exam_id).length > 0 && (
+            <section>
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
+                <Edit3 className="h-4 w-4" />
+                Draft Workspaces
+              </h3>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {documents.workspaces
+                  .filter(d => !d.published_master_exam_id)
+                  .map((doc) => (
+                  <div
+                    key={doc.id}
+                    onClick={() => navigate(`/master-exams/${doc.id}`)}
+                    className="group relative flex cursor-pointer flex-col rounded-[12px] border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-accent ring-1 ring-slate-100 transition-colors group-hover:bg-accent/5">
+                        <Edit3 className="h-5 w-5" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium capitalize text-slate-600">
+                           Draft
+                        </span>
+                        <button
+                          onClick={(e) => handleDelete(e, doc.id, doc.title)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <h4 className="mb-2 line-clamp-2 text-base font-semibold text-slate-900 group-hover:text-accent">
+                      {doc.title || 'Untitled Document'}
+                    </h4>
+                    <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4 text-xs font-medium text-slate-400">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : 'Just now'}
+                      </div>
+                      <span className="flex items-center gap-1 text-accent opacity-0 transition-opacity group-hover:opacity-100">
+                        <Edit3 className="h-3.5 w-3.5" /> Continue Assembly
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            </section>
+          )}
         </div>
       )}
     </div>

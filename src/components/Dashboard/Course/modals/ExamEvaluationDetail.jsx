@@ -1774,6 +1774,57 @@ const ExamEvaluationDetail = ({
                           </div>
                         )}
 
+                        {Array.isArray(answerScript.questions[currentQuestionIndex].selected_option_ids) && 
+                         answerScript.questions[currentQuestionIndex].selected_option_ids.length > 0 && (
+                          <div className={`${darkMode ? 'bg-blue-900/20 border-blue-700/30' : 'bg-blue-50 border-blue-100'} border rounded-lg p-4`}>
+                            <h4 className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-blue-700'} mb-3 flex items-center gap-2`}>
+                              <CheckCircle className="w-4 h-4" />
+                              Selected MCQ Option:
+                            </h4>
+                            <div className="flex flex-wrap gap-3">
+                              {answerScript.questions[currentQuestionIndex].selected_option_ids.map(optId => {
+                                const normOptId = String(optId).replace('option_', '').trim();
+                                const optionObj = currentQuestion?.mcq_options?.find(o => 
+                                  String(o.option_id) === String(optId) || 
+                                  String(o.option_id).replace('option_', '').trim() === normOptId
+                                );
+                                const isCorrect = answerScript.questions[currentQuestionIndex].is_correct;
+                                return (
+                                  <div 
+                                    key={optId} 
+                                    className={`px-4 py-3 rounded-xl font-medium border-2 flex flex-col gap-1 transition-all w-full ${
+                                      isCorrect 
+                                        ? darkMode ? 'bg-green-900/20 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700'
+                                        : darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'
+                                    }`}
+                                  >
+                                    <div className="text-[10px] uppercase tracking-widest opacity-60">Selected Option {normOptId}</div>
+                                    <div className="text-sm prose prose-slate max-w-none leading-relaxed">
+                                      {optionObj && (optionObj.option_body || optionObj.option_text) ? (
+                                        optionObj.option_body ? (
+                                          <div dangerouslySetInnerHTML={{ __html: optionObj.option_body }} />
+                                        ) : (
+                                          <p>{optionObj.option_text}</p>
+                                        )
+                                      ) : (
+                                        <p>{`Option ${normOptId}`}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {answerScript.questions[currentQuestionIndex].is_correct !== null && (
+                              <div className={`mt-3 px-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${
+                                answerScript.questions[currentQuestionIndex].is_correct ? 'text-green-500' : 'text-red-500'
+                              }`}>
+                                <div className={`w-2 h-2 rounded-full ${answerScript.questions[currentQuestionIndex].is_correct ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                                {answerScript.questions[currentQuestionIndex].is_correct ? 'Auto-graded: Correct' : 'Auto-graded: Incorrect'}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {answerScript.questions[currentQuestionIndex].zip_answer_url && (
                           <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'} border rounded-lg p-4`}>
                             <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
@@ -1912,10 +1963,18 @@ const ExamEvaluationDetail = ({
                         <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                           Question {currentQuestionNumber}
                         </h3>
-                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          Score: <span className={`font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                            {currentTotalScore} / {currentMaxScore}
-                          </span>
+                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} flex flex-col items-end`}>
+                          <div>
+                            Score: <span className={`font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                              {currentTotalScore} / {currentMaxScore}
+                            </span>
+                          </div>
+                          {currentQuestion.question_type === 'mcq_reasoning' && (
+                            <div className="text-[10px] opacity-70 mt-1">
+                              Selection: {currentQuestion.selection_marks_awarded || 0}/{currentQuestion.selection_marks || 0} | 
+                              Reasoning: {currentQuestion.reasoning_marks_awarded || 0}/{currentQuestion.reasoning_marks || 0}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <AnimatedCard 
@@ -1942,6 +2001,53 @@ const ExamEvaluationDetail = ({
                             <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                               {currentQuestion.question_text || 'No question text available'}
                             </p>
+                          )}
+
+                          {/* MCQ Options Display */}
+                          {(currentQuestion.question_type === 'mcq' || currentQuestion.question_type === 'mcq_reasoning') && (
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                              <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Question Options
+                              </h4>
+                              <div className="grid grid-cols-1 gap-3">
+                                {(currentQuestion.mcq_options || []).map((option) => {
+                                  const isCorrect = (currentQuestion.correct_option_ids || []).includes(option.option_id);
+                                  return (
+                                    <div 
+                                      key={option.option_id}
+                                      className={`p-3 rounded-xl border-2 transition-all flex items-start gap-3 ${
+                                        isCorrect 
+                                          ? darkMode ? 'bg-green-900/10 border-green-500/30' : 'bg-green-50 border-green-200'
+                                          : darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+                                      }`}
+                                    >
+                                      <div className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 font-bold text-xs ${
+                                        isCorrect 
+                                          ? 'border-green-500 bg-green-500 text-white' 
+                                          : darkMode ? 'border-gray-600 text-gray-500' : 'border-gray-300 text-gray-400'
+                                      }`}>
+                                        {option.option_id}
+                                      </div>
+                                      <div className="flex-grow">
+                                        {option.option_body ? (
+                                          <div 
+                                            className={`prose prose-sm max-w-none ${darkMode ? 'prose-invert text-gray-300' : 'text-gray-700'}`}
+                                            dangerouslySetInnerHTML={{ __html: option.option_body }}
+                                          />
+                                        ) : (
+                                          <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{option.option_text}</div>
+                                        )}
+                                      </div>
+                                      {isCorrect && (
+                                        <div className="text-[10px] font-black uppercase text-green-600 tracking-tighter bg-green-100 px-1.5 py-0.5 rounded">
+                                          Correct
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </AnimatedCard>
@@ -2044,6 +2150,22 @@ const ExamEvaluationDetail = ({
                       </div>
                     </motion.div>
                     
+                    {currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false && (
+                      <div className={`p-4 rounded-2xl border flex items-start gap-4 mb-6 ${
+                        darkMode ? 'bg-red-900/10 border-red-500/20 text-red-300' : 'bg-red-50 border-red-100 text-red-800'
+                      }`}>
+                        <div className={`p-2 rounded-xl ${darkMode ? 'bg-red-900/30' : 'bg-red-100'} flex-shrink-0`}>
+                          <AlertCircle className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-sm">Reasoning marks disabled</h4>
+                          <p className="text-xs opacity-80 leading-relaxed">
+                            The student selected an incorrect MCQ option. According to policy, reasoning marks cannot be awarded for incorrect selections.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="space-y-4">
                       {rubrics.map((rubric, index) => (
                         <motion.div 
@@ -2075,13 +2197,18 @@ const ExamEvaluationDetail = ({
                                     min="0"
                                     max={rubric.max_marks}
                                     step="0.5"
+                                    disabled={currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false}
                                     value={rubric.marks_awarded || 0}
                                     onChange={(e) => handleRubricScoreChange(index, e.target.value)}
                                     className={`w-16 px-2 py-1 rounded-md text-center ${
                                       darkMode 
                                         ? 'bg-gray-800 border-gray-600 text-gray-200 focus:ring-blue-500/50' 
                                         : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500/50'
-                                    } focus:outline-none focus:ring-2 focus:border-blue-500`}
+                                    } ${
+                                      (currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false)
+                                        ? 'opacity-50 cursor-not-allowed grayscale'
+                                        : 'focus:outline-none focus:ring-2 focus:border-blue-500'
+                                    }`}
                                   />
                                   <span className={`mx-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     /{rubric.max_marks}

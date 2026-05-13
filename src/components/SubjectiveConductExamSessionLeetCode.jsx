@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EditorContent, useEditor, NodeViewWrapper, ReactNodeViewRenderer, Node } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -65,6 +66,16 @@ import { examsApi } from './Student_api';
 const getSessionStorageKey = (examId) => `conduct_exam_session_${examId}`;
 const getSyncChannelName = (examId) => `conduct_exam_sync_${examId}`;
 
+const isMcqQuestion = (question) => question?.question_type === 'mcq' || question?.question_type === 'mcq_reasoning';
+const needsReasoningEditor = (question) => (
+  question?.question_type === 'mcq_reasoning'
+  || (question?.question_type === 'mcq' && Boolean(question?.reason_required))
+);
+const needsTextEditor = (question) => (
+  needsReasoningEditor(question)
+  || (!isMcqQuestion(question) && Boolean(question?.allow_text_answer))
+);
+
 const createSessionId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -117,6 +128,7 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionPanelCollapsed, setQuestionPanelCollapsed] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState('saved'); // 'saved', 'saving', 'unsaved'
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const [uploadState, setUploadState] = useState({});
   const [showUploadPanel, setShowUploadPanel] = useState(false);
@@ -259,6 +271,7 @@ Take your time and write a comprehensive answer.`,
         const serverAnswer = {
           text_answer: question.text_answer || '',
           answer_images: question.answer_images || [],
+          selected_option_ids: question.selected_option_ids || [],
         };
         const shouldPreserveLocalAnswer =
           preserveDirtyAnswers &&
@@ -369,6 +382,7 @@ Take your time and write a comprehensive answer.`,
       question_id: Number(questionId),
       text_answer: answers[questionId]?.text_answer || '',
       image_url: answers[questionId]?.image_answer_url || null,
+      selected_option_ids: answers[questionId]?.selected_option_ids || null,
     }));
 
     if (!silent) {
@@ -482,6 +496,15 @@ Take your time and write a comprehensive answer.`,
     handleAutoSubmit();
   }, [timeLeft, session?.status]);
 
+  useEffect(() => {
+    if (isSubmitted) {
+      const timer = setTimeout(() => {
+        navigate('/student-dashboard');
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmitted, navigate]);
+
   // Keyboard navigation and shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -517,7 +540,8 @@ Take your time and write a comprehensive answer.`,
         const hasText = String(answer?.text_answer || '').trim();
         const hasImages = uploadState[qId]?.images?.length > 0;
         const hasZip = answer?.zip_answer_url || uploadState[qId]?.zipUrl;
-        if (hasText || hasImages || hasZip) count++;
+        const hasMcq = Array.isArray(answer?.selected_option_ids) && answer.selected_option_ids.length > 0;
+        if (hasText || hasImages || hasZip || hasMcq) count++;
       }
       return count;
     },
@@ -530,6 +554,17 @@ Take your time and write a comprehensive answer.`,
       [questionId]: {
         ...(prev[questionId] || {}),
         text_answer: value,
+      },
+    }));
+    setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
+  };
+
+  const handleOptionChange = (questionId, optionId) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...(prev[questionId] || {}),
+        selected_option_ids: [optionId], // Storing as array for future multi-select compatibility
       },
     }));
     setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
@@ -619,6 +654,7 @@ Take your time and write a comprehensive answer.`,
       }
       hydrateSession(response.data);
       broadcastSessionSync();
+      setIsSubmitted(true);
       setNotice('Conduct exam submitted successfully');
     } catch (err) {
       setError(err.message || 'Unable to submit conduct exam.');
@@ -637,7 +673,10 @@ Take your time and write a comprehensive answer.`,
   const isQuestionAnswered = (questionId) => {
     const ans = answers[questionId];
     const up = uploadState[questionId];
-    return !!(ans?.text_answer?.trim() || (up?.images && up.images.length > 0));
+    const hasText = !!ans?.text_answer?.trim() && ans.text_answer !== '<p></p>';
+    const hasImages = !!(up?.images && up.images.length > 0);
+    const hasMcq = Array.isArray(ans?.selected_option_ids) && ans.selected_option_ids.length > 0;
+    return hasText || hasImages || hasMcq;
   };
 
   // Toolbar button component
@@ -689,7 +728,8 @@ Take your time and write a comprehensive answer.`,
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white overflow-hidden select-none">
+    <>
+      <div className="h-screen flex flex-col bg-white overflow-hidden select-none">
       <style>{`
         .ProseMirror table {
           border-collapse: collapse;
@@ -1021,9 +1061,73 @@ Take your time and write a comprehensive answer.`,
               </div>
             )}
 
-            <div className="flex-1 flex flex-col min-h-0 gap-8">
-              {currentQuestion?.allow_text_answer && (
-                <div className="flex-1 flex flex-col min-h-0 min-h-[500px]">
+            <div className="flex-1 flex flex-col min-h-0 gap-6">
+              {/* MCQ Options Section */}
+              {isMcqQuestion(currentQuestion) && (
+                <div className="shrink-0">
+                  <div className="space-y-3 max-w-3xl">
+                    {(!currentQuestion.mcq_options || currentQuestion.mcq_options.length === 0) ? (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
+                        <p className="font-bold">Notice:</p>
+                        <p>No multiple-choice options are defined for this question. Please contact your instructor.</p>
+                      </div>
+                    ) : (
+                      (currentQuestion.mcq_options || []).map((option, idx) => {
+                      const isSelected = (currentAnswer?.selected_option_ids || []).includes(option.option_id);
+                      return (
+                        <label
+                          key={option.option_id}
+                          className={`relative flex items-start p-4 cursor-pointer rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md ${
+                            isSelected
+                              ? 'border-accent bg-accent/5 ring-4 ring-accent/10'
+                              : 'border-gray-200 bg-white hover:border-accent/40 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center h-6 mt-1">
+                            <input
+                              type="radio"
+                              name={`mcq-${currentQuestion.id}`}
+                              value={option.option_id}
+                              checked={isSelected}
+                              onChange={() => handleOptionChange(currentQuestion.id, option.option_id)}
+                              className="w-5 h-5 text-accent border-gray-300 focus:ring-accent/50 cursor-pointer transition-colors"
+                            />
+                          </div>
+                          <div className="ml-4 flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <span className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold ${
+                                isSelected ? 'bg-accent text-white shadow-sm' : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                {String.fromCharCode(65 + idx)}
+                              </span>
+                            </div>
+                            <div
+                              className={`prose prose-sm max-w-none transition-colors ${
+                                isSelected ? 'text-gray-900' : 'text-gray-700'
+                              }`}
+                              dangerouslySetInnerHTML={{
+                                __html: option.option_body || option.option_text || ''
+                              }}
+                            />
+                          </div>
+                        </label>
+                      );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Rich Text Editor Section (Subjective or MCQ Reasoning) */}
+              {needsTextEditor(currentQuestion) && (
+                <div className="flex-1 flex flex-col min-h-0 min-h-[400px]">
+                  {isMcqQuestion(currentQuestion) && (
+                    <div className="flex items-center gap-2 mb-3 px-2">
+                       <TypeIcon size={14} className="text-gray-400" />
+                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Supporting Reasoning Required</span>
+                    </div>
+                  )}
+                  
                   {/* TipTap Toolbar - MS Word Style */}
                   <div className="flex flex-wrap items-center gap-1 p-2 mb-2 bg-gray-50 border border-gray-200 rounded-2xl shrink-0 shadow-sm">
                     {/* Basic Formatting */}
@@ -1227,12 +1331,70 @@ Take your time and write a comprehensive answer.`,
                   </div>
                 </div>
               )}
+            </div>
 
             </div>
           </div>
         </div>
       </div>
-    </div>
+      
+      <AnimatePresence>
+        {isSubmitted && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-white/95 backdrop-blur-md"
+          >
+            <div className="text-center max-w-md px-6">
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className="w-32 h-32 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-emerald-200"
+              >
+                <CheckCircle2 className="w-16 h-16" />
+              </motion.div>
+              
+              <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h2 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">Exam Complete!</h2>
+                <p className="text-gray-500 font-medium text-lg mb-10">
+                  Your answers have been securely synced and submitted. Great work!
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400 px-1">
+                    <span>Redirecting to Dashboard</span>
+                    <span>4s</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-50 shadow-inner">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 3.5, ease: "linear" }}
+                      className="h-full bg-emerald-500"
+                    />
+                  </div>
+                </div>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/student-dashboard')}
+                  className="mt-12 px-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-gray-800 transition-all shadow-xl shadow-gray-200"
+                >
+                  Go Now
+                </motion.button>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

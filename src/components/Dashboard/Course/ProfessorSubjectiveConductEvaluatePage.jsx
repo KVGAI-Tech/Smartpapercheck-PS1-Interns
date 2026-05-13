@@ -95,10 +95,10 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
             Back to Exams
           </button>
           <h1 className="text-3xl font-semibold text-gray-900">
-            {listData?.exam?.exam_name || 'Conduct Exam Review'}
+            {listData?.exam?.exam_name || 'Online Exam Review'}
           </h1>
           <p className="mt-2 text-sm text-gray-500">
-            Review subjective conduct submissions, award marks, and leave feedback question by question.
+            Review subjective online submissions, award marks, and leave feedback question by question.
           </p>
         </div>
 
@@ -169,7 +169,9 @@ const ProfessorSubjectiveConductEvaluatePage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        submission.status === 'submitted' || submission.status === 'auto_submitted'
+                        submission.status === 'evaluated'
+                          ? 'bg-blue-100 text-blue-800'
+                          : submission.status === 'submitted' || submission.status === 'auto_submitted'
                           ? 'bg-green-100 text-green-800'
                           : 'bg-amber-100 text-amber-800'
                       }`}>

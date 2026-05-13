@@ -61,7 +61,7 @@ const ExamForm = ({
   const isPortalMcq = formData.exam_type === 'portal_mcq';
 
   const handleTypeChange = (e) => {
-    const newType = e.target.value;
+      const newType = e.target.value;
     setFormData((prev) => ({
       ...prev,
       exam_type: newType,
@@ -82,6 +82,7 @@ const ExamForm = ({
       exam_name: formData.exam_name.trim(),
       full_marks: Number(formData.full_marks),
       exam_type: formData.exam_type,
+      exam_mode: formData.exam_type === 'conduct' ? 'online' : 'offline',
       is_active: Boolean(formData.is_active),
       allow_recheck: formData.allow_recheck,
       max_recheck_attempts: formData.max_recheck_attempts,
@@ -185,17 +186,12 @@ const ExamForm = ({
             {[
               {
                 value: 'evaluated',
-                label: 'Evaluated Exam',
+                label: 'Offline Exam',
                 icon: Brain
               },
               {
-                value: 'portal_mcq',
-                label: 'MCQ Exam',
-                icon: ClipboardList
-              },
-              {
                 value: 'conduct',
-                label: 'Conduct Exam',
+                label: 'Online Exam',
                 icon: FileText
               }
             ].map((type) => {
@@ -222,7 +218,7 @@ const ExamForm = ({
             })}
           </div>
           <p className="mt-3 text-xs text-gray-500">
-            Evaluated exams keep the current answer-sheet workflow. Portal MCQ and Conduct Exam stay fully inside the portal.
+            Offline exams keep the current answer-sheet workflow. Online exams stay fully inside the portal.
           </p>
         </div>
 

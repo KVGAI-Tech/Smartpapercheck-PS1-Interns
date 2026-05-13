@@ -602,7 +602,7 @@ const Toast = ({ message, type, show, onClose }) => {
                       exit={{ opacity: 0, y: 5, scale: 0.95 }}
                       className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] font-bold rounded-lg shadow-2xl whitespace-nowrap pointer-events-none border border-white/10"
                     >
-                      <span className="relative z-10">{isPortalExam ? 'MCQ Exam' : isSubjectiveConduct ? 'Conduct Exam' : 'Evaluated Exam'}</span>
+                      <span className="relative z-10">{isPortalExam ? 'MCQ Exam' : isSubjectiveConduct ? 'Online Exam' : 'Offline Exam'}</span>
                       <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[5px] border-transparent border-t-gray-900/95" />
                     </motion.div>
                   )}
@@ -1821,7 +1821,7 @@ const Toast = ({ message, type, show, onClose }) => {
           state: {
             ...(location.state || {}),
             from: 'exams',
-            examName: exam.exam_name || (isPortalExam ? 'MCQ Evaluation' : isSubjectiveConduct ? 'Conduct Exam Review' : 'Exam Evaluations'),
+            examName: exam.exam_name || (isPortalExam ? 'MCQ Evaluation' : isSubjectiveConduct ? 'Online Exam Review' : 'Exam Evaluations'),
           },
         });
         
@@ -1913,7 +1913,7 @@ const Toast = ({ message, type, show, onClose }) => {
         }
         setExistingQuestions(questions);
         setSelectedExamId(examId);
-        setSelectedExamType(isPortalMcqExam(selectedExam) ? 'conduct' : (selectedExam.exam_type === 'conduct' && selectedExam.conduct_variant === 'subjective') ? 'subjective_conduct' : 'evaluated');
+        setSelectedExamType(isPortalMcqExam(selectedExam) ? 'conduct' : (selectedExam.exam_type === 'conduct' && (selectedExam.conduct_variant === 'subjective' || selectedExam.conduct_variant === 'hybrid')) ? 'subjective_conduct' : 'evaluated');
         setShowUploadModal(true);
       } finally {
         setIsLoading(false);

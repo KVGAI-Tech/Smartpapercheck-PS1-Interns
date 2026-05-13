@@ -116,14 +116,23 @@ const StudentEvaluationLoader = ({
     if (!studentData || !studentData.evaluations) return 0;
 
     return Object.values(studentData.evaluations).reduce(
-      (sum, evaluation) => sum + (evaluation.total_marks || 0),
+      (sum, evaluation) => {
+        // Handle null/undefined evaluations safely
+        if (!evaluation || typeof evaluation !== 'object') return sum;
+        const marks = evaluation.total_marks;
+        return sum + (typeof marks === 'number' && !isNaN(marks) ? marks : 0);
+      },
       0
     );
   };
 
   const getMaxMarks = () => {
     return questions.reduce(
-      (sum, question) => sum + (Math.abs(question.max_marks) || 0),
+      (sum, question) => {
+        const maxMarks = question.max_marks;
+        // Use absolute value to handle negative marks properly
+        return sum + (typeof maxMarks === 'number' && !isNaN(maxMarks) ? Math.abs(maxMarks) : 0);
+      },
       0
     );
   };
@@ -785,7 +794,7 @@ const StudentEvaluationLoader = ({
             className="flex-1 overflow-auto bg-slate-100"
             onScroll={handleScroll}
           >
-            {currentPage && (currentPage.imageUrl || currentPage.type === 'text') ? (
+            {currentPage && (currentPage.imageUrl || currentPage.type === 'text' || currentPage.type === 'mcq') ? (
               currentPage.imageUrl ? (
                 <PageViewer
                   url={currentPage.imageUrl}
@@ -794,6 +803,91 @@ const StudentEvaluationLoader = ({
                   onZoomReset={handleZoomReset}
                   zoomLevel={zoomLevel}
                 />
+              ) : currentPage.type === 'mcq' ? (
+                <div className="p-4 md:p-8 w-full max-w-4xl mx-auto h-full overflow-auto">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200 flex flex-col gap-6 text-left"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                      <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent flex-shrink-0">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">Multiple Choice Evaluation</h3>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">Automated Assessment</p>
+                      </div>
+                      {currentPage.is_correct !== null && (
+                        <div className={`ml-auto px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                          currentPage.is_correct ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${currentPage.is_correct ? 'bg-green-500' : 'bg-red-500'}`} />
+                          {currentPage.is_correct ? 'Correct' : 'Incorrect'}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="flex flex-col gap-4">
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        <span>Student Selected Option</span>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        {Array.isArray(currentPage.selected_option_ids) && currentPage.selected_option_ids.length > 0 ? (
+                          currentPage.selected_option_ids.map(optId => {
+                            const normOptId = String(optId).replace('option_', '').trim();
+                            // Check find robustly over both raw and normalized forms
+                            const optionObj = currentQuestion?.mcq_options?.find(o => 
+                              String(o.option_id) === String(optId) || 
+                              String(o.option_id).replace('option_', '').trim() === normOptId
+                            );
+                            return (
+                              <div 
+                                key={optId} 
+                                className={`p-5 rounded-xl border flex flex-col gap-2.5 transition-all ${
+                                  currentPage.is_correct 
+                                    ? 'bg-green-50/50 border-green-200 text-green-900 shadow-sm' 
+                                    : 'bg-red-50/30 border-red-100 text-slate-800'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between border-b pb-2 border-slate-100/80">
+                                  <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                                    Option {normOptId}
+                                  </span>
+                                </div>
+                                <div className="text-base prose prose-slate max-w-none leading-relaxed">
+                                  {optionObj && (optionObj.option_body || optionObj.option_text) ? (
+                                    optionObj.option_body ? (
+                                      <div dangerouslySetInnerHTML={{ __html: optionObj.option_body }} />
+                                    ) : (
+                                      <p>{optionObj.option_text}</p>
+                                    )
+                                  ) : (
+                                    <p>{`Option ${normOptId}`}</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-sm italic">
+                            No option selected by the student
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Scoring Info */}
+                    <div className="mt-2 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                      <span>Awarded Score</span>
+                      <div className="font-bold text-slate-900 text-sm">
+                        {currentPage.is_correct ? (Math.abs(currentQuestion?.max_marks) || 1) : 0} / {Math.abs(currentQuestion?.max_marks) || 1} Marks
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
               ) : (
                 <div className="p-4 md:p-8 max-w-4xl mx-auto h-full overflow-auto">
                   <motion.div 
