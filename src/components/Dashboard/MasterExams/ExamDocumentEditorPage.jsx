@@ -36,6 +36,7 @@ import {
   uploadWorkspaceDocument,
   fetchWorkspaceDocuments,
   fetchWorkspaceCards,
+  fetchMasterExamQuestions,
   updateWorkspaceCard,
   deleteWorkspaceCard,
   reorderWorkspaceCards,
@@ -62,6 +63,7 @@ export default function ExamDocumentEditorPage() {
   
   const [editingCard, setEditingCard] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
