@@ -292,6 +292,27 @@ export const examsApi = {
 
     return response.json();
   },
+
+  logConductExamSecurityEvent: async (examId, eventPayload) => {
+    const token = localStorage.getItem('accessToken');
+
+    const response = await fetch(`${API_BASE_URL}/students/exams/${examId}/conduct-exams/security-events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify(eventPayload),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await resolveApiErrorMessage(response, 'Unable to log exam security event.')
+      );
+    }
+
+    return response.json();
+  },
   
   
   submitRecheckRequest: async (examId, data) => {

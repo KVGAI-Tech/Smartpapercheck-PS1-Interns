@@ -4,7 +4,7 @@ import {
   Search, Plus, Edit2, Trash2,
   ChevronRight, Calendar, Upload,
   Users, PlayCircle, X, AlertCircle, CheckCircle, BarChart3,
-  Check, History, Loader2, Layout, FileText, Brain, ClipboardList
+  Check, History, Loader2, Layout, FileText, Brain, ClipboardList, ShieldCheck
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,6 +49,125 @@ const Toast = ({ message, type, show, onClose }) => {
         <AlertCircle className="w-5 h-5" />
       )}
       <span>{message}</span>
+    </div>
+  );
+};
+
+const DEFAULT_ONLINE_SECURITY_CONFIG = {
+  require_fullscreen: true,
+  require_camera: true,
+  track_tab_switching: true,
+  disable_copy_paste: true,
+  auto_submit_on_violation: false,
+  violation_limit: 5,
+};
+
+const normalizeSecurityConfig = (config = {}) => ({
+  ...DEFAULT_ONLINE_SECURITY_CONFIG,
+  ...(config || {}),
+  violation_limit: Math.max(1, Number(config?.violation_limit || DEFAULT_ONLINE_SECURITY_CONFIG.violation_limit)),
+});
+
+const OnlineExamSecurityModal = ({
+  exam,
+  onClose,
+  onSave,
+  saving = false,
+}) => {
+  const [config, setConfig] = useState(() => normalizeSecurityConfig(exam?.online_exam_security_config));
+
+  useEffect(() => {
+    setConfig(normalizeSecurityConfig(exam?.online_exam_security_config));
+  }, [exam]);
+
+  if (!exam) return null;
+
+  const updateConfig = (key, value) => {
+    setConfig((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/50 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-5">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-accent">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Online Exam Security
+            </div>
+            <h3 className="text-xl font-black text-gray-900">{exam.exam_name}</h3>
+            <p className="mt-1 text-sm font-medium text-gray-500">
+              Defaults are enabled for all online exams. Change these only when this exam needs a different policy.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-6 py-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {[
+              ['require_fullscreen', 'Require fullscreen'],
+              ['require_camera', 'Require camera preview'],
+              ['track_tab_switching', 'Track tab switching'],
+              ['disable_copy_paste', 'Restrict copy/paste'],
+              ['auto_submit_on_violation', 'Auto-submit at limit'],
+            ].map(([key, label]) => (
+              <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={Boolean(config[key])}
+                  onChange={(event) => updateConfig(key, event.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-gray-100 bg-white p-4">
+            <label className="block text-xs font-black uppercase tracking-[0.16em] text-gray-500">
+              Violation warning limit
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={config.violation_limit}
+              onChange={(event) => updateConfig('violation_limit', event.target.value === '' ? '' : Number(event.target.value))}
+              className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-accent focus:ring-2 focus:ring-accent/20"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-lg px-4 py-2 text-sm font-bold text-gray-600 transition hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(exam, normalizeSecurityConfig(config))}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2 text-sm font-black text-white shadow-sm transition hover:bg-accent/90 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Save Security
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -540,6 +659,7 @@ const Toast = ({ message, type, show, onClose }) => {
     onReviewPortalAttempts,
     onStartEvaluation,
     onToggleExamActive,
+    onOpenSecurity,
     isTogglingActive = false,
     initialStep = 0,
     onStepChange,
@@ -602,7 +722,7 @@ const Toast = ({ message, type, show, onClose }) => {
                       exit={{ opacity: 0, y: 5, scale: 0.95 }}
                       className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] font-bold rounded-lg shadow-2xl whitespace-nowrap pointer-events-none border border-white/10"
                     >
-                      <span className="relative z-10">{isPortalExam ? 'MCQ Exam' : isSubjectiveConduct ? 'Online Exam' : 'Offline Exam'}</span>
+                      <span className="relative z-10">{isPortalExam || isSubjectiveConduct ? 'Online Exam' : 'Offline Exam'}</span>
                       <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[5px] border-transparent border-t-gray-900/95" />
                     </motion.div>
                   )}
@@ -645,27 +765,38 @@ const Toast = ({ message, type, show, onClose }) => {
               <span>Evaluate</span>
             </button>
             {(isPortalExam || isSubjectiveConduct) && (
-              <label className={`w-full sm:w-auto inline-flex items-center justify-center gap-3 px-3 sm:px-4 py-2 rounded-lg border transition-colors ${
-                isTogglingActive ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-              } ${exam?.is_active ? 'bg-green-50 border-green-200 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
-                <span className="text-sm font-medium">
-                  {exam?.is_active ? 'Active' : 'Inactive'}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={Boolean(exam?.is_active)}
-                  disabled={isTogglingActive}
-                  onChange={() => onToggleExamActive(exam)}
-                  className="sr-only"
-                />
-                <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  exam?.is_active ? 'bg-green-600' : 'bg-gray-300'
-                }`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    exam?.is_active ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </span>
-              </label>
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => onOpenSecurity(exam)}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-sm font-bold text-accent transition hover:bg-accent/10 sm:flex-none"
+                  title="Online exam security settings"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Security
+                </button>
+                <label className={`inline-flex flex-1 items-center justify-center gap-3 rounded-lg border px-3 py-2 transition-colors sm:flex-none sm:px-4 ${
+                  isTogglingActive ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                } ${exam?.is_active ? 'bg-green-50 border-green-200 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
+                  <span className="text-sm font-medium">
+                    {exam?.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(exam?.is_active)}
+                    disabled={isTogglingActive}
+                    onChange={() => onToggleExamActive(exam)}
+                    className="sr-only"
+                  />
+                  <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    exam?.is_active ? 'bg-green-600' : 'bg-gray-300'
+                  }`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      exam?.is_active ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </span>
+                </label>
+              </div>
             )}
 
             <div className="flex items-center justify-end gap-2 sm:ml-2">
@@ -1436,6 +1567,8 @@ const Toast = ({ message, type, show, onClose }) => {
     const [showConductAttemptsModal, setShowConductAttemptsModal] = useState(false);
     const [selectedExamForConductAttempts, setSelectedExamForConductAttempts] = useState(null);
     const [togglingExamId, setTogglingExamId] = useState(null);
+    const [selectedSecurityExam, setSelectedSecurityExam] = useState(null);
+    const [savingSecurity, setSavingSecurity] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedExamForEdit, setSelectedExamForEdit] = useState(null);
     const [examSteps, setExamSteps] = useState({});
@@ -1651,7 +1784,7 @@ const Toast = ({ message, type, show, onClose }) => {
           throw new Error(data.message || 'Failed to update exam status');
         }
 
-        showToast(`Portal exam is now ${nextIsActive ? 'active' : 'inactive'}`, 'success');
+        showToast(`Online exam is now ${nextIsActive ? 'active' : 'inactive'}`, 'success');
         if (onRefresh) {
           await onRefresh();
         }
@@ -1660,6 +1793,54 @@ const Toast = ({ message, type, show, onClose }) => {
         showToast(error.message || 'Failed to update exam status', 'error');
       } finally {
         setTogglingExamId(null);
+      }
+    };
+
+    const handleSaveSecurityConfig = async (exam, securityConfig) => {
+      try {
+        if (!courseId || !exam?.id) {
+          throw new Error('Course ID or Exam ID is missing');
+        }
+        setSavingSecurity(true);
+
+        const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${exam.id}`;
+        const response = await fetch(fullUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            exam_name: exam.exam_name,
+            full_marks: exam.full_marks,
+            exam_type: exam.exam_type,
+            exam_mode: exam.exam_mode,
+            conduct_variant: exam.conduct_variant,
+            is_active: Boolean(exam.is_active),
+            online_exam_security_config: securityConfig,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.detail || `Failed to update security settings: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.code !== 200) {
+          throw new Error(data.message || 'Failed to update security settings');
+        }
+
+        showToast('Online exam security settings updated', 'success');
+        setSelectedSecurityExam(null);
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } catch (error) {
+        console.error('Error updating online exam security settings:', error);
+        showToast(error.message || 'Failed to update security settings', 'error');
+      } finally {
+        setSavingSecurity(false);
       }
     };
   
@@ -2103,6 +2284,7 @@ const Toast = ({ message, type, show, onClose }) => {
                   onReviewPortalAttempts={handleReviewConductAttempts}
                   onStartEvaluation={handleStartEvaluation}
                   onToggleExamActive={handleToggleExamActive}
+                  onOpenSecurity={setSelectedSecurityExam}
                   isTogglingActive={togglingExamId === exam.id}
                   initialStep={examSteps[exam.id] ?? 0}
                   onStepChange={(step) => {
@@ -2167,6 +2349,17 @@ const Toast = ({ message, type, show, onClose }) => {
             exam={selectedExamForEdit}
             onSave={handleUpdateExam}
           />
+
+          <AnimatePresence>
+            {selectedSecurityExam && (
+              <OnlineExamSecurityModal
+                exam={selectedSecurityExam}
+                saving={savingSecurity}
+                onClose={() => setSelectedSecurityExam(null)}
+                onSave={handleSaveSecurityConfig}
+              />
+            )}
+          </AnimatePresence>
   
           <UploadQnAModal
             isOpen={showUploadModal}

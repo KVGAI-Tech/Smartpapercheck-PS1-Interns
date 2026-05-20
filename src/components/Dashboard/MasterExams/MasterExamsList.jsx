@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FilePlus2, FileText, Trash2, Edit3, Clock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,12 +8,57 @@ import {
   createExamDocument,
   deleteExamDocument
 } from './examDocumentApi';
+import { API_BASE_URL } from '../../../BaseURL';
+import { getPaperTypeMeta } from './paperBuilderSchema';
+
+const MASTER_EXAM_WHITELIST = [
+  "pareta7atharv@gmail.com",
+  "testprof12345@gmail.com",
+  "anubhav@kvgai.com",
+  "anubhav.elhence@smart-qna.com",
+  "anubhav.elhence@pilani.bits-pilani.ac.in",
+  "rishi.garg@aiqwip.com",
+  "rishigarg2503@gmail.com",
+  "nidesh.ahilan@gmail.com",
+  "ahilan.nidesh@gmail.com",
+  "nidesh.ahilan.1234@gmail.com",
+  "dhanvantg07@gmail.com",
+  "dhanvant006@gmail.com",
+  "dhanvantdgrt@gmail.com",
+  "tomaluter@gmail.com"
+];
 
 const MasterExamsList = () => {
   const [documents, setDocuments] = useState({ workspaces: [], finalized: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/users/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (res.ok) {
+          const body = await res.json();
+          const email = body?.data?.email?.toLowerCase()?.trim();
+          if (email && !MASTER_EXAM_WHITELIST.includes(email)) {
+            setIsAuthorized(false);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    checkAuth();
+  }, []);
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -76,13 +121,32 @@ const MasterExamsList = () => {
     }
   };
 
+  if (!isAuthorized) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-4 bg-white p-8 rounded-3xl border border-slate-100 shadow-xl">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 border border-rose-100">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m-3 3h10a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-sm text-slate-500">You do not have access to the Master Exams library workspace. Please contact support or your institution administrator for permissions.</p>
+          <button onClick={() => navigate('/dashboard')} className="w-full inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition">
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1200px] p-6 lg:p-8">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Master Exams Library</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">SmartPaperCheck Library</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Create, manage, and reuse your formatted exam documentation.
+            Build professional question papers with document flow, visual composition, and reusable extracted cards.
           </p>
         </div>
         <button
@@ -128,7 +192,9 @@ const MasterExamsList = () => {
                 Finalized Master Exams
               </h3>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {documents.finalized.map((exam) => (
+                {documents.finalized.map((exam) => {
+                  const paperType = getPaperTypeMeta(exam.paper_type);
+                  return (
                   <div
                     key={exam.id}
                     className="group relative flex flex-col rounded-[12px] border border-green-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-green-300"
@@ -141,13 +207,16 @@ const MasterExamsList = () => {
                         <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
                           Finalized
                         </span>
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                          {paperType.shortLabel}
+                        </span>
                       </div>
                     </div>
                     <h4 className="mb-2 line-clamp-2 text-base font-semibold text-slate-900">
                       {exam.exam_name || exam.title}
                     </h4>
                     <p className="mb-4 text-xs text-slate-500 line-clamp-1">
-                      {exam.full_marks} Marks • Ready for import
+                      {exam.full_marks} Marks • {paperType.label}
                     </p>
                     <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4 text-xs font-medium text-slate-400">
                       <div className="flex items-center gap-1.5">
@@ -157,7 +226,8 @@ const MasterExamsList = () => {
                       <span className="text-green-600 font-semibold">Locked 🔒</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
@@ -172,7 +242,9 @@ const MasterExamsList = () => {
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {documents.workspaces
                   .filter(d => !d.published_master_exam_id)
-                  .map((doc) => (
+                  .map((doc) => {
+                  const paperType = getPaperTypeMeta(doc.paper_type);
+                  return (
                   <div
                     key={doc.id}
                     onClick={() => navigate(`/master-exams/${doc.id}`)}
@@ -186,6 +258,9 @@ const MasterExamsList = () => {
                         <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium capitalize text-slate-600">
                            Draft
                         </span>
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                          {paperType.shortLabel}
+                        </span>
                         <button
                           onClick={(e) => handleDelete(e, doc.id, doc.title)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
@@ -198,6 +273,9 @@ const MasterExamsList = () => {
                     <h4 className="mb-2 line-clamp-2 text-base font-semibold text-slate-900 group-hover:text-accent">
                       {doc.title || 'Untitled Document'}
                     </h4>
+                    <p className="mb-4 text-xs text-slate-500 line-clamp-2">
+                      {paperType.label} • Continue building sections, cards, and document layout before locking the paper.
+                    </p>
                     <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4 text-xs font-medium text-slate-400">
                       <div className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5" />
@@ -208,7 +286,8 @@ const MasterExamsList = () => {
                       </span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}

@@ -186,7 +186,7 @@ const ConductExamSession = ({ examId, courseId, enrollmentId }) => {
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-accent uppercase tracking-wide">Portal MCQ Exam</p>
+            <p className="text-sm font-medium text-accent uppercase tracking-wide">Online Exam</p>
             <h1 className="text-2xl font-semibold text-gray-900 mt-1">{examData?.exam_name || 'Exam'}</h1>
             <p className="text-sm text-gray-500 mt-2">
               Answer the MCQs below. Some questions may require a short reason.

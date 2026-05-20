@@ -987,6 +987,10 @@ const UploadQnAModal = ({
   }), [formulaSupported]);
 
   const handleOpenAiAnswerModal = () => {
+    if (activeQuestion?.questionType === 'mcq') {
+      setAiGenerationError('Standard MCQs are graded from the selected option and do not need generated answers.');
+      return;
+    }
     setAiGenerationError('');
     setAiPreviewAnswer('');
     setShowAiAnswerModal(true);
@@ -1113,6 +1117,11 @@ const UploadQnAModal = ({
     }
 
     const eligibleQuestions = questions.filter((question) => {
+      const normalizedQuestionType = question.questionType === 'mcq_reasoning'
+        ? 'mcq_reasoning'
+        : (question.questionType || (isPortalMcqMode ? 'mcq' : 'subjective'));
+      if (normalizedQuestionType === 'mcq') return false;
+
       const questionBody = question.questionBody || '';
       const questionPlain = richTextToPlainText(questionBody);
       const questionImageUrl = question.questionUrl || question.questionPreview || '';
@@ -1120,7 +1129,7 @@ const UploadQnAModal = ({
     });
 
     if (eligibleQuestions.length === 0) {
-      toast.error('Add question content before generating answers');
+      toast.error('No subjective or MCQ reasoning questions are ready for answer generation');
       return;
     }
 
@@ -1305,11 +1314,11 @@ const UploadQnAModal = ({
   }, [draftStorageKey, initialized, isOpen, questions, selectedIndex]);
 
   useEffect(() => {
-    console.log('[Build MCQ Exam] Questions state updated:', questions);
+    console.log('[Build Online Exam] Questions state updated:', questions);
   }, [questions]);
 
   useEffect(() => {
-    console.log('[Build MCQ Exam] Selected question index changed:', selectedIndex);
+    console.log('[Build Online Exam] Selected question index changed:', selectedIndex);
   }, [selectedIndex]);
 
   useEffect(() => {
@@ -2170,7 +2179,7 @@ const UploadQnAModal = ({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
-              {isPortalMcqMode ? 'Build MCQ Exam' : isSubjectiveConductMode ? 'Build Online Exam' : 'Upload Questions & Solutions'}
+              {isPortalMcqMode || isSubjectiveConductMode ? 'Build Online Exam' : 'Upload Questions & Solutions'}
             </h2>
             <p className="text-sm text-gray-500">
               {isPortalMcqMode

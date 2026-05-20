@@ -2150,7 +2150,11 @@ const ExamEvaluationDetail = ({
                       </div>
                     </motion.div>
                     
-                    {currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false && (
+                    {currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false && !(
+                      currentQuestion.mcq_metadata?.allow_reasoning_when_selection_wrong
+                      || currentQuestion.mcq_metadata?.award_reasoning_when_selection_wrong
+                      || currentQuestion.mcq_metadata?.strict_reasoning_requires_correct_option === false
+                    ) && (
                       <div className={`p-4 rounded-2xl border flex items-start gap-4 mb-6 ${
                         darkMode ? 'bg-red-900/10 border-red-500/20 text-red-300' : 'bg-red-50 border-red-100 text-red-800'
                       }`}>
@@ -2197,7 +2201,11 @@ const ExamEvaluationDetail = ({
                                     min="0"
                                     max={rubric.max_marks}
                                     step="0.5"
-                                    disabled={currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false}
+                                    disabled={currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false && !(
+                                      currentQuestion.mcq_metadata?.allow_reasoning_when_selection_wrong
+                                      || currentQuestion.mcq_metadata?.award_reasoning_when_selection_wrong
+                                      || currentQuestion.mcq_metadata?.strict_reasoning_requires_correct_option === false
+                                    )}
                                     value={rubric.marks_awarded || 0}
                                     onChange={(e) => handleRubricScoreChange(index, e.target.value)}
                                     className={`w-16 px-2 py-1 rounded-md text-center ${
@@ -2205,7 +2213,11 @@ const ExamEvaluationDetail = ({
                                         ? 'bg-gray-800 border-gray-600 text-gray-200 focus:ring-blue-500/50' 
                                         : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500/50'
                                     } ${
-                                      (currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false)
+                                      (currentQuestion.question_type === 'mcq_reasoning' && currentQuestion.is_correct === false && !(
+                                        currentQuestion.mcq_metadata?.allow_reasoning_when_selection_wrong
+                                        || currentQuestion.mcq_metadata?.award_reasoning_when_selection_wrong
+                                        || currentQuestion.mcq_metadata?.strict_reasoning_requires_correct_option === false
+                                      ))
                                         ? 'opacity-50 cursor-not-allowed grayscale'
                                         : 'focus:outline-none focus:ring-2 focus:border-blue-500'
                                     }`}

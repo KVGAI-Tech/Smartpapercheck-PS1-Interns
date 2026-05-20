@@ -436,12 +436,36 @@ const DashboardLayout = ({ children }) => {
     logout();
   };
 
+  const MASTER_EXAM_WHITELIST = [
+    "pareta7atharv@gmail.com",
+    "testprof12345@gmail.com",
+    "anubhav@kvgai.com",
+    "anubhav.elhence@smart-qna.com",
+    "anubhav.elhence@pilani.bits-pilani.ac.in",
+    "rishi.garg@aiqwip.com",
+    "rishigarg2503@gmail.com",
+    "nidesh.ahilan@gmail.com",
+    "ahilan.nidesh@gmail.com",
+    "nidesh.ahilan.1234@gmail.com",
+    "dhanvantg07@gmail.com",
+    "dhanvant006@gmail.com",
+    "dhanvantdgrt@gmail.com",
+    "tomaluter@gmail.com"
+  ];
+
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard" },
     { icon: BookOpen, label: "Courses", to: "/courses" },
     { icon: FileText, label: "Master Exams", to: "/master-exams" },
     { icon: BookOpen, label: "Archived Courses", to: "/courses/archived" },
-  ];
+  ].filter((item) => {
+    if (item.label === "Master Exams") {
+      if (!userData || !userData.email) return false;
+      const email = userData.email.toLowerCase().trim();
+      return MASTER_EXAM_WHITELIST.includes(email);
+    }
+    return true;
+  });
 
   const isActive = (path) => {
     if (path === "/dashboard") {

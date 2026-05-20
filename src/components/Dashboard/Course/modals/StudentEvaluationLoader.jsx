@@ -568,8 +568,67 @@ const StudentEvaluationLoader = ({
   const answerHasText = !!(
     answerKeyText
   );
+  const currentAnswerData =
+    studentData?.answers_by_question?.[String(questionNumber)] ||
+    studentData?.answers_by_question?.[`question_${questionNumber}`] ||
+    null;
+
+  const normalizeOptionId = (value) => String(value ?? "").replace(/^option_/i, "").trim();
+  const optionMatches = (left, right) => {
+    const leftRaw = String(left ?? "").trim();
+    const rightRaw = String(right ?? "").trim();
+    return leftRaw === rightRaw || normalizeOptionId(leftRaw) === normalizeOptionId(rightRaw);
+  };
+  const findMcqOption = (optionId) =>
+    (currentQuestion?.mcq_options || []).find((option) => optionMatches(option.option_id, optionId));
+  const selectedOptionIds = Array.isArray(currentAnswerData?.selected_option_ids)
+    ? currentAnswerData.selected_option_ids
+    : (Array.isArray(currentPage?.selected_option_ids) ? currentPage.selected_option_ids : []);
+  const correctOptionIds = Array.isArray(currentQuestion?.correct_option_ids)
+    ? currentQuestion.correct_option_ids
+    : [];
+  const isMcqQuestion = (
+    currentQuestion?.question_type === "mcq" ||
+    currentQuestion?.question_type === "mcq_reasoning" ||
+    (currentQuestion?.mcq_options || []).length > 0 ||
+    selectedOptionIds.length > 0 ||
+    correctOptionIds.length > 0
+  );
+
+  const renderMcqOptionCard = (optionId, tone = "neutral") => {
+    const option = findMcqOption(optionId);
+    const normalizedId = normalizeOptionId(optionId);
+    const toneClass = tone === "correct"
+      ? "border-green-200 bg-green-50 text-green-950"
+      : tone === "selected"
+        ? "border-blue-200 bg-blue-50 text-blue-950"
+        : "border-slate-200 bg-white text-slate-800";
+
+    return (
+      <div key={`${tone}-${optionId}`} className={`rounded-xl border p-3 ${toneClass}`}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">
+            Option {normalizedId || optionId}
+          </span>
+          {tone === "correct" && (
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700">
+              Correct
+            </span>
+          )}
+        </div>
+        <div className="prose prose-sm max-w-none text-sm leading-relaxed">
+          {option?.option_body ? (
+            <div dangerouslySetInnerHTML={{ __html: option.option_body }} />
+          ) : (
+            <p>{option?.option_text || `Option ${normalizedId || optionId}`}</p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const getTypeLabel = (hasImage, hasText) => {
+    if (isMcqQuestion) return currentQuestion?.question_type === "mcq_reasoning" ? "MCQ + Reasoning" : "MCQ";
     if (hasImage && hasText) return "Image + Text";
     if (hasText) return "Text";
     if (hasImage) return "Image";
@@ -1095,8 +1154,51 @@ const StudentEvaluationLoader = ({
                           </span>
                         </h4>
                       </div>
-                      <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden p-2">
-                        {answerHasImage ? (
+                      <div className={`${isMcqQuestion ? "min-h-[18rem]" : "aspect-video"} bg-gray-100 flex items-center justify-center overflow-hidden p-2`}>
+                        {isMcqQuestion ? (
+                          <div className="h-full w-full overflow-auto p-3 text-left">
+                            <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3">
+                              <div className="mb-2 flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                  Student selected
+                                </span>
+                                {currentAnswerData?.is_correct !== null && currentAnswerData?.is_correct !== undefined && (
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                                    currentAnswerData.is_correct
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}>
+                                    {currentAnswerData.is_correct ? "Correct" : "Incorrect"}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                {selectedOptionIds.length > 0 ? (
+                                  selectedOptionIds.map((optionId) => renderMcqOptionCard(optionId, "selected"))
+                                ) : (
+                                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+                                    No option selected by the student
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl border border-green-200 bg-white p-3">
+                              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-green-700">
+                                Correct option
+                              </div>
+                              <div className="space-y-2">
+                                {correctOptionIds.length > 0 ? (
+                                  correctOptionIds.map((optionId) => renderMcqOptionCard(optionId, "correct"))
+                                ) : (
+                                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+                                    Correct option is not available
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : answerHasImage ? (
                           <motion.div
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}

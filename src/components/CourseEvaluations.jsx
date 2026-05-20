@@ -21,6 +21,7 @@ const ExamCard = ({
   exam_id,
   exam_name,
   full_marks,
+  exam_mode,
   exam_type,
   conduct_variant,
   exam_is_active,
@@ -36,7 +37,7 @@ const ExamCard = ({
 }) => {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const examVariant = getExamVariant({ exam_type, conduct_variant });
+  const examVariant = getExamVariant({ exam_mode, exam_type, conduct_variant });
 
   const getSubjectiveConductAvailability = () => {
     const now = Date.now();
@@ -158,7 +159,7 @@ const ExamCard = ({
           <div>
             <h3 className="font-semibold text-gray-900">{exam_name}</h3>
             <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-              {exam_type && <p>Type: {examVariant === 'portal_mcq' ? 'MCQ Exam' : examVariant === 'conduct' ? 'Online Exam' : 'Offline Exam'}</p>}
+              {exam_type && <p>Type: {examVariant === 'portal_mcq' || examVariant === 'conduct' ? 'Online Exam' : 'Offline Exam'}</p>}
               {examVariant === 'portal_mcq' && <p>Availability: {exam_is_active ? 'Active' : 'Inactive'}</p>}
               {examVariant === 'conduct' && <p>Window: {getStatusText()}</p>}
               {duration && <p>Duration: {formatDuration(duration)}</p>}
@@ -330,6 +331,7 @@ const CourseEvaluations = () => {
               exam_id={exam.exam_id}
               exam_name={exam.exam_name}
               full_marks={exam.full_marks}
+              exam_mode={exam.exam_mode}
               exam_type={exam.exam_type}
               conduct_variant={exam.conduct_variant}
               exam_is_active={exam.exam_is_active}

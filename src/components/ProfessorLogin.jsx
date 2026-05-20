@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, ChevronRight, ShieldCheck } from 'lucide-react';
 import { API_BASE_URL } from '../BaseURL';
 import ForgotPasswordModal from './ForgotPasswordModal';
 
@@ -84,6 +84,88 @@ const PasswordRequirements = React.memo(({ password }) => {
   );
 });
 
+const SegmentedCodeInput = React.memo(({
+  value,
+  onChange,
+  length = 6,
+  disabled = false,
+  autoFocus = false,
+  ariaLabel = 'Verification code',
+}) => {
+  const inputRef = useRef(null);
+  const digits = useMemo(() => value.padEnd(length, ' ').slice(0, length).split(''), [value, length]);
+  const activeIndex = Math.min(value.length, length - 1);
+
+  const focusInput = useCallback(() => {
+    if (!disabled) {
+      inputRef.current?.focus();
+    }
+  }, [disabled]);
+
+  useEffect(() => {
+    if (autoFocus && !disabled) {
+      inputRef.current?.focus();
+    }
+  }, [autoFocus, disabled]);
+
+  const handleChange = useCallback((event) => {
+    const nextValue = event.target.value.replace(/\D/g, '').slice(0, length);
+    onChange(nextValue);
+  }, [length, onChange]);
+
+  const handleKeyDown = useCallback((event) => {
+    if (event.key === 'Backspace' && value.length > 0) {
+      event.preventDefault();
+      onChange(value.slice(0, -1));
+    }
+  }, [onChange, value]);
+
+  const handlePaste = useCallback((event) => {
+    event.preventDefault();
+    const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, length);
+    if (pasted) {
+      onChange(pasted);
+    }
+  }, [length, onChange]);
+
+  return (
+    <div className="relative flex justify-center" onClick={focusInput}>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        disabled={disabled}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="one-time-code"
+        name="one_time_code"
+        aria-label={ariaLabel}
+        className="absolute inset-0 h-full w-full opacity-0 caret-transparent"
+      />
+      <div className="flex gap-2" aria-hidden="true">
+        {digits.map((digit, index) => {
+          const isActive = index === activeIndex && value.length < length;
+          return (
+            <div
+              key={index}
+              className={`h-12 w-11 rounded-lg border bg-white text-center text-lg font-semibold leading-[3rem] text-gray-900 transition-all ${
+                isActive
+                  ? 'border-accent ring-2 ring-accent/30'
+                  : 'border-gray-300'
+              }`}
+            >
+              {digit.trim()}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
 const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
   const [activeTab, setActiveTab] = useState('login');
   const [isLoading, setIsLoading] = useState(false);
@@ -98,6 +180,14 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState(null);
+  const [otp, setOtp] = useState('');
+  const [useBackupCode, setUseBackupCode] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(false);
+  const [pendingSetupToken, setPendingSetupToken] = useState(null);
+  const [setupData, setSetupData] = useState(null);
+  const [setupCode, setSetupCode] = useState('');
+  const [setupBackupCodes, setSetupBackupCodes] = useState([]);
 
   const passwordChecks = useMemo(() => ({
     minLength: formData.password.length >= 8,
@@ -160,6 +250,39 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
     setIsForgotPasswordOpen(false);
   }, []);
 
+  const startMandatoryTwoFactorSetup = useCallback(async (accessToken) => {
+    const statusResponse = await fetch(`${API_BASE_URL}/auth/2fa/status`, {
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const statusData = await statusResponse.json().catch(() => ({}));
+
+    if (!statusResponse.ok) {
+      throw new Error(statusData.detail || statusData.message || 'Unable to check two-factor status');
+    }
+
+    if (statusData.data?.is_enabled) {
+      onLoginSuccess(accessToken, 'professor');
+      return;
+    }
+
+    const setupResponse = await fetch(`${API_BASE_URL}/auth/2fa/setup`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const setupPayload = await setupResponse.json().catch(() => ({}));
+
+    if (!setupResponse.ok) {
+      throw new Error(setupPayload.detail || setupPayload.message || 'Unable to start two-factor setup');
+    }
+
+    setPendingSetupToken(accessToken);
+    setSetupData(setupPayload.data);
+    setSetupCode('');
+    setSetupBackupCodes([]);
+  }, [onLoginSuccess]);
+
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
 
@@ -183,6 +306,7 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
       if (activeTab === 'login') {
         const response = await fetch(`${API_BASE_URL}/professors/login`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             email: formData.email, 
@@ -199,7 +323,10 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
 
         if (data.code === 200 && data.data?.access_token) {
           const { access_token } = data.data;
-          onLoginSuccess(access_token, 'professor');
+          await startMandatoryTwoFactorSetup(access_token);
+        } else if (data.code === 200 && data.data?.twofa_required) {
+          setTwoFactorChallenge(data.data.challenge_token);
+          setOtp('');
         } else {
           throw new Error(data.message || 'Login failed');
         }
@@ -224,6 +351,7 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
         if (data.code === 201) {
           const loginResponse = await fetch(`${API_BASE_URL}/professors/login`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               email: formData.email, 
@@ -240,7 +368,10 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
 
           if (loginData.code === 200 && loginData.data?.access_token) {
             const { access_token } = loginData.data;
-            onLoginSuccess(access_token, 'professor');
+            await startMandatoryTwoFactorSetup(access_token);
+          } else if (loginData.code === 200 && loginData.data?.twofa_required) {
+            setTwoFactorChallenge(loginData.data.challenge_token);
+            setOtp('');
           } else {
             throw new Error(loginData.message || 'Login failed after signup');
           }
@@ -253,7 +384,248 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, isLoginFormValid, isSignupFormValid, formData, onLoginSuccess]);
+  }, [activeTab, isLoginFormValid, isSignupFormValid, formData, startMandatoryTwoFactorSetup]);
+
+  const handleSetupSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    if (!pendingSetupToken || setupCode.length !== 6) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/2fa/enable`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${pendingSetupToken}`,
+        },
+        body: JSON.stringify({ code: setupCode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || 'Invalid setup code');
+      }
+
+      const codes = data.data?.backup_codes || [];
+      if (codes.length) {
+        setSetupBackupCodes(codes);
+        return;
+      }
+
+      onLoginSuccess(pendingSetupToken, 'professor');
+    } catch (error) {
+      setError(error.message || 'Unable to enable two-factor authentication');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pendingSetupToken, setupCode, onLoginSuccess]);
+
+  const completeSetupLogin = useCallback(() => {
+    if (pendingSetupToken) {
+      onLoginSuccess(pendingSetupToken, 'professor');
+    }
+  }, [pendingSetupToken, onLoginSuccess]);
+
+  const copySetupBackupCodes = useCallback(async () => {
+    await navigator.clipboard.writeText(setupBackupCodes.join('\n'));
+  }, [setupBackupCodes]);
+
+  const handleOtpChange = useCallback((value) => {
+    const nextValue = useBackupCode
+      ? value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 17)
+      : value.replace(/\D/g, '').slice(0, 6);
+    setOtp(nextValue);
+  }, [useBackupCode]);
+
+  const handleOtpSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    if (!twoFactorChallenge || (!useBackupCode && otp.length !== 6) || (useBackupCode && otp.length < 8)) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/2fa/login-verify`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challenge_token: twoFactorChallenge,
+          code: otp,
+          remember_device: rememberDevice,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || 'Invalid verification code');
+      }
+      if (data.code === 200 && data.data?.access_token) {
+        onLoginSuccess(data.data.access_token, 'professor');
+      } else {
+        throw new Error(data.message || 'Two-factor verification failed');
+      }
+    } catch (error) {
+      setError(error.message || 'Two-factor verification failed');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [otp, rememberDevice, twoFactorChallenge, useBackupCode, onLoginSuccess]);
+
+  const renderTwoFactorForm = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+    >
+      <form onSubmit={handleOtpSubmit} className="space-y-5">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center mb-3">
+            <ShieldCheck className="h-6 w-6 text-accent" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">Two-factor verification</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Enter the code from your authenticator app.
+          </p>
+        </div>
+
+        {!useBackupCode ? (
+          <SegmentedCodeInput
+            value={otp}
+            onChange={setOtp}
+            disabled={isLoading}
+            autoFocus
+            ariaLabel="Two-factor verification code"
+          />
+        ) : (
+          <input
+            value={otp}
+            onChange={(e) => handleOtpChange(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent text-center tracking-widest uppercase"
+            placeholder="XXXXXXXX-XXXXXXXX"
+          />
+        )}
+
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center text-gray-600">
+            <input
+              type="checkbox"
+              checked={rememberDevice}
+              onChange={(e) => setRememberDevice(e.target.checked)}
+              className="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded mr-2"
+            />
+            Trust this device for 7 days
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              setUseBackupCode((value) => !value);
+              setOtp('');
+            }}
+            className="font-medium text-accent"
+          >
+            {useBackupCode ? 'Use app code' : 'Use backup code'}
+          </button>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading || (!useBackupCode && otp.length !== 6) || (useBackupCode && otp.length < 8)}
+          className="w-full py-3 rounded-lg font-medium text-white bg-accent disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Verifying...' : 'Verify and continue'}
+        </button>
+      </form>
+    </motion.div>
+  );
+
+  const renderMandatorySetupForm = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+    >
+      <form onSubmit={handleSetupSubmit} className="space-y-5">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center mb-3">
+            <ShieldCheck className="h-6 w-6 text-accent" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">Set up Google Authenticator</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Professor accounts require two-factor authentication before opening the dashboard.
+          </p>
+        </div>
+
+        {setupBackupCodes.length > 0 ? (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+              <p className="text-sm font-medium text-green-800 mb-2">Save these one-time backup codes.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {setupBackupCodes.map((code) => (
+                  <code key={code} className="px-2 py-1.5 rounded bg-white border border-green-100 text-xs text-gray-800">
+                    {code}
+                  </code>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={copySetupBackupCodes}
+                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-700 font-medium"
+              >
+                Copy codes
+              </button>
+              <button
+                type="button"
+                onClick={completeSetupLogin}
+                className="flex-1 py-2.5 rounded-lg bg-accent text-white font-medium"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-lg border border-gray-200 bg-white p-3 flex items-center justify-center">
+              {setupData?.qr_code_url ? (
+                <img src={setupData.qr_code_url} alt="Authenticator QR code" className="h-48 w-48" />
+              ) : (
+                <div className="h-48 w-48 flex items-center justify-center text-center text-xs text-gray-500">
+                  Use the manual setup key below.
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Manual setup key</label>
+              <code className="block px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-xs break-all">
+                {setupData?.secret}
+              </code>
+            </div>
+
+            <SegmentedCodeInput
+              value={setupCode}
+              onChange={setSetupCode}
+              disabled={isLoading}
+              autoFocus
+              ariaLabel="Authenticator setup verification code"
+            />
+
+            <button
+              type="submit"
+              disabled={isLoading || setupCode.length !== 6}
+              className="w-full py-3 rounded-lg font-medium text-white bg-accent disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Verifying...' : 'Enable 2FA and continue'}
+            </button>
+          </>
+        )}
+      </form>
+    </motion.div>
+  );
 
   const renderLoginForm = () => (
     <motion.div
@@ -509,11 +881,16 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
         <div className="relative z-10">
           <div className="mb-4">
             <button
-              onClick={onBack}
+              onClick={twoFactorChallenge || pendingSetupToken ? () => {
+                setTwoFactorChallenge(null);
+                setPendingSetupToken(null);
+                setSetupData(null);
+                setSetupBackupCodes([]);
+              } : onBack}
               className="flex items-center text-gray-600 hover:text-accent transition-colors text-sm"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to role selection
+              {twoFactorChallenge || pendingSetupToken ? 'Back to password' : 'Back to role selection'}
             </button>
           </div>
           
@@ -523,12 +900,12 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
                 <User className="h-5 w-5 text-accent" />
               </div>
               <h2 className="text-xl font-bold text-gray-900">
-                {activeTab === 'login' ? 'Professor Login' : 'Create Professor Account'}
+                {pendingSetupToken ? 'Required Security Setup' : twoFactorChallenge ? 'Secure Login' : activeTab === 'login' ? 'Professor Login' : 'Create Professor Account'}
               </h2>
             </div>
           </div>
 
-          <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+          {!twoFactorChallenge && !pendingSetupToken && <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />}
 
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm mb-5">
@@ -538,7 +915,7 @@ const ProfessorLogin = ({ onBack, onLoginSuccess }) => {
           )}
 
           <AnimatePresence mode="wait">
-            {activeTab === 'login' ? renderLoginForm() : renderSignupForm()}
+            {pendingSetupToken ? renderMandatorySetupForm() : twoFactorChallenge ? renderTwoFactorForm() : activeTab === 'login' ? renderLoginForm() : renderSignupForm()}
           </AnimatePresence>
         </div>
         

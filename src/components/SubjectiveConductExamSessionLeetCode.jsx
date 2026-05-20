@@ -62,11 +62,23 @@ import {
 } from 'lucide-react';
 
 import { examsApi } from './Student_api';
+import OnlineExamSecurityCheck from './OnlineExamSecurityCheck';
+import ExamProtectionOverlay from './ExamProtectionOverlay';
+import { useExamProtection } from '../hooks/useExamProtection';
 
 const getSessionStorageKey = (examId) => `conduct_exam_session_${examId}`;
 const getSyncChannelName = (examId) => `conduct_exam_sync_${examId}`;
 
 const isMcqQuestion = (question) => question?.question_type === 'mcq' || question?.question_type === 'mcq_reasoning';
+const isMultiSelectQuestion = (question) => {
+  const metadata = question?.mcq_metadata || {};
+  return Boolean(
+    metadata?.multi_select
+    || metadata?.multiple_correct
+    || metadata?.allow_multiple
+    || metadata?.selection_mode === 'multiple'
+  );
+};
 const needsReasoningEditor = (question) => (
   question?.question_type === 'mcq_reasoning'
   || (question?.question_type === 'mcq' && Boolean(question?.reason_required))
@@ -116,7 +128,7 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const dirtyQuestionIdsRef = useRef([]);
   const syncChannelRef = useRef(null);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -129,6 +141,8 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const [questionPanelCollapsed, setQuestionPanelCollapsed] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState('saved'); // 'saved', 'saving', 'unsaved'
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [redirectSeconds, setRedirectSeconds] = useState(4);
+  const [securityCleared, setSecurityCleared] = useState(false);
 
   const [uploadState, setUploadState] = useState({});
   const [showUploadPanel, setShowUploadPanel] = useState(false);
@@ -188,6 +202,11 @@ Take your time and write a comprehensive answer.`,
     }
   }, [currentQuestion?.id, editor]);
 
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(session?.status === 'in_progress');
+    }
+  }, [editor, session?.status]);
 
   useEffect(() => {
     if (!resolvedExamId) return;
@@ -342,11 +361,25 @@ Take your time and write a comprehensive answer.`,
     }
   };
 
+  const logSecurityEvent = useCallback((eventPayload) => {
+    if (!resolvedExamId) return Promise.resolve();
+    return examsApi.logConductExamSecurityEvent(resolvedExamId, eventPayload);
+  }, [resolvedExamId]);
+
+  const protection = useExamProtection({
+    active: Boolean(securityCleared && session?.status === 'in_progress'),
+    config: session?.online_exam_security_config,
+    examId: resolvedExamId,
+    submissionId: session?.submission_id,
+    logSecurityEvent,
+    onAutoSubmit: handleAutoSubmit,
+  });
+
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      if (!resolvedExamId || !sessionIdRef.current) return;
+      if (!resolvedExamId || !sessionIdRef.current || !securityCleared) return;
       setLoading(true);
       setError('');
       try {
@@ -371,7 +404,7 @@ Take your time and write a comprehensive answer.`,
     return () => {
       cancelled = true;
     };
-  }, [resolvedExamId]);
+  }, [resolvedExamId, securityCleared]);
 
   const saveAnswers = async (questionIds = dirtyQuestionIds, silent = false) => {
     if (!resolvedExamId || !sessionIdRef.current || questionIds.length === 0) {
@@ -492,16 +525,41 @@ Take your time and write a comprehensive answer.`,
   }, [resolvedExamId, session?.status]);
 
   useEffect(() => {
+    if (!protection.isOnline || session?.status !== 'in_progress' || dirtyQuestionIds.length === 0) {
+      return;
+    }
+    saveAnswers(dirtyQuestionIds, true).catch(() => {});
+  }, [protection.isOnline]);
+
+  useEffect(() => {
     if (session?.status !== 'in_progress' || timeLeft !== 0 || autoSubmitRef.current) return;
     handleAutoSubmit();
   }, [timeLeft, session?.status]);
 
   useEffect(() => {
+    if (!isSubmitted) return undefined;
+
+    setRedirectSeconds(4);
+    const interval = setInterval(() => {
+      setRedirectSeconds((previous) => {
+        if (previous <= 1) {
+          clearInterval(interval);
+          navigate('/student-dashboard');
+          return 0;
+        }
+        return previous - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSubmitted, navigate]);
+
+  useEffect(() => {
     if (isSubmitted) {
-      const timer = setTimeout(() => {
+      const fallbackTimer = setTimeout(() => {
         navigate('/student-dashboard');
-      }, 4000);
-      return () => clearTimeout(timer);
+      }, 4500);
+      return () => clearTimeout(fallbackTimer);
     }
   }, [isSubmitted, navigate]);
 
@@ -560,11 +618,18 @@ Take your time and write a comprehensive answer.`,
   };
 
   const handleOptionChange = (questionId, optionId) => {
+    if (session?.status !== 'in_progress') return;
+    const question = (session?.questions || []).find((item) => item.id === questionId);
+    const isMultiple = isMultiSelectQuestion(question);
     setAnswers((prev) => ({
       ...prev,
       [questionId]: {
         ...(prev[questionId] || {}),
-        selected_option_ids: [optionId], // Storing as array for future multi-select compatibility
+        selected_option_ids: isMultiple
+          ? ((prev[questionId]?.selected_option_ids || []).includes(optionId)
+              ? (prev[questionId]?.selected_option_ids || []).filter((id) => id !== optionId)
+              : [...(prev[questionId]?.selected_option_ids || []), optionId])
+          : [optionId],
       },
     }));
     setDirtyQuestionIds((prev) => (prev.includes(questionId) ? prev : [...prev, questionId]));
@@ -572,6 +637,7 @@ Take your time and write a comprehensive answer.`,
 
   const handleImageUpload = async (questionId, files) => {
     if (!files || files.length === 0 || !resolvedExamId || !sessionIdRef.current) return;
+    protection.suspendProtection?.(90000);
     
     // files could be a FileList or array
     const fileArray = Array.from(files);
@@ -616,6 +682,8 @@ Take your time and write a comprehensive answer.`,
         ...prev,
         [questionId]: { ...(prev[questionId] || {}), uploading: false, imageError: err.message || 'Image upload failed' },
       }));
+    } finally {
+      protection.suspendProtection?.(5000);
     }
   };
 
@@ -644,6 +712,7 @@ Take your time and write a comprehensive answer.`,
 
   const handleSubmit = async () => {
     setError('');
+    setSubmitting(true);
     try {
       if (dirtyQuestionIds.length > 0) {
         await saveAnswers(dirtyQuestionIds, true);
@@ -695,11 +764,22 @@ Take your time and write a comprehensive answer.`,
     </button>
   );
 
+  if (!securityCleared) {
+    return (
+      <OnlineExamSecurityCheck
+        examName={session?.exam_name || 'Online Exam'}
+        protection={protection}
+        onReady={() => setSecurityCleared(true)}
+        onCancel={() => navigate('/student-dashboard')}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-3 bg-gray-50">
         <Loader className="w-8 h-8 text-accent animate-spin" />
-        <p className="text-gray-600">Loading conduct exam...</p>
+        <p className="text-gray-600">Loading online exam...</p>
       </div>
     );
   }
@@ -718,7 +798,7 @@ Take your time and write a comprehensive answer.`,
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 flex items-start gap-3">
             <AlertTriangle className="w-6 h-6 mt-0.5" />
             <div>
-              <h2 className="font-semibold">Unable to load conduct exam</h2>
+              <h2 className="font-semibold">Unable to load online exam</h2>
               <p className="text-sm mt-1">{error}</p>
             </div>
           </div>
@@ -807,7 +887,7 @@ Take your time and write a comprehensive answer.`,
             <div className="min-w-0">
               <h1 className="text-lg font-black truncate tracking-tight text-gray-900">{session?.exam_name}</h1>
               <div className="flex items-center gap-3 mt-0.5">
-                <span className="text-[10px] uppercase font-black tracking-widest text-[#166D70] bg-[#166D70]/5 px-2 py-0.5 rounded border border-[#166D70]/10">Conduct Mode</span>
+                <span className="text-[10px] uppercase font-black tracking-widest text-[#166D70] bg-[#166D70]/5 px-2 py-0.5 rounded border border-[#166D70]/10">Online Exam</span>
               </div>
             </div>
           </div>
@@ -1074,6 +1154,7 @@ Take your time and write a comprehensive answer.`,
                     ) : (
                       (currentQuestion.mcq_options || []).map((option, idx) => {
                       const isSelected = (currentAnswer?.selected_option_ids || []).includes(option.option_id);
+                      const multiple = isMultiSelectQuestion(currentQuestion);
                       return (
                         <label
                           key={option.option_id}
@@ -1085,10 +1166,11 @@ Take your time and write a comprehensive answer.`,
                         >
                           <div className="flex items-center h-6 mt-1">
                             <input
-                              type="radio"
+                              type={multiple ? 'checkbox' : 'radio'}
                               name={`mcq-${currentQuestion.id}`}
                               value={option.option_id}
                               checked={isSelected}
+                              disabled={session?.status !== 'in_progress'}
                               onChange={() => handleOptionChange(currentQuestion.id, option.option_id)}
                               className="w-5 h-5 text-accent border-gray-300 focus:ring-accent/50 cursor-pointer transition-colors"
                             />
@@ -1294,7 +1376,10 @@ Take your time and write a comprehensive answer.`,
                         ))}
                         {session?.status === 'in_progress' && (
                           <button
-                            onClick={() => imageInputRef.current?.click()}
+                            onClick={() => {
+                              protection.suspendProtection?.(30000);
+                              imageInputRef.current?.click();
+                            }}
                             disabled={uploadState[currentQuestion?.id]?.uploading === 'image'}
                             className="aspect-square flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-accent hover:bg-accent/5 text-gray-400 hover:text-accent transition-all group"
                           >
@@ -1317,6 +1402,7 @@ Take your time and write a comprehensive answer.`,
                         accept="image/*" 
                         className="hidden" 
                         onChange={(e) => {
+                          protection.suspendProtection?.(90000);
                           if (e.target.files) handleImageUpload(currentQuestion.id, e.target.files);
                           e.target.value = '';
                         }} 
@@ -1337,6 +1423,9 @@ Take your time and write a comprehensive answer.`,
           </div>
         </div>
       </div>
+      {session?.status === 'in_progress' && (
+        <ExamProtectionOverlay protection={protection} />
+      )}
       
       <AnimatePresence>
         {isSubmitted && (
@@ -1369,7 +1458,7 @@ Take your time and write a comprehensive answer.`,
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400 px-1">
                     <span>Redirecting to Dashboard</span>
-                    <span>4s</span>
+                    <span>{redirectSeconds}s</span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-50 shadow-inner">
                     <motion.div

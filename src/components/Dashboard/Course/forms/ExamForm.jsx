@@ -309,6 +309,7 @@ const ExamForm = ({
                 Optional. If set, each student’s attempt is capped by this duration even before the global end time.
               </p>
             </div>
+
           </>
         )}
       </div>
