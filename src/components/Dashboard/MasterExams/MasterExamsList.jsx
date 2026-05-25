@@ -8,57 +8,13 @@ import {
   createExamDocument,
   deleteExamDocument
 } from './examDocumentApi';
-import { API_BASE_URL } from '../../../BaseURL';
 import { getPaperTypeMeta } from './paperBuilderSchema';
-
-const MASTER_EXAM_WHITELIST = [
-  "pareta7atharv@gmail.com",
-  "testprof12345@gmail.com",
-  "anubhav@kvgai.com",
-  "anubhav.elhence@smart-qna.com",
-  "anubhav.elhence@pilani.bits-pilani.ac.in",
-  "rishi.garg@aiqwip.com",
-  "rishigarg2503@gmail.com",
-  "nidesh.ahilan@gmail.com",
-  "ahilan.nidesh@gmail.com",
-  "nidesh.ahilan.1234@gmail.com",
-  "dhanvantg07@gmail.com",
-  "dhanvant006@gmail.com",
-  "dhanvantdgrt@gmail.com",
-  "tomaluter@gmail.com"
-];
 
 const MasterExamsList = () => {
   const [documents, setDocuments] = useState({ workspaces: [], finalized: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
-  const [isAuthorized, setIsAuthorized] = useState(true);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/users/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (res.ok) {
-          const body = await res.json();
-          const email = body?.data?.email?.toLowerCase()?.trim();
-          if (email && !MASTER_EXAM_WHITELIST.includes(email)) {
-            setIsAuthorized(false);
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
-    checkAuth();
-  }, []);
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -120,25 +76,6 @@ const MasterExamsList = () => {
       toast.error('Failed to delete document');
     }
   };
-
-  if (!isAuthorized) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center p-6 text-center">
-        <div className="max-w-md space-y-4 bg-white p-8 rounded-3xl border border-slate-100 shadow-xl">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 border border-rose-100">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m-3 3h10a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
-          <p className="text-sm text-slate-500">You do not have access to the Master Exams library workspace. Please contact support or your institution administrator for permissions.</p>
-          <button onClick={() => navigate('/dashboard')} className="w-full inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition">
-            Return to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto w-full max-w-[1200px] p-6 lg:p-8">

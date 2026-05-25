@@ -27,7 +27,6 @@ import ProfessorSubjectiveConductEvaluatePage from "./components/Dashboard/Cours
 import AnswerReviewPage from "./components/Dashboard/Course/AnswerReviewPage";
 import ProfessorNotificationsPage from "./components/Dashboard/ProfessorNotificationsPage";
 import PoliciesPage from "./components/PoliciesPage";
-import DemoPage, { DemoEvaluationPage } from "./components/Demo/DemoPage";
 import SubjectiveConductExamSessionLeetCode from "./components/SubjectiveConductExamSessionLeetCode";
 import { useAuth } from "./components/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -108,8 +107,8 @@ function App() {
             <Route path="/about" element={<AboutUsPage />} />
             <Route path="/policies" element={<PoliciesPage />} />
             <Route path="/auth" element={<AuthRoute />} />
-            <Route path="/demo" element={<DemoPage />} />
-            <Route path="/demo/evaluations" element={<DemoEvaluationPage />} />
+            <Route path="/demo" element={<Navigate to="/" replace />} />
+            <Route path="/demo/evaluations" element={<Navigate to="/" replace />} />
 
             <Route
               path="/dashboard"

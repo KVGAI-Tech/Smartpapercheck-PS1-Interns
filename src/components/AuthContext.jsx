@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../BaseURL';
 
 const AuthContext = createContext(null);
 
@@ -65,37 +64,14 @@ export const AuthProvider = ({ children }) => {
         case 'student':
           navigate('/student-dashboard', { replace: true });
           break;
-        case 'professor': {
-          // First-time professor login → show the onboarding demo tour
-          const hasSeenDemo = localStorage.getItem('professor_demo_seen');
+        case 'professor':
           try {
-            const coursesRes = await fetch(`${API_BASE_URL}/professors/courses`, {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-
-            if (!coursesRes.ok) {
-              navigate('/dashboard', { replace: true });
-              break;
-            }
-
-            const coursesJson = await coursesRes.json().catch(() => ({}));
-            const courses = Array.isArray(coursesJson?.data) ? coursesJson.data : [];
-
-            if (courses.length === 0 && !hasSeenDemo) {
-              localStorage.setItem('professor_demo_seen', 'true');
-              navigate('/demo', { replace: true });
-            } else {
-              navigate('/dashboard', { replace: true });
-            }
+            localStorage.removeItem('professor_demo_seen');
           } catch (e) {
-            navigate('/dashboard', { replace: true });
+            console.error('Failed to clear professor demo state:', e);
           }
+          navigate('/dashboard', { replace: true });
           break;
-        }
         default:
           throw new Error(`Invalid role type: ${role}`);
       }
