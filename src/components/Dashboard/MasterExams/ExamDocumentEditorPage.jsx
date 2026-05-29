@@ -1,28 +1,51 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft,
+  Archive,
+  BookOpen,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  FolderKanban,
   Loader2,
-  Save,
+  PanelRightClose,
+  Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import SourcePanel from './SourcePanel';
-import CardWorkspace from './CardWorkspace';
+import { API_BASE_URL } from '../../../BaseURL';
 import QuestionEditModal from './QuestionEditModal';
-import PaperComposer from './PaperComposer';
+import SourceDocumentPreviewModal from './SourceDocumentPreviewModal';
+
+// New workspace components
+import './workspace.css';
+import WorkspaceStepper from './WorkspaceStepper';
+import WorkspaceHeader from './WorkspaceHeader';
+import ImportWorkspace from './ImportWorkspace';
+import LibraryWorkspace from './LibraryWorkspace';
+import BuilderWorkspace from './BuilderWorkspace';
+import AIAssistantDrawer from './AIAssistantDrawer';
 import {
-  createSourceFolder,
+  aiCategorizeWorkspaceCards,
+  bulkDeleteCards,
+  bulkUpdateWorkspaceCards,
   createWorkspaceCard,
   deleteWorkspaceCard,
   deleteWorkspaceDocument,
+  downloadMasterExamDocx,
   duplicateWorkspaceCard,
-  bulkDeleteCards,
+  fetchDocumentParseDebug,
+  fetchDocumentTaskStatus,
   fetchExamDocument,
+  fetchMasterExamById,
+  fetchMasterExamPrintableHtml,
   fetchSourceFolders,
   fetchWorkspaceCards,
   fetchWorkspaceDocuments,
+  importWorkspaceCards,
+  lockMasterExam,
+  renameWorkspaceDocument,
   reorderWorkspaceCards,
   reprocessDocument,
   updateExamDocument,
@@ -30,6 +53,37 @@ import {
   uploadWorkspaceDocument,
 } from './examDocumentApi';
 import { normalizeMasterExamCard } from './masterExamCardSchema';
+import { normalizeLegacySections } from './paperDocumentBuilder';
+
+const WORKSPACE_VIEWS = [
+  { id: 'papers', label: 'Papers', hint: 'Compose and export', icon: FileText },
+  { id: 'library', label: 'Question Library', hint: 'Review and organize', icon: BookOpen },
+  { id: 'imports', label: 'Imports', hint: 'Upload and extract', icon: FolderKanban },
+  { id: 'recent', label: 'Recent', hint: 'Latest activity', icon: Clock3 },
+  { id: 'archived', label: 'Archived', hint: 'Published snapshots', icon: Archive },
+];
+
+const buildWorkspaceProgressSocketUrl = (workspaceId) => {
+  const token = localStorage.getItem('accessToken');
+  if (!token || !workspaceId) return null;
+  const root = API_BASE_URL.replace(/\/api$/, '');
+  const wsRoot = root.replace(/^http/i, 'ws');
+  return `${wsRoot}/api/master-exams-workspace/${workspaceId}/progress/ws?token=${encodeURIComponent(token)}`;
+};
+
+const mergeDocumentProgress = (workspaceDocuments = [], statusMap = new Map()) => (
+  (workspaceDocuments || []).map((doc) => {
+    const taskData = statusMap.get(String(doc.id));
+    if (!taskData) return doc;
+    return {
+      ...doc,
+      parsed_status: taskData.parsed_status || doc.parsed_status,
+      task_id: taskData.task_id || doc.task_id,
+      task_progress: taskData.task_progress || doc.task_progress,
+      parser_runtime: taskData.parser_runtime || doc.parser_runtime,
+    };
+  })
+);
 
 const createManualQuestionDraft = () => normalizeMasterExamCard({
   id: `manual-${Date.now()}`,
@@ -44,7 +98,6 @@ const createManualQuestionDraft = () => normalizeMasterExamCard({
   writing_space_lines: 6,
   writing_space_height: 0,
   parsed_metadata: {
-    title: 'New Question Card',
     instructions: '',
     internal_notes: '',
     topic: '',
@@ -81,41 +134,165 @@ const createManualQuestionDraft = () => normalizeMasterExamCard({
   },
 });
 
+function WorkspaceNavButton({ item, active, collapsed, onClick }) {
+  const Icon = item.icon;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(item.id)}
+      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+        active
+          ? 'bg-[#eef6f3] text-accent'
+          : 'text-slate-500 hover:bg-white/80 hover:text-slate-900'
+      }`}
+      title={collapsed ? item.label : undefined}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {!collapsed ? (
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">{item.label}</div>
+          <div className="truncate text-xs text-slate-400">{item.hint}</div>
+        </div>
+      ) : null}
+    </button>
+  );
+}
+
+function InfoBlock({ eyebrow, title, body, tone = 'default' }) {
+  const toneClassName = tone === 'accent'
+    ? 'border-emerald-100 bg-[#eef6f3]'
+    : 'border-slate-200 bg-white';
+  return (
+    <div className={`rounded-[26px] border px-4 py-4 ${toneClassName}`}>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{eyebrow}</div>
+      <div className="mt-2 text-sm font-medium text-slate-950">{title}</div>
+      <div className="mt-2 text-sm leading-6 text-slate-500">{body}</div>
+    </div>
+  );
+}
+
+function ActivityRow({ title, subtitle, meta }) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-[24px] border border-slate-200 bg-white px-4 py-4">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium text-slate-950">{title}</div>
+        <div className="mt-1 text-sm leading-6 text-slate-500">{subtitle}</div>
+      </div>
+      {meta ? <div className="shrink-0 text-xs text-slate-400">{meta}</div> : null}
+    </div>
+  );
+}
+
 export default function ExamDocumentEditorPage() {
   const { documentId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Core state
   const [workspace, setWorkspace] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [cards, setCards] = useState([]);
   const [sourceFolders, setSourceFolders] = useState([]);
   const [activeFolderId, setActiveFolderId] = useState('');
-  
-  // Workflow state
-  const [currentStep, setCurrentStep] = useState('cards'); // 'cards' | 'composer'
+  const [sections, setSections] = useState([{ id: 'section-1', title: 'Section A', instructions: '', cardIds: [], parsed_metadata: {} }]);
 
-  // UI state
+  const [activeView, setActiveView] = useState('papers');
+  const [paperSurface, setPaperSurface] = useState('composer');
+  const [topbarSearch, setTopbarSearch] = useState('');
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(true);
   const [editingCard, setEditingCard] = useState(null);
+  const [editingCardContext, setEditingCardContext] = useState(null);
+  const [editingCardContextLoading, setEditingCardContextLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [uploadBatchTotal, setUploadBatchTotal] = useState(0);
   const [uploadBatchDone, setUploadBatchDone] = useState(0);
-  const [sourcePanelCollapsed, setSourcePanelCollapsed] = useState(false);
-  
-  // Paper Structure state
-  const [sections, setSections] = useState([
-    { id: 'section-1', title: 'Section A', instructions: '', cards: [] }
-  ]);
+  const [draftStatus, setDraftStatus] = useState('clean');
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [previewDocumentData, setPreviewDocumentData] = useState(null);
+  const [previewDocumentLoading, setPreviewDocumentLoading] = useState(false);
+  const [, setDocumentProgressMap] = useState(new Map());
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [finalizedExam, setFinalizedExam] = useState(null);
 
-  // Derived values
+  // Workspace 3-step shell state
+  const [workspaceStep, setWorkspaceStep] = useState('import'); // 'import', 'library', 'builder'
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+
+  const workspaceMeta = workspace?.builder_layout_json?.questionWorkspace || workspace?.content_json?.attrs?.questionWorkspace || {};
+  const routeCourseId = searchParams.get('courseId');
+  const courseLabel = workspaceMeta.courseName || workspaceMeta.course_name || workspaceMeta.courseCode || (routeCourseId ? `Course ${routeCourseId}` : 'Course Workspace');
   const uploadPercent = uploadBatchTotal > 0 ? Math.round((uploadBatchDone / uploadBatchTotal) * 100) : 0;
-  const completedDocs = documents.filter((d) => d.parsed_status === 'completed').length;
-  const pendingDocs = documents.filter((d) => ['pending', 'processing'].includes(d.parsed_status)).length;
+  const completedDocs = documents.filter((doc) => doc.parsed_status === 'completed').length;
+  const pendingDocs = documents.filter((doc) => ['pending', 'processing'].includes(doc.parsed_status)).length;
+  const selectedCardIds = new Set(sections.flatMap((section) => section.cardIds || []).map((id) => String(id)));
+  const selectedCards = cards.filter((card) => selectedCardIds.has(String(card.id)));
+  const selectedMarks = selectedCards.reduce((sum, card) => sum + (Number(card.marks) || 0), 0);
+  const currentViewMeta = WORKSPACE_VIEWS.find((item) => item.id === activeView) || WORKSPACE_VIEWS[0];
+  const isPaperComposerView = activeView === 'papers' && paperSurface === 'composer';
+  const showInspector = !isPaperComposerView;
 
-  // ==========================================
-  // DATA LOADING
-  // ==========================================
+  const persistableWorkspace = useMemo(() => {
+    if (!workspace) return null;
+    return {
+      title: workspace.title,
+      builder_layout_json: {
+        ...(workspace.builder_layout_json || {}),
+        paperStructure: { sections },
+      },
+      paper_type: workspace.paper_type || 'standard',
+      template_id: workspace.template_id || 'universal',
+      paper_settings_json: workspace.paper_settings_json || {},
+      export_preferences_json: workspace.export_preferences_json || {},
+    };
+  }, [sections, workspace]);
+
+  const recentActivity = useMemo(() => {
+    const rows = (documents || []).map((doc) => ({
+      id: `doc-${doc.id}`,
+      title: doc.original_filename,
+      subtitle: doc.parsed_status === 'completed'
+        ? 'Questions extracted and ready in the library'
+        : doc.parsed_status === 'failed'
+          ? 'Extraction needs review'
+          : 'Parsing is still running in the background',
+      meta: new Date(doc.updated_at || doc.created_at || Date.now()).toLocaleDateString(),
+      sortValue: new Date(doc.updated_at || doc.created_at || 0).getTime(),
+    }));
+    if (finalizedExam) {
+      rows.push({
+        id: `exam-${finalizedExam.id}`,
+        title: finalizedExam.exam_name || 'Published master exam',
+        subtitle: 'Immutable published snapshot ready for export',
+        meta: new Date(finalizedExam.updated_at || finalizedExam.created_at || Date.now()).toLocaleDateString(),
+        sortValue: new Date(finalizedExam.updated_at || finalizedExam.created_at || 0).getTime(),
+      });
+    }
+    return rows.sort((a, b) => b.sortValue - a.sortValue).slice(0, 8);
+  }, [documents, finalizedExam]);
+
+  const hydrateDocumentProgress = useCallback(async (workspaceDocuments = []) => {
+    const pendingDocuments = (workspaceDocuments || []).filter((doc) => ['pending', 'processing'].includes(doc.parsed_status));
+    if (!pendingDocuments.length) {
+      setDocumentProgressMap(new Map());
+      return workspaceDocuments;
+    }
+
+    const taskStatuses = await Promise.all(
+      pendingDocuments.map(async (doc) => {
+        try {
+          const taskStatus = await fetchDocumentTaskStatus(documentId, doc.id);
+          return [String(doc.id), taskStatus];
+        } catch {
+          return [String(doc.id), null];
+        }
+      })
+    );
+
+    const nextMap = new Map(taskStatuses.filter(([, status]) => Boolean(status)));
+    setDocumentProgressMap(nextMap);
+    return mergeDocumentProgress(workspaceDocuments, nextMap);
+  }, [documentId]);
 
   const loadWorkspace = useCallback(async () => {
     if (!documentId) return;
@@ -127,27 +304,41 @@ export default function ExamDocumentEditorPage() {
         fetchSourceFolders(documentId),
       ]);
 
+      const normalizedCards = (workspaceCards || []).map((card) => normalizeMasterExamCard(card));
+      const savedSections = workspaceDoc?.builder_layout_json?.paperStructure?.sections
+        || workspaceDoc?.parsed_metadata?.sections
+        || [];
+      const hydratedDocuments = await hydrateDocumentProgress(workspaceDocuments);
+
       setWorkspace(workspaceDoc);
-      setDocuments(workspaceDocuments);
-      setCards((workspaceCards || []).map((c) => normalizeMasterExamCard(c)));
+      setDocuments(hydratedDocuments);
+      setCards(normalizedCards);
       setSourceFolders(folders);
-      
-      if (workspaceDoc?.parsed_metadata?.sections) {
-        setSections(workspaceDoc.parsed_metadata.sections);
+      setSections(normalizeLegacySections(savedSections, normalizedCards));
+      setDraftStatus('clean');
+
+      if (workspaceDoc?.published_master_exam_id) {
+        try {
+          const exam = await fetchMasterExamById(workspaceDoc.published_master_exam_id);
+          setFinalizedExam(exam);
+        } catch {
+          setFinalizedExam(null);
+        }
+      } else {
+        setFinalizedExam(null);
       }
     } catch (error) {
-      toast.error('Failed to load workspace');
+      toast.error(error.message || 'Failed to load workspace');
     }
-  }, [activeFolderId, documentId]);
+  }, [activeFolderId, documentId, hydrateDocumentProgress]);
 
   useEffect(() => {
     loadWorkspace();
   }, [loadWorkspace]);
 
-  // Poll for processing documents
   useEffect(() => {
     if (!documentId) return;
-    const hasPending = documents.some((d) => ['pending', 'processing'].includes(d.parsed_status));
+    const hasPending = documents.some((doc) => ['pending', 'processing'].includes(doc.parsed_status));
     if (!hasPending) return;
 
     const interval = setInterval(async () => {
@@ -156,60 +347,129 @@ export default function ExamDocumentEditorPage() {
           fetchWorkspaceDocuments(documentId, activeFolderId ? { folderId: activeFolderId } : {}),
           fetchWorkspaceCards(documentId),
         ]);
-        setDocuments(workspaceDocuments);
-        setCards((workspaceCards || []).map((c) => normalizeMasterExamCard(c)));
+        const hydratedDocuments = await hydrateDocumentProgress(workspaceDocuments);
+        setDocuments(hydratedDocuments);
+        setCards((workspaceCards || []).map((card) => normalizeMasterExamCard(card)));
       } catch {
-        // Silent polling failure
+        // keep polling quiet
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeFolderId, documentId, documents]);
+  }, [activeFolderId, documentId, documents, hydrateDocumentProgress]);
 
-  // ==========================================
-  // SOURCE PANEL HANDLERS
-  // ==========================================
+  useEffect(() => {
+    if (!documentId || !persistableWorkspace || draftStatus !== 'dirty') return undefined;
+    const timeoutId = setTimeout(async () => {
+      try {
+        setDraftStatus('saving');
+        const updated = await updateExamDocument(documentId, persistableWorkspace);
+        setWorkspace((prev) => ({ ...prev, ...updated }));
+        setDraftStatus('clean');
+      } catch (error) {
+        setDraftStatus('dirty');
+        toast.error(error.message || 'Autosave failed');
+      }
+    }, 900);
 
-  const handleFileUpload = async (event) => {
-    const files = Array.from(event.target.files || []);
+    return () => clearTimeout(timeoutId);
+  }, [documentId, draftStatus, persistableWorkspace]);
+
+  useEffect(() => {
+    if (!documentId) return undefined;
+    const socketUrl = buildWorkspaceProgressSocketUrl(documentId);
+    if (!socketUrl) return undefined;
+
+    const socket = new WebSocket(socketUrl);
+
+    socket.onmessage = async (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (!['document_parse_progress', 'workspace_progress_snapshot'].includes(payload.event) || !payload.document_id) return;
+
+        setDocumentProgressMap((prev) => {
+          const next = new Map(prev);
+          next.set(String(payload.document_id), {
+            document_id: payload.document_id,
+            parsed_status: payload.parsed_status,
+            task_id: payload.task_id,
+            task_progress: payload.task_progress,
+            parser_runtime: {
+              status: payload.parsed_status,
+              task_id: payload.task_id,
+              progress: payload.task_progress,
+            },
+          });
+          return next;
+        });
+
+        setDocuments((prev) => prev.map((doc) => (
+          String(doc.id) === String(payload.document_id)
+            ? {
+                ...doc,
+                parsed_status: payload.parsed_status || doc.parsed_status,
+                task_id: payload.task_id || doc.task_id,
+                task_progress: payload.task_progress || doc.task_progress,
+                parser_runtime: {
+                  ...(doc.parser_runtime || {}),
+                  status: payload.parsed_status,
+                  task_id: payload.task_id,
+                  progress: payload.task_progress,
+                },
+              }
+            : doc
+        )));
+
+        if (payload.parsed_status === 'completed' || payload.parsed_status === 'failed') {
+          await loadWorkspace();
+        }
+      } catch {
+        // keep websocket updates quiet
+      }
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [documentId, loadWorkspace]);
+
+  const markWorkspaceDirty = useCallback((updater) => {
+    setWorkspace((prev) => (typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }));
+    setDraftStatus('dirty');
+  }, []);
+
+  const updateSectionsWithDirty = useCallback((updater) => {
+    setSections((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+    setDraftStatus('dirty');
+  }, []);
+
+  const handleImportFiles = async (filesToUpload) => {
+    const files = Array.from(filesToUpload || []);
     if (!files.length) return;
-
     try {
       setIsUploading(true);
       setUploadBatchTotal(files.length);
       setUploadBatchDone(0);
-
       for (const file of files) {
         await uploadWorkspaceDocument(documentId, file, activeFolderId ? { folderId: activeFolderId } : {});
         setUploadBatchDone((prev) => prev + 1);
       }
-
       toast.success(`${files.length} file(s) uploaded. Extraction running in background.`);
       await loadWorkspace();
     } catch (error) {
       toast.error(error.message || 'Failed to upload files');
     } finally {
       setIsUploading(false);
-      setTimeout(() => { setUploadBatchTotal(0); setUploadBatchDone(0); }, 1200);
-      if (event.target?.value) event.target.value = '';
+      setTimeout(() => {
+        setUploadBatchTotal(0);
+        setUploadBatchDone(0);
+      }, 1200);
     }
   };
 
-  const handleCreateFolder = async () => {
-    const name = window.prompt('Name this source folder');
-    if (!name?.trim()) return;
-
-    try {
-      const folder = await createSourceFolder(documentId, {
-        name: name.trim(),
-        folder_type: 'source',
-      });
-      setSourceFolders((prev) => [...prev, folder]);
-      setActiveFolderId(folder.id);
-      toast.success('Source folder created');
-    } catch (error) {
-      toast.error(error.message || 'Failed to create folder');
-    }
+  const handleFileUpload = async (event) => {
+    await handleImportFiles(event.target.files);
+    if (event.target?.value) event.target.value = '';
   };
 
   const handleReprocessDocument = async (docId) => {
@@ -223,7 +483,7 @@ export default function ExamDocumentEditorPage() {
   };
 
   const handleDeleteDocument = async (docId) => {
-    if (!window.confirm('Delete this source and all its generated cards?')) return;
+    if (!window.confirm('Delete this source and all its generated questions?')) return;
     try {
       await deleteWorkspaceDocument(documentId, docId);
       toast.success('Source deleted');
@@ -233,16 +493,65 @@ export default function ExamDocumentEditorPage() {
     }
   };
 
-  // ==========================================
-  // CARD HANDLERS
-  // ==========================================
+  const handleRenameDocument = async (doc) => {
+    const nextName = window.prompt('Rename this source document', doc.original_filename || '');
+    if (!nextName) return;
+    const trimmed = nextName.trim();
+    if (!trimmed || trimmed === doc.original_filename) return;
+    try {
+      const updated = await renameWorkspaceDocument(documentId, doc.id, { original_filename: trimmed });
+      setDocuments((prev) => prev.map((item) => (item.id === doc.id ? updated : item)));
+      toast.success('Source renamed');
+    } catch (error) {
+      toast.error(error.message || 'Failed to rename source');
+    }
+  };
+
+  const handleOpenDocumentPreview = async (document) => {
+    setPreviewDocument(document);
+    setPreviewDocumentLoading(true);
+    try {
+      const data = await fetchDocumentParseDebug(documentId, document.id);
+      setPreviewDocumentData(data);
+    } catch (error) {
+      toast.error(error.message || 'Failed to load source preview');
+      setPreviewDocumentData(null);
+    } finally {
+      setPreviewDocumentLoading(false);
+    }
+  };
+
+  const handleEditCard = useCallback(async (card) => {
+    setEditingCard(card);
+    setEditingCardContext(null);
+    if (!card?.source_document_id || String(card.id).startsWith('manual-')) return;
+
+    try {
+      setEditingCardContextLoading(true);
+      const data = await fetchDocumentParseDebug(documentId, card.source_document_id);
+      setEditingCardContext(data);
+    } catch {
+      setEditingCardContext(null);
+    } finally {
+      setEditingCardContextLoading(false);
+    }
+  }, [documentId]);
+
+  const removeCardIdsFromSections = useCallback((cardIdsToRemove) => {
+    const blockedIds = new Set(cardIdsToRemove.map((id) => String(id)));
+    updateSectionsWithDirty((prev) => prev.map((section) => ({
+      ...section,
+      cardIds: (section.cardIds || []).filter((id) => !blockedIds.has(String(id))),
+    })));
+  }, [updateSectionsWithDirty]);
 
   const handleDeleteCard = async (cardId) => {
-    if (!window.confirm('Delete this question card?')) return;
+    if (!window.confirm('Delete this question?')) return;
     try {
       await deleteWorkspaceCard(cardId);
-      setCards((prev) => prev.filter((c) => c.id !== cardId));
-      toast.success('Card deleted');
+      setCards((prev) => prev.filter((card) => card.id !== cardId));
+      removeCardIdsFromSections([cardId]);
+      toast.success('Question deleted');
     } catch {
       toast.error('Failed to delete card');
     }
@@ -252,7 +561,7 @@ export default function ExamDocumentEditorPage() {
     try {
       const duplicated = normalizeMasterExamCard(await duplicateWorkspaceCard(cardId));
       setCards((prev) => [...prev, duplicated]);
-      toast.success('Card duplicated');
+      toast.success('Question duplicated');
     } catch {
       toast.error('Failed to duplicate card');
     }
@@ -261,27 +570,64 @@ export default function ExamDocumentEditorPage() {
   const handleBulkDelete = async (cardIds) => {
     try {
       await bulkDeleteCards(documentId, cardIds);
-      setCards((prev) => prev.filter((c) => !cardIds.includes(c.id)));
-      toast.success(`${cardIds.length} cards deleted`);
+      setCards((prev) => prev.filter((card) => !cardIds.includes(card.id)));
+      removeCardIdsFromSections(cardIds);
+      toast.success(`${cardIds.length} questions deleted`);
     } catch {
       toast.error('Failed to delete cards');
     }
   };
 
+  const handleBulkTag = async (cardIds, tags) => {
+    try {
+      const updatedCards = await bulkUpdateWorkspaceCards(documentId, {
+        card_ids: cardIds,
+        tags_json: tags,
+        categorization_status: 'needs_review',
+      });
+      const map = new Map(updatedCards.map((card) => [String(card.id), normalizeMasterExamCard(card)]));
+      setCards((prev) => prev.map((card) => map.get(String(card.id)) || card));
+      toast.success(`Tagged ${updatedCards.length} questions`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to update tags');
+    }
+  };
+
+  const handleAiCategorize = async (cardIds) => {
+    try {
+      const updatedCards = await aiCategorizeWorkspaceCards(documentId, cardIds);
+      const map = new Map(updatedCards.map((card) => [String(card.id), normalizeMasterExamCard(card)]));
+      setCards((prev) => prev.map((card) => map.get(String(card.id)) || card));
+      toast.success(`AI categorized ${updatedCards.length} questions`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to categorize questions');
+    }
+  };
+
+  const handleImportCards = async ({ sourceExamDocumentId, cardIds }) => {
+    try {
+      const importedCards = await importWorkspaceCards(documentId, {
+        source_exam_document_id: sourceExamDocumentId,
+        card_ids: cardIds,
+      });
+      setCards((prev) => [...prev, ...(importedCards || []).map((card) => normalizeMasterExamCard(card))]);
+      toast.success(`Imported ${importedCards.length} questions`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to import questions');
+      throw error;
+    }
+  };
+
   const handleReorderCards = async (cardIds) => {
-    // Optimistic reorder
     setCards((prev) => {
-      const cardMap = new Map(prev.map((c) => [c.id, c]));
-      const reordered = cardIds
-        .map((id, index) => {
-          const c = cardMap.get(id);
-          return c ? { ...c, order_index: index } : null;
-        })
-        .filter(Boolean);
-      const remaining = prev.filter((c) => !cardIds.includes(c.id));
+      const cardMap = new Map(prev.map((card) => [card.id, card]));
+      const reordered = cardIds.map((id, index) => {
+        const card = cardMap.get(id);
+        return card ? { ...card, order_index: index } : null;
+      }).filter(Boolean);
+      const remaining = prev.filter((card) => !cardIds.includes(card.id));
       return [...reordered, ...remaining];
     });
-
     try {
       await reorderWorkspaceCards(documentId, cardIds);
     } catch {
@@ -293,172 +639,256 @@ export default function ExamDocumentEditorPage() {
     try {
       const isManualDraft = String(cardId).startsWith('manual-');
       const savedCard = isManualDraft
-        ? await createWorkspaceCard(documentId, {
-            ...payload,
-            source_folder_id: activeFolderId || null,
-          })
+        ? await createWorkspaceCard(documentId, { ...payload, source_folder_id: activeFolderId || null })
         : await updateWorkspaceCard(cardId, payload);
-
       const normalized = normalizeMasterExamCard(savedCard);
-      setCards((prev) =>
+      setCards((prev) => (
         isManualDraft
           ? [...prev, normalized]
-          : prev.map((c) => (c.id === cardId ? { ...c, ...normalized } : c))
-      );
-      toast.success(isManualDraft ? 'Card created' : 'Card updated');
+          : prev.map((card) => (card.id === cardId ? { ...card, ...normalized } : card))
+      ));
+      toast.success(isManualDraft ? 'Question created' : 'Question updated');
     } catch (error) {
-      toast.error('Failed to save card');
+      toast.error(error.message || 'Failed to save question');
       throw error;
     }
   };
 
-  const handleCreateManualCard = () => {
-    setEditingCard(createManualQuestionDraft());
+  const handleCreateQuickQuestion = async (payload) => {
+    const savedCard = await createWorkspaceCard(documentId, {
+      ...payload,
+      source_folder_id: activeFolderId || null,
+    });
+    const normalized = normalizeMasterExamCard(savedCard);
+    setCards((prev) => [...prev, normalized]);
+    return normalized;
   };
 
-  const handleSaveWorkspace = async () => {
-    if (!workspace) return;
-    setIsSaving(true);
+  const handleFinalize = async (examName) => {
     try {
-      const updated = await updateExamDocument(documentId, {
-        title: workspace.title,
-        parsed_metadata: {
-          ...workspace.parsed_metadata,
-          sections: sections
-        }
-      });
-      setWorkspace((prev) => ({ ...prev, ...updated }));
-      toast.success('Workspace saved');
-    } catch {
-      toast.error('Failed to save workspace');
+      setIsFinalizing(true);
+      setDraftStatus('finalizing');
+      if (draftStatus === 'dirty' && persistableWorkspace) {
+        const updatedWorkspace = await updateExamDocument(documentId, persistableWorkspace);
+        setWorkspace((prev) => ({ ...prev, ...updatedWorkspace }));
+      }
+      const result = await lockMasterExam(documentId, examName);
+      const masterExamId = result?.master_exam_id || result?.data?.master_exam_id;
+      if (masterExamId) {
+        const exam = await fetchMasterExamById(masterExamId);
+        setFinalizedExam(exam);
+      }
+      await loadWorkspace();
+      setActiveView('papers');
+      setPaperSurface('finalize');
+      toast.success('Draft finalized successfully');
+    } catch (error) {
+      toast.error(error.message || 'Failed to finalize draft');
     } finally {
-      setIsSaving(false);
+      setIsFinalizing(false);
+      setDraftStatus('clean');
     }
   };
 
-  // ==========================================
-  // RENDER
-  // ==========================================
+  const handleDownloadDocx = useCallback(async (exam) => {
+    try {
+      const blob = await downloadMasterExamDocx(exam.id);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${(exam.exam_name || 'master_exam').replace(/\s+/g, '_')}.docx`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success('DOCX export started', {
+        duration: 3000,
+        position: 'bottom-center',
+      });
+      return true;
+    } catch (error) {
+      toast.error(error.message || 'Failed to download DOCX');
+      return false;
+    }
+  }, []);
+
+  const handleOpenPrintable = async (exam) => {
+    try {
+      const html = await fetchMasterExamPrintableHtml(exam.id);
+      const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+      if (!printWindow) {
+        toast.error('Popup blocked while opening printable view');
+        return;
+      }
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } catch (error) {
+      toast.error(error.message || 'Failed to open printable view');
+    }
+  };
+
+  const ensureFinalizedExam = useCallback(async (examName = workspace?.title || 'Final Exam Paper') => {
+    if (finalizedExam) return finalizedExam;
+
+    if (draftStatus === 'dirty' && persistableWorkspace) {
+      const updatedWorkspace = await updateExamDocument(documentId, persistableWorkspace);
+      setWorkspace((prev) => ({ ...prev, ...updatedWorkspace }));
+    }
+
+    const result = await lockMasterExam(documentId, examName);
+    const masterExamId = result?.master_exam_id || result?.data?.master_exam_id;
+    if (!masterExamId) {
+      throw new Error('Published exam snapshot was not created');
+    }
+
+    const exam = await fetchMasterExamById(masterExamId);
+    setFinalizedExam(exam);
+    await loadWorkspace();
+    return exam;
+  }, [documentId, draftStatus, finalizedExam, loadWorkspace, persistableWorkspace, workspace?.title]);
+
+  const handlePublishFromComposer = useCallback(async () => {
+    const alreadyPublished = Boolean(finalizedExam);
+    await ensureFinalizedExam(workspace?.title || 'Final Exam Paper');
+    toast.success(alreadyPublished ? 'Paper already published' : 'Paper published to platform', {
+      duration: 3000,
+      position: 'bottom-center',
+    });
+  }, [ensureFinalizedExam, finalizedExam, workspace?.title]);
+
+  const handleDocxExportFromComposer = useCallback(async () => {
+    const exam = await ensureFinalizedExam(workspace?.title || 'Final Exam Paper');
+    const didExport = await handleDownloadDocx(exam);
+    if (!didExport) {
+      throw new Error('Failed to export DOCX');
+    }
+  }, [ensureFinalizedExam, handleDownloadDocx, workspace?.title]);
+
+  const handleCreateManualCard = () => {
+    setActiveView('library');
+    setEditingCardContext(null);
+    setEditingCard(createManualQuestionDraft());
+  };
+
+
 
   if (!workspace) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f8fbf8]">
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-semibold text-slate-600 shadow-sm">
-          <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+      <div className="flex h-screen items-center justify-center bg-[#f1f4f4]">
+        <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 shadow-sm">
+          <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--ws-brand)' }} />
           Loading workspace...
         </div>
       </div>
     );
   }
 
+  // Calculate paper counts
+  const sourcesCount = documents.length;
+  const questionsCount = cards.length;
+  const addedMarks = sections.reduce((sum, sec) => sum + (sec.cardIds || []).reduce((s, id) => s + (Number(cards.find(c => c.id === id)?.marks) || 0), 0), 0);
+  const totalMarks = workspace.paper_settings_json?.totalMarks || 100;
+
   return (
-    <div className="flex h-screen flex-col bg-[#f8fbf8] text-slate-900">
-      {/* Top header bar */}
-      <header className="z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/master-exams')}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:-translate-y-0.5 hover:bg-slate-50"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">
-                Question Import Workspace
-              </span>
-            </div>
-            <input
-              value={workspace.title || ''}
-              onChange={(e) => setWorkspace((prev) => ({ ...prev, title: e.target.value }))}
-              className="mt-0.5 block w-[320px] border-none bg-transparent text-lg font-semibold text-slate-950 outline-none placeholder:text-slate-300"
-              placeholder="Untitled Workspace"
-            />
-          </div>
-        </div>
+    <div className="ws-shell">
+      <WorkspaceHeader
+        paper={{
+          title: workspace.title || 'Untitled Paper',
+          duration: workspace.paper_settings_json?.duration || '3 Hours',
+          totalMarks: totalMarks,
+          subject: workspaceMeta?.courseName || 'Subject',
+        }}
+        courseContext={{
+          code: workspaceMeta?.courseCode || 'SPC101',
+          name: workspaceMeta?.courseName || 'Course',
+          institution: 'Institution Name',
+        }}
+        step={workspaceStep}
+        onBack={() => {
+          if (workspaceStep === 'builder') setWorkspaceStep('library');
+          else if (workspaceStep === 'library') setWorkspaceStep('import');
+        }}
+        onContinue={() => {
+          if (workspaceStep === 'import') setWorkspaceStep('library');
+          else if (workspaceStep === 'library') setWorkspaceStep('builder');
+        }}
+        draftStatus={draftStatus}
+      />
 
-        <div className="flex items-center gap-2">
-          {currentStep === 'cards' ? (
-            <button
-              onClick={() => setCurrentStep('composer')}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700"
-            >
-              Compose Paper →
-            </button>
-          ) : (
-            <button
-              onClick={() => setCurrentStep('cards')}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
-            >
-              ← Back to Cards
-            </button>
-          )}
+      <WorkspaceStepper
+        step={workspaceStep}
+        onChange={setWorkspaceStep}
+        sourcesCount={sourcesCount}
+        questionsCount={questionsCount}
+        addedMarks={addedMarks}
+        totalMarks={totalMarks}
+      />
 
-          <button
-            type="button"
-            onClick={handleSaveWorkspace}
-            disabled={isSaving}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:opacity-50"
-          >
-            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            Save
-          </button>
-        </div>
-      </header>
-
-      {/* Main content: source panel + card workspace */}
-      {currentStep === 'cards' ? (
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <SourcePanel
-            documents={documents}
-            sourceFolders={sourceFolders}
-            activeFolderId={activeFolderId}
-            setActiveFolderId={setActiveFolderId}
-            isUploading={isUploading}
-            uploadPercent={uploadPercent}
-            pendingDocs={pendingDocs}
-            completedDocs={completedDocs}
-            totalCards={cards.length}
-            onFileUpload={handleFileUpload}
-            onCreateFolder={handleCreateFolder}
-            onReprocessDocument={handleReprocessDocument}
-            onDeleteDocument={handleDeleteDocument}
-            collapsed={sourcePanelCollapsed}
-            onToggleCollapse={() => setSourcePanelCollapsed((prev) => !prev)}
-          />
-
-          <CardWorkspace
-            cards={cards}
-            documents={documents}
-            onEditCard={setEditingCard}
-            onDeleteCard={handleDeleteCard}
-            onDuplicateCard={handleDuplicateCard}
-            onReorderCards={handleReorderCards}
-            onBulkDelete={handleBulkDelete}
-            onCreateManualCard={handleCreateManualCard}
-            activeCardId={editingCard?.id}
-            sections={sections}
-            setSections={setSections}
-          />
-        </div>
-      ) : (
-        <PaperComposer
+      {workspaceStep === 'import' && (
+        <ImportWorkspace
+          documents={documents}
           cards={cards}
-          workspace={workspace}
-          sections={sections}
-          setSections={setSections}
-          onSaveWorkspace={(updates) => setWorkspace(prev => ({ ...prev, ...updates }))}
+          onImportFiles={handleImportFiles}
+          onDeleteDocument={handleDeleteDocument}
+          onViewDocument={handleOpenDocumentPreview}
+          onContinue={() => setWorkspaceStep('library')}
+          isUploading={isUploading}
         />
       )}
 
-      {/* Edit modal */}
+      {workspaceStep === 'library' && (
+        <LibraryWorkspace
+          cards={cards}
+          onEditCard={handleEditCard}
+          onContinue={() => setWorkspaceStep('builder')}
+          onCreateNewQuestion={handleCreateManualCard}
+        />
+      )}
+
+      {workspaceStep === 'builder' && (
+        <BuilderWorkspace
+          cards={cards}
+          sections={sections}
+          updateSections={updateSectionsWithDirty}
+          paperTitle={workspace.title}
+          setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
+          paperSettings={workspace.paper_settings_json || {}}
+          courseContext={{
+            code: workspaceMeta?.courseCode || 'SPC101',
+            name: workspaceMeta?.courseName || 'Subject',
+            institution: 'University',
+          }}
+          onExport={async () => {
+            await ensureFinalizedExam(workspace.title);
+            if (finalizedExam) handleDownloadDocx(finalizedExam);
+          }}
+          onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
+        />
+      )}
+
+
       <QuestionEditModal
         card={editingCard}
-        onClose={() => setEditingCard(null)}
+        sourceAssets={editingCardContext?.assets || []}
+        contextLoading={editingCardContextLoading}
+        onClose={() => {
+          setEditingCard(null);
+          setEditingCardContext(null);
+          setEditingCardContextLoading(false);
+        }}
         onSave={handleCardSave}
         onDelete={handleDeleteCard}
-        sections={[]}
+        sections={sections}
+      />
+
+      <SourceDocumentPreviewModal
+        document={previewDocument}
+        parseDebug={previewDocumentData}
+        loading={previewDocumentLoading}
+        onClose={() => {
+          setPreviewDocument(null);
+          setPreviewDocumentData(null);
+          setPreviewDocumentLoading(false);
+        }}
       />
     </div>
   );

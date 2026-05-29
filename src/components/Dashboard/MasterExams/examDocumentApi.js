@@ -125,6 +125,15 @@ export const deleteExamDocument = async (documentId) => {
   return true;
 };
 
+export const listProfessorCourses = async () => {
+  const response = await fetch(`${API_BASE_URL}/professors/courses`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to fetch courses');
+  const data = await response.json();
+  return data?.data || [];
+};
+
 // ==========================================
 // MASTER EXAMS WORKSPACE API
 // ==========================================
@@ -158,6 +167,17 @@ export const fetchWorkspaceDocuments = async (masterExamId, options = {}) => {
   if (!response.ok) await throwApiError(response, 'Failed to fetch workspace documents');
   const data = await response.json();
   return data?.data || [];
+};
+
+export const renameWorkspaceDocument = async (masterExamId, documentId, payload) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams-workspace/${masterExamId}/documents/${documentId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to rename source document');
+  const data = await response.json();
+  return data?.data;
 };
 
 export const fetchSourceFolders = async (masterExamId) => {
@@ -390,6 +410,15 @@ export const reprocessDocument = async (masterExamId, documentId) => {
   return data?.data;
 };
 
+export const fetchDocumentParseDebug = async (masterExamId, documentId) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams-workspace/${masterExamId}/documents/${documentId}/parse-debug`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to fetch parser debug payload');
+  const data = await response.json();
+  return data?.data;
+};
+
 export const deleteWorkspaceDocument = async (masterExamId, documentId) => {
   const response = await fetch(`${API_BASE_URL}/master-exams-workspace/${masterExamId}/documents/${documentId}`, {
     method: 'DELETE',
@@ -419,3 +448,72 @@ export const bulkDeleteCards = async (examDocumentId, cardIds) => {
   return true;
 };
 
+export const bulkUpdateWorkspaceCards = async (examDocumentId, payload) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams-workspace/${examDocumentId}/cards/bulk-metadata`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to bulk update cards');
+  const data = await response.json();
+  return data?.data || [];
+};
+
+export const aiCategorizeWorkspaceCards = async (examDocumentId, cardIds = []) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams-workspace/${examDocumentId}/cards/ai-categorize`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ card_ids: cardIds }),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to categorize cards');
+  const data = await response.json();
+  return data?.data || [];
+};
+
+export const importWorkspaceCards = async (examDocumentId, payload) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams-workspace/${examDocumentId}/cards/import`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to import cards');
+  const data = await response.json();
+  return data?.data || [];
+};
+
+export const downloadMasterExamDocx = async (examId) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams/${examId}/exports/docx`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to export DOCX');
+  return response.blob();
+};
+
+export const fetchMasterExamPrintableHtml = async (examId) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams/${examId}/exports/printable`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to export printable view');
+  return response.text();
+};
+
+
+export const parsePaperWithAI = async (examId, file, metadata = {}) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  if (metadata.paper_title) formData.append('paper_title', metadata.paper_title);
+  if (metadata.course_code) formData.append('course_code', metadata.course_code);
+  if (metadata.subject) formData.append('subject', metadata.subject);
+
+  const response = await fetch(`${API_BASE_URL}/master-exams/${examId}/parse-paper`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+    },
+    body: formData,
+  });
+  
+  if (!response.ok) await throwApiError(response, 'Failed to parse paper');
+  return response.json();
+};

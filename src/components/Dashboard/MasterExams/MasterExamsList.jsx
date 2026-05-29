@@ -1,233 +1,255 @@
-import { useCallback, useEffect, useState } from 'react';
+/* eslint-disable react/prop-types */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FilePlus2, FileText, Trash2, Edit3, Clock, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import {
+  Archive,
+  FilePlus2,
+  Loader2,
+  Trash2,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+
+import {
+  createExamDocument,
+  createSourceFolder,
+  deleteExamDocument,
   listExamDocuments,
   listMasterExams,
-  createExamDocument,
-  deleteExamDocument
+  listProfessorCourses,
+  updateExamDocument,
 } from './examDocumentApi';
-import { getPaperTypeMeta } from './paperBuilderSchema';
+
+const DEFAULT_SOURCE_FOLDERS = [
+  { name: 'Previous Year Papers', folder_type: 'previous_year' },
+  { name: 'Mid Sem', folder_type: 'mid_sem' },
+  { name: 'End Sem', folder_type: 'end_sem' },
+  { name: 'Unit Tests', folder_type: 'unit_test' },
+  { name: 'Assignments', folder_type: 'assignment' },
+  { name: 'Practice Sets', folder_type: 'practice' },
+  { name: 'Custom Imports', folder_type: 'custom' },
+];
+
+const getCourseWorkspaceMeta = (document = {}) => (
+  document?.builder_layout_json?.questionWorkspace
+  || document?.content_json?.attrs?.questionWorkspace
+  || document?.content_json?.questionWorkspace
+  || {}
+);
+
+const buildCourseWorkspacePayload = (course) => ({
+  title: `${course.course_name || course.course_code || 'Course'} Question Workspace`,
+  content: '',
+  content_json: {
+    type: 'doc',
+    attrs: {
+      questionWorkspace: {
+        courseId: course.id,
+        courseCode: course.course_code,
+        courseName: course.course_name,
+      },
+    },
+    content: [{ type: 'paragraph' }],
+  },
+});
+
+function CourseWorkspaceCard({ course, workspace, onOpen, onCreate, creating }) {
+  const statusLabel = workspace ? 'Ready' : 'Empty';
+  const statusTone = workspace ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200';
+  const courseSubtitle = course.semester_code || course.semester || course.session || course.academic_year || 'Workspace';
+
+  return (
+    <article className="group flex min-h-[190px] flex-col rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_14px_36px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+            {course.course_code || 'Course'}
+          </div>
+        </div>
+        <div className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${workspace ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+          {statusLabel}
+        </div>
+      </div>
+
+      <div className="mt-6 min-w-0">
+        <h3 className="line-clamp-2 text-[22px] font-semibold tracking-tight text-slate-950">
+          {course.course_name || course.course_code || 'Untitled Course'}
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-slate-500">
+          {courseSubtitle}
+        </p>
+      </div>
+
+      <div className="mt-auto flex items-center justify-between gap-3 pt-6">
+        <button
+          type="button"
+          onClick={workspace ? onOpen : onCreate}
+          disabled={creating}
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-60"
+        >
+          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePlus2 className="h-4 w-4" />}
+          {workspace ? 'Open Workspace' : 'Create Workspace'}
+        </button>
+      </div>
+    </article>
+  );
+}
 
 const MasterExamsList = () => {
+  const [courses, setCourses] = useState([]);
   const [documents, setDocuments] = useState({ workspaces: [], finalized: [] });
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
+  const [creatingCourseId, setCreatingCourseId] = useState(null);
   const navigate = useNavigate();
 
-  const loadDocuments = useCallback(async () => {
+  const loadWorkspaceDashboard = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [workspaces, finalized] = await Promise.all([
+      const [courseList, workspaces, finalized] = await Promise.all([
+        listProfessorCourses(),
         listExamDocuments(),
-        listMasterExams()
+        listMasterExams(),
       ]);
-      
-      // Merge them into a single list or handle separately
-      // For now, let's keep workspaces that AREN'T finalized yet separately or mark them
+
+      setCourses(Array.isArray(courseList) ? courseList : []);
       setDocuments({
         workspaces: Array.isArray(workspaces) ? workspaces : [],
-        finalized: Array.isArray(finalized) ? finalized : []
+        finalized: Array.isArray(finalized) ? finalized : [],
       });
     } catch (err) {
-      toast.error('Failed to load library');
+      toast.error(err.message || 'Failed to load course workspaces');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadDocuments();
-  }, [loadDocuments]);
+    loadWorkspaceDashboard();
+  }, [loadWorkspaceDashboard]);
 
-  const handleCreateNew = async () => {
+  const workspacesByCourseId = useMemo(() => {
+    const map = new Map();
+    (documents.workspaces || []).forEach((workspace) => {
+      if (workspace.published_master_exam_id) return;
+      const meta = getCourseWorkspaceMeta(workspace);
+      const courseId = meta.courseId ?? meta.course_id;
+      if (!courseId) return;
+      const key = String(courseId);
+      const current = map.get(key);
+      if (!current || new Date(workspace.updated_at || workspace.created_at || 0) > new Date(current.updated_at || current.created_at || 0)) {
+        map.set(key, workspace);
+      }
+    });
+    return map;
+  }, [documents.workspaces]);
+
+  const finalizedCountByCourseId = useMemo(() => {
+    const map = new Map();
+    (documents.finalized || []).forEach((exam) => {
+      const courseId = exam.course_id || exam.courseId;
+      if (!courseId) return;
+      const key = String(courseId);
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return map;
+  }, [documents.finalized]);
+
+  const handleCreateCourseWorkspace = async (course) => {
     try {
-      setIsCreating(true);
-      const newDoc = await createExamDocument({
-        title: 'Untitled Document',
-        content: '',
-        content_json: {
-          type: 'doc',
-          content: [{ type: 'paragraph' }],
+      setCreatingCourseId(course.id);
+      const created = await createExamDocument(buildCourseWorkspacePayload(course));
+      const builderLayout = {
+        ...(created.builder_layout_json || {}),
+        questionWorkspace: {
+          courseId: course.id,
+          courseCode: course.course_code,
+          courseName: course.course_name,
+          workspaceType: 'course_question_workspace',
         },
+        paperStructure: {
+          sections: [
+            { id: 'section-1', title: 'Section A', instructions: '', cardIds: [], parsed_metadata: {} },
+          ],
+        },
+      };
+      const updated = await updateExamDocument(created.id, {
+        title: `${course.course_name || course.course_code} Question Workspace`,
+        builder_layout_json: builderLayout,
       });
-      toast.success('Document created successfully');
-      navigate(`/master-exams/${newDoc.id}`);
+
+      await Promise.all(DEFAULT_SOURCE_FOLDERS.map((folder) => createSourceFolder(updated.id, {
+        ...folder,
+        course_name: course.course_name,
+        metadata_json: {
+          course_id: course.id,
+          course_code: course.course_code,
+        },
+      }).catch(() => null)));
+
+      toast.success('Course question workspace created');
+      navigate(`/master-exams/${updated.id}?courseId=${course.id}`);
     } catch (err) {
-      toast.error(err.message || 'Failed to create document');
-      setIsCreating(false);
+      toast.error(err.message || 'Failed to create course workspace');
+    } finally {
+      setCreatingCourseId(null);
     }
   };
 
-  const handleDelete = async (e, docId, title) => {
-    e.stopPropagation();
-    const confirmed = window.confirm(`Are you sure you want to delete "${title || 'Untitled Document'}"?`);
+  const handleDelete = async (event, docId, title) => {
+    event.stopPropagation();
+    const confirmed = window.confirm(`Archive "${title || 'Untitled Workspace'}"?`);
     if (!confirmed) return;
 
     try {
       await deleteExamDocument(docId);
-      setDocuments(prev => ({
+      setDocuments((prev) => ({
         ...prev,
-        workspaces: prev.workspaces.filter(d => d.id !== docId)
+        workspaces: prev.workspaces.filter((item) => item.id !== docId),
       }));
-      toast.success('Document deleted');
+      toast.success('Workspace archived');
     } catch (err) {
-      toast.error('Failed to delete document');
+      toast.error(err.message || 'Failed to archive workspace');
     }
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] p-6 lg:p-8">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">SmartPaperCheck Library</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Build professional question papers with document flow, visual composition, and reusable extracted cards.
-          </p>
-        </div>
-        <button
-          onClick={handleCreateNew}
-          disabled={isCreating}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/90 disabled:opacity-70 disabled:pointer-events-none"
-        >
-          {isCreating ? <Loader2 className="h-5 w-5 animate-spin" /> : <FilePlus2 className="h-5 w-5" />}
-          New Paper
-        </button>
-      </div>
-
+    <div className="mx-auto w-full max-w-[1360px] px-5 py-6 lg:px-8">
       {isLoading ? (
-        <div className="flex justify-center p-20">
-          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <div className="flex justify-center py-24">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
         </div>
-      ) : (documents.workspaces?.length === 0 && documents.finalized?.length === 0) ? (
-        <div className="flex flex-col items-center justify-center rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-center shadow-sm">
-          {/* ... (empty state content) ... */}
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100">
-            <FileText className="h-8 w-8 text-accent" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900">Your library is empty</h3>
-          <p className="mt-2 mb-6 max-w-sm text-sm text-slate-500">
-            Start by creating a new paper or uploading documents to build your master exam database.
-          </p>
-          <button
-            onClick={handleCreateNew}
-            disabled={isCreating}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white shadow hover:opacity-90"
-          >
-            {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePlus2 className="h-4 w-4" />}
-            Create New Paper
-          </button>
+      ) : courses.length > 0 ? (
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {courses.map((course) => {
+            const workspace = workspacesByCourseId.get(String(course.id));
+            return (
+              <div key={course.id} className="group relative">
+                <CourseWorkspaceCard
+                  course={course}
+                  workspace={workspace}
+                  creating={creatingCourseId === course.id}
+                  onCreate={() => handleCreateCourseWorkspace(course)}
+                  onOpen={() => navigate(`/master-exams/${workspace.id}?courseId=${course.id}`)}
+                />
+                {workspace && (
+                  <button
+                    type="button"
+                    onClick={(event) => handleDelete(event, workspace.id, workspace.title)}
+                    className="absolute right-4 top-4 hidden rounded-full border border-rose-100 bg-white p-2 text-rose-500 shadow-sm hover:bg-rose-50 md:group-hover:block"
+                    title="Archive workspace"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <div className="space-y-10">
-          {/* Finalized Master Exams Section */}
-          {documents.finalized?.length > 0 && (
-            <section>
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
-                <FileText className="h-4 w-4" />
-                Finalized Master Exams
-              </h3>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {documents.finalized.map((exam) => {
-                  const paperType = getPaperTypeMeta(exam.paper_type);
-                  return (
-                  <div
-                    key={exam.id}
-                    className="group relative flex flex-col rounded-[12px] border border-green-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-green-300"
-                  >
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600 ring-1 ring-green-100 transition-colors">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                          Finalized
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-                          {paperType.shortLabel}
-                        </span>
-                      </div>
-                    </div>
-                    <h4 className="mb-2 line-clamp-2 text-base font-semibold text-slate-900">
-                      {exam.exam_name || exam.title}
-                    </h4>
-                    <p className="mb-4 text-xs text-slate-500 line-clamp-1">
-                      {exam.full_marks} Marks • {paperType.label}
-                    </p>
-                    <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4 text-xs font-medium text-slate-400">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        {exam.created_at ? new Date(exam.created_at).toLocaleDateString() : 'Ready'}
-                      </div>
-                      <span className="text-green-600 font-semibold">Locked 🔒</span>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Draft Workspaces Section */}
-          {documents.workspaces?.filter(d => !d.published_master_exam_id).length > 0 && (
-            <section>
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
-                <Edit3 className="h-4 w-4" />
-                Draft Workspaces
-              </h3>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {documents.workspaces
-                  .filter(d => !d.published_master_exam_id)
-                  .map((doc) => {
-                  const paperType = getPaperTypeMeta(doc.paper_type);
-                  return (
-                  <div
-                    key={doc.id}
-                    onClick={() => navigate(`/master-exams/${doc.id}`)}
-                    className="group relative flex cursor-pointer flex-col rounded-[12px] border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
-                  >
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-accent ring-1 ring-slate-100 transition-colors group-hover:bg-accent/5">
-                        <Edit3 className="h-5 w-5" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium capitalize text-slate-600">
-                           Draft
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                          {paperType.shortLabel}
-                        </span>
-                        <button
-                          onClick={(e) => handleDelete(e, doc.id, doc.title)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <h4 className="mb-2 line-clamp-2 text-base font-semibold text-slate-900 group-hover:text-accent">
-                      {doc.title || 'Untitled Document'}
-                    </h4>
-                    <p className="mb-4 text-xs text-slate-500 line-clamp-2">
-                      {paperType.label} • Continue building sections, cards, and document layout before locking the paper.
-                    </p>
-                    <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4 text-xs font-medium text-slate-400">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : 'Just now'}
-                      </div>
-                      <span className="flex items-center gap-1 text-accent opacity-0 transition-opacity group-hover:opacity-100">
-                        <Edit3 className="h-3.5 w-3.5" /> Continue Assembly
-                      </span>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+        <div className="rounded-[30px] border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+          <Archive className="mx-auto mb-3 h-9 w-9 text-slate-300" />
+          <h3 className="text-base font-semibold text-slate-900">No assigned courses found</h3>
+          <p className="mt-2 text-sm text-slate-500">Courses assigned to this professor will appear here as question workspaces.</p>
         </div>
       )}
     </div>

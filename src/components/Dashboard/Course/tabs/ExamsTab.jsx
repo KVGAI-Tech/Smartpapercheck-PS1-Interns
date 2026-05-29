@@ -68,6 +68,15 @@ const normalizeSecurityConfig = (config = {}) => ({
   violation_limit: Math.max(1, Number(config?.violation_limit || DEFAULT_ONLINE_SECURITY_CONFIG.violation_limit)),
 });
 
+const withPositiveFullMarks = (payload, fullMarksValue) => {
+  const fullMarks = Number(fullMarksValue);
+  if (!Number.isFinite(fullMarks) || fullMarks <= 0) return payload;
+  return {
+    ...payload,
+    full_marks: fullMarks,
+  };
+};
+
 const OnlineExamSecurityModal = ({
   exam,
   onClose,
@@ -1685,16 +1694,15 @@ const OnlineExamSecurityModal = ({
         const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${updatedExam.id}`;
         
         console.log('Making PUT request to:', fullUrl);
-        const updatePayload = {
+        const updatePayload = withPositiveFullMarks({
           exam_name: updatedExam.exam_name,
-          full_marks: updatedExam.full_marks,
           exam_type: updatedExam.exam_type,
           conduct_variant: updatedExam.exam_type === 'portal_mcq' ? 'portal_mcq' : undefined,
           is_active: updatedExam.is_active,
           start_time: updatedExam.start_time || undefined,
           end_time: updatedExam.end_time || undefined,
           duration_minutes: updatedExam.duration_minutes || undefined,
-        };
+        }, updatedExam.full_marks);
         console.log('Request payload:', {
           ...updatePayload,
         });
@@ -1757,7 +1765,13 @@ const OnlineExamSecurityModal = ({
         setTogglingExamId(exam.id);
 
         const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${exam.id}`;
-        const nextIsActive = !Boolean(exam.is_active);
+        const nextIsActive = !exam.is_active;
+        const updatePayload = withPositiveFullMarks({
+          exam_name: exam.exam_name,
+          exam_type: exam.exam_type,
+          conduct_variant: exam.conduct_variant,
+          is_active: nextIsActive,
+        }, exam.full_marks);
 
         const response = await fetch(fullUrl, {
           method: 'PUT',
@@ -1765,13 +1779,7 @@ const OnlineExamSecurityModal = ({
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            exam_name: exam.exam_name,
-            full_marks: exam.full_marks,
-            exam_type: exam.exam_type,
-            conduct_variant: exam.conduct_variant,
-            is_active: nextIsActive,
-          }),
+          body: JSON.stringify(updatePayload),
         });
 
         if (!response.ok) {
@@ -1804,21 +1812,21 @@ const OnlineExamSecurityModal = ({
         setSavingSecurity(true);
 
         const fullUrl = `${API_BASE_URL}/professors/courses/${courseId}/exams/${exam.id}`;
+        const updatePayload = withPositiveFullMarks({
+          exam_name: exam.exam_name,
+          exam_type: exam.exam_type,
+          exam_mode: exam.exam_mode,
+          conduct_variant: exam.conduct_variant,
+          is_active: Boolean(exam.is_active),
+          online_exam_security_config: securityConfig,
+        }, exam.full_marks);
         const response = await fetch(fullUrl, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            exam_name: exam.exam_name,
-            full_marks: exam.full_marks,
-            exam_type: exam.exam_type,
-            exam_mode: exam.exam_mode,
-            conduct_variant: exam.conduct_variant,
-            is_active: Boolean(exam.is_active),
-            online_exam_security_config: securityConfig,
-          }),
+          body: JSON.stringify(updatePayload),
         });
 
         if (!response.ok) {

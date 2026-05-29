@@ -17,6 +17,12 @@ export const PAPER_TYPES = [
     shortLabel: 'Writable',
     description: 'Printable question paper with built-in answer lines, boxes, or drawing regions.',
   },
+  {
+    value: 'technical_writable',
+    label: 'Graph / Technical Writable',
+    shortLabel: 'Technical',
+    description: 'Writable paper with graph space reserved only for technical questions that need it.',
+  },
 ];
 
 export const PAPER_TYPE_LABELS = Object.fromEntries(
@@ -27,6 +33,11 @@ export const getPaperTypeMeta = (value) =>
   PAPER_TYPE_LABELS[value] || PAPER_TYPE_LABELS.standard;
 
 export const PAPER_TEMPLATES = [
+  {
+    value: 'university_format',
+    label: 'University Format',
+    description: 'Formal exam paper layout with strong institutional hierarchy.',
+  },
   {
     value: 'bits',
     label: 'BITS University',
@@ -63,6 +74,7 @@ export const createDefaultBuilderLayout = () => ({
 });
 
 export const createDefaultPaperSettings = () => ({
+  preview_mode: 'standard',
   answerSpaceMode: 'auto',
   lineDensity: 'comfortable',
   showSectionMarks: true,
@@ -70,8 +82,14 @@ export const createDefaultPaperSettings = () => ({
   includeCoverHeader: true,
   numberingStyle: 'numeric',
   writableLineCount: 6,
-  writableBoxHeight: 160,
-  graphBoxHeight: 180,
+  writableLineSpacing: 'normal',
+  writableBoxHeight: 120,
+  graphBoxHeight: 156,
+  writablePadding: 'normal',
+  writableBoxStyle: 'lines',
+  startSectionsNewPage: false,
+  repeatHeader: false,
+  footerEnabled: true,
 });
 
 export const createDefaultExportPreferences = () => ({

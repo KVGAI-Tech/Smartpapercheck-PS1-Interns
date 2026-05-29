@@ -132,6 +132,28 @@ function normalizeRubricMarks(rubrics, totalMarks) {
     return normalized;
 }
 
+function getQuestionRubricTargetMarks(question = {}) {
+    const questionType = String(question?.question_type || question?.questionType || '').trim().toLowerCase();
+    const reasonRequired = Boolean(question?.reason_required || question?.reasonRequired || questionType === 'mcq_reasoning');
+    const totalMarks = Math.abs(parseFloat(question?.max_marks || question?.marks) || 0);
+
+    if (!reasonRequired) {
+        return totalMarks;
+    }
+
+    const reasoningMarks = Math.abs(parseFloat(question?.reasoning_marks || question?.reasoningMarks) || 0);
+    if (reasoningMarks > 0) {
+        return reasoningMarks;
+    }
+
+    const selectionMarks = Math.abs(parseFloat(question?.selection_marks || question?.selectionMarks) || 0);
+    if (selectionMarks > 0 && totalMarks > selectionMarks) {
+        return Math.round((totalMarks - selectionMarks) * 100) / 100;
+    }
+
+    return totalMarks;
+}
+
 const GenerateLoader = () => (
     <motion.div 
         initial={{ opacity: 0, y: 10 }}
@@ -284,7 +306,7 @@ const EmptyState = ({ onGenerate, onManual, isGenerating, selectedQuestion, hasR
                     Generate Smart Rubric
                 </h3>
                 <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                    Click 'Generate' to create an AI-powered grading rubric with evaluation criteria.
+                    Click &apos;Generate&apos; to create an AI-powered grading rubric with evaluation criteria.
                 </p>
             </div>
 
@@ -939,7 +961,7 @@ const RubricModal = ({
         console.log('[RubricModal] requestRubricGeneration called for question:', question);
 
         // question objects use max_marks; fall back to marks for legacy shapes
-        const questionMarks = parseFloat(question.max_marks || question.marks) || 10;
+        const questionMarks = getQuestionRubricTargetMarks(question) || parseFloat(question.max_marks || question.marks) || 10;
         const itemCount = overrideSettings?.num_rubric_items
             ?? (numRubricItems > 0 ? numRubricItems : 3);
         const instructions = overrideSettings?.professor_instructions
@@ -1092,11 +1114,14 @@ const RubricModal = ({
 
         const totalMaxMarks = rubricItems.reduce((sum, item) => sum + (parseFloat(item.max_marks) || 0), 0);
         const selectedQuestionData = questions.find(q => q.question_number === selectedQuestion);
-        const questionMaxMarks = Math.abs(selectedQuestionData?.max_marks || 10);
+        const questionMaxMarks = getQuestionRubricTargetMarks(selectedQuestionData) || Math.abs(selectedQuestionData?.max_marks || 10);
+        const targetLabel = (selectedQuestionData?.reason_required || selectedQuestionData?.question_type === 'mcq_reasoning')
+            ? 'reasoning marks'
+            : 'question marks';
 
         // STRICT: Total max marks must exactly equal question max marks
         if (Math.abs(totalMaxMarks - questionMaxMarks) > 0.01) {
-            errors.push(`Total rubric marks (${totalMaxMarks.toFixed(2)}) must exactly equal question marks (${questionMaxMarks})`);
+            errors.push(`Total rubric marks (${totalMaxMarks.toFixed(2)}) must exactly equal ${targetLabel} (${questionMaxMarks})`);
         }
 
         // Validate each rubric item
@@ -1323,7 +1348,7 @@ const RubricModal = ({
 
     const handleAddRubricItem = () => {
         const currentQuestion = questions.find(q => q.question_number === selectedQuestion);
-        const maxMarks = Math.abs(currentQuestion?.max_marks || 10);
+        const maxMarks = getQuestionRubricTargetMarks(currentQuestion) || Math.abs(currentQuestion?.max_marks || 10);
         const targetCount = Math.max(rubricItems.length + 1, 1);
         const remainingItems = targetCount - rubricItems.length;
         const currentTotalMarks = rubricItems.reduce((sum, item) => sum + (parseFloat(item.max_marks) || 0), 0);
@@ -1381,7 +1406,7 @@ const RubricModal = ({
 
     const normalizeRubricItemsForSave = (questionNumber = selectedQuestion) => {
         const selectedQuestionData = questions.find(q => q.question_number === questionNumber);
-        const questionMaxMarks = Math.abs(selectedQuestionData?.max_marks || 10);
+        const questionMaxMarks = getQuestionRubricTargetMarks(selectedQuestionData) || Math.abs(selectedQuestionData?.max_marks || 10);
         const items = questionNumber != null ? (rubricsMap[questionNumber] || []) : [];
 
         // First clean fields, then normalize marks to match question total
@@ -1441,6 +1466,7 @@ const RubricModal = ({
                 const cleanText = htmlToPlainText(q.question_text || '');
                 const combined = smartJoinContext(cleanText, cleanBody);
                 const subparts = parseQuestionSubparts(combined);
+                const rubricTargetMarks = getQuestionRubricTargetMarks(q) || parseFloat(q.max_marks || q.marks) || 10;
 
                 // Get the configured num_rubric_items for this question
                 // Priority: Database value (detected subparts) > UI override > Default
@@ -1456,7 +1482,7 @@ const RubricModal = ({
                     exam_id: examId, // Include exam_id for storage
                     question_text: cleanText,
                     question_body: cleanBody,
-                    marks: parseFloat(q.max_marks || q.marks) || 10,
+                    marks: rubricTargetMarks,
                     num_rubric_items: desiredRubricCount, // Include desired rubric count
                     ...(subparts.length > 0 && { subparts })
                 };
@@ -2315,9 +2341,9 @@ const RubricModal = ({
                                                     </div>
 
                                                     <div className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 ${
-                                                        Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? 'text-red-600' : 'text-green-600'
+                                                        Math.abs(validation.totalMaxMarks - (getQuestionRubricTargetMarks(selectedQuestionData) || selectedQuestionData?.max_marks || 10)) > 0.01 ? 'text-red-600' : 'text-green-600'
                                                     }`}>
-                                                        {Math.abs(validation.totalMaxMarks - (selectedQuestionData?.max_marks || 10)) > 0.01 ? (
+                                                        {Math.abs(validation.totalMaxMarks - (getQuestionRubricTargetMarks(selectedQuestionData) || selectedQuestionData?.max_marks || 10)) > 0.01 ? (
                                                             <AlertTriangle className="w-4 h-4" />
                                                         ) : (
                                                             <CheckCircle className="w-4 h-4" />
@@ -2326,7 +2352,12 @@ const RubricModal = ({
                                                             <div className="text-xs text-gray-500">Total Marks</div>
                                                             <div className="font-semibold">
                                                                 {validation.totalMaxMarks?.toFixed(2) || '0.00'}
-                                                                <span className="text-xs text-gray-500 font-medium"> (Target {selectedQuestionData?.max_marks || 10})</span>
+                                                                <span className="text-xs text-gray-500 font-medium">
+                                                                    {(selectedQuestionData?.reason_required || selectedQuestionData?.question_type === 'mcq_reasoning')
+                                                                        ? ` (Target reasoning marks ${getQuestionRubricTargetMarks(selectedQuestionData) || selectedQuestionData?.reasoning_marks || 0})`
+                                                                        : ` (Target ${selectedQuestionData?.max_marks || 10})`
+                                                                    }
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </div>

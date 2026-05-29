@@ -260,6 +260,21 @@ const handleSingleUpload = async () => {
   const loadingToast = toast.loading('Uploading answer pages...');
 
   try {
+    const readApiError = async (resp, fallbackMessage) => {
+      const raw = await resp.text().catch(() => '');
+      let json = null;
+      try {
+        json = raw ? JSON.parse(raw) : null;
+      } catch {
+        json = null;
+      }
+
+      return {
+        json,
+        message: json?.message || json?.detail || raw || fallbackMessage,
+      };
+    };
+
     const results = [];
     for (const job of jobs) {
       const uploadedQuestionNumbers = new Set(job.entries.map(([qn]) => String(qn)));
@@ -279,10 +294,9 @@ const handleSingleUpload = async () => {
           },
         );
 
-        const json = await resp.json().catch(() => null);
+        const { json, message } = await readApiError(resp, `Upload failed for student ${job.studentId} Q${qn}`);
         if (!resp.ok || json?.code !== 200) {
-          const msg = json?.message || json?.detail || `Upload failed for student ${job.studentId} Q${qn}`;
-          throw new Error(msg);
+          throw new Error(message);
         }
 
         results.push({ studentId: job.studentId, questionNumber: qn, data: json?.data });
@@ -305,10 +319,9 @@ const handleSingleUpload = async () => {
           },
         );
 
-        const json = await resp.json().catch(() => null);
+        const { json, message } = await readApiError(resp, `Clear failed for student ${job.studentId} Q${qn}`);
         if (!resp.ok || json?.code !== 200) {
-          const msg = json?.message || json?.detail || `Clear failed for student ${job.studentId} Q${qn}`;
-          throw new Error(msg);
+          throw new Error(message);
         }
 
         results.push({ studentId: job.studentId, questionNumber: qn, cleared: true, data: json?.data });

@@ -1,7 +1,7 @@
-import React from 'react';
-import { ImageIcon } from 'lucide-react';
+/* eslint-disable react/prop-types */
 
 import { getQuestionTypeDefinition, supportsOptions, supportsReasoning } from './masterExamCardSchema';
+import WritableAnswerArea from './WritableAnswerArea';
 
 const PreviewSection = ({ label, children }) => (
   <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -17,6 +17,16 @@ export default function QuestionLivePreview({ card }) {
   const correctOptions = options.filter((option) => option.isCorrect);
   const rubricItems = (metadata.rubrics || []).filter((item) => item?.title || item?.description || item?.marks);
   const hasImages = card?.image_urls && card.image_urls.length > 0;
+  const writablePreviewArea = (() => {
+    const rawType = (card?.writing_space_type || '').toLowerCase();
+    if (!rawType || rawType === 'none') return null;
+    if (rawType === 'lines' || rawType === 'lined') return { mode: 'lined', lines: card?.writing_space_lines || 4 };
+    if (rawType === 'steps') return { mode: 'steps', lines: card?.writing_space_lines || 5 };
+    if (rawType === 'grid' || rawType === 'graph_grid' || rawType === 'graph') return { mode: 'graph', height: card?.writing_space_height || 120 };
+    if (rawType === 'boxed' || rawType === 'box') return { mode: 'boxed', height: card?.writing_space_height || 120 };
+    if (rawType === 'blank' || rawType === 'drawing_area') return { mode: 'blank', height: card?.writing_space_height || 120 };
+    return null;
+  })();
 
   return (
     <div className="space-y-4">
@@ -27,9 +37,9 @@ export default function QuestionLivePreview({ card }) {
               <p className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-400">
                 Final Paper Preview
               </p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-900">
-                {metadata.title || 'Untitled Question'}
-              </h3>
+              {metadata.title ? (
+                <div className="mt-2 text-lg font-semibold text-slate-900">{metadata.title}</div>
+              ) : null}
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span>{questionType.label}</span>
                 <span>•</span>
@@ -47,7 +57,7 @@ export default function QuestionLivePreview({ card }) {
 
         {/* MCQ Layout (no reasoning) */}
         {supportsOptions(card?.question_type) && !supportsReasoning(card?.question_type) && (
-          <div className="grid gap-6 pt-5 xl:grid-cols-[1fr_240px]">
+          <div className={`grid gap-6 pt-5 ${hasImages ? 'xl:grid-cols-[1fr_240px]' : 'grid-cols-1'}`}>
             {/* Left Column: Instructions, Question Body, Options */}
             <div className="space-y-4">
               {metadata.instructions && (
@@ -82,14 +92,15 @@ export default function QuestionLivePreview({ card }) {
             </div>
 
             {/* Right Column: Media (if image) + Metadata */}
-            <div className="space-y-4">
-              {hasImages && (
+            {hasImages && (
+              <div className="space-y-4">
                 <div className="shrink-0 w-full">
                   <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Media</p>
                   <div className="relative group/img overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-all hover:border-slate-300 hover:shadow-md h-36 w-full flex items-center justify-center">
                     <img
                       src={card.image_urls[0]}
                       alt="Question Image"
+                      loading="lazy"
                       className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
@@ -100,9 +111,8 @@ export default function QuestionLivePreview({ card }) {
                     )}
                   </div>
                 </div>
-              )}
-
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -110,7 +120,7 @@ export default function QuestionLivePreview({ card }) {
         {!supportsOptions(card?.question_type) && (
           <div className="space-y-5 pt-5">
             {/* Top Row: Question text + Right-side image */}
-            <div className="grid gap-6 xl:grid-cols-[1fr_240px]">
+            <div className={`grid gap-6 ${hasImages ? 'xl:grid-cols-[1fr_240px]' : 'grid-cols-1'}`}>
               <div className="space-y-4">
                 {metadata.instructions && (
                   <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-100">
@@ -127,14 +137,15 @@ export default function QuestionLivePreview({ card }) {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {hasImages && (
+              {hasImages && (
+                <div className="space-y-4">
                   <div className="shrink-0 w-full">
                     <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Media</p>
                     <div className="relative group/img overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-all hover:border-slate-300 hover:shadow-md h-36 w-full flex items-center justify-center">
                       <img
                         src={card.image_urls[0]}
                         alt="Question Image"
+                        loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
@@ -145,48 +156,17 @@ export default function QuestionLivePreview({ card }) {
                       )}
                     </div>
                   </div>
-                )}
-
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Bottom Row: Full-width Answer Writing Space Preview */}
-            {card?.writing_space_type && card?.writing_space_type !== 'none' && (
+            {writablePreviewArea && (
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Writable Space Preview ({card.writing_space_type})
                 </p>
-                {card.writing_space_type === 'lines' && (
-                  <div className="space-y-1 overflow-hidden" style={{ minHeight: '60px', height: card.writing_space_height ? `${card.writing_space_height}px` : 'auto' }}>
-                    {Array.from({ length: card.writing_space_lines || 4 }).map((_, i) => (
-                      <div key={i} className="border-b border-dashed border-slate-300 h-6" />
-                    ))}
-                  </div>
-                )}
-                {card.writing_space_type === 'blank' && (
-                  <div
-                    className="flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white"
-                    style={{ height: `${card.writing_space_height || 120}px` }}
-                  >
-                    <span className="text-xs text-slate-400 font-medium">Blank Answer / Sketching Space</span>
-                  </div>
-                )}
-                {card.writing_space_type === 'grid' && (
-                  <div
-                    className="rounded-xl border border-slate-200 bg-white relative overflow-hidden"
-                    style={{
-                      height: `${card.writing_space_height || 120}px`,
-                      backgroundImage: 'linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)',
-                      backgroundSize: '20px 20px'
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-xs font-semibold text-slate-400/80 bg-white/90 px-2.5 py-1 rounded-md border border-slate-100 shadow-sm">
-                        Graph Grid Workspace
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <WritableAnswerArea answerArea={writablePreviewArea} />
               </div>
             )}
           </div>
@@ -194,7 +174,7 @@ export default function QuestionLivePreview({ card }) {
 
         {/* MCQ with Reason Layout */}
         {supportsReasoning(card?.question_type) && (
-          <div className="grid gap-6 pt-5 xl:grid-cols-[1fr_260px]">
+          <div className={`grid gap-6 pt-5 ${(hasImages || metadata.reasoning_prompt) ? 'xl:grid-cols-[1fr_260px]' : 'grid-cols-1'}`}>
             {/* Left Column: Question body + Options */}
             <div className="space-y-4">
               {metadata.instructions && (
@@ -229,27 +209,28 @@ export default function QuestionLivePreview({ card }) {
             </div>
 
             {/* Right Column: Images + Rea Prompt Container + Metadata */}
-            <div className="space-y-4">
-              {hasImages && (
-                <PreviewSection label="Media">
-                  <div className="grid grid-cols-2 gap-2">
-                    {card.image_urls.slice(0, 2).map((url, idx) => (
-                      <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 h-20">
-                        <img src={url} alt={`Asset ${idx + 1}`} className="h-full w-full object-cover" />
-                      </div>
-                    ))}
+            {(hasImages || metadata.reasoning_prompt) && (
+              <div className="space-y-4">
+                {hasImages && (
+                  <PreviewSection label="Media">
+                    <div className="grid grid-cols-2 gap-2">
+                      {card.image_urls.slice(0, 2).map((url, idx) => (
+                        <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 h-20">
+                          <img src={url} alt={`Asset ${idx + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </PreviewSection>
+                )}
+
+                {metadata.reasoning_prompt && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Reason Required</p>
+                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-amber-900/80">{metadata.reasoning_prompt}</p>
                   </div>
-                </PreviewSection>
-              )}
-
-              {metadata.reasoning_prompt && (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Reason Required</p>
-                  <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-amber-900/80">{metadata.reasoning_prompt}</p>
-                </div>
-              )}
-
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

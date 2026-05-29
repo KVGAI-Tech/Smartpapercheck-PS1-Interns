@@ -1,0 +1,86 @@
+/* Smart Paper Check — Workspace Design Tokens
+   Ported from reference design. Forest-green brand, academic SaaS density.
+*/
+
+:root {
+  /* Brand greens */
+  --ws-brand: #0a6f55;
+  --ws-brand-600: #0a6047;
+  --ws-brand-700: #074a37;
+  --ws-brand-50: #e6f4ef;
+  --ws-brand-100: #d3ebe1;
+  --ws-brand-200: #b8dccd;
+
+  /* Ink scale (neutral grays) */
+  --ws-ink-0: #ffffff;
+  --ws-ink-50: #f8fafa;
+  --ws-ink-100: #f1f4f4;
+  --ws-ink-150: #e8ecec;
+  --ws-ink-200: #dde2e2;
+  --ws-ink-300: #c4cbcb;
+  --ws-ink-400: #97a0a0;
+  --ws-ink-500: #6b7475;
+  --ws-ink-600: #4b5556;
+  --ws-ink-700: #2f3839;
+  --ws-ink-800: #1b2222;
+  --ws-ink-900: #0c1112;
+
+  /* Semantic */
+  --ws-warn: #b86a00;
+  --ws-warn-bg: #fdf3e3;
+  --ws-danger: #b3261e;
+  --ws-danger-bg: #fbeae9;
+  --ws-info: #245fa7;
+  --ws-info-bg: #e8f0fa;
+
+  /* Surfaces */
+  --ws-sidebar-bg: #f4f6f6;
+  --ws-canvas-bg: #f1f4f4;
+
+  /* Radii */
+  --ws-radius-sm: 6px;
+  --ws-radius: 10px;
+  --ws-radius-lg: 14px;
+  --ws-radius-xl: 18px;
+
+  /* Shadows */
+  --ws-shadow-1: 0 1px 2px rgba(15, 23, 25, 0.04), 0 1px 1px rgba(15, 23, 25, 0.03);
+  --ws-shadow-2: 0 4px 16px rgba(15, 23, 25, 0.06), 0 1px 3px rgba(15, 23, 25, 0.04);
+  --ws-shadow-3: 0 12px 40px rgba(15, 23, 25, 0.12), 0 2px 8px rgba(15, 23, 25, 0.05);
+
+  /* Typography */
+  --ws-font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --ws-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+  --ws-font-serif: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+}
+
+/* ========= Animations ========= */
+@keyframes ws-fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ws-pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+@keyframes ws-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes ws-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes ws-slideRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.ws-fade-up { animation: ws-fadeUp 0.25s ease both; }
+
+.ws-spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--ws-ink-200);
+  border-top-color: var(--ws-brand);
+  animation: ws-spin 0.8s linear infinite;
+  display: inline-block;
+}

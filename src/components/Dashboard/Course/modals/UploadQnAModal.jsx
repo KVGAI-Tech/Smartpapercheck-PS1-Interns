@@ -1523,6 +1523,58 @@ const UploadQnAModal = ({
     }
   };
 
+  const resolveMcqReasoningSplit = (question, totalMarks) => {
+    const marksValue = Number(totalMarks) || 0;
+    const selectionRaw = question?.selectionMarks;
+    const reasoningRaw = question?.reasoningMarks;
+    const selectionProvided = selectionRaw !== '' && selectionRaw !== null && selectionRaw !== undefined;
+    const reasoningProvided = reasoningRaw !== '' && reasoningRaw !== null && reasoningRaw !== undefined;
+
+    if (marksValue <= 0) {
+      return { error: 'Max marks must be greater than 0.' };
+    }
+
+    if (!selectionProvided && !reasoningProvided) {
+      return { selectionMarks: '', reasoningMarks: '' };
+    }
+
+    const selectionMarks = selectionProvided ? Number(selectionRaw) : null;
+    const reasoningMarks = reasoningProvided ? Number(reasoningRaw) : null;
+
+    if ((selectionProvided && Number.isNaN(selectionMarks)) || (reasoningProvided && Number.isNaN(reasoningMarks))) {
+      return { error: 'Selection and reasoning marks must be valid numbers.' };
+    }
+
+    if (selectionProvided && reasoningProvided) {
+      if (selectionMarks < 0 || reasoningMarks < 0) {
+        return { error: 'Selection and reasoning marks cannot be negative.' };
+      }
+      if (Math.abs((selectionMarks + reasoningMarks) - marksValue) > 0.001) {
+        return { error: 'Selection marks plus reasoning marks must equal total marks.' };
+      }
+      return { selectionMarks, reasoningMarks };
+    }
+
+    if (selectionProvided) {
+      if (selectionMarks < 0 || selectionMarks > marksValue) {
+        return { error: 'Selection marks must be between 0 and total marks.' };
+      }
+      return {
+        selectionMarks,
+        reasoningMarks: Math.round((marksValue - selectionMarks) * 100) / 100,
+      };
+    }
+
+    if (reasoningMarks < 0 || reasoningMarks > marksValue) {
+      return { error: 'Reasoning marks must be between 0 and total marks.' };
+    }
+
+    return {
+      selectionMarks: Math.round((marksValue - reasoningMarks) * 100) / 100,
+      reasoningMarks,
+    };
+  };
+
   const validateQuestions = () => {
     if (isPortalMcqMode || isSubjectiveConductMode) {
       const conductIssue = questions.find((q) => {
@@ -1542,12 +1594,9 @@ const UploadQnAModal = ({
         const invalidSubjectiveRubricCount = normalizedQuestionType === 'subjective' && (
           isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10
         );
-        const splitProvided = q.selectionMarks !== '' || q.reasoningMarks !== '';
-        const invalidSplit = normalizedQuestionType === 'mcq_reasoning' && splitProvided && (
-          Number(q.selectionMarks || 0) < 0
-          || Number(q.reasoningMarks || 0) < 0
-          || Math.abs((Number(q.selectionMarks || 0) + Number(q.reasoningMarks || 0)) - marksValue) > 0.001
-        );
+        const splitValidation = normalizedQuestionType === 'mcq_reasoning'
+          ? resolveMcqReasoningSplit(q, marksValue)
+          : null;
 
         if (!hasQuestionFile && !hasQuestionContent) return { question: q, message: 'Question content is required.' };
         if (invalidMarks) return { question: q, message: 'Max marks must be greater than 0.' };
@@ -1555,7 +1604,7 @@ const UploadQnAModal = ({
         if (isMcqLike && missingCorrectOption) return { question: q, message: 'Select a correct option among the non-empty options.' };
         if (invalidReasonRubricCount) return { question: q, message: 'Reason rubric item count must be between 1 and 10.' };
         if (invalidSubjectiveRubricCount) return { question: q, message: 'Rubric item count must be between 1 and 10.' };
-        if (invalidSplit) return { question: q, message: 'Selection marks plus reasoning marks must equal total marks.' };
+        if (splitValidation?.error) return { question: q, message: splitValidation.error };
         return null;
       });
 
@@ -1589,12 +1638,17 @@ const UploadQnAModal = ({
       const hasAnswerFile = Boolean(q.answer || q.answerUrl);
       const hasQuestionContent = !isRichTextEmpty(q.questionBody) || /<img\b/i.test(q.questionBody || '');
       const hasAnswerContent = !isRichTextEmpty(q.answerBody) || /<img\b/i.test(q.answerBody || '');
+      const normalizedQuestionType = q.questionType === 'mcq_reasoning' ? 'mcq_reasoning' : (q.questionType || 'subjective');
+      const requiresAnswer = !['mcq', 'mcq_reasoning'].includes(normalizedQuestionType);
 
       // Validate rubric items count
       const rubricCount = parseInt(q.num_rubric_items);
       const invalidRubricCount = isNaN(rubricCount) || rubricCount < 1 || rubricCount > 10;
 
-      return !hasQuestionFile && !hasQuestionContent || !hasAnswerFile && !hasAnswerContent || !q.marks || invalidRubricCount;
+      return (!hasQuestionFile && !hasQuestionContent)
+        || (requiresAnswer && !hasAnswerFile && !hasAnswerContent)
+        || !q.marks
+        || invalidRubricCount;
     });
 
     if (invalidQuestions.length > 0) {
@@ -1691,8 +1745,12 @@ const UploadQnAModal = ({
             payload.correct_option_ids = [q.correctOptionId].filter(Boolean);
             payload.negative_marks = Math.abs(parseFloat(q.negative_marks)) || 0;
             if (normalizedQuestionType === 'mcq_reasoning') {
-              if (q.selectionMarks !== '') payload.selection_marks = Number(q.selectionMarks);
-              if (q.reasoningMarks !== '') payload.reasoning_marks = Number(q.reasoningMarks);
+              const splitValidation = resolveMcqReasoningSplit(q, q.marks);
+              if (splitValidation?.error) {
+                throw new Error(splitValidation.error);
+              }
+              if (splitValidation.selectionMarks !== '') payload.selection_marks = Number(splitValidation.selectionMarks);
+              if (splitValidation.reasoningMarks !== '') payload.reasoning_marks = Number(splitValidation.reasoningMarks);
             }
             // Only send num_rubric_items if reasoning is required for this MCQ
             if (normalizedQuestionType !== 'mcq_reasoning') {
@@ -2096,6 +2154,12 @@ const UploadQnAModal = ({
       return;
     }
 
+    const nextFullMarks = Number(examMarksValidation.totalQuestionMarks) || 0;
+    if (nextFullMarks <= 0) {
+      toast.error('Add marks to at least one question before adjusting exam marks');
+      return;
+    }
+
     const loadingToast = toast.loading('Adjusting exam marks...');
 
     try {
@@ -2106,7 +2170,7 @@ const UploadQnAModal = ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          full_marks: examMarksValidation.totalQuestionMarks
+          full_marks: nextFullMarks
         })
       });
 
@@ -2362,10 +2426,11 @@ const UploadQnAModal = ({
             </div>
             <button
               onClick={handleAdjustExamMarks}
+              disabled={examMarksValidation.totalQuestionMarks <= 0}
               className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${examMarksValidation.isExceeded
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               Adjust Exam Marks
             </button>
