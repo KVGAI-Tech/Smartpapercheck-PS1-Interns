@@ -3,8 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Archive,
+  ArrowRight,
+  CheckCircle2,
   FilePlus2,
   Loader2,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -52,43 +55,67 @@ const buildCourseWorkspacePayload = (course) => ({
   },
 });
 
-function CourseWorkspaceCard({ course, workspace, onOpen, onCreate, creating }) {
+function CourseWorkspaceCard({ course, workspace, finalizedCount = 0, onOpen, onCreate, creating }) {
   const statusLabel = workspace ? 'Ready' : 'Empty';
-  const statusTone = workspace ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200';
+  const statusTone = workspace
+    ? 'border-emerald-200 bg-emerald-50/90 text-emerald-700'
+    : 'border-sky-100 bg-white/80 text-slate-500';
   const courseSubtitle = course.semester_code || course.semester || course.session || course.academic_year || 'Workspace';
+  const actionLabel = workspace ? 'Open Workspace' : 'Create Workspace';
+  const updatedLabel = workspace?.updated_at
+    ? new Date(workspace.updated_at).toLocaleDateString()
+    : null;
 
   return (
-    <article className="group flex min-h-[190px] flex-col rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_14px_36px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+    <article className="group relative flex min-h-[230px] flex-col overflow-hidden rounded-[20px] border border-[#d9e8e4] bg-[linear-gradient(180deg,#fbfefd_0%,#ffffff_52%,#f4faf8_100%)] p-5 shadow-[0_18px_48px_rgba(16,72,62,0.08)] transition duration-300 hover:-translate-y-1 hover:border-[#b8d6ce] hover:shadow-[0_24px_60px_rgba(16,72,62,0.14)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,rgba(205,236,229,0.55)_0%,rgba(255,255,255,0)_100%)]" />
+      <div className="relative z-10 flex items-start justify-between gap-4">
+        <div className="min-w-0 relative z-10">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6e8f89]">
             {course.course_code || 'Course'}
           </div>
         </div>
-        <div className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone}`}>
+        <div className={`relative z-10 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-sm backdrop-blur ${statusTone}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${workspace ? 'bg-emerald-500' : 'bg-slate-400'}`} />
           {statusLabel}
         </div>
       </div>
 
-      <div className="mt-6 min-w-0">
-        <h3 className="line-clamp-2 text-[22px] font-semibold tracking-tight text-slate-950">
+      <div className="relative z-10 mt-4 min-w-0 border-b border-[#e5f0ec] pb-4">
+        <h3 className="line-clamp-2 text-[20px] font-semibold tracking-tight text-[#082038] md:text-[22px]">
           {course.course_name || course.course_code || 'Untitled Course'}
         </h3>
-        <p className="mt-1 text-sm leading-6 text-slate-500">
+        <p className="mt-2 text-sm leading-6 text-[#5c7281]">
           {courseSubtitle}
         </p>
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-3 pt-6">
+      <div className="relative z-10 mt-4 grid grid-cols-1 gap-3 rounded-[16px] border border-[#dcebe6] bg-white/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86a39b]">Published Papers</div>
+          <div className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-[#103b36]">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            {finalizedCount}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-auto flex items-end justify-between gap-4 pt-4">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86a39b]">Last Activity</div>
+          <div className="mt-2 text-sm font-medium leading-5 text-[#365955]">
+            {updatedLabel || 'No workspace activity yet'}
+          </div>
+        </div>
         <button
           type="button"
           onClick={workspace ? onOpen : onCreate}
           disabled={creating}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-60"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#1f7a6b,#114d46)] px-4 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(17,77,70,0.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_34px_rgba(17,77,70,0.28)] disabled:opacity-60"
         >
           {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePlus2 className="h-4 w-4" />}
-          {workspace ? 'Open Workspace' : 'Create Workspace'}
+          {actionLabel}
+          {!creating && <ArrowRight className="h-4 w-4" />}
         </button>
       </div>
     </article>
@@ -227,6 +254,7 @@ const MasterExamsList = () => {
                 <CourseWorkspaceCard
                   course={course}
                   workspace={workspace}
+                  finalizedCount={finalizedCountByCourseId.get(String(course.id)) || 0}
                   creating={creatingCourseId === course.id}
                   onCreate={() => handleCreateCourseWorkspace(course)}
                   onOpen={() => navigate(`/master-exams/${workspace.id}?courseId=${course.id}`)}

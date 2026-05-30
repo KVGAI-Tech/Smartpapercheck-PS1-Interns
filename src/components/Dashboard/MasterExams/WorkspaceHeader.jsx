@@ -21,7 +21,7 @@ export default function WorkspaceHeader({ paper, courseContext, step, onBack, on
           {[code, duration, `${totalMarks} Marks`].filter(Boolean).join(' • ')}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
         {step !== 'import' && (
           <button type="button" className="ws-btn" onClick={onBack}>
             <ArrowLeft size={16} />Back

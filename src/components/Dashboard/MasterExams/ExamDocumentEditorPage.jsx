@@ -224,7 +224,7 @@ export default function ExamDocumentEditorPage() {
   const [finalizedExam, setFinalizedExam] = useState(null);
 
   // Workspace 3-step shell state
-  const [workspaceStep, setWorkspaceStep] = useState('import'); // 'import', 'library', 'builder'
+  const [workspaceStep, setWorkspaceStep] = useState('import'); // 'import', 'library', 'workspace', 'builder'
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
 
   const workspaceMeta = workspace?.builder_layout_json?.questionWorkspace || workspace?.content_json?.attrs?.questionWorkspace || {};
@@ -825,12 +825,14 @@ export default function ExamDocumentEditorPage() {
         }}
         step={workspaceStep}
         onBack={() => {
-          if (workspaceStep === 'builder') setWorkspaceStep('library');
+          if (workspaceStep === 'builder') setWorkspaceStep('workspace');
+          else if (workspaceStep === 'workspace') setWorkspaceStep('library');
           else if (workspaceStep === 'library') setWorkspaceStep('import');
         }}
         onContinue={() => {
           if (workspaceStep === 'import') setWorkspaceStep('library');
-          else if (workspaceStep === 'library') setWorkspaceStep('builder');
+          else if (workspaceStep === 'library') setWorkspaceStep('workspace');
+          else if (workspaceStep === 'workspace') setWorkspaceStep('builder');
         }}
         draftStatus={draftStatus}
       />
@@ -862,13 +864,43 @@ export default function ExamDocumentEditorPage() {
         <LibraryWorkspace
           cards={cards}
           onEditCard={handleEditCard}
-          onContinue={() => setWorkspaceStep('builder')}
+          onContinue={() => setWorkspaceStep('workspace')}
           onCreateNewQuestion={handleCreateManualCard}
+        />
+      )}
+
+      {workspaceStep === 'workspace' && (
+        <BuilderWorkspace
+          mode="compose"
+          cards={cards}
+          sections={sections}
+          updateSections={updateSectionsWithDirty}
+          paperTitle={workspace.title}
+          setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
+          paperSettings={workspace.paper_settings_json || {}}
+          builderLayout={workspace.builder_layout_json || {}}
+          onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
+            ...prev,
+            builder_layout_json: {
+              ...(prev.builder_layout_json || {}),
+              ...patch,
+              paperStructure: (prev.builder_layout_json || {}).paperStructure,
+            },
+          }))}
+          paperType={workspace.paper_type || 'standard'}
+          onChangePaperType={(pt) => markWorkspaceDirty({ paper_type: pt })}
+          courseContext={{
+            code: workspaceMeta?.courseCode || 'SPC101',
+            name: workspaceMeta?.courseName || 'Subject',
+            institution: 'University',
+          }}
+          onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
         />
       )}
 
       {workspaceStep === 'builder' && (
         <BuilderWorkspace
+          mode="finalize"
           cards={cards}
           sections={sections}
           updateSections={updateSectionsWithDirty}

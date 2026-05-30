@@ -2,13 +2,14 @@ import React from 'react';
 import { Check, ChevronRight } from 'lucide-react';
 
 /**
- * 3-step workspace stepper: Import Sources → Question Library → Paper Builder & Preview
+ * 4-step workspace stepper: Import Sources → Question Library → Question Paper Workspace → Paper Builder & Preview
  */
 export default function WorkspaceStepper({ step, onChange, sourcesCount, questionsCount, addedMarks, totalMarks }) {
   const steps = [
     { id: 'import', label: 'Import Sources', sub: `${sourcesCount || 0} sources` },
     { id: 'library', label: 'Question Library', sub: `${questionsCount || 0} questions` },
-    { id: 'builder', label: 'Paper Builder & Preview', sub: `${addedMarks || 0}/${totalMarks || 100} marks` },
+    { id: 'workspace', label: 'Question Paper Workspace', sub: `${addedMarks || 0}/${totalMarks || 100} marks` },
+    { id: 'builder', label: 'Paper Builder & Preview', sub: 'Settings & preview' },
   ];
   const idx = steps.findIndex((s) => s.id === step);
 

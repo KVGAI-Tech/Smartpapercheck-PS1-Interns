@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   FileText, Plus, Search, GripVertical, X, Download, CheckCircle2, ChevronDown, ChevronRight,
-  Settings2, Printer, Trash2, Edit2, Check, Layout,
+  Settings2, Printer, Layout,
 } from 'lucide-react';
 import DifficultyDots from './DifficultyDots';
 import { supportsOptions } from './masterExamCardSchema';
@@ -238,6 +238,7 @@ function ExportDropdown({ onExport }) {
 }
 
 export default function BuilderWorkspace({
+  mode = 'compose',
   cards,
   sections,
   updateSections,
@@ -257,6 +258,8 @@ export default function BuilderWorkspace({
   const [dragOverCardId, setDragOverCardId] = useState(null);
   const [isLibraryCollapsed, setIsLibraryCollapsed] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState(new Set());
+  const isComposeMode = mode === 'compose';
+  const isFinalizeMode = mode === 'finalize';
 
   const cardsById = useMemo(() => {
     const map = {};
@@ -405,20 +408,24 @@ export default function BuilderWorkspace({
     updateSections((prev) => prev.map((s) => (s.id === id ? { ...s, [key]: val } : s)));
   };
 
-  // Effective header values (from builderLayout or courseContext fallbacks)
-  const effectiveInstitution = builderLayout.institution || courseContext?.institution || 'Institution Name';
-  const effectiveCourse = builderLayout.course || courseContext?.code || 'Course';
-  const effectiveSubject = builderLayout.subject || courseContext?.name || 'Subject';
-  const effectiveDuration = builderLayout.examTime || paperSettings?.duration || '3 Hours';
-  const effectiveInstructions = builderLayout.instructions || paperSettings?.instructions || '';
+  const structureSummary = sections.map((sec) => {
+    const sectionQuestionCount = (sec.cardIds || []).length;
+    const sectionMarks = (sec.cardIds || []).reduce((sum, id) => sum + (Number(cardsById[id]?.marks) || 0), 0);
+    return {
+      id: sec.id,
+      title: sec.title || 'Untitled Section',
+      questionCount: sectionQuestionCount,
+      marks: sectionMarks,
+    };
+  });
 
   return (
     <div 
-      className="ws-builder-layout" 
+      className={`ws-builder-layout ${isFinalizeMode ? 'ws-builder-layout--finalize' : 'ws-builder-layout--compose'}`} 
       style={{
-        gridTemplateColumns: isLibraryCollapsed 
-          ? '48px 0.8fr 1.2fr'
-          : '280px 1fr 1fr'
+        gridTemplateColumns: isComposeMode
+          ? (isLibraryCollapsed ? '48px 1fr' : '280px 1fr')
+          : '420px minmax(0, 1fr)'
       }}
     >
       {/* TOP: Summary bar */}
@@ -447,218 +454,264 @@ export default function BuilderWorkspace({
               <div style={{ width: `${marksPercent}%`, background: marksPercent > 100 ? 'var(--ws-danger)' : 'var(--ws-brand)' }} />
             </div>
           </div>
-          <button type="button" className="ws-btn ws-btn--primary" onClick={onFinalize}>
-            <CheckCircle2 size={14} /> Finalize
-          </button>
-        </div>
-      </div>
-
-      {/* LEFT: Mini library */}
-      <div className={`ws-builder-library ws-fade-up ${isLibraryCollapsed ? 'ws-builder-library--collapsed' : ''}`} style={{ 
-        animationDelay: '40ms',
-        width: isLibraryCollapsed ? '48px' : '280px',
-        minWidth: isLibraryCollapsed ? '48px' : '280px',
-        transition: 'width 0.3s ease, min-width 0.3s ease'
-      }}>
-        <div className="ws-builder-library__head">
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 8, 
-              cursor: 'pointer',
-              justifyContent: isLibraryCollapsed ? 'center' : 'flex-start',
-              width: '100%'
-            }} 
-            onClick={() => setIsLibraryCollapsed(!isLibraryCollapsed)}
-          >
-            {isLibraryCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-            {!isLibraryCollapsed && <div className="ws-label-eyebrow">Question Library</div>}
-          </div>
-          {!isLibraryCollapsed && (
-            <div className="ws-input">
-              <Search size={14} />
-              <input placeholder="Search library..." value={libSearch} onChange={(e) => setLibSearch(e.target.value)} />
+          {isFinalizeMode ? (
+            <button type="button" className="ws-btn ws-btn--primary" onClick={onFinalize}>
+              <CheckCircle2 size={14} /> Finalize
+            </button>
+          ) : (
+            <div className="ws-summary-chip">
+              <Layout size={14} />
+              Arrange sections here, then finish in Paper Builder
             </div>
           )}
         </div>
-        {!isLibraryCollapsed && (
-          <div className="ws-builder-library__list">
-            {filteredLib.map((c) => {
-              const added = addedIds.has(String(c.id));
+      </div>
+
+      {isComposeMode && (
+        <div className={`ws-builder-library ws-fade-up ${isLibraryCollapsed ? 'ws-builder-library--collapsed' : ''}`} style={{ 
+          animationDelay: '40ms',
+          width: isLibraryCollapsed ? '48px' : '280px',
+          minWidth: isLibraryCollapsed ? '48px' : '280px',
+          transition: 'width 0.3s ease, min-width 0.3s ease'
+        }}>
+          <div className="ws-builder-library__head">
+            <div 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                cursor: 'pointer',
+                justifyContent: isLibraryCollapsed ? 'center' : 'flex-start',
+                width: '100%'
+              }} 
+              onClick={() => setIsLibraryCollapsed(!isLibraryCollapsed)}
+            >
+              {isLibraryCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {!isLibraryCollapsed && <div className="ws-label-eyebrow">Question Library</div>}
+            </div>
+            {!isLibraryCollapsed && (
+              <div className="ws-input">
+                <Search size={14} />
+                <input placeholder="Search library..." value={libSearch} onChange={(e) => setLibSearch(e.target.value)} />
+              </div>
+            )}
+          </div>
+          {!isLibraryCollapsed && (
+            <div className="ws-builder-library__list">
+              {filteredLib.map((c) => {
+                const added = addedIds.has(String(c.id));
+                return (
+                  <div
+                    key={c.id}
+                    className={`ws-mini-card ${added ? 'ws-mini-card--added' : ''}`}
+                    draggable={!added}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', String(c.id));
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                  >
+                    <div className="ws-mini-card__top">
+                      <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[c.question_type] || 'Q'}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--ws-ink-700)' }}>{c.marks || 0}M</span>
+                      <div style={{ marginLeft: 'auto' }}><DifficultyDots level={c.difficulty} /></div>
+                    </div>
+                    <div className="ws-mini-card__title">
+                      {cleanText(c.question_body).slice(0, 60)}...
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="ws-builder-canvas ws-fade-up" style={{ animationDelay: '80ms' }}>
+        {isFinalizeMode && (
+          <>
+            <PaperSettingsPanel
+              builderLayout={builderLayout}
+              onUpdateLayout={onUpdateBuilderLayout}
+              paperType={paperType}
+              onChangePaperType={onChangePaperType}
+            />
+
+            <div className="ws-card ws-builder-structure-card">
+              <div className="ws-builder-structure-card__head">
+                <div>
+                  <div className="ws-label-eyebrow">Question Paper Workspace</div>
+                  <div className="ws-builder-structure-card__title">Sections locked in from step 3</div>
+                </div>
+                <div className="ws-builder-structure-card__meta">{count} questions</div>
+              </div>
+              <div className="ws-builder-structure-card__list">
+                {structureSummary.map((section) => (
+                  <div key={section.id} className="ws-builder-structure-card__row">
+                    <div>
+                      <div className="ws-builder-structure-card__row-title">{section.title}</div>
+                      <div className="ws-builder-structure-card__row-sub">
+                        {section.questionCount} question{section.questionCount === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                    <div className="ws-builder-structure-card__row-marks">{section.marks} marks</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {isComposeMode && (
+          <>
+            {sections.map((sec) => {
+              const secMarks = (sec.cardIds || []).reduce((sum, id) => sum + (Number(cardsById[id]?.marks) || 0), 0);
+              const qCount = (sec.cardIds || []).length;
+              const isCollapsed = collapsedSections.has(sec.id);
               return (
                 <div
-                  key={c.id}
-                  className={`ws-mini-card ${added ? 'ws-mini-card--added' : ''}`}
-                  draggable={!added}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', String(c.id));
-                    e.dataTransfer.effectAllowed = 'copy';
-                  }}
+                  key={sec.id}
+                  className={`ws-section-block ${dragOverSectionId === sec.id && !dragOverCardId ? 'ws-section-block--drop' : ''}`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverSectionId(sec.id); }}
+                  onDragLeave={() => setDragOverSectionId(null)}
+                  onDrop={(e) => handleDrop(e, sec.id)}
                 >
-                  <div className="ws-mini-card__top">
-                    <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[c.question_type] || 'Q'}</span>
-                    <span style={{ fontWeight: 600, color: 'var(--ws-ink-700)' }}>{c.marks || 0}M</span>
-                    <div style={{ marginLeft: 'auto' }}><DifficultyDots level={c.difficulty} /></div>
+                  <div className="ws-section-block__head">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'grab' }} draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', `section:${sec.id}`); e.dataTransfer.effectAllowed = 'move'; }}>
+                      <GripVertical size={16} color="var(--ws-ink-300)" />
+                    </div>
+                    <div className="ws-section-block__title">
+                      <input
+                        value={sec.title}
+                        onChange={(e) => updateSectionMeta(sec.id, 'title', e.target.value)}
+                        placeholder="Section Name"
+                      />
+                    </div>
+                    <div className="ws-section-block__actions">
+                      <button type="button" className="ws-section-block__action-btn" onClick={() => toggleSection(sec.id)} title={isCollapsed ? "Expand" : "Collapse"}>
+                        {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                      </button>
+                      <button type="button" className="ws-section-block__action-btn" onClick={() => updateSections(p => p.filter(s => s.id !== sec.id))} title="Delete Section">
+                        <X size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="ws-mini-card__title">
-                    {cleanText(c.question_body).slice(0, 60)}...
-                  </div>
+
+                  {isCollapsed ? (
+                    <div className="ws-section-block__summary" onClick={() => toggleSection(sec.id)} style={{ cursor: 'pointer' }}>
+                      {qCount === 0 ? 'No questions added yet' : `${qCount} Question${qCount !== 1 ? 's' : ''} • ${secMarks} Marks`}
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ padding: '8px 14px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <input
+                          className="ws-section-block__instructions"
+                          placeholder="Optional section instructions (e.g. Answer any 5 questions)"
+                          value={sec.instructions || ''}
+                          onChange={(e) => updateSectionMeta(sec.id, 'instructions', e.target.value)}
+                        />
+                        <div className="ws-section-block__marks">{secMarks} Marks</div>
+                      </div>
+                      <div
+                        className={`ws-section-block__body ${(sec.cardIds || []).length === 0 ? 'ws-section-block__body--empty' : ''}`}
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverSectionId(sec.id); }}
+                        onDrop={(e) => { e.stopPropagation(); handleDrop(e, sec.id); }}
+                      >
+                        {(sec.cardIds || []).map((id, idx) => {
+                          const q = cardsById[id];
+                          if (!q) return null;
+
+                          const hasOptions = supportsOptions(q.question_type) && Array.isArray(q.options) && q.options.length > 0;
+
+                          return (
+                            <div
+                              key={`${sec.id}-${id}-${idx}`}
+                              className="ws-builder-row ws-builder-row--detailed"
+                              draggable
+                              onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('text/plain', `reorder-card:${id}:${sec.id}`); e.dataTransfer.effectAllowed = 'move'; }}
+                              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverCardId(id); }}
+                              onDragLeave={() => setDragOverCardId(null)}
+                              onDrop={(e) => { e.stopPropagation(); handleDrop(e, sec.id, idx); }}
+                              style={dragOverCardId === id ? { borderTop: '2px solid var(--ws-brand)' } : {}}
+                            >
+                              <div className="ws-builder-row__header">
+                                <div className="ws-builder-row__left">
+                                  <div className="ws-builder-row__grip"><GripVertical size={16} color="var(--ws-ink-300)" /></div>
+                                  <div className="ws-builder-row__num">Q{idx + 1}</div>
+                                  <div className="ws-builder-row__title" title={cleanText(q.question_body)}>
+                                    {cleanText(q.question_body)}
+                                  </div>
+                                </div>
+                                <div className="ws-builder-row__right">
+                                  <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[q.question_type] || 'Q'}</span>
+                                  <div className="ws-builder-row__marks">{q.marks || 0} Marks</div>
+                                  <button
+                                    type="button"
+                                    className="ws-builder-row__remove"
+                                    onClick={() => removeCard(sec.id, id)}
+                                    title="Remove Question"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {hasOptions && (
+                                <div className="ws-builder-row__options">
+                                  {q.options.slice(0, 4).map((opt, optIdx) => (
+                                    <div key={optIdx} className="ws-builder-row__option">
+                                      <span className="ws-builder-row__option-key">({opt.key || String.fromCharCode(65 + optIdx)})</span>
+                                      <span className="ws-builder-row__option-text">{cleanText(opt.text)}</span>
+                                    </div>
+                                  ))}
+                                  {q.options.length > 4 && (
+                                    <div className="ws-builder-row__option-more">+{q.options.length - 4} more</div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {(sec.cardIds || []).length === 0 && (
+                          <div
+                            className="ws-empty-state"
+                            style={{ padding: '30px', textAlign: 'center', border: '2px dashed var(--ws-ink-200)', borderRadius: 8, color: 'var(--ws-ink-500)', width: '100%' }}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverSectionId(sec.id); }}
+                            onDrop={(e) => { e.stopPropagation(); handleDrop(e, sec.id); }}
+                          >
+                            No questions added yet.
+                            <br/>
+                            Drag questions here from Question Library.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
-          </div>
+            <button type="button" className="ws-btn ws-btn--ghost" onClick={addSection} style={{ alignSelf: 'center' }}>
+              <Plus size={14} /> Add section
+            </button>
+          </>
         )}
       </div>
 
-      {/* CENTER: Canvas */}
-      <div className="ws-builder-canvas ws-fade-up" style={{ animationDelay: '80ms' }}>
-        {/* Paper Settings Panel */}
-        <PaperSettingsPanel
-          builderLayout={builderLayout}
-          onUpdateLayout={onUpdateBuilderLayout}
-          paperType={paperType}
-          onChangePaperType={onChangePaperType}
-        />
-
-        {/* Sections */}
-        {sections.map((sec, secIdx) => {
-          const secMarks = (sec.cardIds || []).reduce((sum, id) => sum + (Number(cardsById[id]?.marks) || 0), 0);
-          const qCount = (sec.cardIds || []).length;
-          const isCollapsed = collapsedSections.has(sec.id);
-          return (
-            <div
-              key={sec.id}
-              className={`ws-section-block ${dragOverSectionId === sec.id && !dragOverCardId ? 'ws-section-block--drop' : ''}`}
-              onDragOver={(e) => { e.preventDefault(); setDragOverSectionId(sec.id); }}
-              onDragLeave={() => setDragOverSectionId(null)}
-              onDrop={(e) => handleDrop(e, sec.id)}
-            >
-              <div className="ws-section-block__head">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'grab' }} draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', `section:${sec.id}`); e.dataTransfer.effectAllowed = 'move'; }}>
-                  <GripVertical size={16} color="var(--ws-ink-300)" />
-                </div>
-                <div className="ws-section-block__title">
-                  <input
-                    value={sec.title}
-                    onChange={(e) => updateSectionMeta(sec.id, 'title', e.target.value)}
-                    placeholder="Section Name"
-                  />
-                </div>
-                <div className="ws-section-block__actions">
-                  <button type="button" className="ws-section-block__action-btn" onClick={() => toggleSection(sec.id)} title={isCollapsed ? "Expand" : "Collapse"}>
-                    {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                  </button>
-                  <button type="button" className="ws-section-block__action-btn" onClick={() => updateSections(p => p.filter(s => s.id !== sec.id))} title="Delete Section">
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {isCollapsed ? (
-                <div className="ws-section-block__summary" onClick={() => toggleSection(sec.id)} style={{ cursor: 'pointer' }}>
-                  {qCount === 0 ? 'No questions added yet' : `${qCount} Question${qCount !== 1 ? 's' : ''} • ${secMarks} Marks`}
-                </div>
-              ) : (
-                <>
-                  <div style={{ padding: '8px 14px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <input
-                      className="ws-section-block__instructions"
-                      placeholder="Optional section instructions (e.g. Answer any 5 questions)"
-                      value={sec.instructions || ''}
-                      onChange={(e) => updateSectionMeta(sec.id, 'instructions', e.target.value)}
-                    />
-                    <div className="ws-section-block__marks">{secMarks} Marks</div>
-                  </div>
-                  <div className="ws-section-block__body">
-                    {(sec.cardIds || []).map((id, idx) => {
-                      const q = cardsById[id];
-                      if (!q) return null;
-                      
-                      const hasOptions = supportsOptions(q.question_type) && Array.isArray(q.options) && q.options.length > 0;
-                      
-                      return (
-                        <div
-                          key={`${sec.id}-${id}-${idx}`}
-                          className="ws-builder-row ws-builder-row--detailed"
-                          draggable
-                          onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('text/plain', `reorder-card:${id}:${sec.id}`); e.dataTransfer.effectAllowed = 'move'; }}
-                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverCardId(id); }}
-                          onDragLeave={() => setDragOverCardId(null)}
-                          onDrop={(e) => { e.stopPropagation(); handleDrop(e, sec.id, idx); }}
-                          style={dragOverCardId === id ? { borderTop: '2px solid var(--ws-brand)' } : {}}
-                        >
-                          <div className="ws-builder-row__header">
-                            <div className="ws-builder-row__left">
-                              <div className="ws-builder-row__grip"><GripVertical size={16} color="var(--ws-ink-300)" /></div>
-                              <div className="ws-builder-row__num">Q{idx + 1}</div>
-                              <div className="ws-builder-row__title" title={cleanText(q.question_body)}>
-                                {cleanText(q.question_body)}
-                              </div>
-                            </div>
-                            <div className="ws-builder-row__right">
-                              <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[q.question_type] || 'Q'}</span>
-                              <div className="ws-builder-row__marks">{q.marks || 0} Marks</div>
-                              <button
-                                type="button"
-                                className="ws-builder-row__remove"
-                                onClick={() => removeCard(sec.id, id)}
-                                title="Remove Question"
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                          </div>
-                          
-                          {hasOptions && (
-                            <div className="ws-builder-row__options">
-                              {q.options.slice(0, 4).map((opt, optIdx) => (
-                                <div key={optIdx} className="ws-builder-row__option">
-                                  <span className="ws-builder-row__option-key">({opt.key || String.fromCharCode(65 + optIdx)})</span>
-                                  <span className="ws-builder-row__option-text">{cleanText(opt.text)}</span>
-                                </div>
-                              ))}
-                              {q.options.length > 4 && (
-                                <div className="ws-builder-row__option-more">+{q.options.length - 4} more</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {(sec.cardIds || []).length === 0 && (
-                      <div className="ws-empty-state" style={{ padding: '30px', textAlign: 'center', border: '2px dashed var(--ws-ink-200)', borderRadius: 8, color: 'var(--ws-ink-500)' }}>
-                        No questions added yet.
-                        <br/>
-                        Drag questions here from Question Library.
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-        <button type="button" className="ws-btn ws-btn--ghost" onClick={addSection} style={{ alignSelf: 'center' }}>
-          <Plus size={14} /> Add section
-        </button>
-      </div>
-
-      {/* RIGHT: Live Preview */}
-      <div className="ws-preview-pane ws-fade-up" style={{ animationDelay: '120ms' }}>
-        <div className="ws-preview-pane__toolbar">
-          <div className="ws-label-eyebrow">Live Preview</div>
-          <ExportDropdown onExport={onExport} />
+      {isFinalizeMode && (
+        <div className="ws-preview-pane ws-fade-up" style={{ animationDelay: '120ms' }}>
+          <div className="ws-preview-pane__toolbar">
+            <div className="ws-label-eyebrow">Live Preview</div>
+            <ExportDropdown onExport={onExport} />
+          </div>
+          <div className="ws-preview-pane__scroll">
+            <LocalErrorBoundary>
+              <PaperPreviewRenderer 
+                paperDocument={paperDocument} 
+                paperSettings={paperSettings} 
+              />
+            </LocalErrorBoundary>
+          </div>
         </div>
-        <div className="ws-preview-pane__scroll">
-          <LocalErrorBoundary>
-            <PaperPreviewRenderer 
-              paperDocument={paperDocument} 
-              paperSettings={paperSettings} 
-            />
-          </LocalErrorBoundary>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
