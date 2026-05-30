@@ -190,6 +190,8 @@ export default function ExamDocumentEditorPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const wsStatusCache = useRef(new Map());
+  const documentsRef = useRef([]);
+  const hasPendingRef = useRef(false);
 
   const [workspace, setWorkspace] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -344,6 +346,12 @@ export default function ExamDocumentEditorPage() {
     }
   }, [activeFolderId, documentId, hydrateDocumentProgress]);
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    documentsRef.current = documents;
+    hasPendingRef.current = documents.some((doc) => ['pending', 'processing'].includes(doc.parsed_status));
+  }, [documents]);
+
   useEffect(() => {
     console.log('loadWorkspace effect triggered');
     loadWorkspace();
@@ -351,10 +359,12 @@ export default function ExamDocumentEditorPage() {
 
   useEffect(() => {
     if (!documentId) return;
-    const hasPending = documents.some((doc) => ['pending', 'processing'].includes(doc.parsed_status));
-    if (!hasPending) return;
 
+    // Use a ref-driven approach: always set up an interval, but only
+    // fetch when there are pending/processing docs. This avoids
+    // tearing down the interval every time `documents` changes.
     const interval = setInterval(async () => {
+      if (!hasPendingRef.current) return;
       try {
         const [workspaceDocuments, workspaceCards] = await Promise.all([
           fetchWorkspaceDocuments(documentId, activeFolderId ? { folderId: activeFolderId } : {}),
@@ -369,7 +379,7 @@ export default function ExamDocumentEditorPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeFolderId, documentId, documents, hydrateDocumentProgress]);
+  }, [activeFolderId, documentId, hydrateDocumentProgress]);
 
   useEffect(() => {
     if (!documentId || !persistableWorkspace || draftStatus !== 'dirty') return undefined;
@@ -437,7 +447,15 @@ export default function ExamDocumentEditorPage() {
         const prevStatus = wsStatusCache.current.get(cacheKey);
         wsStatusCache.current.set(cacheKey, payload.parsed_status);
 
-        console.log('WS message received', payload.document_id, payload.parsed_status, 'prevStatus:', prevStatus);
+        // When a document transitions to 'completed', refetch everything
+        // so the newly extracted question cards appear immediately.
+        if (
+          payload.parsed_status === 'completed' &&
+          prevStatus !== 'completed'
+        ) {
+          console.log('Document completed, refreshing workspace:', payload.document_id);
+          loadWorkspace();
+        }
 
       } catch {
         // keep websocket updates quiet

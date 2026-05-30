@@ -1,8 +1,4 @@
 export const getExamVariant = (exam) => {
-  const examMode = String(exam?.exam_mode || '').toLowerCase();
-  if (examMode === 'offline') return 'evaluated';
-  if (examMode === 'online') return 'conduct';
-
   const examType = String(exam?.exam_type || '').toLowerCase();
   const conductVariant = String(exam?.conduct_variant || '').toLowerCase();
 
@@ -19,6 +15,15 @@ export const getExamVariant = (exam) => {
       return 'conduct';
     }
     return 'portal_mcq';
+  }
+
+  const examMode = String(exam?.exam_mode || '').toLowerCase();
+  if (examMode === 'offline') return 'evaluated';
+  if (examMode === 'online') {
+    if (conductVariant === 'portal_mcq') {
+      return 'portal_mcq';
+    }
+    return 'conduct';
   }
 
   return examType || 'evaluated';
