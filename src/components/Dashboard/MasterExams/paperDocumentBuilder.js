@@ -197,7 +197,13 @@ function domToAst(html = '') {
   const images = [];
   const ast = [];
   const parser = new DOMParser();
-  const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+  
+  // Clean up HTML: convert <br> to paragraph breaks, and force subquestions to start new blocks
+  let processedHtml = html
+    .replace(/<br\s*\/?>/gi, '</p><p>')
+    .replace(/(<p>|<div>)?\s*(\([a-zivx]+\)|[a-zivx]+\)|\d+\.)\s+/gi, '</p><p>$2 ');
+    
+  const doc = parser.parseFromString(`<div>${processedHtml}</div>`, 'text/html');
   const root = doc.body.firstElementChild;
 
   const pushParagraph = (node) => {
@@ -720,7 +726,11 @@ function estimateAnswerAreaHeight(answerArea) {
 
 export function buildQuestionBlock(card, context = {}) {
   const paperSettings = normalizePaperSettings(context.paperSettings);
-  const bodyAst = parseHtmlToAst(ensureString(card?.question_body));
+  let rawBody = ensureString(card?.question_body);
+  // Strip trailing marks like [10 Marks] or [10]
+  rawBody = rawBody.replace(/\s*\[\s*\d+(\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]\s*(<\/p>)?\s*$/i, '$2');
+  
+  const bodyAst = parseHtmlToAst(rawBody);
   const bodyBlocks = [...bodyAst.blocks];
   const optionBlock = buildOptionBlock(card);
   if (optionBlock) bodyBlocks.push(optionBlock);
@@ -914,7 +924,7 @@ function buildHeaderDescriptor(builderLayout = {}) {
   };
 }
 
-function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, paperType) {
+function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, paperType, globalContext = { questionIndex: 0 }) {
   return normalizedSections
     .map((section, index) => {
       const cards = section.cardIds
@@ -923,14 +933,15 @@ function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, p
       if (cards.length === 0) return null;
 
       const instructionsAst = parseHtmlToAst(section.instructions);
-      const questionBlocks = cards.map((card, cardIndex) =>
-        buildQuestionBlock(card, {
+      const questionBlocks = cards.map((card) => {
+        globalContext.questionIndex += 1;
+        return buildQuestionBlock(card, {
           sectionId: section.id,
-          questionNumber: cardIndex + 1,
+          questionNumber: globalContext.questionIndex,
           paperSettings,
           paperType,
-        })
-      );
+        });
+      });
 
       return {
         ...section,
@@ -944,17 +955,18 @@ function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, p
     .filter(Boolean);
 }
 
-function buildUnsectionedQuestionBlocks(cards, usedCardIds, paperSettings, paperType) {
+function buildUnsectionedQuestionBlocks(cards, usedCardIds, paperSettings, paperType, globalContext = { questionIndex: 0 }) {
   return cards
     .filter((card) => !usedCardIds.has(String(card.id)))
-    .map((card, index) =>
-      buildQuestionBlock(card, {
+    .map((card) => {
+      globalContext.questionIndex += 1;
+      return buildQuestionBlock(card, {
         sectionId: null,
-        questionNumber: index + 1,
+        questionNumber: globalContext.questionIndex,
         paperSettings,
         paperType,
-      })
-    );
+      });
+    });
 }
 
 function estimateSectionHeaderHeight(section) {
@@ -983,7 +995,7 @@ function createEmptyPage(pageNumber, isFirstPage, header, paperSettings) {
   };
 }
 
-export function paginatePaperDocument({ header, sections, unsectionedQuestionBlocks = [], paperSettings = {} }) {
+export function paginatePaperDocument({ header, sections, paperSettings = {} }) {
   const normalizedSettings = normalizePaperSettings(paperSettings);
   const pages = [];
   let currentPage = createEmptyPage(1, true, header, normalizedSettings);
@@ -1021,16 +1033,6 @@ export function paginatePaperDocument({ header, sections, unsectionedQuestionBlo
   };
 
   const allSectionLikeGroups = [...sections];
-  if (unsectionedQuestionBlocks.length > 0) {
-    allSectionLikeGroups.push({
-      id: 'unsectioned',
-      title: 'Unsectioned Questions',
-      instructionsAst: [],
-      marks: unsectionedQuestionBlocks.reduce((sum, block) => sum + block.marks, 0),
-      parsed_metadata: {},
-      questionBlocks: unsectionedQuestionBlocks,
-    });
-  }
 
   allSectionLikeGroups.forEach((section, sectionIndex) => {
     const needsPageBreak = Boolean(section.parsed_metadata?.page_break_before)
@@ -1040,14 +1042,17 @@ export function paginatePaperDocument({ header, sections, unsectionedQuestionBlo
     }
 
     const firstQuestion = section.questionBlocks[0];
-    if (!firstQuestion) return;
 
-    const firstQuestionFirstSegment = createQuestionSegments(firstQuestion)[0];
     const sectionHeaderHeight = estimateSectionHeaderHeight(section);
-    if (
-      currentPage.items.length > 0
-      && sectionHeaderHeight + firstQuestionFirstSegment.estimatedHeight > currentPage.remainingHeight
-    ) {
+    if (firstQuestion) {
+      const firstQuestionFirstSegment = createQuestionSegments(firstQuestion)[0];
+      if (
+        currentPage.items.length > 0
+        && sectionHeaderHeight + firstQuestionFirstSegment.estimatedHeight > currentPage.remainingHeight
+      ) {
+        startNewPage();
+      }
+    } else if (currentPage.items.length > 0 && sectionHeaderHeight > currentPage.remainingHeight) {
       startNewPage();
     }
 
@@ -1082,16 +1087,14 @@ export function buildPaperDocument({
   const cardsById = new Map(cards.map((card) => [String(card.id), card]));
   const usedCardIds = new Set(normalizedSections.flatMap((section) => section.cardIds));
   const header = buildHeaderDescriptor(builderLayout);
-  const resolvedSections = buildSectionDescriptors(normalizedSections, cardsById, normalizedSettings, paperType);
-  const unsectionedQuestionBlocks = buildUnsectionedQuestionBlocks(cards, usedCardIds, normalizedSettings, paperType);
-  const questions = [
-    ...resolvedSections.flatMap((section) => section.questionBlocks),
-    ...unsectionedQuestionBlocks,
-  ];
+  
+  const globalContext = { questionIndex: 0 };
+  const resolvedSections = buildSectionDescriptors(normalizedSections, cardsById, normalizedSettings, paperType, globalContext);
+  
+  const questions = resolvedSections.flatMap((section) => section.questionBlocks);
   const pageDescriptors = paginatePaperDocument({
     header,
     sections: resolvedSections,
-    unsectionedQuestionBlocks,
     paperSettings: normalizedSettings,
   });
 
@@ -1101,6 +1104,5 @@ export function buildPaperDocument({
     questions,
     pageDescriptors,
     normalizedSections,
-    unsectionedQuestionBlocks,
   };
 }

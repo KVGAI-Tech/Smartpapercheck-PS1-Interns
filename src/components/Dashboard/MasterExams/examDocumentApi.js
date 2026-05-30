@@ -349,11 +349,29 @@ export const updateBuilderLayout = async (masterExamId, builderLayoutJson) => {
 // MASTER EXAMS (FINALIZED) API
 // ==========================================
 
+export const listExamPapers = async () => {
+  const response = await fetch(`${API_BASE_URL}/exam-papers/`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to fetch finalized exam papers');
+  const data = await response.json();
+  return data?.data || [];
+};
+
+export const fetchExamPaperById = async (paperId) => {
+  const response = await fetch(`${API_BASE_URL}/exam-papers/${paperId}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to fetch finalized exam paper details');
+  const data = await response.json();
+  return data?.data || null;
+};
+
 export const listMasterExams = async () => {
   const response = await fetch(`${API_BASE_URL}/master-exams/`, {
     headers: getAuthHeaders(),
   });
-  if (!response.ok) await throwApiError(response, 'Failed to fetch finalized master exams');
+  if (!response.ok) await throwApiError(response, 'Failed to fetch master exams');
   const data = await response.json();
   return data?.data || [];
 };
@@ -516,4 +534,14 @@ export const parsePaperWithAI = async (examId, file, metadata = {}) => {
   
   if (!response.ok) await throwApiError(response, 'Failed to parse paper');
   return response.json();
+};
+
+export const finalizeMasterExamPaper = async (examId) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams/${examId}/finalize`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to finalize paper');
+  const data = await response.json();
+  return data?.data || data;
 };

@@ -12,6 +12,7 @@ import { studentApi } from './studentApi';
 import UploadQnAModal from '../modals/UploadQnAModal';
 import RubricModal from '../modals/RubricModal';
 import UploadAnswersModal from '../modals/UploadAnswersModal';
+import ImportExamPaperModal from '../modals/ImportExamPaperModal';
 import { API_BASE_URL } from '../../../../BaseURL';
 import { getExamVariant, isPortalMcqExam, isSubjectiveConductExam } from '../../../examTypeUtils';
 
@@ -1581,6 +1582,7 @@ const OnlineExamSecurityModal = ({
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedExamForEdit, setSelectedExamForEdit] = useState(null);
     const [examSteps, setExamSteps] = useState({});
+    const [showImportPaperModal, setShowImportPaperModal] = useState(false);
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ show: true, message, type });
@@ -2267,6 +2269,15 @@ const OnlineExamSecurityModal = ({
   
             <div className="flex items-center gap-3 w-full sm:w-auto">                                    
               <button
+                onClick={() => setShowImportPaperModal(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700
+                  rounded-xl hover:bg-gray-50 transition-all duration-300
+                  shadow-sm hover:shadow-md focus:ring-2 focus:ring-gray-200 focus:ring-offset-2"
+              >
+                <FileText className="w-5 h-5" />
+                Import Paper
+              </button>
+              <button
                 onClick={onAdd}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white
                   rounded-xl hover:bg-accent transition-all duration-300
@@ -2487,6 +2498,15 @@ const OnlineExamSecurityModal = ({
               setSelectedExamForConductAttempts(null);
             }}
             examId={selectedExamForConductAttempts}
+          />
+          
+          <ImportExamPaperModal
+            isOpen={showImportPaperModal}
+            onClose={() => setShowImportPaperModal(false)}
+            courseId={courseId}
+            onImportSuccess={(newExam) => {
+              if (onRefresh) onRefresh();
+            }}
           />
         </div>
   

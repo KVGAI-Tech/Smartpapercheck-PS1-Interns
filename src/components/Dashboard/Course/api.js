@@ -379,3 +379,12 @@ export const updateStudent = async (data) => {
     })
   });
 };
+export const getFinalizedExamPapers = async () => {
+  return fetchApi('/exam-papers');
+};
+
+export const importExamPaper = async (examId, paperId) => {
+  return fetchApi(`/exams/${examId}/import-paper/${paperId}`, {
+    method: 'POST'
+  });
+};

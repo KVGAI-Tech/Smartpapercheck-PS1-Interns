@@ -96,19 +96,18 @@ export default function QuestionLivePreview({ card }) {
               <div className="space-y-4">
                 <div className="shrink-0 w-full">
                   <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Media</p>
-                  <div className="relative group/img overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-all hover:border-slate-300 hover:shadow-md h-36 w-full flex items-center justify-center">
-                    <img
-                      src={card.image_urls[0]}
-                      alt="Question Image"
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                    {card.image_urls.length > 1 && (
-                      <div className="absolute bottom-2 right-2 rounded-lg bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-[2px] ring-1 ring-white/10">
-                        +{card.image_urls.length - 1} more
+                  <div className="grid gap-2 grid-cols-2">
+                    {card.image_urls.map((url, idx) => (
+                      <div key={idx} className="relative group/img overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-all hover:border-slate-300 hover:shadow-md h-36 w-full flex items-center justify-center">
+                        <img
+                          src={url}
+                          alt={`Question Image ${idx + 1}`}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>
@@ -141,19 +140,18 @@ export default function QuestionLivePreview({ card }) {
                 <div className="space-y-4">
                   <div className="shrink-0 w-full">
                     <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Media</p>
-                    <div className="relative group/img overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-all hover:border-slate-300 hover:shadow-md h-36 w-full flex items-center justify-center">
-                      <img
-                        src={card.image_urls[0]}
-                        alt="Question Image"
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                      {card.image_urls.length > 1 && (
-                        <div className="absolute bottom-2 right-2 rounded-lg bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-[2px] ring-1 ring-white/10">
-                          +{card.image_urls.length - 1} more
+                    <div className="grid gap-2 grid-cols-2">
+                      {card.image_urls.map((url, idx) => (
+                        <div key={idx} className="relative group/img overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-all hover:border-slate-300 hover:shadow-md h-36 w-full flex items-center justify-center">
+                          <img
+                            src={url}
+                            alt={`Question Image ${idx + 1}`}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -214,8 +212,8 @@ export default function QuestionLivePreview({ card }) {
                 {hasImages && (
                   <PreviewSection label="Media">
                     <div className="grid grid-cols-2 gap-2">
-                      {card.image_urls.slice(0, 2).map((url, idx) => (
-                        <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 h-20">
+                      {card.image_urls.map((url, idx) => (
+                        <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 h-24">
                           <img src={url} alt={`Asset ${idx + 1}`} loading="lazy" className="h-full w-full object-cover" />
                         </div>
                       ))}

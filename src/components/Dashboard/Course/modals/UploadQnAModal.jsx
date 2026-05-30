@@ -39,8 +39,8 @@ import {
   listExamDocuments,
   parseExamDocument,
   fetchExamDocument,
-  listMasterExams,
-  fetchMasterExamQuestions
+  listExamPapers,
+  fetchExamPaperById
 } from '../../MasterExams/examDocumentApi';
 import { addConductExamQuestion, updateConductQuestion, deleteConductExamQuestion, deleteExamQuestion } from '../api';
 
@@ -632,10 +632,18 @@ const UploadQnAModal = ({
     // Preserve marks
     const marksValue = option.marks || option.max_marks || '';
 
+    // Determine valid question type
+    let validQuestionType = 'subjective';
+    if (['subjective', 'mcq', 'mcq_reasoning'].includes(option.questionType)) {
+      validQuestionType = option.questionType;
+    } else if (isPortalMcqMode) {
+      validQuestionType = 'mcq';
+    }
+
     return {
       ...createDefaultQuestion(),
       id: createQuestionId(),
-      questionType: 'text',
+      questionType: validQuestionType,
       answerType: (option.answerBody || option.answerText) ? 'text' : 'image',
       questionBody: compositeBody,
       answerBody: (option.answerBody || option.answerText) ? `<p>${option.answerBody || option.answerText}</p>` : '',
@@ -673,18 +681,28 @@ const UploadQnAModal = ({
       // First check if it's a finalized Master Exam
       const masterExam = finalizedMasterExams.find(e => String(e.id) === String(paperId));
       if (masterExam) {
-        const questionsData = await fetchMasterExamQuestions(paperId);
-        // Map Master Exam questions to the format expected by the flatten logic
-        // Master Exam questions are already flattened in MongoDB
-        const options = (questionsData || []).map((q, idx) => ({
-          id: q.id || q._id,
-          label: `Q${q.question_number || (idx + 1)}: ${q.question_text?.substring(0, 50) || 'Untitled Question'}...`,
-          questionBody: q.question_text || q.question_body,
-          answerBody: q.answer_text || q.answer_body,
-          marks: q.max_marks,
-          imageUrls: q.image_urls || [],
-          num_rubric_items: q.num_rubric_items,
-          rubrics: q.rubric_items || []
+        const fullPaper = await fetchExamPaperById(paperId);
+        
+        // Extract questions from sections
+        const allQuestions = [];
+        if (fullPaper?.sections) {
+          fullPaper.sections.forEach(sec => {
+            if (sec.questions) {
+              allQuestions.push(...sec.questions);
+            }
+          });
+        }
+        
+        const options = allQuestions.map((q, idx) => ({
+          id: q.id,
+          label: `Q${q.display_order + 1 || (idx + 1)}: ${q.question_text?.substring(0, 50) || 'Untitled Question'}...`,
+          questionBody: q.question_text || '',
+          answerBody: q.metadata_json?.answer_body || q.metadata_json?.answer_text || '',
+          marks: q.marks,
+          imageUrls: q.images || [],
+          num_rubric_items: q.metadata_json?.num_rubric_items || 1,
+          rubrics: q.metadata_json?.parsed_metadata?.rubrics || [],
+          questionType: q.question_type || 'subjective',
         }));
         setFlattenedOptions(options);
         return options;
@@ -1277,7 +1295,7 @@ const UploadQnAModal = ({
         try {
           const [papers, finalizedExams] = await Promise.all([
             listExamDocuments(),
-            listMasterExams()
+            listExamPapers()
           ]);
 
           // Filter out raw documents that are already finalized to avoid duplicates

@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import ErrorBoundary from './ErrorBoundary';
 import {
   Archive,
   BookOpen,
@@ -17,6 +18,8 @@ import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../../../BaseURL';
 import QuestionEditModal from './QuestionEditModal';
 import SourceDocumentPreviewModal from './SourceDocumentPreviewModal';
+import { pdf } from '@react-pdf/renderer';
+import { PDFLayoutRenderer } from './pdf/PDFLayoutRenderer';
 
 // New workspace components
 import './workspace.css';
@@ -49,7 +52,6 @@ import {
   reorderWorkspaceCards,
   reprocessDocument,
   updateExamDocument,
-  updateWorkspaceCard,
   uploadWorkspaceDocument,
 } from './examDocumentApi';
 import { normalizeMasterExamCard } from './masterExamCardSchema';
@@ -187,6 +189,7 @@ export default function ExamDocumentEditorPage() {
   const { documentId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const wsStatusCache = useRef(new Map());
 
   const [workspace, setWorkspace] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -206,7 +209,12 @@ export default function ExamDocumentEditorPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadBatchTotal, setUploadBatchTotal] = useState(0);
   const [uploadBatchDone, setUploadBatchDone] = useState(0);
-  const [draftStatus, setDraftStatus] = useState('clean');
+  const draftStatusRef = useRef('clean');
+  const [draftStatus, setDraftStatusState] = useState('clean');
+  const setDraftStatus = useCallback((status) => {
+    draftStatusRef.current = status;
+    setDraftStatusState(status);
+  }, []);
   const [previewDocument, setPreviewDocument] = useState(null);
   const [previewDocumentData, setPreviewDocumentData] = useState(null);
   const [previewDocumentLoading, setPreviewDocumentLoading] = useState(false);
@@ -295,6 +303,8 @@ export default function ExamDocumentEditorPage() {
   }, [documentId]);
 
   const loadWorkspace = useCallback(async () => {
+    console.log('loadWorkspace called!');
+    console.trace('loadWorkspace trace');
     if (!documentId) return;
     try {
       const [workspaceDoc, workspaceDocuments, workspaceCards, folders] = await Promise.all([
@@ -314,8 +324,10 @@ export default function ExamDocumentEditorPage() {
       setDocuments(hydratedDocuments);
       setCards(normalizedCards);
       setSourceFolders(folders);
-      setSections(normalizeLegacySections(savedSections, normalizedCards));
-      setDraftStatus('clean');
+      
+      if (draftStatusRef.current === 'clean') {
+        setSections(normalizeLegacySections(savedSections, normalizedCards));
+      }
 
       if (workspaceDoc?.published_master_exam_id) {
         try {
@@ -333,6 +345,7 @@ export default function ExamDocumentEditorPage() {
   }, [activeFolderId, documentId, hydrateDocumentProgress]);
 
   useEffect(() => {
+    console.log('loadWorkspace effect triggered');
     loadWorkspace();
   }, [loadWorkspace]);
 
@@ -420,9 +433,12 @@ export default function ExamDocumentEditorPage() {
             : doc
         )));
 
-        if (payload.parsed_status === 'completed' || payload.parsed_status === 'failed') {
-          await loadWorkspace();
-        }
+        const cacheKey = String(payload.document_id);
+        const prevStatus = wsStatusCache.current.get(cacheKey);
+        wsStatusCache.current.set(cacheKey, payload.parsed_status);
+
+        console.log('WS message received', payload.document_id, payload.parsed_status, 'prevStatus:', prevStatus);
+
       } catch {
         // keep websocket updates quiet
       }
@@ -524,18 +540,20 @@ export default function ExamDocumentEditorPage() {
   const handleEditCard = useCallback(async (card) => {
     setEditingCard(card);
     setEditingCardContext(null);
-    if (!card?.source_document_id || String(card.id).startsWith('manual-')) return;
+
+    const targetDocId = card?.source_document_id || documents?.[0]?.exam_document_id;
+    if (!targetDocId) return;
 
     try {
       setEditingCardContextLoading(true);
-      const data = await fetchDocumentParseDebug(documentId, card.source_document_id);
+      const data = await fetchDocumentParseDebug(documentId, targetDocId);
       setEditingCardContext(data);
     } catch {
       setEditingCardContext(null);
     } finally {
       setEditingCardContextLoading(false);
     }
-  }, [documentId]);
+  }, [documentId, documents]);
 
   const removeCardIdsFromSections = useCallback((cardIdsToRemove) => {
     const blockedIds = new Set(cardIdsToRemove.map((id) => String(id)));
@@ -677,6 +695,9 @@ export default function ExamDocumentEditorPage() {
       if (masterExamId) {
         const exam = await fetchMasterExamById(masterExamId);
         setFinalizedExam(exam);
+        
+        // Finalize paper to create snapshot
+        await import('./examDocumentApi').then(api => api.finalizeMasterExamPaper(masterExamId));
       }
       await loadWorkspace();
       setActiveView('papers');
@@ -832,6 +853,8 @@ export default function ExamDocumentEditorPage() {
           onViewDocument={handleOpenDocumentPreview}
           onContinue={() => setWorkspaceStep('library')}
           isUploading={isUploading}
+          uploadBatchTotal={uploadBatchTotal}
+          uploadBatchDone={uploadBatchDone}
         />
       )}
 
@@ -852,33 +875,76 @@ export default function ExamDocumentEditorPage() {
           paperTitle={workspace.title}
           setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
           paperSettings={workspace.paper_settings_json || {}}
+          builderLayout={workspace.builder_layout_json || {}}
+          onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
+            ...prev,
+            builder_layout_json: {
+              ...(prev.builder_layout_json || {}),
+              ...patch,
+              paperStructure: (prev.builder_layout_json || {}).paperStructure,
+            },
+          }))}
+          paperType={workspace.paper_type || 'standard'}
+          onChangePaperType={(pt) => markWorkspaceDirty({ paper_type: pt })}
           courseContext={{
             code: workspaceMeta?.courseCode || 'SPC101',
             name: workspaceMeta?.courseName || 'Subject',
             institution: 'University',
           }}
-          onExport={async () => {
-            await ensureFinalizedExam(workspace.title);
-            if (finalizedExam) handleDownloadDocx(finalizedExam);
+          onExport={async (exportPaperType) => {
+            const toastId = toast.loading(`Generating ${exportPaperType} PDF...`);
+            try {
+              const exam = await ensureFinalizedExam(workspace.title);
+              if (!exam) throw new Error("Failed to finalize exam");
+
+              const finalizedBuilder = exam?.builder_snapshot_json?.builder_layout_json || {};
+              const finalizedCards = (exam?.structure_snapshot_json?.cards || []).map((card) => normalizeMasterExamCard(card));
+              const finalizedSections = exam?.structure_snapshot_json?.sections || [];
+              const finalizedSettings = exam?.builder_snapshot_json?.paper_settings_json || {};
+
+              const doc = (
+                <PDFLayoutRenderer
+                  title={finalizedBuilder.headerTitle || exam.exam_name}
+                  builderLayout={finalizedBuilder}
+                  cards={finalizedCards}
+                  sections={finalizedSections}
+                  paperType={exportPaperType || 'standard'}
+                  paperSettings={finalizedSettings}
+                />
+              );
+
+              const blob = await pdf(doc).toBlob();
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement('a');
+              anchor.href = url;
+              anchor.download = `${(exam.exam_name || 'Finalized_Exam').replace(/\s+/g, '_')}_${exportPaperType}.pdf`;
+              anchor.click();
+              URL.revokeObjectURL(url);
+              toast.success('PDF downloaded successfully', { id: toastId });
+            } catch (error) {
+              toast.error(error.message || 'Failed to generate PDF', { id: toastId });
+            }
           }}
           onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
         />
       )}
 
 
-      <QuestionEditModal
-        card={editingCard}
-        sourceAssets={editingCardContext?.assets || []}
-        contextLoading={editingCardContextLoading}
-        onClose={() => {
-          setEditingCard(null);
-          setEditingCardContext(null);
-          setEditingCardContextLoading(false);
-        }}
-        onSave={handleCardSave}
-        onDelete={handleDeleteCard}
-        sections={sections}
-      />
+      <ErrorBoundary>
+        <QuestionEditModal
+          card={editingCard}
+          sourceAssets={editingCardContext?.assets || []}
+          contextLoading={editingCardContextLoading}
+          onClose={() => {
+            setEditingCard(null);
+            setEditingCardContext(null);
+            setEditingCardContextLoading(false);
+          }}
+          onSave={handleCardSave}
+          onDelete={handleDeleteCard}
+          sections={sections}
+        />
+      </ErrorBoundary>
 
       <SourceDocumentPreviewModal
         document={previewDocument}

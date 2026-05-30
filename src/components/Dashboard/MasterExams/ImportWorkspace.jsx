@@ -65,6 +65,9 @@ export default function ImportWorkspace({
   onDeleteDocument,
   onViewDocument,
   onContinue,
+  isUploading,
+  uploadBatchTotal,
+  uploadBatchDone,
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [sourceSearch, setSourceSearch] = useState('');
@@ -86,11 +89,12 @@ export default function ImportWorkspace({
       <div className="ws-import-main ws-fade-up">
         {/* Dropzone */}
         <div
-          className={`ws-dropzone ${dragOver ? 'ws-dropzone--active' : ''}`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          className={`ws-dropzone ${dragOver ? 'ws-dropzone--active' : ''} ${isUploading ? 'ws-dropzone--uploading' : ''}`}
+          onDragOver={(e) => { if (!isUploading) { e.preventDefault(); setDragOver(true); } }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onDrop={(e) => { if (!isUploading) handleDrop(e); }}
+          onClick={() => { if (!isUploading) fileInputRef.current?.click(); }}
+          style={{ position: 'relative', overflow: 'hidden' }}
         >
           <input
             ref={fileInputRef}
@@ -98,41 +102,102 @@ export default function ImportWorkspace({
             multiple
             accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.zip,.tex"
             style={{ display: 'none' }}
+            disabled={isUploading}
             onChange={(e) => {
               onImportFiles?.(Array.from(e.target.files || []));
               e.target.value = '';
             }}
           />
-          <div className="ws-dropzone__icon">
-            <Cloud size={28} strokeWidth={1.5} />
-          </div>
-          <div className="ws-dropzone__title">
-            <Sparkles size={18} style={{ display: 'inline', marginRight: 8, color: '#6a48d1' }} />
-            Drag & drop past papers — AI will extract questions automatically
-          </div>
-          <div className="ws-dropzone__sub">
-            Our AI will analyze your papers, extract individual questions with images, detect marks, 
-            classify question types, and organize everything into ready-to-use cards.
-          </div>
-          <div className="ws-dropzone__formats">
-            <span className="ws-pill">PDF</span>
-            <span className="ws-pill">DOCX</span>
-            <span className="ws-pill">PNG · JPG</span>
-            <span className="ws-pill">LaTeX</span>
-          </div>
-          <div className="ws-dropzone__or">or</div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-            <button
-              type="button"
-              className="ws-btn ws-btn--primary"
-              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-            >
-              <Upload size={16} />Browse files
-            </button>
-            <button type="button" className="ws-btn" onClick={(e) => e.stopPropagation()}>
-              <History size={16} />Pull from past course
-            </button>
-          </div>
+          {isUploading ? (
+            <div className="ws-upload-loading-overlay ws-fade-in" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '40px 20px',
+              gap: '16px',
+              width: '100%',
+              minHeight: '240px'
+            }}>
+              <div className="ws-upload-loading-spinner" style={{
+                position: 'relative',
+                width: '64px',
+                height: '64px'
+              }}>
+                <span className="ws-spinner ws-spinner--large" style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  height: '100%',
+                  borderWidth: '3px',
+                  borderColor: 'var(--ws-ink-200)',
+                  borderTopColor: 'var(--ws-brand)',
+                  borderRadius: '50%',
+                  animation: 'ws-spin 0.8s linear infinite'
+                }} />
+                <Sparkles size={24} style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  color: 'var(--ws-brand-700)',
+                  animation: 'ws-pulseDot 1.5s infinite ease-in-out'
+                }} />
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ws-ink-900)' }}>
+                {uploadBatchTotal > 1 
+                  ? `Uploading paper ${uploadBatchDone + 1} of ${uploadBatchTotal}...`
+                  : "Uploading question paper..."
+                }
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--ws-ink-500)', maxWidth: '360px', textAlign: 'center' }}>
+                Please keep this page open. We are sending the file to storage and preparing the AI vision model...
+              </div>
+              {uploadBatchTotal > 1 && (
+                <div className="ws-progress" style={{ width: '100%', maxWidth: '240px', height: '6px', borderRadius: '3px' }}>
+                  <div className="ws-progress__bar" style={{ 
+                    width: `${(uploadBatchDone / uploadBatchTotal) * 100}%`,
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="ws-dropzone__icon">
+                <Cloud size={28} strokeWidth={1.5} />
+              </div>
+              <div className="ws-dropzone__title">
+                <Sparkles size={18} style={{ display: 'inline', marginRight: 8, color: '#6a48d1' }} />
+                Drag & drop past papers — AI will extract questions automatically
+              </div>
+              <div className="ws-dropzone__sub">
+                Our AI will analyze your papers, extract individual questions with images, detect marks, 
+                classify question types, and organize everything into ready-to-use cards.
+              </div>
+              <div className="ws-dropzone__formats">
+                <span className="ws-pill">PDF</span>
+                <span className="ws-pill">DOCX</span>
+                <span className="ws-pill">PNG · JPG</span>
+                <span className="ws-pill">LaTeX</span>
+              </div>
+              <div className="ws-dropzone__or">or</div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="ws-btn ws-btn--primary"
+                  onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                >
+                  <Upload size={16} />Browse files
+                </button>
+                <button type="button" className="ws-btn" onClick={(e) => e.stopPropagation()}>
+                  <History size={16} />Pull from past course
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Imported sources list */}

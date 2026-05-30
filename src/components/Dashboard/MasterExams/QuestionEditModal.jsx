@@ -28,6 +28,7 @@ import {
   createEmptyCardDraft,
   createEmptyRubric,
   normalizeMasterExamCard,
+  supportsOptions,
   supportsReasoning,
 } from './masterExamCardSchema';
 
@@ -152,15 +153,15 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
   };
 
   const setOption = (index, patch) => {
-    setMetadataField('options', metadata.options.map((option, currentIndex) => (
+    setMetadataField('options', (metadata.options || []).map((option, currentIndex) => (
       currentIndex === index ? { ...option, ...patch } : option
     )));
   };
 
   const addOption = () => {
-    const nextIndex = metadata.options.length;
+    const nextIndex = (metadata.options || []).length;
     setMetadataField('options', [
-      ...metadata.options,
+      ...(metadata.options || []),
       {
         id: `option-${Date.now()}-${nextIndex}`,
         key: String.fromCharCode(65 + nextIndex),
@@ -171,7 +172,7 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
   };
 
   const removeOption = (index) => {
-    const nextOptions = metadata.options
+    const nextOptions = (metadata.options || [])
       .filter((_, currentIndex) => currentIndex !== index)
       .map((option, currentIndex) => ({
         ...option,
@@ -330,7 +331,14 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
   };
 
   const metadataImageAssets = formData.parsed_metadata?.imageAssets || [];
-  const attachableSourceAssets = sourceAssets.filter((asset) => !metadataImageAssets.some((item) => item.id === asset.id || item.url === asset.asset_url));
+  const questionPage = formData.source_page_number || formData.parsed_metadata?.page_span?.start;
+  const attachableSourceAssets = sourceAssets.filter((asset) => {
+    if (metadataImageAssets.some((item) => item.id === asset.id || item.url === asset.asset_url)) return false;
+    if (questionPage && asset.page_number) {
+      return asset.page_number === questionPage;
+    }
+    return true;
+  });
 
   const renderSection = () => {
     switch (activeSection) {
@@ -425,6 +433,97 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
                 placeholder="unit-3, k-map, digital-logic"
               />
             </Field>
+
+            {supportsOptions(formData.question_type) ? (
+              <div className="mt-4 border-t border-slate-200 pt-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-800">Options</h3>
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(metadata.shuffle_options)}
+                      onChange={(event) => setMetadataField('shuffle_options', event.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                    />
+                    Shuffle options
+                  </label>
+                </div>
+                <div className="space-y-3">
+                  {(metadata.options || []).map((option, index) => (
+                    <div key={option.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                            {option.key}
+                          </span>
+                          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(option.isCorrect)}
+                              onChange={(event) => setOption(index, { isCorrect: event.target.checked })}
+                              className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                            />
+                            Correct option
+                          </label>
+                        </div>
+                        { (metadata.options || []).length > 2 ? (
+                          <button
+                            type="button"
+                            onClick={() => removeOption(index)}
+                            className="rounded-xl p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
+                      <textarea
+                        value={option.text}
+                        onChange={(event) => setOption(index, { text: event.target.value })}
+                        rows={3}
+                        className={`${textareaClassName} min-h-[88px]`}
+                        placeholder={`Option ${option.key}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addOption}
+                  className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Option
+                </button>
+              </div>
+            ) : null}
+
+            {supportsReasoning(formData.question_type) ? (
+              <div className="mt-4 border-t border-slate-200 pt-6">
+                <Field label="Reasoning Prompt">
+                  <textarea
+                    value={metadata.reasoning_prompt || ''}
+                    onChange={(event) => setMetadataField('reasoning_prompt', event.target.value)}
+                    rows={4}
+                    className={`${textareaClassName} min-h-[96px]`}
+                    placeholder="Ask the student to justify their selected answer."
+                  />
+                </Field>
+              </div>
+            ) : null}
+
+            {!supportsOptions(formData.question_type) ? (
+              <div className="mt-4 border-t border-slate-200 pt-6">
+                <Field label="Reference Answer / Solution">
+                  <textarea
+                    value={metadata.reference_answer || ''}
+                    onChange={(event) => setMetadataField('reference_answer', event.target.value)}
+                    rows={6}
+                    className={textareaClassName}
+                    placeholder="Canonical answer or solution for this question."
+                  />
+                </Field>
+              </div>
+            ) : null}
           </div>
         );
 
@@ -513,7 +612,7 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
             </label>
 
             <div className="space-y-3">
-              {metadata.options.map((option, index) => (
+              {(metadata.options || []).map((option, index) => (
                 <div key={option.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -530,7 +629,7 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
                         Correct option
                       </label>
                     </div>
-                    {metadata.options.length > 2 ? (
+                    {(metadata.options || []).length > 2 ? (
                       <button
                         type="button"
                         onClick={() => removeOption(index)}
