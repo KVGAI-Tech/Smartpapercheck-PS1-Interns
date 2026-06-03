@@ -8,6 +8,7 @@ import StudentDashboard from "./components/StudentDashboard";
 import Courses from "./components/Dashboard/Courses";
 import CourseDetails from "./components/Dashboard/Course/CourseDetails";
 import MasterExamsList from "./components/Dashboard/MasterExams/MasterExamsList";
+import CourseWorkspacesList from "./components/Dashboard/MasterExams/CourseWorkspacesList";
 import ExamDocumentEditorPage from "./components/Dashboard/MasterExams/ExamDocumentEditorPage";
 import RoleAuth from "./components/RoleAuth";
 import LandingPage from "./components/LandingPage";
@@ -156,6 +157,16 @@ function App() {
                 <RoleRoute requiredRole="professor">
                   <DashboardLayout>
                     <MasterExamsList />
+                  </DashboardLayout>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/master-exams/course/:courseId"
+              element={
+                <RoleRoute requiredRole="professor">
+                  <DashboardLayout>
+                    <CourseWorkspacesList />
                   </DashboardLayout>
                 </RoleRoute>
               }

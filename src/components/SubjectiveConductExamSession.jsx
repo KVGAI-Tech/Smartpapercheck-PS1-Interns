@@ -10,6 +10,8 @@ import {
   Save,
   Send,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useTabMonitor } from '../hooks/useTabMonitor';
 
 import { examsApi } from './Student_api';
 
@@ -78,6 +80,15 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
   useEffect(() => {
     dirtyQuestionIdsRef.current = dirtyQuestionIds;
   }, [dirtyQuestionIds]);
+
+  useTabMonitor({
+    enabled: true,
+    active: session?.status === 'in_progress' && !submitting && !saving && !isSubmitted,
+    onTabSwitch: (source) => {
+      toast.error('Tab switch detected! Your exam is being automatically submitted for security reasons.', { duration: 5000 });
+      handleSubmit();
+    }
+  });
 
   useEffect(() => {
     if (!resolvedExamId) return;

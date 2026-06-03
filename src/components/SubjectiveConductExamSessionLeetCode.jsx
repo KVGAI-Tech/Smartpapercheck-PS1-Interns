@@ -65,6 +65,8 @@ import { examsApi } from './Student_api';
 import OnlineExamSecurityCheck from './OnlineExamSecurityCheck';
 import ExamProtectionOverlay from './ExamProtectionOverlay';
 import { useExamProtection } from '../hooks/useExamProtection';
+import { useTabMonitor } from '../hooks/useTabMonitor';
+import toast from 'react-hot-toast';
 
 const getSessionStorageKey = (examId) => `conduct_exam_session_${examId}`;
 const getSyncChannelName = (examId) => `conduct_exam_sync_${examId}`;
@@ -280,6 +282,15 @@ Take your time and write a comprehensive answer.`,
   useEffect(() => {
     dirtyQuestionIdsRef.current = dirtyQuestionIds;
   }, [dirtyQuestionIds]);
+
+  useTabMonitor({
+    enabled: true,
+    active: session?.status === 'in_progress' && !submitting && !saving && !isSubmitted,
+    onTabSwitch: (source) => {
+      toast.error('Tab switch detected! Your exam is being automatically submitted for security reasons.', { duration: 5000 });
+      handleSubmit();
+    }
+  });
 
   const hydrateSession = (payload, { preserveDirtyAnswers = false, clearDirtyIds = [] } = {}) => {
     setSession(payload);

@@ -5,21 +5,16 @@ import {
   Archive,
   ArrowRight,
   CheckCircle2,
-  FilePlus2,
+  Layers,
   Loader2,
   Sparkles,
-  Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import {
-  createExamDocument,
-  createSourceFolder,
-  deleteExamDocument,
   listExamDocuments,
   listMasterExams,
   listProfessorCourses,
-  updateExamDocument,
 } from './examDocumentApi';
 
 const DEFAULT_SOURCE_FOLDERS = [
@@ -55,16 +50,13 @@ const buildCourseWorkspacePayload = (course) => ({
   },
 });
 
-function CourseWorkspaceCard({ course, workspace, finalizedCount = 0, onOpen, onCreate, creating }) {
-  const statusLabel = workspace ? 'Ready' : 'Empty';
-  const statusTone = workspace
+function CourseWorkspaceCard({ course, workspacesCount = 0, finalizedCount = 0, onOpen }) {
+  const statusLabel = workspacesCount > 0 ? `${workspacesCount} Workspaces` : 'Empty';
+  const statusTone = workspacesCount > 0
     ? 'border-emerald-200 bg-emerald-50/90 text-emerald-700'
     : 'border-sky-100 bg-white/80 text-slate-500';
-  const courseSubtitle = course.semester_code || course.semester || course.session || course.academic_year || 'Workspace';
-  const actionLabel = workspace ? 'Open Workspace' : 'Create Workspace';
-  const updatedLabel = workspace?.updated_at
-    ? new Date(workspace.updated_at).toLocaleDateString()
-    : null;
+  const courseSubtitle = course.semester_code || course.semester || course.session || course.academic_year || 'Course Workspaces';
+  const actionLabel = 'View Workspaces';
 
   return (
     <article className="group relative flex min-h-[230px] flex-col overflow-hidden rounded-[20px] border border-[#d9e8e4] bg-[linear-gradient(180deg,#fbfefd_0%,#ffffff_52%,#f4faf8_100%)] p-5 shadow-[0_18px_48px_rgba(16,72,62,0.08)] transition duration-300 hover:-translate-y-1 hover:border-[#b8d6ce] hover:shadow-[0_24px_60px_rgba(16,72,62,0.14)]">
@@ -76,7 +68,7 @@ function CourseWorkspaceCard({ course, workspace, finalizedCount = 0, onOpen, on
           </div>
         </div>
         <div className={`relative z-10 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-sm backdrop-blur ${statusTone}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${workspace ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${workspacesCount > 0 ? 'bg-emerald-500' : 'bg-slate-400'}`} />
           {statusLabel}
         </div>
       </div>
@@ -102,20 +94,19 @@ function CourseWorkspaceCard({ course, workspace, finalizedCount = 0, onOpen, on
 
       <div className="relative z-10 mt-auto flex items-end justify-between gap-4 pt-4">
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86a39b]">Last Activity</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86a39b]">Total Workspaces</div>
           <div className="mt-2 text-sm font-medium leading-5 text-[#365955]">
-            {updatedLabel || 'No workspace activity yet'}
+            {workspacesCount} workspace{workspacesCount !== 1 ? 's' : ''} available
           </div>
         </div>
         <button
           type="button"
-          onClick={workspace ? onOpen : onCreate}
-          disabled={creating}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#1f7a6b,#114d46)] px-4 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(17,77,70,0.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_34px_rgba(17,77,70,0.28)] disabled:opacity-60"
+          onClick={onOpen}
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#1f7a6b,#114d46)] px-4 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(17,77,70,0.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_34px_rgba(17,77,70,0.28)]"
         >
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePlus2 className="h-4 w-4" />}
+          <Layers className="h-4 w-4" />
           {actionLabel}
-          {!creating && <ArrowRight className="h-4 w-4" />}
+          <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </article>
@@ -126,7 +117,7 @@ const MasterExamsList = () => {
   const [courses, setCourses] = useState([]);
   const [documents, setDocuments] = useState({ workspaces: [], finalized: [] });
   const [isLoading, setIsLoading] = useState(true);
-  const [creatingCourseId, setCreatingCourseId] = useState(null);
+  const [creatingCourseId, setCreatingCourseId] = useState(null); // Unused now, kept for minimal diff
   const navigate = useNavigate();
 
   const loadWorkspaceDashboard = useCallback(async () => {
@@ -154,7 +145,7 @@ const MasterExamsList = () => {
     loadWorkspaceDashboard();
   }, [loadWorkspaceDashboard]);
 
-  const workspacesByCourseId = useMemo(() => {
+  const workspacesCountByCourseId = useMemo(() => {
     const map = new Map();
     (documents.workspaces || []).forEach((workspace) => {
       if (workspace.published_master_exam_id) return;
@@ -162,10 +153,7 @@ const MasterExamsList = () => {
       const courseId = meta.courseId ?? meta.course_id;
       if (!courseId) return;
       const key = String(courseId);
-      const current = map.get(key);
-      if (!current || new Date(workspace.updated_at || workspace.created_at || 0) > new Date(current.updated_at || current.created_at || 0)) {
-        map.set(key, workspace);
-      }
+      map.set(key, (map.get(key) || 0) + 1);
     });
     return map;
   }, [documents.workspaces]);
@@ -181,63 +169,7 @@ const MasterExamsList = () => {
     return map;
   }, [documents.finalized]);
 
-  const handleCreateCourseWorkspace = async (course) => {
-    try {
-      setCreatingCourseId(course.id);
-      const created = await createExamDocument(buildCourseWorkspacePayload(course));
-      const builderLayout = {
-        ...(created.builder_layout_json || {}),
-        questionWorkspace: {
-          courseId: course.id,
-          courseCode: course.course_code,
-          courseName: course.course_name,
-          workspaceType: 'course_question_workspace',
-        },
-        paperStructure: {
-          sections: [
-            { id: 'section-1', title: 'Section A', instructions: '', cardIds: [], parsed_metadata: {} },
-          ],
-        },
-      };
-      const updated = await updateExamDocument(created.id, {
-        title: `${course.course_name || course.course_code} Question Workspace`,
-        builder_layout_json: builderLayout,
-      });
-
-      await Promise.all(DEFAULT_SOURCE_FOLDERS.map((folder) => createSourceFolder(updated.id, {
-        ...folder,
-        course_name: course.course_name,
-        metadata_json: {
-          course_id: course.id,
-          course_code: course.course_code,
-        },
-      }).catch(() => null)));
-
-      toast.success('Course question workspace created');
-      navigate(`/master-exams/${updated.id}?courseId=${course.id}`);
-    } catch (err) {
-      toast.error(err.message || 'Failed to create course workspace');
-    } finally {
-      setCreatingCourseId(null);
-    }
-  };
-
-  const handleDelete = async (event, docId, title) => {
-    event.stopPropagation();
-    const confirmed = window.confirm(`Archive "${title || 'Untitled Workspace'}"?`);
-    if (!confirmed) return;
-
-    try {
-      await deleteExamDocument(docId);
-      setDocuments((prev) => ({
-        ...prev,
-        workspaces: prev.workspaces.filter((item) => item.id !== docId),
-      }));
-      toast.success('Workspace archived');
-    } catch (err) {
-      toast.error(err.message || 'Failed to archive workspace');
-    }
-  };
+  // Removed handleCreateCourseWorkspace and handleDelete as they moved to CourseWorkspacesList.jsx
 
   return (
     <div className="mx-auto w-full max-w-[1360px] px-5 py-6 lg:px-8">
@@ -248,27 +180,15 @@ const MasterExamsList = () => {
       ) : courses.length > 0 ? (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {courses.map((course) => {
-            const workspace = workspacesByCourseId.get(String(course.id));
+            const count = workspacesCountByCourseId.get(String(course.id)) || 0;
             return (
               <div key={course.id} className="group relative">
                 <CourseWorkspaceCard
                   course={course}
-                  workspace={workspace}
+                  workspacesCount={count}
                   finalizedCount={finalizedCountByCourseId.get(String(course.id)) || 0}
-                  creating={creatingCourseId === course.id}
-                  onCreate={() => handleCreateCourseWorkspace(course)}
-                  onOpen={() => navigate(`/master-exams/${workspace.id}?courseId=${course.id}`)}
+                  onOpen={() => navigate(`/master-exams/course/${course.id}`)}
                 />
-                {workspace && (
-                  <button
-                    type="button"
-                    onClick={(event) => handleDelete(event, workspace.id, workspace.title)}
-                    className="absolute right-4 top-4 hidden rounded-full border border-rose-100 bg-white p-2 text-rose-500 shadow-sm hover:bg-rose-50 md:group-hover:block"
-                    title="Archive workspace"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
               </div>
             );
           })}

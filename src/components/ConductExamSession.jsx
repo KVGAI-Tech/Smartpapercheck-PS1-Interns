@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Clock, Loader, Send } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { examsApi } from './Student_api';
+import { useTabMonitor } from '../hooks/useTabMonitor';
 
 const ConductExamSession = ({ examId, courseId, enrollmentId }) => {
   const navigate = useNavigate();
@@ -47,6 +49,15 @@ const ConductExamSession = ({ examId, courseId, enrollmentId }) => {
       load();
     }
   }, [resolvedExamId]);
+
+  useTabMonitor({
+    enabled: true,
+    active: !loading && !submitting && !success,
+    onTabSwitch: (source) => {
+      toast.error('Tab switch detected! Your exam is being automatically submitted for security reasons.', { duration: 5000 });
+      handleSubmit();
+    }
+  });
 
   const attemptedCount = useMemo(
     () =>
