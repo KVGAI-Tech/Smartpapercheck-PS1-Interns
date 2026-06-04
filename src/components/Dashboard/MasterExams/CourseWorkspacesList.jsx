@@ -26,7 +26,8 @@ import {
   fetchExamDocument,
   fetchWorkspaceCards,
   fetchMasterExamById,
-  fetchMasterExamQuestions
+  fetchMasterExamQuestions,
+  updateExamDocument
 } from './examDocumentApi';
 import SmartPaperPreview from './SmartPaperPreview';
 import { normalizeMasterExamCard } from './masterExamCardSchema';
