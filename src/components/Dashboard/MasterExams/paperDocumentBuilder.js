@@ -1,6 +1,12 @@
 import { supportsOptions } from './masterExamCardSchema.js';
 
-const DEFAULT_PAGE_HEIGHT = 980;
+export const PDF_PAGE_WIDTH = 794;
+export const PDF_PAGE_HEIGHT = 1123;
+export const PDF_PAGE_PADDING_X = 42;
+export const PDF_PAGE_PADDING_Y = 57;
+export const PDF_A4_WIDTH = 595.28;
+export const PDF_A4_HEIGHT = 841.89;
+const DEFAULT_PAGE_HEIGHT = PDF_PAGE_HEIGHT;
 const DEFAULT_FIRST_PAGE_HEADER_HEIGHT = 240;
 const DEFAULT_REPEAT_HEADER_HEIGHT = 56;
 const DEFAULT_FOOTER_HEIGHT = 28;
@@ -70,6 +76,14 @@ function normalizePaperSettings(paperSettings = {}) {
   };
 }
 
+function resolveSubjectCode(builderLayout = {}) {
+  return ensureString(
+    builderLayout.subjectCode
+    || builderLayout.subject_code
+    || builderLayout.courseContext?.subjectCode
+  );
+}
+
 function dedupeIds(cardIds = [], validCardIds = new Map()) {
   const seen = new Set();
   const normalized = [];
@@ -88,7 +102,8 @@ export function normalizeLegacySections(rawSections = [], cards = []) {
   const validCardIds = new Map(cards.map((card) => [String(card.id), card.id]));
   const globallyAssigned = new Set();
 
-  return (Array.isArray(rawSections) ? rawSections : []).map((section, index) => {
+  return (Array.isArray(rawSections) ? rawSections : [])
+    .map((section, index) => {
     const legacyCardIds = Array.isArray(section?.cards)
       ? section.cards.map((card) => card?.id).filter(Boolean)
       : [];
@@ -113,7 +128,13 @@ export function normalizeLegacySections(rawSections = [], cards = []) {
         ? section.parsed_metadata
         : {},
     };
-  });
+  })
+    .filter((section) => {
+      const hasTitle = Boolean(ensureString(section?.title).trim());
+      const hasInstructions = Boolean(ensureString(section?.instructions).trim());
+      const hasCards = Array.isArray(section?.cardIds) && section.cardIds.length > 0;
+      return hasTitle || hasInstructions || hasCards;
+    });
 }
 
 function normalizeInlineText(text) {
@@ -398,12 +419,14 @@ function normalizeAnswerSpaceType(rawValue) {
 }
 
 function calculateWritableLines(marks = 0, baseLineCount = 5) {
-  if (marks <= 0) return Math.max(3, baseLineCount);
-  if (marks <= 2) return 2;
-  if (marks <= 5) return Math.max(5, baseLineCount);
-  if (marks <= 10) return Math.max(8, baseLineCount + 2);
-  if (marks <= 15) return Math.max(12, baseLineCount + 5);
-  return Math.max(16, baseLineCount + 8);
+  if (marks <= 0) return Math.max(2, Math.min(baseLineCount, 4));
+  if (marks <= 1) return 2;
+  if (marks <= 2) return 4;
+  if (marks <= 3) return 6;
+  if (marks <= 5) return 10;
+  if (marks <= 10) return 10 + ((marks - 5) * 2);
+  if (marks <= 15) return 20 + ((marks - 10) * 2);
+  return 30 + ((marks - 15) * 2);
 }
 
 function calculateWritableHeight(marks = 0, baseHeight = 120, extraLargeFloor = 150) {
@@ -771,6 +794,7 @@ export function buildQuestionBlock(card, context = {}) {
     estimatedHeight: 0,
     allowPageSplit: true,
     questionNumber: context.questionNumber || 1,
+    questionDisplayNumber: String(context.questionDisplayNumber || context.questionNumber || 1),
     questionLabel: getSourceQuestionLabel(card, context.questionNumber || 1),
     sectionId: context.sectionId || null,
     paperType: context.paperType || 'standard',
@@ -798,6 +822,7 @@ export function createQuestionSegments(questionBlock) {
       questionId: questionBlock.id,
       cardId: questionBlock.cardId,
       questionNumber: questionBlock.questionNumber,
+      questionDisplayNumber: questionBlock.questionDisplayNumber,
       questionLabel: questionBlock.questionLabel,
       marks: questionBlock.marks,
       continuation: index > 0,
@@ -828,6 +853,7 @@ export function createQuestionSegments(questionBlock) {
       questionId: questionBlock.id,
       cardId: questionBlock.cardId,
       questionNumber: questionBlock.questionNumber,
+      questionDisplayNumber: questionBlock.questionDisplayNumber,
       questionLabel: questionBlock.questionLabel,
       marks: questionBlock.marks,
       continuation: bodySegments.length > 0,
@@ -862,6 +888,7 @@ export function createQuestionSegments(questionBlock) {
         questionId: questionBlock.id,
         cardId: questionBlock.cardId,
         questionNumber: questionBlock.questionNumber,
+        questionDisplayNumber: questionBlock.questionDisplayNumber,
         questionLabel: questionBlock.questionLabel,
         marks: questionBlock.marks,
         continuation: true,
@@ -887,6 +914,7 @@ export function createQuestionSegments(questionBlock) {
         questionId: questionBlock.id,
         cardId: questionBlock.cardId,
         questionNumber: questionBlock.questionNumber,
+        questionDisplayNumber: questionBlock.questionDisplayNumber,
         questionLabel: questionBlock.questionLabel,
         marks: questionBlock.marks,
         continuation: true,
@@ -916,8 +944,10 @@ function buildHeaderDescriptor(builderLayout = {}) {
     title: ensureString(builderLayout.headerTitle || 'Examination Paper'),
     subtitle: ensureString(builderLayout.headerSubtitle || builderLayout.institution),
     templateId: ensureString(builderLayout.template_id || builderLayout.templateId || 'universal'),
+    institution: ensureString(builderLayout.institution),
     course: ensureString(builderLayout.course),
     subject: ensureString(builderLayout.subject),
+    subjectCode: resolveSubjectCode(builderLayout),
     examTime: ensureString(builderLayout.examTime || '3 Hours'),
     totalMarks: builderLayout.totalMarks ?? 100,
     instructions: headerInstructions.blocks,
@@ -933,11 +963,12 @@ function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, p
       if (cards.length === 0) return null;
 
       const instructionsAst = parseHtmlToAst(section.instructions);
-      const questionBlocks = cards.map((card) => {
+      const questionBlocks = cards.map((card, cardIndex) => {
         globalContext.questionIndex += 1;
         return buildQuestionBlock(card, {
           sectionId: section.id,
           questionNumber: globalContext.questionIndex,
+          questionDisplayNumber: cardIndex + 1,
           paperSettings,
           paperType,
         });
@@ -953,20 +984,6 @@ function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, p
       };
     })
     .filter(Boolean);
-}
-
-function buildUnsectionedQuestionBlocks(cards, usedCardIds, paperSettings, paperType, globalContext = { questionIndex: 0 }) {
-  return cards
-    .filter((card) => !usedCardIds.has(String(card.id)))
-    .map((card) => {
-      globalContext.questionIndex += 1;
-      return buildQuestionBlock(card, {
-        sectionId: null,
-        questionNumber: globalContext.questionIndex,
-        paperSettings,
-        paperType,
-      });
-    });
 }
 
 function estimateSectionHeaderHeight(section) {
@@ -990,6 +1007,10 @@ function createEmptyPage(pageNumber, isFirstPage, header, paperSettings) {
     headerMode: isFirstPage ? 'full' : (paperSettings.repeatHeader ? 'repeat' : 'none'),
     header,
     footerEnabled: paperSettings.footerEnabled !== false,
+    headerHeight,
+    footerHeight,
+    contentHeight: DEFAULT_PAGE_HEIGHT - headerHeight - footerHeight,
+    cursorY: 0,
     remainingHeight: DEFAULT_PAGE_HEIGHT - headerHeight - footerHeight,
     items: [],
   };
@@ -1007,20 +1028,18 @@ export function paginatePaperDocument({ header, sections, paperSettings = {} }) 
   };
 
   const pushItem = (item) => {
-    currentPage.items.push(item);
+    currentPage.items.push({
+      ...item,
+      yOffset: currentPage.cursorY,
+    });
+    currentPage.cursorY += item.estimatedHeight;
     currentPage.remainingHeight -= item.estimatedHeight;
   };
 
   const paginateQuestionBlock = (questionBlock) => {
-    const segments = createQuestionSegments(questionBlock);
-    const totalHeight = segments.reduce((sum, segment) => sum + segment.estimatedHeight, 0);
-    const maxPageHeight = DEFAULT_PAGE_HEIGHT - DEFAULT_REPEAT_HEADER_HEIGHT - DEFAULT_FOOTER_HEIGHT;
+    const questionSegments = createQuestionSegments(questionBlock);
 
-    if (totalHeight <= maxPageHeight && totalHeight > currentPage.remainingHeight && currentPage.items.length > 0) {
-      startNewPage();
-    }
-
-    segments.forEach((segment, index) => {
+    questionSegments.forEach((segment, index) => {
       if (segment.estimatedHeight > currentPage.remainingHeight && currentPage.items.length > 0) {
         startNewPage();
       }
@@ -1042,13 +1061,13 @@ export function paginatePaperDocument({ header, sections, paperSettings = {} }) 
     }
 
     const firstQuestion = section.questionBlocks[0];
+    const firstQuestionSegment = firstQuestion ? createQuestionSegments(firstQuestion)[0] : null;
 
     const sectionHeaderHeight = estimateSectionHeaderHeight(section);
     if (firstQuestion) {
-      const firstQuestionFirstSegment = createQuestionSegments(firstQuestion)[0];
       if (
         currentPage.items.length > 0
-        && sectionHeaderHeight + firstQuestionFirstSegment.estimatedHeight > currentPage.remainingHeight
+        && sectionHeaderHeight + (firstQuestionSegment?.estimatedHeight || firstQuestion.estimatedHeight) > currentPage.remainingHeight
       ) {
         startNewPage();
       }
@@ -1069,10 +1088,16 @@ export function paginatePaperDocument({ header, sections, paperSettings = {} }) 
     section.questionBlocks.forEach((questionBlock) => paginateQuestionBlock(questionBlock));
   });
 
-  return pages.map((page) => ({
-    ...page,
-    remainingHeight: undefined,
-  }));
+  return pages
+    .filter((page) => page.items.length > 0)
+    .map((page, index) => ({
+      ...page,
+      id: `page-${index + 1}`,
+      pageNumber: index + 1,
+      isFirstPage: index === 0,
+      remainingHeight: undefined,
+      cursorY: undefined,
+    }));
 }
 
 export function buildPaperDocument({
@@ -1085,7 +1110,6 @@ export function buildPaperDocument({
   const normalizedSettings = normalizePaperSettings(paperSettings);
   const normalizedSections = normalizeLegacySections(sections, cards);
   const cardsById = new Map(cards.map((card) => [String(card.id), card]));
-  const usedCardIds = new Set(normalizedSections.flatMap((section) => section.cardIds));
   const header = buildHeaderDescriptor(builderLayout);
   
   const globalContext = { questionIndex: 0 };
@@ -1105,4 +1129,78 @@ export function buildPaperDocument({
     pageDescriptors,
     normalizedSections,
   };
+}
+
+export function summarizePaperDocument(paperDocument = null) {
+  const pageItems = paperDocument?.pageDescriptors?.flatMap((page) => page.items || []) || [];
+  const renderedSectionCount = pageItems.filter((item) => item.type === 'sectionHeader').length;
+  const renderedQuestionItems = pageItems.filter(
+    (item) => item.type === 'questionBlock' || item.type === 'questionSegment'
+  );
+  const renderedQuestionIds = renderedQuestionItems.map((item) => String(item.questionId || item.id));
+  const renderedQuestionCount = new Set(renderedQuestionIds).size;
+  const renderedSectionOrder = pageItems
+    .filter((item) => item.type === 'sectionHeader')
+    .map((item) => String(item.sectionId));
+  const renderedQuestionOrder = renderedQuestionItems
+    .filter((item, index, list) => (
+      list.findIndex((candidate) => String(candidate.questionId || candidate.id) === String(item.questionId || item.id)) === index
+    ))
+    .map((item) => String(item.questionId || item.id));
+  const expectedSectionOrder = (paperDocument?.sections || []).map((section) => String(section.id));
+  const expectedQuestionOrder = (paperDocument?.sections || []).flatMap((section) => (
+    section.questionBlocks || []
+  ).map((questionBlock) => String(questionBlock.id)));
+  const duplicateQuestionIds = renderedQuestionIds.filter(
+    (questionId, index, list) => list.indexOf(questionId) !== index
+  );
+
+  return {
+    sectionCount: paperDocument?.sections?.length || 0,
+    questionCount: paperDocument?.questions?.length || 0,
+    renderedSectionCount,
+    renderedQuestionCount,
+    pageCount: paperDocument?.pageDescriptors?.length || 0,
+    expectedSectionOrder,
+    renderedSectionOrder,
+    expectedQuestionOrder,
+    renderedQuestionOrder,
+    duplicateQuestionIds,
+  };
+}
+
+export function validatePaperDocumentForExport(paperDocument = null) {
+  if (!paperDocument || !Array.isArray(paperDocument.pageDescriptors)) {
+    throw new Error('ExportValidationError: paper document is missing page descriptors.');
+  }
+
+  const summary = summarizePaperDocument(paperDocument);
+
+  if (summary.sectionCount !== summary.renderedSectionCount) {
+    throw new Error(
+      `ExportValidationError: previewSectionCount (${summary.sectionCount}) !== pdfSectionCount (${summary.renderedSectionCount}).`
+    );
+  }
+
+  if (summary.questionCount !== summary.renderedQuestionCount) {
+    throw new Error(
+      `ExportValidationError: previewQuestionCount (${summary.questionCount}) !== pdfQuestionCount (${summary.renderedQuestionCount}).`
+    );
+  }
+
+  if (summary.duplicateQuestionIds.length > 0) {
+    throw new Error(
+      `ExportValidationError: duplicate questions detected in export order (${summary.duplicateQuestionIds.join(', ')}).`
+    );
+  }
+
+  if (JSON.stringify(summary.expectedSectionOrder) !== JSON.stringify(summary.renderedSectionOrder)) {
+    throw new Error('ExportValidationError: rendered section order does not match builder section order.');
+  }
+
+  if (JSON.stringify(summary.expectedQuestionOrder) !== JSON.stringify(summary.renderedQuestionOrder)) {
+    throw new Error('ExportValidationError: rendered question order does not match builder question order.');
+  }
+
+  return summary;
 }

@@ -36,6 +36,7 @@ export const useExamProtection = ({
   submissionId,
   logSecurityEvent,
   onAutoSubmit,
+  shouldIgnoreTabSwitch,
 } = {}) => {
   const securityConfig = useMemo(() => normalizeConfig(config), [config]);
   const [violations, setViolations] = useState([]);
@@ -112,6 +113,7 @@ export const useExamProtection = ({
   useTabMonitor({
     enabled: securityConfig.track_tab_switching,
     active,
+    shouldIgnore: (source) => isProtectionSuspended() || shouldIgnoreTabSwitch?.(source),
     onTabSwitch: (source) => recordViolation('TAB_SWITCH', { metadata: { source } }),
   });
 

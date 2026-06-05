@@ -876,14 +876,14 @@ const DashboardLayout = ({ children }) => {
         <main
           className={
             location.pathname.startsWith('/master-exams/') && location.pathname !== '/master-exams'
-              ? "h-[calc(100vh-4rem)] bg-white w-full overflow-hidden"
+              ? "min-h-[calc(100vh-4rem)] bg-white w-full overflow-y-auto overflow-x-hidden"
               : "min-h-[calc(100vh-4rem)] bg-white p-4 md:p-6 min-w-0 overflow-x-hidden"
           }
         >
           <div
             className={
               location.pathname.startsWith('/master-exams/') && location.pathname !== '/master-exams'
-                ? "h-full w-full"
+                ? "w-full min-h-0"
                 : "max-w-7xl mx-auto min-w-0"
             }
           >

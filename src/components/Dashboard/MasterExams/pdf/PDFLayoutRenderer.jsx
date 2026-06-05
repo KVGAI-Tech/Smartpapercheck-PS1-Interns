@@ -2,7 +2,16 @@
 import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
 
 import { tw } from './PdfStyles';
-import { buildPaperDocument } from '../paperDocumentBuilder';
+import {
+  PDF_A4_HEIGHT,
+  PDF_A4_WIDTH,
+  buildPaperDocument,
+  PDF_PAGE_PADDING_X,
+  PDF_PAGE_PADDING_Y,
+  PDF_PAGE_HEIGHT,
+  PDF_PAGE_WIDTH,
+  validatePaperDocumentForExport,
+} from '../paperDocumentBuilder';
 import PdfWritableAnswerArea from './PdfWritableAnswerArea';
 
 function PdfInlineContent({ inlines = [] }) {
@@ -127,20 +136,20 @@ function PdfSectionHeader({ item, paperSettings }) {
   );
 }
 
-function PdfQuestionSegment({ item, paperSettings }) {
+function PdfQuestionBlock({ item, paperSettings }) {
   return (
-    <View style={tw('mb-5 flex flex-row items-start')} wrap={false}>
+    <View style={tw('flex flex-row items-start')} wrap={false}>
       <View style={tw('w-[28px]')}>
         <Text style={tw('text-[11px] font-bold text-slate-900')}>
-          {item.showNumber ? `Q${item.questionLabel})` : ''}
+          {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel})`}
         </Text>
       </View>
       <View style={tw('flex-1')}>
-        {item.blocks?.length > 0 && <PdfBlocks blocks={item.blocks} />}
+        {(item.body?.blocks || item.blocks)?.length > 0 && <PdfBlocks blocks={item.body?.blocks || item.blocks} />}
         {item.images?.length > 0 && <PdfQuestionImages images={item.images} layoutMode={item.layoutMode} />}
         {item.answerArea && <PdfWritableAnswerArea answerArea={item.answerArea} />}
       </View>
-      {item.showMarks && paperSettings.showQuestionMarks !== false && item.marks > 0 && (
+      {paperSettings.showQuestionMarks !== false && item.marks > 0 && (
         <View style={tw('ml-2')}>
           <Text style={tw('text-[11px] font-bold text-slate-900')}>[{item.marks} Marks]</Text>
         </View>
@@ -169,6 +178,11 @@ function PdfPageHeader({ header, page }) {
       <Text style={tw(`text-center text-[20px] tracking-[0.08em] text-slate-950 ${templateId === 'university_format' ? 'font-bold uppercase' : 'font-serif font-bold uppercase'}`)}>
         {header.title}
       </Text>
+      {header.institution && (
+        <Text style={tw('mt-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-600')}>
+          {header.institution}
+        </Text>
+      )}
       {header.subtitle && (
         <Text style={tw('mt-2 text-center text-[12px] font-bold uppercase tracking-[0.2em] text-slate-600')}>
           {header.subtitle}
@@ -182,6 +196,10 @@ function PdfPageHeader({ header, page }) {
         <View style={tw('mb-2 w-1/4 items-center')}>
           <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Subject</Text>
           <Text style={tw('mt-1 text-[10px] font-bold')}>{header.subject || 'Not set'}</Text>
+        </View>
+        <View style={tw('mb-2 w-1/4 items-center')}>
+          <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Subject Code</Text>
+          <Text style={tw('mt-1 text-[10px] font-bold')}>{header.subjectCode || 'Not set'}</Text>
         </View>
         <View style={tw('mb-2 w-1/4 items-center')}>
           <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Duration</Text>
@@ -211,8 +229,9 @@ export function PDFLayoutRenderer({
   sections = [],
   paperType = 'standard',
   paperSettings = {},
+  paperDocument = null,
 }) {
-  const paperDocument = buildPaperDocument({
+  const resolvedPaperDocument = paperDocument || buildPaperDocument({
     cards,
     sections,
     builderLayout: {
@@ -222,42 +241,74 @@ export function PDFLayoutRenderer({
     paperSettings,
     paperType,
   });
+  validatePaperDocumentForExport(resolvedPaperDocument);
+  const pageScale = Math.min(PDF_A4_WIDTH / PDF_PAGE_WIDTH, PDF_A4_HEIGHT / PDF_PAGE_HEIGHT);
 
   return (
     <Document>
-      {paperDocument.pageDescriptors.map((page) => (
+      {resolvedPaperDocument.pageDescriptors.map((page) => (
         <Page
           key={page.id}
           size="A4"
           style={[
             tw('bg-white'),
             {
-              paddingLeft: 42,
-              paddingRight: 42,
-              paddingTop: 57,
-              paddingBottom: 57,
+              position: 'relative',
             },
           ]}
+          wrap={false}
         >
-          <PdfPageHeader header={paperDocument.header} page={page} />
-
-          <View style={tw('flex flex-col')}>
-            {page.items.map((item) => (
-              item.type === 'sectionHeader' ? (
-                <PdfSectionHeader key={item.id} item={item} paperSettings={paperSettings} />
-              ) : (
-                <PdfQuestionSegment key={item.id} item={item} paperSettings={paperSettings} />
-              )
-            ))}
-          </View>
-
-          {page.footerEnabled && (
-            <View style={tw('absolute bottom-5 left-0 right-0 flex flex-row justify-center')}>
-              <Text style={tw('text-[9px] text-slate-400')}>
-                {`Page ${page.pageNumber} of ${paperDocument.pageDescriptors.length}`}
-              </Text>
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: PDF_PAGE_WIDTH,
+              height: PDF_PAGE_HEIGHT,
+              transformOrigin: 'top left',
+              transform: [{ scale: pageScale }],
+            }}
+            wrap={false}
+          >
+            <PdfPageHeader header={resolvedPaperDocument.header} page={page} />
+            <View
+              style={{
+                position: 'absolute',
+                left: PDF_PAGE_PADDING_X,
+                right: PDF_PAGE_PADDING_X,
+                top: PDF_PAGE_PADDING_Y + page.headerHeight,
+                height: page.contentHeight,
+              }}
+              wrap={false}
+            >
+              {page.items.map((item) => (
+                <View
+                  key={item.id}
+                  style={{
+                    position: 'absolute',
+                    top: item.yOffset || 0,
+                    left: 0,
+                    right: 0,
+                  }}
+                  wrap={false}
+                >
+                  {item.type === 'sectionHeader' ? (
+                    <PdfSectionHeader item={item} paperSettings={paperSettings} />
+                  ) : (
+                    <PdfQuestionBlock item={item} paperSettings={paperSettings} />
+                  )}
+                </View>
+              ))}
             </View>
-          )}
+
+            {page.footerEnabled && (
+              <View style={tw('absolute bottom-5 left-0 right-0 flex flex-row justify-center')} wrap={false}>
+                <Text style={tw('text-[9px] text-slate-400')}>
+                  {`Page ${page.pageNumber} of ${resolvedPaperDocument.pageDescriptors.length}`}
+                </Text>
+              </View>
+            )}
+          </View>
         </Page>
       ))}
     </Document>

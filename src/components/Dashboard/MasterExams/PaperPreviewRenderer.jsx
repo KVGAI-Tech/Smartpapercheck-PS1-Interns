@@ -1,4 +1,4 @@
-import React from 'react';
+/* eslint-disable react/prop-types */
 import './workspace.css';
 
 export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
@@ -11,11 +11,23 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
 
   return (
     <div className="ws-paper-preview-container">
-      {paperDocument.pageDescriptors.map((page, pageIndex) => (
-        <div key={page.id} className="ws-paper-preview-page">
+      {paperDocument.pageDescriptors.map((page) => (
+        <div
+          key={page.id}
+          className="ws-paper-preview-page"
+          style={{
+            width: 'min(100%, 794px)',
+            minHeight: 1123,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
           {page.headerMode !== 'none' && (
             <div className={`ws-paper-preview-header ${page.headerMode === 'full' ? 'ws-paper-preview-header--full' : 'ws-paper-preview-header--repeat'}`}>
               <div className="ws-paper-preview-header__title">{page.header.title}</div>
+              {page.headerMode === 'full' && page.header.institution && (
+                <div className="ws-paper-preview-header__subtitle">{page.header.institution}</div>
+              )}
               {page.headerMode === 'full' && page.header.subtitle && (
                 <div className="ws-paper-preview-header__subtitle">{page.header.subtitle}</div>
               )}
@@ -23,6 +35,7 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
                 <div className="ws-paper-preview-header__meta">
                   <div><strong>Course</strong><span>{page.header.course || 'Not set'}</span></div>
                   <div><strong>Subject</strong><span>{page.header.subject || 'Not set'}</span></div>
+                  <div><strong>Subject Code</strong><span>{page.header.subjectCode || 'Not set'}</span></div>
                   <div><strong>Duration</strong><span>{page.header.examTime || '3 Hours'}</span></div>
                   <div><strong>Max Marks</strong><span>{page.header.totalMarks || 100}</span></div>
                 </div>
@@ -36,15 +49,31 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
             </div>
           )}
 
-          <div className="ws-paper-preview-content">
+          <div
+            className="ws-paper-preview-content"
+            style={{
+              position: 'relative',
+              minHeight: page.contentHeight || 0,
+            }}
+          >
             {page.items.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '100px 20px', color: '#999', fontStyle: 'italic', fontFamily: 'var(--ws-font-sans)' }}>
                 No questions added to the paper yet.
               </div>
-            ) : page.items.map((item, itemIndex) => {
+            ) : page.items.map((item) => {
               if (item.type === 'sectionHeader') {
                 return (
-                  <div key={item.id} className="ws-paper-preview-section">
+                  <div
+                    key={item.id}
+                    className="ws-paper-preview-section"
+                    style={{
+                      position: 'absolute',
+                      top: item.yOffset || 0,
+                      left: 0,
+                      right: 0,
+                      marginBottom: 0,
+                    }}
+                  >
                     <div className="ws-paper-preview-section__head">
                       <div className="ws-paper-preview-section__title">{item.title}</div>
                       {paperSettings?.showSectionMarks !== false && (
@@ -62,13 +91,23 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
 
               // Question Segment
               return (
-                <div key={item.id} className="ws-paper-preview-q">
+                <div
+                  key={item.id}
+                  className="ws-paper-preview-q"
+                  style={{
+                    position: 'absolute',
+                    top: item.yOffset || 0,
+                    left: 0,
+                    right: 0,
+                    marginBottom: 0,
+                  }}
+                >
                   <div className="ws-paper-preview-q__left">
-                    {item.showNumber ? `Q${item.questionLabel}.` : ''}
+                    {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}.`}
                   </div>
                   <div className="ws-paper-preview-q__body">
-                    {item.blocks && item.blocks.length > 0 && (
-                      <BlockRenderer blocks={item.blocks} />
+                    {(item.body?.blocks || item.blocks) && (item.body?.blocks || item.blocks).length > 0 && (
+                      <BlockRenderer blocks={item.body?.blocks || item.blocks} />
                     )}
                     {item.images && item.images.length > 0 && (
                       <div className="ws-paper-preview-q__images">
@@ -82,7 +121,7 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
                     )}
                   </div>
                   <div className="ws-paper-preview-q__right">
-                    {item.showMarks && paperSettings?.showQuestionMarks !== false && item.marks > 0 && `[${item.marks}]`}
+                    {paperSettings?.showQuestionMarks !== false && item.marks > 0 && `[${item.marks}]`}
                   </div>
                 </div>
               );

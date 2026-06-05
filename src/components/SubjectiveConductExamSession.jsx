@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -66,6 +66,8 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
   const autoSubmitRef = useRef(false);
   const dirtyQuestionIdsRef = useRef([]);
   const syncChannelRef = useRef(null);
+  const fileUploadInProgressRef = useRef(false);
+  const imageUploadInProgressRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -81,10 +83,39 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
     dirtyQuestionIdsRef.current = dirtyQuestionIds;
   }, [dirtyQuestionIds]);
 
+  const beginTrustedFilePicker = useCallback(() => {
+    fileUploadInProgressRef.current = true;
+  }, []);
+
+  const finishTrustedFilePicker = useCallback(() => {
+    window.setTimeout(() => {
+      fileUploadInProgressRef.current = false;
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    const handlePickerClosed = () => {
+      if (fileUploadInProgressRef.current) {
+        finishTrustedFilePicker();
+      }
+    };
+
+    window.addEventListener('focus', handlePickerClosed);
+    window.addEventListener('pageshow', handlePickerClosed);
+    return () => {
+      window.removeEventListener('focus', handlePickerClosed);
+      window.removeEventListener('pageshow', handlePickerClosed);
+    };
+  }, [finishTrustedFilePicker]);
+
   useTabMonitor({
     enabled: true,
     active: session?.status === 'in_progress' && !submitting && !saving && !isSubmitted,
+    shouldIgnore: () => fileUploadInProgressRef.current || imageUploadInProgressRef.current,
     onTabSwitch: (source) => {
+      if (fileUploadInProgressRef.current || imageUploadInProgressRef.current) {
+        return;
+      }
       toast.error('Tab switch detected! Your exam is being automatically submitted for security reasons.', { duration: 5000 });
       handleSubmit();
     }
@@ -373,6 +404,7 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
 
   const handleImageUpload = async (questionId, file) => {
     if (!file) return;
+    imageUploadInProgressRef.current = true;
     setError('');
     setNotice('');
     try {
@@ -394,6 +426,9 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
       setNotice('Answer image uploaded');
     } catch (err) {
       setError(err.message || 'Unable to upload answer image.');
+    } finally {
+      imageUploadInProgressRef.current = false;
+      finishTrustedFilePicker();
     }
   };
 
@@ -722,7 +757,16 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
                                         className="max-h-[300px] rounded-xl object-contain shadow-sm"
                                     />
                                     {session?.status === 'in_progress' && (
-                                        <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl cursor-pointer">
+                                        <label
+                                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl cursor-pointer"
+                                            onPointerDown={beginTrustedFilePicker}
+                                            onClick={beginTrustedFilePicker}
+                                            onKeyDown={(event) => {
+                                              if (event.key === 'Enter' || event.key === ' ') {
+                                                beginTrustedFilePicker();
+                                              }
+                                            }}
+                                        >
                                             <div className="bg-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
                                                 <ImagePlus className="w-4 h-4" />
                                                 Replace Image
@@ -731,14 +775,31 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
                                                 type="file"
                                                 accept="image/*"
                                                 disabled={session?.status !== 'in_progress'}
-                                                onChange={(e) => handleImageUpload(question.id, e.target.files?.[0])}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        handleImageUpload(question.id, file);
+                                                    } else {
+                                                        finishTrustedFilePicker();
+                                                    }
+                                                    e.target.value = '';
+                                                }}
                                                 className="hidden"
                                             />
                                         </label>
                                     )}
                                 </div>
                             ) : (
-                                <label className="flex flex-col items-center justify-center gap-3 p-10 rounded-2xl border-2 border-dashed border-gray-200 hover:border-accent/40 hover:bg-accent/5 transition-all cursor-pointer">
+                                    <label
+                                        className="flex flex-col items-center justify-center gap-3 p-10 rounded-2xl border-2 border-dashed border-gray-200 hover:border-accent/40 hover:bg-accent/5 transition-all cursor-pointer"
+                                        onPointerDown={beginTrustedFilePicker}
+                                        onClick={beginTrustedFilePicker}
+                                        onKeyDown={(event) => {
+                                          if (event.key === 'Enter' || event.key === ' ') {
+                                            beginTrustedFilePicker();
+                                          }
+                                        }}
+                                    >
                                     <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent">
                                         <ImagePlus className="w-6 h-6" />
                                     </div>
@@ -750,7 +811,15 @@ const SubjectiveConductExamSession = ({ examId, courseId }) => {
                                         type="file"
                                         accept="image/*"
                                         disabled={session?.status !== 'in_progress'}
-                                        onChange={(e) => handleImageUpload(question.id, e.target.files?.[0])}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                handleImageUpload(question.id, file);
+                                            } else {
+                                                finishTrustedFilePicker();
+                                            }
+                                            e.target.value = '';
+                                        }}
                                         className="hidden"
                                     />
                                 </label>

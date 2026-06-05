@@ -192,7 +192,7 @@ function PreviewQuestionSegment({ item, paperSettings, paperType, isSelected, on
     >
       <div className="flex items-start gap-3">
         <div className="min-w-[30px] pt-0.5 font-bold text-slate-900">
-          {item.showNumber ? `Q${item.questionLabel})` : ''}
+          {item.showNumber ? `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel})` : ''}
         </div>
         <div className="flex-1">
           {item.blocks?.length > 0 && <PreviewBlocks blocks={item.blocks} />}

@@ -55,7 +55,7 @@ import {
   uploadWorkspaceDocument,
 } from './examDocumentApi';
 import { normalizeMasterExamCard } from './masterExamCardSchema';
-import { normalizeLegacySections } from './paperDocumentBuilder';
+import { normalizeLegacySections, validatePaperDocumentForExport } from './paperDocumentBuilder';
 
 const WORKSPACE_VIEWS = [
   { id: 'papers', label: 'Papers', hint: 'Compose and export', icon: FileText },
@@ -864,120 +864,121 @@ export default function ExamDocumentEditorPage() {
         totalMarks={totalMarks}
       />
 
-      {workspaceStep === 'import' && (
-        <ImportWorkspace
-          documents={documents}
-          cards={cards}
-          onImportFiles={handleImportFiles}
-          onDeleteDocument={handleDeleteDocument}
-          onViewDocument={handleOpenDocumentPreview}
-          onContinue={() => setWorkspaceStep('library')}
-          isUploading={isUploading}
-          uploadBatchTotal={uploadBatchTotal}
-          uploadBatchDone={uploadBatchDone}
-        />
-      )}
+      <div className={`ws-stage ${workspaceStep === 'workspace' || workspaceStep === 'builder' ? 'ws-stage--builder' : ''}`}>
+        {workspaceStep === 'import' && (
+          <ImportWorkspace
+            documents={documents}
+            cards={cards}
+            onImportFiles={handleImportFiles}
+            onDeleteDocument={handleDeleteDocument}
+            onViewDocument={handleOpenDocumentPreview}
+            onContinue={() => setWorkspaceStep('library')}
+            isUploading={isUploading}
+            uploadBatchTotal={uploadBatchTotal}
+            uploadBatchDone={uploadBatchDone}
+          />
+        )}
 
-      {workspaceStep === 'library' && (
-        <LibraryWorkspace
-          cards={cards}
-          onEditCard={handleEditCard}
-          onContinue={() => setWorkspaceStep('workspace')}
-          onCreateNewQuestion={handleCreateManualCard}
-        />
-      )}
+        {workspaceStep === 'library' && (
+          <LibraryWorkspace
+            cards={cards}
+            onEditCard={handleEditCard}
+            onContinue={() => setWorkspaceStep('workspace')}
+            onCreateNewQuestion={handleCreateManualCard}
+          />
+        )}
 
-      {workspaceStep === 'workspace' && (
-        <BuilderWorkspace
-          mode="compose"
-          cards={cards}
-          sections={sections}
-          updateSections={updateSectionsWithDirty}
-          paperTitle={workspace.title}
-          setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
-          paperSettings={workspace.paper_settings_json || {}}
-          builderLayout={workspace.builder_layout_json || {}}
-          onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
-            ...prev,
-            builder_layout_json: {
-              ...(prev.builder_layout_json || {}),
-              ...patch,
-              paperStructure: (prev.builder_layout_json || {}).paperStructure,
-            },
-          }))}
-          paperType={workspace.paper_type || 'standard'}
-          onChangePaperType={(pt) => markWorkspaceDirty({ paper_type: pt })}
-          courseContext={{
-            code: workspaceMeta?.courseCode || 'SPC101',
-            name: workspaceMeta?.courseName || 'Subject',
-            institution: 'University',
-          }}
-          onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
-        />
-      )}
+        {workspaceStep === 'workspace' && (
+          <BuilderWorkspace
+            mode="compose"
+            cards={cards}
+            sections={sections}
+            updateSections={updateSectionsWithDirty}
+            paperTitle={workspace.title}
+            setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
+            paperSettings={workspace.paper_settings_json || {}}
+            builderLayout={workspace.builder_layout_json || {}}
+            onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
+              ...prev,
+              builder_layout_json: {
+                ...(prev.builder_layout_json || {}),
+                ...patch,
+                paperStructure: (prev.builder_layout_json || {}).paperStructure,
+              },
+            }))}
+            paperType={workspace.paper_type || 'standard'}
+            onChangePaperType={(pt) => markWorkspaceDirty({ paper_type: pt })}
+            courseContext={{
+              code: workspaceMeta?.courseCode || 'SPC101',
+              name: workspaceMeta?.courseName || 'Subject',
+              institution: 'University',
+            }}
+            onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
+          />
+        )}
 
-      {workspaceStep === 'builder' && (
-        <BuilderWorkspace
-          mode="finalize"
-          cards={cards}
-          sections={sections}
-          updateSections={updateSectionsWithDirty}
-          paperTitle={workspace.title}
-          setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
-          paperSettings={workspace.paper_settings_json || {}}
-          builderLayout={workspace.builder_layout_json || {}}
-          onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
-            ...prev,
-            builder_layout_json: {
-              ...(prev.builder_layout_json || {}),
-              ...patch,
-              paperStructure: (prev.builder_layout_json || {}).paperStructure,
-            },
-          }))}
-          paperType={workspace.paper_type || 'standard'}
-          onChangePaperType={(pt) => markWorkspaceDirty({ paper_type: pt })}
-          courseContext={{
-            code: workspaceMeta?.courseCode || 'SPC101',
-            name: workspaceMeta?.courseName || 'Subject',
-            institution: 'University',
-          }}
-          onExport={async (exportPaperType) => {
-            const toastId = toast.loading(`Generating ${exportPaperType} PDF...`);
-            try {
-              const exam = await ensureFinalizedExam(workspace.title);
-              if (!exam) throw new Error("Failed to finalize exam");
+        {workspaceStep === 'builder' && (
+          <BuilderWorkspace
+            mode="finalize"
+            cards={cards}
+            sections={sections}
+            updateSections={updateSectionsWithDirty}
+            paperTitle={workspace.title}
+            setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
+            paperSettings={workspace.paper_settings_json || {}}
+            builderLayout={workspace.builder_layout_json || {}}
+            onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
+              ...prev,
+              builder_layout_json: {
+                ...(prev.builder_layout_json || {}),
+                ...patch,
+                paperStructure: (prev.builder_layout_json || {}).paperStructure,
+              },
+            }))}
+            paperType={workspace.paper_type || 'standard'}
+            onChangePaperType={(pt) => markWorkspaceDirty({ paper_type: pt })}
+            courseContext={{
+              code: workspaceMeta?.courseCode || 'SPC101',
+              name: workspaceMeta?.courseName || 'Subject',
+              institution: 'University',
+            }}
+            onExport={async ({
+              paperType: exportPaperType,
+              paperDocument,
+              builderLayout,
+              paperSettings,
+              paperTitle,
+            }) => {
+              const toastId = toast.loading(`Generating ${exportPaperType} PDF...`);
+              try {
+                validatePaperDocumentForExport(paperDocument);
 
-              const finalizedBuilder = exam?.builder_snapshot_json?.builder_layout_json || {};
-              const finalizedCards = (exam?.structure_snapshot_json?.cards || []).map((card) => normalizeMasterExamCard(card));
-              const finalizedSections = exam?.structure_snapshot_json?.sections || [];
-              const finalizedSettings = exam?.builder_snapshot_json?.paper_settings_json || {};
+                const doc = (
+                  <PDFLayoutRenderer
+                    title={builderLayout?.headerTitle || paperTitle || workspace.title}
+                    builderLayout={builderLayout || {}}
+                    paperType={exportPaperType || 'standard'}
+                    paperSettings={paperSettings || {}}
+                    paperDocument={paperDocument}
+                  />
+                );
 
-              const doc = (
-                <PDFLayoutRenderer
-                  title={finalizedBuilder.headerTitle || exam.exam_name}
-                  builderLayout={finalizedBuilder}
-                  cards={finalizedCards}
-                  sections={finalizedSections}
-                  paperType={exportPaperType || 'standard'}
-                  paperSettings={finalizedSettings}
-                />
-              );
-
-              const blob = await pdf(doc).toBlob();
-              const url = URL.createObjectURL(blob);
-              const anchor = document.createElement('a');
-              anchor.href = url;
-              anchor.download = `${(exam.exam_name || 'Finalized_Exam').replace(/\s+/g, '_')}_${exportPaperType}.pdf`;
-              anchor.click();
-              URL.revokeObjectURL(url);
-              toast.success('PDF downloaded successfully', { id: toastId });
-            } catch (error) {
-              toast.error(error.message || 'Failed to generate PDF', { id: toastId });
-            }
-          }}
-          onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
-        />
-      )}
+                const blob = await pdf(doc).toBlob();
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = `${(paperTitle || workspace.title || 'Exam_Paper').replace(/\s+/g, '_')}_${exportPaperType}.pdf`;
+                anchor.click();
+                URL.revokeObjectURL(url);
+                toast.success('PDF downloaded successfully', { id: toastId });
+              } catch (error) {
+                toast.error(error.message || 'Failed to generate PDF', { id: toastId });
+              }
+            }}
+            onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
+          />
+        )}
+      </div>
 
 
       <ErrorBoundary>

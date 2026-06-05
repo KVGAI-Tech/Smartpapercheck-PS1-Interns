@@ -6,6 +6,8 @@ import {
   buildQuestionBlock,
   buildPaperDocument,
   deriveAnswerArea,
+  summarizePaperDocument,
+  validatePaperDocumentForExport,
 } from './paperDocumentBuilder.js';
 
 const baseCard = {
@@ -84,6 +86,26 @@ test('buildQuestionBlock prefers parser numbering over local section index', () 
   assert.equal(questionBlock.questionLabel, '12');
 });
 
+test('buildQuestionBlock keeps a separate workspace sequence number', () => {
+  const questionBlock = buildQuestionBlock({
+    ...baseCard,
+    parsed_metadata: {
+      ...baseCard.parsed_metadata,
+      display_number: '12',
+      question_number: 'Q12',
+    },
+  }, {
+    paperType: 'standard',
+    paperSettings: {},
+    questionNumber: 7,
+    questionDisplayNumber: 3,
+  });
+
+  assert.equal(questionBlock.questionNumber, 7);
+  assert.equal(questionBlock.questionDisplayNumber, '3');
+  assert.equal(questionBlock.questionLabel, '12');
+});
+
 test('deriveAnswerArea uses writable heuristics when no explicit card override exists', () => {
   assert.deepEqual(
     deriveAnswerArea({
@@ -157,14 +179,129 @@ test('buildPaperDocument paginates long writable questions without detaching ans
 
   assert.ok(paperDocument.pageDescriptors.length >= 2);
 
-  const answerSegments = paperDocument.pageDescriptors
+  const renderedQuestionSegments = paperDocument.pageDescriptors
     .flatMap((page) => page.items)
-    .filter((item) => item.type === 'questionSegment' && item.segmentType === 'answer');
-  const bodySegmentWithInlineAnswerArea = paperDocument.pageDescriptors
-    .flatMap((page) => page.items)
-    .find((item) => item.type === 'questionSegment' && item.segmentType === 'body' && item.answerArea);
+    .filter((item) => item.type === 'questionSegment');
 
-  assert.ok(bodySegmentWithInlineAnswerArea);
-  assert.ok(answerSegments.length > 0);
-  assert.ok(answerSegments.every((segment) => segment.questionId === '202'));
+  assert.ok(renderedQuestionSegments.length > 1);
+  assert.equal(new Set(renderedQuestionSegments.map((item) => item.questionId)).size, 1);
+  assert.equal(renderedQuestionSegments[0].questionId, '202');
+  assert.ok(renderedQuestionSegments.some((item) => item.answerArea?.mode === 'lined' || item.answerArea?.mode === 'steps'));
+});
+
+test('buildPaperDocument includes header metadata needed for preview/export parity', () => {
+  const paperDocument = buildPaperDocument({
+    cards: [{ ...baseCard }],
+    sections: [{ id: 'section-a', title: 'Section A', instructions: '', cardIds: [101], parsed_metadata: {} }],
+    builderLayout: {
+      headerTitle: 'Gen Bio Question Workspace',
+      headerSubtitle: 'Mid Semester Examination',
+      institution: 'University',
+      course: 'Gen Bio',
+      subject: 'BIO',
+      subjectCode: 'BIO F111',
+      examTime: '3 Hours',
+      totalMarks: 200,
+    },
+    paperSettings: {},
+    paperType: 'standard',
+  });
+
+  assert.equal(paperDocument.header.institution, 'University');
+  assert.equal(paperDocument.header.subjectCode, 'BIO F111');
+});
+
+test('deriveAnswerArea scales writable lines by marks for student print papers', () => {
+  assert.equal(deriveAnswerArea({
+    question_type: 'short_subjective',
+    writing_space_type: 'none',
+    writing_space_lines: 0,
+    writing_space_height: 0,
+    marks: 2,
+  }, {}, 'writable').lines, 4);
+
+  assert.equal(deriveAnswerArea({
+    question_type: 'long_subjective',
+    writing_space_type: 'none',
+    writing_space_lines: 0,
+    writing_space_height: 0,
+    marks: 10,
+  }, {}, 'writable').lines, 20);
+
+  assert.equal(deriveAnswerArea({
+    question_type: 'long_subjective',
+    writing_space_type: 'none',
+    writing_space_lines: 0,
+    writing_space_height: 0,
+    marks: 15,
+  }, {}, 'writable').lines, 30);
+});
+
+test('validatePaperDocumentForExport confirms page render tree matches source counts', () => {
+  const paperDocument = buildPaperDocument({
+    cards: [{ ...baseCard }],
+    sections: [{ id: 'section-a', title: 'Section A', instructions: '', cardIds: [101], parsed_metadata: {} }],
+    builderLayout: {
+      headerTitle: 'Physics Exam',
+      course: 'PHY101',
+      subject: 'Physics',
+      examTime: '3 Hours',
+      totalMarks: 100,
+    },
+    paperSettings: {},
+    paperType: 'standard',
+  });
+
+  const summary = summarizePaperDocument(paperDocument);
+  assert.equal(summary.sectionCount, 1);
+  assert.equal(summary.renderedSectionCount, 1);
+  assert.equal(summary.questionCount, 1);
+  assert.equal(summary.renderedQuestionCount, 1);
+
+  assert.doesNotThrow(() => validatePaperDocumentForExport(paperDocument));
+});
+
+test('buildPaperDocument preserves strict builder section and question order across pages', () => {
+  const cards = [
+    { ...baseCard, id: 1, marks: 5, question_body: `<p>${'Question one '.repeat(60)}</p>` },
+    { ...baseCard, id: 2, marks: 5, question_body: `<p>${'Question two '.repeat(60)}</p>` },
+    { ...baseCard, id: 3, marks: 5, question_body: `<p>${'Question three '.repeat(60)}</p>` },
+    { ...baseCard, id: 4, marks: 5, question_body: `<p>${'Question four '.repeat(60)}</p>` },
+  ];
+
+  const paperDocument = buildPaperDocument({
+    cards,
+    sections: [
+      { id: 'section-a', title: 'Section A', instructions: '', cardIds: [1, 2], parsed_metadata: {} },
+      { id: 'section-b', title: 'Section B', instructions: '', cardIds: [3, 4], parsed_metadata: {} },
+    ],
+    builderLayout: {
+      headerTitle: 'Ordered Exam',
+      course: 'TEST101',
+      subject: 'Testing',
+      examTime: '3 Hours',
+      totalMarks: 20,
+    },
+    paperSettings: {},
+    paperType: 'standard',
+  });
+
+  const renderedQuestions = paperDocument.pageDescriptors
+    .flatMap((page) => page.items)
+    .filter((item) => item.type === 'questionSegment' && item.showNumber)
+    .map((item) => item.questionId);
+  const renderedQuestionNumbers = paperDocument.pageDescriptors
+    .flatMap((page) => page.items)
+    .filter((item) => item.type === 'questionSegment' && item.showNumber)
+    .map((item) => item.questionDisplayNumber);
+  const renderedSections = paperDocument.pageDescriptors
+    .flatMap((page) => page.items)
+    .filter((item) => item.type === 'sectionHeader')
+    .map((item) => item.sectionId);
+
+  assert.deepEqual(renderedSections, ['section-a', 'section-b']);
+  assert.deepEqual(renderedQuestions, ['1', '2', '3', '4']);
+  assert.deepEqual(renderedQuestionNumbers, ['1', '2', '1', '2']);
+  assert.ok(paperDocument.pageDescriptors.every((page) => page.items.length > 0));
+  assert.doesNotThrow(() => validatePaperDocumentForExport(paperDocument));
 });

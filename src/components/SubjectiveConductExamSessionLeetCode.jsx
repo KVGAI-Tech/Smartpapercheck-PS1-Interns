@@ -149,6 +149,29 @@ const SubjectiveConductExamSessionLeetCode = ({ examId, courseId }) => {
   const [uploadState, setUploadState] = useState({});
   const [showUploadPanel, setShowUploadPanel] = useState(false);
   const imageInputRef = useRef(null);
+  const fileUploadInProgressRef = useRef(false);
+  const imageUploadInProgressRef = useRef(false);
+
+  const finishTrustedFilePicker = useCallback(() => {
+    window.setTimeout(() => {
+      fileUploadInProgressRef.current = false;
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    const handlePickerClosed = () => {
+      if (fileUploadInProgressRef.current) {
+        finishTrustedFilePicker();
+      }
+    };
+
+    window.addEventListener('focus', handlePickerClosed);
+    window.addEventListener('pageshow', handlePickerClosed);
+    return () => {
+      window.removeEventListener('focus', handlePickerClosed);
+      window.removeEventListener('pageshow', handlePickerClosed);
+    };
+  }, [finishTrustedFilePicker]);
 
   // Initialize TipTap editor for current question
   const currentQuestion = session?.questions?.[currentQuestionIndex];
@@ -286,7 +309,11 @@ Take your time and write a comprehensive answer.`,
   useTabMonitor({
     enabled: true,
     active: session?.status === 'in_progress' && !submitting && !saving && !isSubmitted,
+    shouldIgnore: () => fileUploadInProgressRef.current || imageUploadInProgressRef.current,
     onTabSwitch: (source) => {
+      if (fileUploadInProgressRef.current || imageUploadInProgressRef.current) {
+        return;
+      }
       toast.error('Tab switch detected! Your exam is being automatically submitted for security reasons.', { duration: 5000 });
       handleSubmit();
     }
@@ -384,7 +411,14 @@ Take your time and write a comprehensive answer.`,
     submissionId: session?.submission_id,
     logSecurityEvent,
     onAutoSubmit: handleAutoSubmit,
+    shouldIgnoreTabSwitch: () => fileUploadInProgressRef.current || imageUploadInProgressRef.current,
   });
+
+  const openTrustedImagePicker = useCallback(() => {
+    fileUploadInProgressRef.current = true;
+    protection.suspendProtection?.(90000);
+    imageInputRef.current?.click();
+  }, [protection]);
 
   useEffect(() => {
     let cancelled = false;
@@ -648,6 +682,7 @@ Take your time and write a comprehensive answer.`,
 
   const handleImageUpload = async (questionId, files) => {
     if (!files || files.length === 0 || !resolvedExamId || !sessionIdRef.current) return;
+    imageUploadInProgressRef.current = true;
     protection.suspendProtection?.(90000);
     
     // files could be a FileList or array
@@ -695,6 +730,8 @@ Take your time and write a comprehensive answer.`,
       }));
     } finally {
       protection.suspendProtection?.(5000);
+      imageUploadInProgressRef.current = false;
+      finishTrustedFilePicker();
     }
   };
 
@@ -1387,10 +1424,10 @@ Take your time and write a comprehensive answer.`,
                         ))}
                         {session?.status === 'in_progress' && (
                           <button
-                            onClick={() => {
-                              protection.suspendProtection?.(30000);
-                              imageInputRef.current?.click();
+                            onPointerDown={() => {
+                              fileUploadInProgressRef.current = true;
                             }}
+                            onClick={openTrustedImagePicker}
                             disabled={uploadState[currentQuestion?.id]?.uploading === 'image'}
                             className="aspect-square flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-accent hover:bg-accent/5 text-gray-400 hover:text-accent transition-all group"
                           >
@@ -1414,7 +1451,11 @@ Take your time and write a comprehensive answer.`,
                         className="hidden" 
                         onChange={(e) => {
                           protection.suspendProtection?.(90000);
-                          if (e.target.files) handleImageUpload(currentQuestion.id, e.target.files);
+                          if (e.target.files?.length) {
+                            handleImageUpload(currentQuestion.id, e.target.files);
+                          } else {
+                            finishTrustedFilePicker();
+                          }
                           e.target.value = '';
                         }} 
                       />
