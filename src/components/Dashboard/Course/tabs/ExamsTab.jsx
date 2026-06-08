@@ -500,7 +500,7 @@ const OnlineExamSecurityModal = ({
         } catch (e) {
           if (file.size > API_FALLBACK_MAX_BYTES && isLikelyS3CorsError(e)) {
             throw new Error(
-              'Direct ZIP upload to S3 was blocked by bucket CORS for this site, and this ZIP is too large for the API fallback. Please allow https://smartpapercheck.com in the S3 bucket CORS policy or increase the API upload size limit.'
+              'Direct ZIP upload to S3 was blocked by bucket CORS for this site, and this ZIP is too large for the API fallback. Please allow this domain in the S3 bucket CORS policy or increase the API upload size limit.'
             );
           }
 
@@ -522,7 +522,7 @@ const OnlineExamSecurityModal = ({
           if (!uploadResp.ok) {
             if (uploadResp.status === 413) {
               throw new Error(
-                'The ZIP is larger than the server upload limit (413 Request Entity Too Large). Direct S3 upload also failed, likely because the bucket CORS policy does not allow https://smartpapercheck.com.'
+                'The ZIP is larger than the server upload limit (413 Request Entity Too Large). Direct S3 upload also failed, likely because the bucket CORS policy does not allow this domain.'
               );
             }
             throw new Error(`Upload failed: ${uploadResp.status}`);
