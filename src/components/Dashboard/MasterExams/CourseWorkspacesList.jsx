@@ -345,8 +345,13 @@ function WorkspacePreviewModal({ workspaceId, onClose }) {
         let paperSettings = {};
 
         if (doc.published_master_exam_id) {
-          const exam = await fetchMasterExamById(doc.published_master_exam_id);
-          
+          // exam metadata and the questions API are independent (both only need
+          // the master_exam_id) — fetch them concurrently instead of in sequence.
+          const [exam, questionsAPI] = await Promise.all([
+            fetchMasterExamById(doc.published_master_exam_id),
+            fetchMasterExamQuestions(doc.published_master_exam_id),
+          ]);
+
           let structureSnapshot = {};
           if (typeof exam.structure_snapshot_json === 'string') {
             try { structureSnapshot = JSON.parse(exam.structure_snapshot_json); } catch(e) {}
@@ -361,8 +366,7 @@ function WorkspacePreviewModal({ workspaceId, onClose }) {
             builderSnapshot = exam.builder_snapshot_json;
           }
 
-          // Fetch cards via API to get presigned URLs for images
-          const questionsAPI = await fetchMasterExamQuestions(doc.published_master_exam_id);
+          // questionsAPI was fetched in parallel with `exam` above.
           const rawCardsAPI = questionsAPI?.questions || questionsAPI || [];
           let cards = [];
           

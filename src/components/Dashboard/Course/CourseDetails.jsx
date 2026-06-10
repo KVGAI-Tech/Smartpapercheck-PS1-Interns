@@ -222,8 +222,24 @@ const CourseDetails = () => {
             setError(null);
 
             try {
-                const courseResponse = await getCourseDetails(courseId);
+                // Fire all course-open requests concurrently instead of fetching the
+                // course first and the related data afterwards. allSettled so a
+                // failure in one section (e.g. TAs) doesn't block the others.
+                const [courseRes, studentsRes, instructorsRes, tasRes, examsRes] =
+                    await Promise.allSettled([
+                        getCourseDetails(courseId),
+                        getCourseStudents(courseId),
+                        getCourseInstructors(courseId),
+                        getCourseTAs(courseId),
+                        getCourseExams(courseId)
+                    ]);
 
+                if (courseRes.status === 'rejected') {
+                    // Re-throw so the outer catch handles the "course not found" path.
+                    throw courseRes.reason;
+                }
+
+                const courseResponse = courseRes.value;
                 if (!courseResponse || !courseResponse.data) {
                     console.warn('Using mock data as fallback');
                     setCourseDetails(MOCK_COURSE);
@@ -231,20 +247,19 @@ const CourseDetails = () => {
                     setCourseDetails(courseResponse.data);
                 }
 
-                try {
-                    const [studentsResp, instructorsResp, tasResp, examsResp] = await Promise.all([
-                        getCourseStudents(courseId),
-                        getCourseInstructors(courseId),
-                        getCourseTAs(courseId),
-                        getCourseExams(courseId)
-                    ]);
+                const relatedFailed =
+                    studentsRes.status === 'rejected' ||
+                    instructorsRes.status === 'rejected' ||
+                    tasRes.status === 'rejected' ||
+                    examsRes.status === 'rejected';
 
-                    setStudents(studentsResp?.data || []);
-                    setInstructors(instructorsResp?.data || []);
-                    setTeachingAssistants(tasResp || []);
-                    setExams(examsResp?.data || []);
-                } catch (error) {
-                    console.error('Error loading related data:', error);
+                setStudents(studentsRes.status === 'fulfilled' ? (studentsRes.value?.data || []) : []);
+                setInstructors(instructorsRes.status === 'fulfilled' ? (instructorsRes.value?.data || []) : []);
+                setTeachingAssistants(tasRes.status === 'fulfilled' ? (tasRes.value || []) : []);
+                setExams(examsRes.status === 'fulfilled' ? (examsRes.value?.data || []) : []);
+
+                if (relatedFailed) {
+                    console.error('Error loading some related course data');
                     showToast('Some course data could not be loaded', 'warning');
                 }
             } catch (error) {

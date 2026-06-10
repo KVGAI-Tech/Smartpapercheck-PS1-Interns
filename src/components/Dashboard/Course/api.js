@@ -34,33 +34,17 @@ export const fetchApi = async (endpoint, options = {}) => {
   }
 };
 export const getCourseDetails = async (courseId) => {
+  if (!courseId) {
+    throw new Error('Course ID is required');
+  }
   try {
-    // Attempt to find in active courses first
-    let response = await fetchApi(`/professors/courses`);
+    // Single-course endpoint: avoids downloading the entire active (and archived)
+    // course list just to locate one course. One round-trip instead of one/two
+    // full-list fetches.
+    const response = await fetchApi(`/professors/courses/${courseId}`);
     if (response && response.data) {
-      let course = response.data.find(c => c.id.toString() === courseId.toString());
-      if (course) {
-        return {
-          code: 200,
-          message: "Course retrieved successfully",
-          data: course
-        };
-      }
+      return response;
     }
-
-    // Attempt to find in archived courses
-    response = await fetchApi(`/professors/archived-courses`);
-    if (response && response.data) {
-      const course = response.data.find(c => c.id.toString() === courseId.toString());
-      if (course) {
-        return {
-          code: 200,
-          message: "Course retrieved successfully",
-          data: course
-        };
-      }
-    }
-
     throw new Error('Course not found');
   } catch (error) {
     console.error('Error getting course details:', error);
