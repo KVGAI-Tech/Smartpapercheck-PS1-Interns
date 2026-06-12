@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FileText, Plus, Search, GripVertical, X, Download, CheckCircle2, ChevronDown, ChevronRight,
+  FileText, Plus, Search, GripVertical, X, Download, CheckCircle2, ChevronDown, ChevronRight, ChevronLeft,
   Settings2, Printer, Layout, Eye, EyeOff,
 } from 'lucide-react';
 import DifficultyDots from './DifficultyDots';
@@ -38,6 +38,62 @@ const TYPE_LABEL_MAP = {
 
 function cleanText(value = '') {
   return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function EditableMarks({ cardId, initialMarks, onUpdateCardMarks }) {
+  const [val, setVal] = useState(initialMarks);
+
+  useEffect(() => {
+    setVal(initialMarks);
+  }, [initialMarks]);
+
+  const handleBlurOrSubmit = () => {
+    const num = parseFloat(val);
+    if (!isNaN(num) && num !== initialMarks && num >= 0) {
+      onUpdateCardMarks?.(cardId, num);
+    } else {
+      setVal(initialMarks);
+    }
+  };
+
+  return (
+    <div className="ws-builder-row__marks" style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '3px 8px' }}>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={val}
+        onChange={(e) => {
+          let inputVal = e.target.value.replace(/[^0-9.]/g, '');
+          const parts = inputVal.split('.');
+          if (parts.length > 2) {
+            inputVal = parts[0] + '.' + parts.slice(1).join('');
+          }
+          setVal(inputVal);
+        }}
+        onBlur={handleBlurOrSubmit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.target.blur();
+          }
+        }}
+        style={{
+          width: '32px',
+          border: 'none',
+          background: 'transparent',
+          fontWeight: 700,
+          fontSize: '12px',
+          color: 'var(--ws-ink-700)',
+          textAlign: 'center',
+          outline: 'none',
+          padding: 0,
+          margin: 0,
+        }}
+        draggable={false}
+        onDragStart={(e) => e.stopPropagation()}
+      />
+      <span>Marks</span>
+    </div>
+  );
 }
 
 function splitQuestionSummary(card = {}) {
@@ -124,13 +180,11 @@ function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onC
       <button
         type="button"
         className="ws-settings-panel__toggle"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((prev) => !prev)}
         style={{ borderBottom: isOpen ? '1px solid var(--ws-ink-150)' : 'none' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Settings2 size={14} />
-          <span>Paper Settings</span>
-        </div>
+        <Settings2 size={14} />
+        <span>Paper Settings</span>
         {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </button>
 
@@ -174,18 +228,6 @@ function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onC
                 onChange={(e) => onUpdateLayout?.({ examTime: e.target.value })}
                 placeholder="3 Hours"
               />
-            </div>
-            <div className="ws-settings-panel__row">
-              <label className="ws-settings-panel__label">Paper Type</label>
-              <select
-                className="ws-settings-panel__input"
-                value={paperType || 'standard'}
-                onChange={(e) => onChangePaperType?.(e.target.value)}
-              >
-                <option value="standard">Standard</option>
-                <option value="writable">Writable (with answer spaces)</option>
-                <option value="technical_writable">Technical Writable</option>
-              </select>
             </div>
           </div>
           <div className="ws-settings-panel__row">
@@ -297,11 +339,13 @@ export default function BuilderWorkspace({
   onChangePaperType,
   onExport,
   onFinalize,
+  onUpdateCardMarks,
 }) {
   const [libSearch, setLibSearch] = useState('');
   const [dragOverSectionId, setDragOverSectionId] = useState(null);
   const [dragOverCardId, setDragOverCardId] = useState(null);
   const [isLibraryCollapsed, setIsLibraryCollapsed] = useState(false);
+  const [isSettingsCollapsed, setIsSettingsCollapsed] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState(new Set());
   const [expandedQuestions, setExpandedQuestions] = useState(new Set());
   const [pendingFocusSectionId, setPendingFocusSectionId] = useState(null);
@@ -317,7 +361,10 @@ export default function BuilderWorkspace({
 
   const cardsById = useMemo(() => {
     const map = {};
-    cards.forEach((c) => { map[c.id] = c; });
+    cards.forEach((c) => {
+      map[c.id] = c;
+      map[String(c.id)] = c;
+    });
     return map;
   }, [cards]);
 
@@ -682,7 +729,8 @@ export default function BuilderWorkspace({
       style={{
         gridTemplateColumns: isComposeMode
           ? (isLibraryCollapsed ? '48px 1fr' : '280px 1fr')
-          : '420px minmax(0, 1fr)'
+          : (isSettingsCollapsed ? '48px 1fr' : '420px minmax(0, 1fr)'),
+        transition: 'grid-template-columns 0.3s ease'
       }}
     >
       {/* TOP: Summary bar */}
@@ -797,10 +845,47 @@ export default function BuilderWorkspace({
       <div
         ref={builderCanvasRef}
         className="ws-builder-canvas ws-fade-up"
-        style={{ animationDelay: '80ms' }}
+        style={{ 
+          animationDelay: '80ms',
+          width: isFinalizeMode ? (isSettingsCollapsed ? '48px' : '420px') : undefined,
+          minWidth: isFinalizeMode ? (isSettingsCollapsed ? '48px' : '420px') : undefined,
+          padding: isFinalizeMode && isSettingsCollapsed ? '14px 4px 72px' : undefined,
+          transition: isFinalizeMode ? 'width 0.3s ease, min-width 0.3s ease, padding 0.3s ease' : undefined,
+          overflowX: 'hidden'
+        }}
         onDragOver={(e) => updateAutoScroll(e.clientY)}
       >
         {isFinalizeMode && (
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: isSettingsCollapsed ? 'center' : 'space-between',
+              padding: '12px 14px',
+              borderBottom: isSettingsCollapsed ? 'none' : '1px solid var(--ws-ink-150)',
+              background: 'var(--ws-ink-50)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              color: 'var(--ws-ink-700)',
+              fontWeight: 600,
+              fontSize: '13px',
+              width: '100%',
+              flexShrink: 0
+            }}
+            onClick={() => setIsSettingsCollapsed((prev) => !prev)}
+            title={isSettingsCollapsed ? "Expand Settings" : "Collapse Settings"}
+          >
+            {!isSettingsCollapsed && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Settings2 size={14} />
+                Builder Settings &amp; Structure
+              </span>
+            )}
+            {isSettingsCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </div>
+        )}
+
+        {isFinalizeMode && !isSettingsCollapsed && (
           <>
             <PaperSettingsPanel
               builderLayout={builderLayout}
@@ -966,7 +1051,7 @@ export default function BuilderWorkspace({
                                   </div>
                                 </div>
                                 <div className="ws-builder-row__right">
-                                  <div className="ws-builder-row__marks">{q.marks || 0} Marks</div>
+                                  <EditableMarks cardId={q.id} initialMarks={q.marks || 0} onUpdateCardMarks={onUpdateCardMarks} />
                                   <button
                                     type="button"
                                     className="ws-builder-row__expand"

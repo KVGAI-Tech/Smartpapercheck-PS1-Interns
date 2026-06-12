@@ -466,21 +466,43 @@ const DashboardLayout = ({ children }) => {
       title = "";
       subtitle = "";
       breadcrumbItems = [];
-    } else if (path.includes("/evaluations")) {
-      title = state.examName || "Exam Evaluations";
+    } else if (path.includes("/evaluations") || path.includes("/evaluate") || path.includes("/conduct-review")) {
+      title = "Evaluation";
       subtitle = state.examSubtitle || "";
+      
+      const courseIdMatch = path.match(/\/courses\/([a-zA-Z0-9_-]+)/);
+      const courseUrl = courseIdMatch ? `/courses/${courseIdMatch[1]}` : undefined;
+
       breadcrumbItems = [
         { label: "Courses", to: "/courses" },
-        { label: state.courseName || "Course" },
+        { label: state.courseName || "Course", to: state.courseId ? `/courses/${state.courseId}` : courseUrl },
+        { label: title },
       ];
     } else if (path.startsWith("/master-exams")) {
-      title = "Master Exams";
-      breadcrumbItems = [{ label: "Master Exams" }];
+      if (path.includes("/course/")) {
+        title = state.courseName || "Master Exams";
+        subtitle = "";
+        breadcrumbItems = [
+          { label: "Master Exams", to: "/master-exams" },
+          { label: title },
+        ];
+      } else if (path !== "/master-exams" && path !== "/master-exams/") {
+        title = state.examName || state.courseName || "Master Exam Workspace";
+        subtitle = "";
+        breadcrumbItems = [
+          { label: "Master Exams", to: "/master-exams" },
+          { label: state.courseName || "Course", to: state.courseId ? `/master-exams/course/${state.courseId}` : undefined },
+          { label: title },
+        ];
+      } else {
+        title = "Master Exams";
+        breadcrumbItems = [{ label: "Master Exams" }];
+      }
     } else if (path.startsWith("/courses")) {
       if (/^\/courses\//.test(path)) {
         // Course details or nested exam pages
         title = state.courseName || "Course";
-        subtitle = state.courseCode || "";
+        subtitle = "";
         breadcrumbItems = [
           { label: "Courses", to: "/courses" },
           { label: title },

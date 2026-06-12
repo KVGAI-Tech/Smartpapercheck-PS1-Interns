@@ -52,6 +52,7 @@ import {
   reorderWorkspaceCards,
   reprocessDocument,
   updateExamDocument,
+  updateWorkspaceCard,
   uploadWorkspaceDocument,
 } from './examDocumentApi';
 import { normalizeMasterExamCard } from './masterExamCardSchema';
@@ -351,6 +352,39 @@ export default function ExamDocumentEditorPage() {
     documentsRef.current = documents;
     hasPendingRef.current = documents.some((doc) => ['pending', 'processing'].includes(doc.parsed_status));
   }, [documents]);
+
+  // Ensure layout header always has the actual course name/code and exam title, even after refresh
+  useEffect(() => {
+    if (!workspace) return;
+
+    const currentState = window.history.state?.usr || {};
+    const workspaceMeta = workspace?.builder_layout_json?.questionWorkspace || workspace?.content_json?.attrs?.questionWorkspace || {};
+
+    const expectedCourseName = workspaceMeta.courseName || workspaceMeta.course_name || '';
+    const expectedCourseCode = workspaceMeta.courseCode || workspaceMeta.course_code || '';
+    const expectedCourseId = workspaceMeta.courseId || workspaceMeta.course_id || '';
+    const expectedExamName = workspace.title || '';
+
+    if (
+      currentState.courseName === expectedCourseName &&
+      currentState.courseCode === expectedCourseCode &&
+      currentState.courseId === expectedCourseId &&
+      currentState.examName === expectedExamName
+    ) {
+      return;
+    }
+
+    navigate(window.location.pathname + window.location.search, {
+      replace: true,
+      state: {
+        ...currentState,
+        courseName: expectedCourseName,
+        courseCode: expectedCourseCode,
+        courseId: expectedCourseId,
+        examName: expectedExamName,
+      },
+    });
+  }, [workspace, navigate]);
 
   useEffect(() => {
     console.log('loadWorkspace effect triggered');
@@ -690,6 +724,37 @@ export default function ExamDocumentEditorPage() {
     }
   };
 
+  const handleUpdateCardMarks = useCallback(async (cardId, newMarks) => {
+    const marksNum = Number(newMarks) || 0;
+
+    // Optimistically update local cards state immediately
+    setCards((prev) =>
+      prev.map((card) =>
+        String(card.id) === String(cardId) ? { ...card, marks: marksNum } : card
+      )
+    );
+
+    try {
+      const savedCard = await updateWorkspaceCard(cardId, { marks: marksNum });
+      const normalized = normalizeMasterExamCard(savedCard);
+      // Sync with the actual saved card from the server
+      setCards((prev) =>
+        prev.map((card) =>
+          String(card.id) === String(cardId) ? { ...card, ...normalized } : card
+        )
+      );
+    } catch (error) {
+      toast.error(error.message || 'Failed to update marks');
+      // Refetch cards to restore correct state from DB
+      try {
+        const workspaceCards = await fetchWorkspaceCards(documentId);
+        setCards((workspaceCards || []).map((card) => normalizeMasterExamCard(card)));
+      } catch {
+        // quiet fallback
+      }
+    }
+  }, [documentId]);
+
   const handleCreateQuickQuestion = async (payload) => {
     const savedCard = await createWorkspaceCard(documentId, {
       ...payload,
@@ -824,7 +889,7 @@ export default function ExamDocumentEditorPage() {
   // Calculate paper counts
   const sourcesCount = documents.length;
   const questionsCount = cards.length;
-  const addedMarks = sections.reduce((sum, sec) => sum + (sec.cardIds || []).reduce((s, id) => s + (Number(cards.find(c => c.id === id)?.marks) || 0), 0), 0);
+  const addedMarks = sections.reduce((sum, sec) => sum + (sec.cardIds || []).reduce((s, id) => s + (Number(cards.find(c => String(c.id) === String(id))?.marks) || 0), 0), 0);
   const totalMarks = workspace.paper_settings_json?.totalMarks || 100;
 
   return (
@@ -834,6 +899,7 @@ export default function ExamDocumentEditorPage() {
           title: workspace.title || 'Untitled Paper',
           duration: workspace.paper_settings_json?.duration || '3 Hours',
           totalMarks: totalMarks,
+          addedMarks: addedMarks,
           subject: workspaceMeta?.courseName || 'Subject',
         }}
         courseContext={{
@@ -914,6 +980,7 @@ export default function ExamDocumentEditorPage() {
               institution: 'University',
             }}
             onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
+            onUpdateCardMarks={handleUpdateCardMarks}
           />
         )}
 
@@ -976,6 +1043,7 @@ export default function ExamDocumentEditorPage() {
               }
             }}
             onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
+            onUpdateCardMarks={handleUpdateCardMarks}
           />
         )}
       </div>

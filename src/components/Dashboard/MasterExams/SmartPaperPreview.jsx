@@ -321,18 +321,7 @@ export default function SmartPaperPreview({
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-slate-200/80 bg-[#f3f5f2] shadow-[0_20px_50px_rgba(15,23,42,0.05)]">
-      <div className="border-b border-slate-200/80 bg-white/90 px-5 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">Live Paper Preview</div>
-            <h3 className="mt-1 text-base font-semibold text-slate-900">{title || 'Untitled Paper'}</h3>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#eef6f3] px-3 py-1 text-[11px] font-bold text-accent">
-            <TemplateIcon className="h-3.5 w-3.5" />
-            {paperTypeMeta.shortLabel}
-          </div>
-        </div>
-      </div>
+
 
       <div className="flex-1 overflow-y-auto bg-[#edf1ec] p-5">
         <div className="space-y-6">

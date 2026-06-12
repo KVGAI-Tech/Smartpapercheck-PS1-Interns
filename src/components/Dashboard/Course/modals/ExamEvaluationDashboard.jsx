@@ -70,7 +70,8 @@ const computeStats = (values) => {
 const buildHistogram = ({ values, maxValue, binSize }) => {
   const nums = (values || []).filter((v) => Number.isFinite(v));
   const safeMax = Number.isFinite(maxValue) && maxValue > 0 ? maxValue : 100;
-  const safeBin = Number.isFinite(binSize) && binSize > 0 ? binSize : 10;
+  const parsedBin = Number(binSize);
+  const safeBin = Number.isFinite(parsedBin) && parsedBin > 0 ? parsedBin : 1;
   const binsCount = Math.max(1, Math.ceil(safeMax / safeBin));
   const bins = Array.from({ length: binsCount }, (_, i) => ({
     from: i * safeBin,
@@ -794,7 +795,7 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
   const [showStudentDetail, setShowStudentDetail] = useState(false);
 
   const [marksMode, setMarksMode] = useState("marks"); // marks | percent
-  const [binSize, setBinSize] = useState(10);
+  const [binSize, setBinSize] = useState(1);
   const [hoverBin, setHoverBin] = useState(null);
 
   // Model comparison state
@@ -1684,13 +1685,35 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
     return sorted.map((student) => {
       const enrollmentId = String(student.enrollment_id);
       
-      // Get comparison data from cache or use current marks
+      // Get comparison data from cache, model_marks, evaluation_metadata, or use current marks
       const compData = comparisonDataCache[student.enrollment_id];
+      const modelMarks = student.model_marks || {};
+      const metadata = student.evaluation_metadata || {};
       
+      const getModelMarks = (modelKey) => {
+        // 1. Try model_marks
+        if (modelMarks && modelMarks[modelKey] !== undefined && modelMarks[modelKey] !== null) {
+          return modelMarks[modelKey];
+        }
+        // 2. Try evaluation_metadata (SQL)
+        if (metadata) {
+          if (modelKey === "current") {
+            return metadata.current?.marks ?? metadata.openai?.marks ?? metadata.gpt?.marks ?? metadata.chatgpt?.marks ?? null;
+          }
+          if (modelKey === "gemini") {
+            return metadata.gemini?.marks ?? metadata.google?.marks ?? metadata.google_gemini?.marks ?? null;
+          }
+          return metadata[modelKey]?.marks ?? null;
+        }
+        return null;
+      };
+
       const currentMarks = compData?.models?.current?.marks ?? 
+                          getModelMarks("current") ??
                           (normalizeModel(student.evaluation_model) === "current" ? student.marks_obtained : null);
       const geminiMarks = compData?.models?.gemini?.marks ?? 
-                         (normalizeModel(student.evaluation_model) === "gemini" ? student.marks_obtained : null);
+                          getModelMarks("gemini") ??
+                          (normalizeModel(student.evaluation_model) === "gemini" ? student.marks_obtained : null);
       
       const studentMaxMarks = student.max_marks || maxMarks;
       
@@ -2585,7 +2608,23 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
                     min={1}
                     max={marksMode === "percent" ? 50 : Math.max(1, Math.floor(maxMarks / 2))}
                     value={binSize}
-                    onChange={(e) => setBinSize(Number(e.target.value) || 10)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setBinSize(val === "" ? "" : Number(val));
+                    }}
+                    onBlur={() => {
+                      if (binSize === "" || Number(binSize) <= 0) {
+                        setBinSize(1);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        if (binSize === "" || Number(binSize) <= 0) {
+                          setBinSize(1);
+                        }
+                        e.target.blur();
+                      }
+                    }}
                     className="w-16 px-2 py-1 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300"
                   />
                 </div>
@@ -3481,6 +3520,10 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
             courseId={courseId}
             enrollmentId={selectedEnrollmentId}
             model={selectedModel}
+            onClose={() => {
+              setShowStudentDetail(false);
+              setSelectedEnrollmentId(null);
+            }}
           />
         )}
       </Suspense>

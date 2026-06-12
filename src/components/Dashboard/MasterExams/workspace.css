@@ -2001,3 +2001,13 @@
   border-top: 1px solid #eee;
   padding-top: 10px;
 }
+
+/* Hide number input spin buttons in editable marks badge */
+.ws-builder-row__marks input[type="number"]::-webkit-outer-spin-button,
+.ws-builder-row__marks input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ws-builder-row__marks input[type="number"] {
+  -moz-appearance: textfield;
+}

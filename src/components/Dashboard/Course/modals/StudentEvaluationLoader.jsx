@@ -664,58 +664,43 @@ const StudentEvaluationLoader = ({
               <ArrowLeft className="w-5 h-5 text-slate-500" />
             </motion.button>
 
-            <div className="min-w-0 space-y-1">
-              <Breadcrumbs
-                items={[
-                  { label: "Courses", to: "/courses" },
-                  {
-                    label: courseName,
-                    to: courseId ? `/courses/${courseId}` : "/courses",
-                  },
-                  { label: examName || "Exam Evaluations" },
-                  { label: "Student Result" },
-                ]}
-              />
+            <div className="min-w-0 space-y-0.5 pt-0.5">
+              <div className="flex items-center text-sm text-slate-500 mb-1">
+                <Breadcrumbs
+                  items={[
+                    { label: "Courses", to: "/courses" },
+                    {
+                      label: courseName,
+                      to: courseId ? `/courses/${courseId}` : "/courses",
+                    },
+                    {
+                      label: examName || "Evaluation",
+                      onClick: onClose,
+                    },
+                    { label: "Student Result" },
+                  ]}
+                />
+              </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg md:text-xl font-semibold text-gray-900">
-                  Results
+                <h1 className="text-lg font-semibold text-gray-900 tracking-tight leading-tight">
+                  {studentData?.student ? studentData.student.name : "Results"}
                 </h1>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-900/5 text-slate-700 border border-slate-200">
-                  {studentData?.evaluation_status || "Pending"}
-                </span>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white text-slate-700 border border-slate-200">
-                  Model: {displayModelName(model)}
-                </span>
               </div>
 
               {studentData?.student && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.15 }}
-                  className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600"
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <User className="w-4 h-4 text-slate-400" />
-                    <span className="font-medium text-slate-800 truncate">
-                      {studentData.student.name}
-                    </span>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                  <span className="font-medium">#{studentData.student.roll_number}</span>
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{studentData.student.email}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Hash className="w-4 h-4 text-slate-400" />
-                    <span className="truncate">{studentData.student.roll_number}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Mail className="w-4 h-4 text-slate-400" />
-                    <span className="truncate">{studentData.student.email}</span>
-                  </div>
-                </motion.div>
+                </div>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 justify-between lg:justify-end">
+          <div className="flex flex-col items-end gap-1.5 justify-center lg:justify-end">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -725,6 +710,15 @@ const StudentEvaluationLoader = ({
               <div className="hidden sm:block text-xs text-gray-500">Total</div>
               <ScoreDisplay marks={totalMarks} maxMarks={maxTotalMarks} />
             </motion.div>
+            
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200"
+            >
+              {displayModelName(model)}
+            </motion.span>
 
             {/* <motion.div
               className="flex items-center gap-1"

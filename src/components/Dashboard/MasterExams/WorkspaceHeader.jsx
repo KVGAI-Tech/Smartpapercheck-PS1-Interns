@@ -10,17 +10,10 @@ export default function WorkspaceHeader({ paper, courseContext, step, onBack, on
   const subject = paper?.subject || courseContext?.name || '';
   const duration = paper?.duration || '3 Hours';
   const totalMarks = paper?.totalMarks || 100;
+  const addedMarks = paper?.addedMarks;
 
   return (
-    <div className="ws-header">
-      <div className="ws-header__title">
-        <h1 className="ws-header__h1">
-          {title}
-        </h1>
-        <div className="ws-header__sub">
-          {[code, duration, `${totalMarks} Marks`].filter(Boolean).join(' • ')}
-        </div>
-      </div>
+    <div className="ws-header" style={{ justifyContent: 'flex-end', minHeight: 'auto', padding: '12px 24px', borderBottom: 'none' }}>
       <div style={{ display: 'flex', gap: 10 }}>
         {step !== 'import' && (
           <button type="button" className="ws-btn" onClick={onBack}>

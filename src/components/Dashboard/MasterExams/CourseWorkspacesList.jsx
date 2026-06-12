@@ -482,7 +482,10 @@ function WorkspacePreviewModal({ workspaceId, onClose }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-8">
       <div className="bg-white rounded-[30px] shadow-2xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
-          <h3 className="text-lg font-bold text-slate-900 line-clamp-1">{previewData?.title || 'Preview Workspace'}</h3>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 line-clamp-1">{previewData?.title || 'Preview Workspace'}</h3>
+            <div className="text-xs text-slate-500 font-medium mt-0.5">Live Preview</div>
+          </div>
           <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition text-slate-600">
             <X className="h-5 w-5" />
           </button>
@@ -557,6 +560,29 @@ const CourseWorkspacesList = () => {
   useEffect(() => {
     loadCourseAndWorkspaces();
   }, [loadCourseAndWorkspaces]);
+
+  // Ensure layout header always has the actual course name/code, even after refresh
+  useEffect(() => {
+    if (!course) return;
+
+    const currentState = window.history.state?.usr || {};
+
+    if (
+      currentState.courseName === course.course_name &&
+      currentState.courseCode === course.course_code
+    ) {
+      return;
+    }
+
+    navigate(window.location.pathname + window.location.search, {
+      replace: true,
+      state: {
+        ...currentState,
+        courseName: course.course_name,
+        courseCode: course.course_code,
+      },
+    });
+  }, [course, navigate]);
 
   const handleCreateWorkspace = async () => {
     try {
@@ -643,21 +669,15 @@ const CourseWorkspacesList = () => {
 
   return (
     <div className="mx-auto w-full max-w-[1360px] px-5 py-6 lg:px-8">
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="mb-8 flex items-center justify-between gap-4 border-b border-gray-100 pb-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/master-exams')}
-            className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-[#6e8f89] transition-colors hover:text-[#365955]"
+            className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-center"
+            aria-label="Back to courses"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Courses
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-[#082038] md:text-3xl">
-            {course.course_name}
-          </h1>
-          <p className="mt-1 text-sm text-[#5c7281]">
-            {course.course_code} • Question Workspaces
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center rounded-lg border border-[#d9e8e4] bg-white p-1">
@@ -700,7 +720,7 @@ const CourseWorkspacesList = () => {
                 key={workspace.id}
                 workspace={workspace}
                 course={course}
-                onOpen={() => navigate(`/master-exams/${workspace.id}?courseId=${course.id}`)}
+                onOpen={() => navigate(`/master-exams/${workspace.id}?courseId=${course.id}`, { state: { courseId: course.id, courseName: course.course_name, courseCode: course.course_code, examName: workspace.title } })}
                 onPreview={() => setPreviewWorkspaceId(workspace.id)}
                 onDelete={handleDeleteWorkspace}
                 onRename={handleRenameWorkspace}
@@ -714,7 +734,7 @@ const CourseWorkspacesList = () => {
                 key={workspace.id}
                 workspace={workspace}
                 course={course}
-                onOpen={() => navigate(`/master-exams/${workspace.id}?courseId=${course.id}`)}
+                onOpen={() => navigate(`/master-exams/${workspace.id}?courseId=${course.id}`, { state: { courseId: course.id, courseName: course.course_name, courseCode: course.course_code, examName: workspace.title } })}
                 onPreview={() => setPreviewWorkspaceId(workspace.id)}
                 onDelete={handleDeleteWorkspace}
                 onRename={handleRenameWorkspace}

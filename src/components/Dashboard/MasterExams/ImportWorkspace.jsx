@@ -143,14 +143,23 @@ export default function ImportWorkspace({
                     borderRadius: '50%',
                     animation: 'ws-spin 0.8s linear infinite'
                   }} />
-                  <Sparkles size={24} style={{
+                  <div style={{
                     position: 'absolute',
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    color: 'var(--ws-brand-700)',
-                    animation: 'ws-pulseDot 1.5s infinite ease-in-out'
-                  }} />
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '24px',
+                    height: '24px'
+                  }}>
+                    <Sparkles size={24} style={{
+                      color: 'var(--ws-brand-700)',
+                      animation: 'ws-pulseDot 1.5s infinite ease-in-out',
+                      display: 'block'
+                    }} />
+                  </div>
                 </div>
                 <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ws-ink-900)' }}>
                   {uploadBatchTotal > 1

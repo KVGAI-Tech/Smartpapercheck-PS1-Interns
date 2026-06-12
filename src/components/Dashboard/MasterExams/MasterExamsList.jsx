@@ -187,7 +187,7 @@ const MasterExamsList = () => {
                   course={course}
                   workspacesCount={count}
                   finalizedCount={finalizedCountByCourseId.get(String(course.id)) || 0}
-                  onOpen={() => navigate(`/master-exams/course/${course.id}`)}
+                  onOpen={() => navigate(`/master-exams/course/${course.id}`, { state: { courseId: course.id, courseName: course.course_name, courseCode: course.course_code } })}
                 />
               </div>
             );

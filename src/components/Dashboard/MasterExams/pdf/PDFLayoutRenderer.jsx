@@ -149,7 +149,7 @@ function PdfQuestionBlock({ item, paperSettings }) {
         {item.images?.length > 0 && <PdfQuestionImages images={item.images} layoutMode={item.layoutMode} />}
         {item.answerArea && <PdfWritableAnswerArea answerArea={item.answerArea} />}
       </View>
-      {paperSettings.showQuestionMarks !== false && item.marks > 0 && (
+      {paperSettings.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && (
         <View style={tw('ml-2')}>
           <Text style={tw('text-[11px] font-bold text-slate-900')}>[{item.marks} Marks]</Text>
         </View>

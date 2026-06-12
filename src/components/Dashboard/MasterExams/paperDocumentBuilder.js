@@ -632,7 +632,7 @@ function estimateBlockHeight(block) {
   if (!block) return 0;
 
   if (block.type === 'paragraph') {
-    return Math.max(24, estimateLinesFromText(extractPlainTextFromInlines(block.inlines)) * 18 + 6);
+    return Math.max(26, estimateLinesFromText(extractPlainTextFromInlines(block.inlines)) * 22 + 8);
   }
 
   if (block.type === 'list') {
@@ -640,22 +640,28 @@ function estimateBlockHeight(block) {
       (sum, item) => sum + Math.max(1, estimateLinesFromText(extractPlainTextFromInlines(item.inlines))),
       0
     );
-    return Math.max(30, lines * 18 + 8);
+    const itemGaps = Math.max(0, (block.items || []).length - 1) * 4;
+    return Math.max(30, lines * 22 + 8 + itemGaps);
   }
 
   if (block.type === 'options') {
-    const lines = (block.options || []).reduce((sum, option) => {
-      const optionText = option.blocks
-        .map((optionBlock) => {
-          if (optionBlock.type === 'paragraph') return extractPlainTextFromInlines(optionBlock.inlines);
-          if (optionBlock.type === 'list') return optionBlock.items.map((item) => extractPlainTextFromInlines(item.inlines)).join(' ');
-          return '';
-        })
-        .join(' ');
-      return sum + Math.max(1, estimateLinesFromText(optionText));
-    }, 0);
-    const rows = Math.max(1, Math.ceil((block.options || []).length / 2));
-    return Math.max(54, rows * 28 + lines * 6 + 12);
+    const optionHeights = (block.options || []).map((option) => {
+      const optionHeight = (option.blocks || []).reduce((sum, optBlock) => {
+        return sum + estimateBlockHeight(optBlock);
+      }, 0);
+      return optionHeight + 26;
+    });
+
+    let totalHeight = 0;
+    for (let i = 0; i < optionHeights.length; i += 2) {
+      const h1 = optionHeights[i] || 0;
+      const h2 = optionHeights[i + 1] || 0;
+      totalHeight += Math.max(h1, h2);
+      if (i > 0) {
+        totalHeight += 16;
+      }
+    }
+    return Math.max(54, totalHeight + 12);
   }
 
   return 0;
@@ -698,9 +704,10 @@ function splitBlocksIntoSegments(blocks = [], lineBudget = DEFAULT_BODY_LINES_PE
       return segments;
     }
 
-    if (lastSegment.estimatedHeight + fragmentHeight <= lineBudget * 22) {
+    const blockGap = 12;
+    if (lastSegment.estimatedHeight + fragmentHeight + blockGap <= lineBudget * 22) {
       lastSegment.blocks.push(fragment);
-      lastSegment.estimatedHeight += fragmentHeight;
+      lastSegment.estimatedHeight += fragmentHeight + blockGap;
       return segments;
     }
 
@@ -750,8 +757,8 @@ function estimateAnswerAreaHeight(answerArea) {
 export function buildQuestionBlock(card, context = {}) {
   const paperSettings = normalizePaperSettings(context.paperSettings);
   let rawBody = ensureString(card?.question_body);
-  // Strip trailing marks like [10 Marks] or [10]
-  rawBody = rawBody.replace(/\s*\[\s*\d+(\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]\s*(<\/p>)?\s*$/i, '$2');
+  // Strip trailing marks like [10 Marks] or [10] at the end of elements, paragraphs, or lines
+  rawBody = rawBody.replace(/\s*\[\s*\d+(\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]\s*(?=(?:<\/p>|<\/li>|<br\s*\/?>|\n|$))/gi, '');
   
   const bodyAst = parseHtmlToAst(rawBody);
   const bodyBlocks = [...bodyAst.blocks];
@@ -801,7 +808,11 @@ export function buildQuestionBlock(card, context = {}) {
     rawCard: card,
   };
 
-  const bodyHeight = bodyBlocks.reduce((sum, block) => sum + estimateBlockHeight(block), 0);
+  const blockGap = 12;
+  const bodyHeight = bodyBlocks.reduce((sum, block, idx) => {
+    const gap = idx > 0 ? blockGap : 0;
+    return sum + estimateBlockHeight(block) + gap;
+  }, 0);
   questionBlock.estimatedHeight = 26 + bodyHeight + estimateImagesHeight(questionBlock) + estimateAnswerAreaHeight(answerArea);
   questionBlock.allowPageSplit = questionBlock.estimatedHeight > 240 || bodyBlocks.length > 2 || ((answerArea.mode === 'lined' || answerArea.mode === 'steps') && answerArea.lines > 6);
   return questionBlock;
@@ -987,7 +998,11 @@ function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, p
 }
 
 function estimateSectionHeaderHeight(section) {
-  const instructionHeight = (section.instructionsAst || []).reduce((sum, block) => sum + estimateBlockHeight(block), 0);
+  const blockGap = 12;
+  const instructionHeight = (section.instructionsAst || []).reduce((sum, block, idx) => {
+    const gap = idx > 0 ? blockGap : 0;
+    return sum + estimateBlockHeight(block) + gap;
+  }, 0);
   return 46 + instructionHeight;
 }
 
@@ -1151,7 +1166,8 @@ export function summarizePaperDocument(paperDocument = null) {
   const expectedQuestionOrder = (paperDocument?.sections || []).flatMap((section) => (
     section.questionBlocks || []
   ).map((questionBlock) => String(questionBlock.id)));
-  const duplicateQuestionIds = renderedQuestionIds.filter(
+  const consecutiveDedupedIds = renderedQuestionIds.filter((id, index, arr) => index === 0 || id !== arr[index - 1]);
+  const duplicateQuestionIds = consecutiveDedupedIds.filter(
     (questionId, index, list) => list.indexOf(questionId) !== index
   );
 

@@ -121,7 +121,7 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
                     )}
                   </div>
                   <div className="ws-paper-preview-q__right">
-                    {paperSettings?.showQuestionMarks !== false && item.marks > 0 && `[${item.marks}]`}
+                    {paperSettings?.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && `[${item.marks}]`}
                   </div>
                 </div>
               );
