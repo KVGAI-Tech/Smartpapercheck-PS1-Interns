@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 // Breadcrumbs are rendered by the main layout; avoid duplicating them here.
@@ -90,6 +91,7 @@ const CourseDetails = () => {
     const { courseId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -306,6 +308,8 @@ const CourseDetails = () => {
                         setStudents(prev => [...prev, response.data]);
                         showToast(`Student added successfully`);
                     }
+                    queryClient.invalidateQueries({ queryKey: ['students', courseId] });
+                    queryClient.invalidateQueries({ queryKey: ['course-students', courseId] });
                     break;
                 case 'instructor':
                     response = await addInstructor(courseId, data);
@@ -346,6 +350,8 @@ const CourseDetails = () => {
                     setUploadStatus('completed');
                     const studentsResponse = await getCourseStudents(courseId);
                     setStudents(studentsResponse.data || []);
+                    queryClient.invalidateQueries({ queryKey: ['students', courseId] });
+                    queryClient.invalidateQueries({ queryKey: ['course-students', courseId] });
                     showToast('Students imported successfully');
 
                     setTimeout(() => {
@@ -406,6 +412,8 @@ const CourseDetails = () => {
                 case 'student':
                     await removeStudent(courseId, id);
                     setStudents(prev => prev.filter(item => item.id !== id));
+                    queryClient.invalidateQueries({ queryKey: ['students', courseId] });
+                    queryClient.invalidateQueries({ queryKey: ['course-students', courseId] });
                     break;
                 case 'instructor':
                     setInstructors(prev => prev.filter(item => item.id !== id));
