@@ -552,12 +552,16 @@ export default function ExamDocumentEditorPage() {
 
   const handleDeleteDocument = async (docId) => {
     if (!window.confirm('Delete this source and all its generated questions?')) return;
+    const previousDocuments = [...documents];
+    setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
     try {
       await deleteWorkspaceDocument(documentId, docId);
       toast.success('Source deleted');
       await loadWorkspace();
     } catch (error) {
+      setDocuments(previousDocuments);
       toast.error(error.message || 'Failed to delete source');
+      await loadWorkspace();
     }
   };
 

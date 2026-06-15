@@ -2011,3 +2011,104 @@
 .ws-builder-row__marks input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Custom structured typeset exam paper classes */
+.question-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+  width: 100%;
+}
+.question-number {
+  font-weight: bold;
+  font-size: 14.5px;
+  margin-right: 8px;
+}
+.question-title {
+  font-weight: bold;
+  font-size: 14.5px;
+  flex: 1;
+  padding-right: 16px;
+}
+.question-marks {
+  font-weight: bold;
+  font-size: 14.5px;
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+}
+.question-body {
+  padding-left: 8px;
+}
+
+.ws-paper-preview-p {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.ws-paper-preview-context-header {
+  margin-top: 14px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+}
+
+.ws-paper-preview-list {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding-left: 24px;
+}
+
+.ws-paper-preview-li {
+  margin-bottom: 6px;
+  line-height: 1.6;
+  font-size: 13.5px;
+}
+
+.ws-list-alpha {
+  list-style-type: lower-alpha;
+}
+.ws-list-roman {
+  list-style-type: lower-roman;
+}
+.ws-list-decimal {
+  list-style-type: decimal;
+}
+.ws-list-bullet {
+  list-style-type: disc;
+}
+
+.ws-subquestion-marks {
+  float: right;
+  font-weight: bold;
+  font-size: 13px;
+  color: #000;
+  margin-left: 8px;
+}
+
+.ws-paper-preview-q__images {
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.ws-paper-preview-pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  background-color: #f8fafc;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  margin: 8px 0;
+  color: #1e293b;
+  overflow-x: auto;
+}

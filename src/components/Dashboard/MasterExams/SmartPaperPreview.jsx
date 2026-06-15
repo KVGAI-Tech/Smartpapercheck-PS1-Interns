@@ -1,17 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useMemo } from 'react';
-import { FileText, MonitorSmartphone, PenSquare } from 'lucide-react';
-
-import { getPaperTypeMeta } from './paperBuilderSchema';
 import { buildPaperDocument, isWritablePaperType } from './paperDocumentBuilder';
 import WritableAnswerArea from './WritableAnswerArea';
-
-const typeIcons = {
-  standard: FileText,
-  online: MonitorSmartphone,
-  writable: PenSquare,
-  technical_writable: PenSquare,
-};
 
 function PreviewInlineContent({ inlines = [] }) {
   return inlines.map((inline, index) => {
@@ -34,7 +24,7 @@ function PreviewInlineContent({ inlines = [] }) {
 
 function PreviewBlocks({ blocks = [] }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {blocks.map((block, index) => {
         if (block.type === 'paragraph') {
           return (
@@ -45,18 +35,41 @@ function PreviewBlocks({ blocks = [] }) {
         }
 
         if (block.type === 'list') {
-          const Tag = block.ordered ? 'ol' : 'ul';
           return (
-            <Tag
-              key={index}
-              className={`space-y-1 pl-5 text-[13px] leading-7 text-slate-900 ${block.ordered ? 'list-decimal' : 'list-disc'}`}
-            >
-              {(block.items || []).map((item, itemIndex) => (
-                <li key={itemIndex}>
-                  <PreviewInlineContent inlines={item.inlines} />
-                </li>
-              ))}
-            </Tag>
+            <div key={index} className="space-y-1 pl-4">
+              {(block.items || []).map((item, itemIndex) => {
+                const marksInline = item.inlines.find(inf => inf.marks?.subquestionMarks);
+                const normalInlines = item.inlines.filter(inf => !inf.marks?.subquestionMarks);
+                
+                let marker = '•';
+                if (block.ordered) {
+                  if (block.listStyleType === 'alpha') {
+                    marker = `(${String.fromCharCode(97 + itemIndex)})`;
+                  } else if (block.listStyleType === 'roman') {
+                    const romanNumerals = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+                    marker = `(${romanNumerals[itemIndex] || itemIndex + 1})`;
+                  } else {
+                    marker = `${itemIndex + 1}.`;
+                  }
+                }
+                
+                return (
+                  <div key={itemIndex} className="flex items-start justify-between text-[13px] leading-7 text-slate-900 mb-1">
+                    <div className="flex items-start gap-2 flex-1">
+                      <span className="font-semibold text-slate-700 min-w-[20px]">{marker}</span>
+                      <div className="flex-1">
+                        <PreviewInlineContent inlines={normalInlines} />
+                      </div>
+                    </div>
+                    {marksInline && (
+                      <span className="font-bold text-slate-800 ml-2">
+                        {marksInline.text}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           );
         }
 
@@ -70,6 +83,14 @@ function PreviewBlocks({ blocks = [] }) {
                 </div>
               ))}
             </div>
+          );
+        }
+
+        if (block.type === 'pre') {
+          return (
+            <pre key={index} className="whitespace-pre-wrap font-mono text-[12px] leading-snug text-slate-800 bg-slate-50 p-3 rounded-lg border border-slate-200 overflow-x-auto mt-2 mb-2">
+              {block.text}
+            </pre>
           );
         }
 
@@ -190,11 +211,19 @@ function PreviewQuestionSegment({ item, paperSettings, paperType, isSelected, on
       className={`print-question-block rounded-[20px] px-2 py-1 transition ${isSelected ? 'bg-[#f7fbf9] ring-1 ring-accent/25' : ''}`}
       onClick={() => onSelectCard?.(item.cardId)}
     >
-      <div className="flex items-start gap-3">
-        <div className="min-w-[30px] pt-0.5 font-bold text-slate-900">
-          {item.showNumber ? `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel})` : ''}
-        </div>
-        <div className="flex-1">
+      <div className="flex flex-col gap-2 w-full">
+        {item.isFirstSegment && (
+          <div className="flex items-baseline justify-between mb-2">
+            <div className="font-bold text-slate-900 text-sm flex-1 pr-4">
+              {item.showNumber ? `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}. ` : ''}
+              {item.title || ''}
+            </div>
+            {item.showMarks && paperSettings.showQuestionMarks !== false && item.marks > 0 && (
+              <div className="ml-3 shrink-0 font-bold text-slate-900 text-xs">[{item.marks} Marks]</div>
+            )}
+          </div>
+        )}
+        <div className="pl-1">
           {item.blocks?.length > 0 && <PreviewBlocks blocks={item.blocks} />}
           {item.images?.length > 0 && <PreviewQuestionImages images={item.images} layoutMode={item.layoutMode} />}
           {item.answerArea && <WritableAnswerArea answerArea={item.answerArea} />}
@@ -205,9 +234,6 @@ function PreviewQuestionSegment({ item, paperSettings, paperType, isSelected, on
             paperType={paperType}
           />
         </div>
-        {item.showMarks && paperSettings.showQuestionMarks !== false && item.marks > 0 && (
-          <div className="ml-3 shrink-0 font-bold text-slate-900">[{item.marks} Marks]</div>
-        )}
       </div>
     </div>
   );
@@ -297,7 +323,6 @@ function PageHeader({ header, page, builderLayout }) {
 }
 
 export default function SmartPaperPreview({
-  title,
   cards = [],
   paperType = 'standard',
   builderLayout = {},
@@ -316,8 +341,6 @@ export default function SmartPaperPreview({
     paperSettings,
     paperType,
   }), [builderLayout, cards, paperDocument, paperSettings, paperType, sections]);
-  const paperTypeMeta = getPaperTypeMeta(paperType);
-  const TemplateIcon = typeIcons[paperType] || FileText;
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-slate-200/80 bg-[#f3f5f2] shadow-[0_20px_50px_rgba(15,23,42,0.05)]">

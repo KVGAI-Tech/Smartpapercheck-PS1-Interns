@@ -52,8 +52,9 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
           <div
             className="ws-paper-preview-content"
             style={{
-              position: 'relative',
-              minHeight: page.contentHeight || 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
             }}
           >
             {page.items.length === 0 ? (
@@ -67,11 +68,7 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
                     key={item.id}
                     className="ws-paper-preview-section"
                     style={{
-                      position: 'absolute',
-                      top: item.yOffset || 0,
-                      left: 0,
-                      right: 0,
-                      marginBottom: 0,
+                      position: 'relative',
                     }}
                   >
                     <div className="ws-paper-preview-section__head">
@@ -91,21 +88,19 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
 
               // Question Segment
               return (
-                <div
-                  key={item.id}
-                  className="ws-paper-preview-q"
-                  style={{
-                    position: 'absolute',
-                    top: item.yOffset || 0,
-                    left: 0,
-                    right: 0,
-                    marginBottom: 0,
-                  }}
-                >
-                  <div className="ws-paper-preview-q__left">
-                    {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}.`}
-                  </div>
-                  <div className="ws-paper-preview-q__body">
+                <div key={item.id} className="ws-paper-preview-q question-container">
+                  {item.isFirstSegment && (
+                    <div className="question-header">
+                      <span className="question-number">
+                        {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}.`}
+                      </span>
+                      <span className="question-title">{item.title || ''}</span>
+                      {paperSettings?.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && (
+                        <span className="question-marks">[{item.marks} Marks]</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="ws-paper-preview-q__body question-body">
                     {(item.body?.blocks || item.blocks) && (item.body?.blocks || item.blocks).length > 0 && (
                       <BlockRenderer blocks={item.body?.blocks || item.blocks} />
                     )}
@@ -119,9 +114,6 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
                     {item.answerArea && item.answerArea.mode !== 'none' && (
                       <AnswerAreaRenderer area={item.answerArea} />
                     )}
-                  </div>
-                  <div className="ws-paper-preview-q__right">
-                    {paperSettings?.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && `[${item.marks}]`}
                   </div>
                 </div>
               );
@@ -153,13 +145,27 @@ function BlockRenderer({ blocks }) {
         }
         if (block.type === 'list') {
           const Tag = block.ordered ? 'ol' : 'ul';
+          const listClass = block.listStyleType === 'alpha'
+            ? 'ws-list-alpha'
+            : block.listStyleType === 'roman'
+              ? 'ws-list-roman'
+              : 'ws-list-decimal';
           return (
-            <Tag key={idx} className="ws-paper-preview-list">
-              {block.items.map((item, itemIdx) => (
-                <li key={itemIdx}>
-                  <InlineRenderer inlines={item.inlines} />
-                </li>
-              ))}
+            <Tag key={idx} className={`ws-paper-preview-list ${block.ordered ? listClass : 'ws-list-bullet'}`}>
+              {block.items.map((item, itemIdx) => {
+                const marksInline = item.inlines.find(inf => inf.marks?.subquestionMarks);
+                const normalInlines = item.inlines.filter(inf => !inf.marks?.subquestionMarks);
+                return (
+                  <li key={itemIdx} className="ws-paper-preview-li">
+                    {marksInline && (
+                      <span className="ws-subquestion-marks">{marksInline.text}</span>
+                    )}
+                    <span className="ws-li-content">
+                      <InlineRenderer inlines={normalInlines} />
+                    </span>
+                  </li>
+                );
+              })}
             </Tag>
           );
         }
@@ -177,6 +183,13 @@ function BlockRenderer({ blocks }) {
             </div>
           );
         }
+        if (block.type === 'pre') {
+          return (
+            <div key={idx} className="ws-paper-preview-pre">
+              {block.text}
+            </div>
+          );
+        }
         return null;
       })}
     </div>
@@ -186,6 +199,12 @@ function BlockRenderer({ blocks }) {
 function InlineRenderer({ inlines }) {
   if (!inlines || !inlines.length) return null;
   return inlines.map((inline, idx) => {
+    if (inline.type === 'br') {
+      return <br key={idx} />;
+    }
+    if (inline.marks?.subquestionMarks) {
+      return <span key={idx} className="ws-subquestion-marks">{inline.text}</span>;
+    }
     let classes = [];
     if (inline.marks?.bold) classes.push('ws-bold');
     if (inline.marks?.italic) classes.push('ws-italic');
@@ -193,7 +212,7 @@ function InlineRenderer({ inlines }) {
     const className = classes.join(' ');
     
     // Add a trailing space if not the last inline to replicate PdfInlineContent behavior
-    const textContent = `${inline.text}${idx < inlines.length - 1 ? ' ' : ''}`;
+    const textContent = `${inline.text || ''}${idx < inlines.length - 1 ? ' ' : ''}`;
 
     if (className) {
       return <span key={idx} className={className}>{textContent}</span>;

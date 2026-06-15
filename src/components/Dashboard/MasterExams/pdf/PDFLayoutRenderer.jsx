@@ -15,20 +15,25 @@ import {
 import PdfWritableAnswerArea from './PdfWritableAnswerArea';
 
 function PdfInlineContent({ inlines = [] }) {
-  return inlines.map((inline, index) => (
-    <Text
-      key={index}
-      style={tw([
-        inline?.marks?.bold ? 'font-bold' : '',
-        inline?.marks?.italic ? 'italic' : '',
-        inline?.marks?.code ? 'font-mono text-[10px]' : '',
-      ]
-        .filter(Boolean)
-        .join(' '))}
-    >
-      {`${inline.text}${index < inlines.length - 1 ? ' ' : ''}`}
-    </Text>
-  ));
+  return inlines.map((inline, index) => {
+    if (inline.type === 'br') {
+      return <Text key={index}>{'\n'}</Text>;
+    }
+    return (
+      <Text
+        key={index}
+        style={tw([
+          inline?.marks?.bold ? 'font-bold' : '',
+          inline?.marks?.italic ? 'italic' : '',
+          inline?.marks?.code ? 'font-mono text-[10px]' : '',
+        ]
+          .filter(Boolean)
+          .join(' '))}
+      >
+        {`${inline.text || ''}${index < inlines.length - 1 ? ' ' : ''}`}
+      </Text>
+    );
+  });
 }
 
 function PdfBlocks({ blocks = [] }) {
@@ -46,16 +51,38 @@ function PdfBlocks({ blocks = [] }) {
         if (block.type === 'list') {
           return (
             <View key={index} style={tw('flex flex-col gap-1 pl-3')}>
-              {(block.items || []).map((item, itemIndex) => (
-                <View key={itemIndex} style={tw('flex flex-row')}>
-                  <Text style={tw('mr-2 text-[11px] text-slate-900')}>
-                    {block.ordered ? `${itemIndex + 1}.` : '•'}
-                  </Text>
-                  <Text style={tw('flex-1 text-[11px] leading-relaxed text-slate-900')}>
-                    <PdfInlineContent inlines={item.inlines} />
-                  </Text>
-                </View>
-              ))}
+              {(block.items || []).map((item, itemIndex) => {
+                const marksInline = item.inlines.find(inf => inf.marks?.subquestionMarks);
+                const normalInlines = item.inlines.filter(inf => !inf.marks?.subquestionMarks);
+                
+                let marker = '•';
+                if (block.ordered) {
+                  if (block.listStyleType === 'alpha') {
+                    marker = `(${String.fromCharCode(97 + itemIndex)})`;
+                  } else if (block.listStyleType === 'roman') {
+                    const romanNumerals = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+                    marker = `(${romanNumerals[itemIndex] || itemIndex + 1})`;
+                  } else {
+                    marker = `${itemIndex + 1}.`;
+                  }
+                }
+                
+                return (
+                  <View key={itemIndex} style={tw('flex flex-row justify-between items-start mb-1')} wrap={false}>
+                    <View style={tw('flex-1 flex flex-row items-start')}>
+                      <Text style={tw('mr-2 text-[11px] font-bold text-slate-900')}>{marker}</Text>
+                      <Text style={tw('flex-1 text-[11px] leading-relaxed text-slate-900')}>
+                        <PdfInlineContent inlines={normalInlines} />
+                      </Text>
+                    </View>
+                    {marksInline && (
+                      <Text style={tw('ml-2 text-[11px] font-bold text-slate-900')}>
+                        {marksInline.text}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           );
         }
@@ -138,22 +165,25 @@ function PdfSectionHeader({ item, paperSettings }) {
 
 function PdfQuestionBlock({ item, paperSettings }) {
   return (
-    <View style={tw('flex flex-row items-start')} wrap={false}>
-      <View style={tw('w-[28px]')}>
-        <Text style={tw('text-[11px] font-bold text-slate-900')}>
-          {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel})`}
-        </Text>
-      </View>
-      <View style={tw('flex-1')}>
+    <View style={tw('flex flex-col mb-4')} wrap={false}>
+      {item.isFirstSegment && (
+        <View style={tw('flex flex-row justify-between items-baseline mb-3 border-b border-slate-900 pb-1')}>
+          <View style={tw('flex-1 pr-4')}>
+            <Text style={tw('text-[11px] font-bold text-slate-900')}>
+              {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}. `}
+              {item.title || ''}
+            </Text>
+          </View>
+          {paperSettings.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && (
+            <Text style={tw('text-[11px] font-bold text-slate-900 shrink-0')}>[{item.marks} Marks]</Text>
+          )}
+        </View>
+      )}
+      <View style={tw('pl-2 flex-1')}>
         {(item.body?.blocks || item.blocks)?.length > 0 && <PdfBlocks blocks={item.body?.blocks || item.blocks} />}
         {item.images?.length > 0 && <PdfQuestionImages images={item.images} layoutMode={item.layoutMode} />}
         {item.answerArea && <PdfWritableAnswerArea answerArea={item.answerArea} />}
       </View>
-      {paperSettings.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && (
-        <View style={tw('ml-2')}>
-          <Text style={tw('text-[11px] font-bold text-slate-900')}>[{item.marks} Marks]</Text>
-        </View>
-      )}
     </View>
   );
 }

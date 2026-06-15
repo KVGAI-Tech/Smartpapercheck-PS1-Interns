@@ -153,6 +153,291 @@ function htmlDecode(text) {
     .replace(/&#39;/gi, "'");
 }
 
+export function parseQuestionHeaderAndTitle(text) {
+  const cleanText = text.trim();
+  const qMatch = cleanText.match(/^(Q\d+[.)]\s*)/i);
+  let qNum = '';
+  let remaining = cleanText;
+  if (qMatch) {
+    qNum = qMatch[1].trim();
+    remaining = cleanText.substring(qMatch[0].length).trim();
+  }
+  
+  // Strip leading/trailing marks like [35 Marks] from remaining for title extraction
+  const marksStripped = remaining.replace(/\[\s*\d+(?:\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]\s*/gi, '').trim();
+  const textToAnalyze = marksStripped || remaining;
+  
+  // Verb list: words that typically START the question body (imperative verbs / sentence starters)
+  const sentenceStartVerbs = /\b(Implement|Explain|Analyze|Calculate|Consider|Suppose|Write|State|Define|Compare|Contrast|Describe|List|Show|Prove|Find|Determine|Evaluate|Construct|Solve|For|Given|Using|Draw|What|How|Why|Derive|The|A|An|If|Assume|Apply|Discuss)\b/;
+  
+  // Strategy 1: Look for verb that starts after a clear sentence break (newline or period+space)
+  const sentenceBreak = textToAnalyze.match(/[.\n]\s+/);
+  if (sentenceBreak && sentenceBreak.index > 2 && sentenceBreak.index < 200) {
+    const before = textToAnalyze.substring(0, sentenceBreak.index).trim();
+    const after = textToAnalyze.substring(sentenceBreak.index).replace(/^[.\n]\s+/, '').trim();
+    // Only split if the text after the break starts with a sentence-start verb
+    if (sentenceStartVerbs.test(after.split(/\s+/)[0])) {
+      return { qNum, title: before, body: after };
+    }
+    // If the before part is short enough to be a title, use it anyway
+    if (before.length < 120) {
+      return { qNum, title: before, body: after };
+    }
+  }
+  
+  // Strategy 2: Look for first sentence-start verb with index > 0 
+  // But only if it's preceded by a space (word boundary) and the preceding text looks like a title (< 150 chars)
+  const verbPattern = new RegExp(`\\s+(${sentenceStartVerbs.source.slice(2, -2)})\\s`, 'g');
+  let verbMatch = null;
+  let match;
+  while ((match = verbPattern.exec(textToAnalyze)) !== null) {
+    const beforeText = textToAnalyze.substring(0, match.index).trim();
+    // Title must be non-empty and reasonably short
+    if (beforeText.length > 2 && beforeText.length < 150) {
+      verbMatch = match;
+      break;
+    }
+  }
+  
+  let title = '';
+  let body = remaining;
+  if (verbMatch) {
+    title = textToAnalyze.substring(0, verbMatch.index).trim();
+    body = textToAnalyze.substring(verbMatch.index).trim();
+  } else {
+    // Fallback: split on first period or colon if early
+    const splitMatch = textToAnalyze.match(/[.:]\s/);
+    if (splitMatch && splitMatch.index > 2 && splitMatch.index < 120) {
+      const possibleTitle = textToAnalyze.substring(0, splitMatch.index).trim();
+      const possibleBody = textToAnalyze.substring(splitMatch.index + 1).trim();
+      if (possibleBody) {
+        title = possibleTitle;
+        body = possibleBody;
+      }
+    }
+  }
+  return { qNum, title, body };
+}
+
+export function reconstructHtmlStructure(html = '') {
+  const preBlocks = [];
+  const withPrePlaceholders = html.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (match) => {
+    preBlocks.push(match);
+    return `\n__PRE_PLACEHOLDER_${preBlocks.length - 1}__\n`;
+  });
+
+  const imgTags = [];
+  const withPlaceholders = withPrePlaceholders.replace(/<img[^>]*>/gi, (match) => {
+    imgTags.push(match);
+    return `__IMG_PLACEHOLDER_${imgTags.length - 1}__`;
+  });
+
+  // Decode HTML first and strip tags to get clean lines
+  let text = withPlaceholders
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .trim();
+    
+  text = htmlDecode(text);
+
+  // Extract main question marks if present in the header area (first 150 chars)
+  const marksPattern = /\[\s*\d+(?:\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]/i;
+  const marksMatch = text.match(marksPattern);
+  let marksText = '';
+  if (marksMatch && marksMatch.index < 150) {
+    marksText = marksMatch[0].trim();
+    text = text.substring(0, marksMatch.index) + text.substring(marksMatch.index + marksText.length);
+    text = text.replace(/\s+/g, ' ').trim();
+  }
+  
+  const { qNum, title, body } = parseQuestionHeaderAndTitle(text);
+  
+  let processedBody = body;
+  const contextLabels = [
+    'Context:', 'Scenario:', 'Problem Statement:', 'Given:', 'Task:',
+    'Constraints:', 'Instructions:', 'Your solution should include:', 'Constraint:'
+  ];
+  
+  // Insert split markers before context labels
+  contextLabels.forEach(label => {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\s*(?=\\b${escaped})`, 'gi');
+    processedBody = processedBody.replace(regex, ' __BLOCK_SPLIT__ ');
+  });
+  
+  // Insert split markers before bullets
+  processedBody = processedBody.replace(/\s*(?=[-•●▪*+]\s+)/g, ' __BLOCK_SPLIT__ ');
+  
+  // Insert split markers before subquestions like (a), (b), (i), (ii)
+  processedBody = processedBody.replace(/\s*(?=\([a-zivx]+\)\s+)/gi, ' __BLOCK_SPLIT__ ');
+  
+  // Split by split marker and newlines
+  const rawSegments = processedBody.split(/__BLOCK_SPLIT__|\n/);
+  const segments = [];
+  rawSegments.forEach(seg => {
+    const cleanSeg = seg.trim();
+    if (!cleanSeg) return;
+    
+    // If a segment exceeds 400 characters, let's split it by sentences
+    if (cleanSeg.length > 400) {
+      const subSegs = cleanSeg.split(/(?<=\.)\s+(?=[A-Z])/);
+      subSegs.forEach(sub => {
+        const cleanSub = sub.trim();
+        if (cleanSub) segments.push(cleanSub);
+      });
+    } else {
+      segments.push(cleanSeg);
+    }
+  });
+
+  // Apply continuation merging logic
+  const mergedSegments = [];
+  segments.forEach((seg) => {
+    if (mergedSegments.length === 0) {
+      mergedSegments.push(seg);
+      return;
+    }
+    
+    const lastSeg = mergedSegments[mergedSegments.length - 1];
+    
+    const startsWithLowercase = /^[a-z]/.test(seg);
+    const isParenthesizedContinuation = /^\([^a-zivx]+\)/i.test(seg) || /^\([a-z]{2,}\)/i.test(seg);
+    const isMathOrSpecial = new RegExp('^[-=+/*]').test(seg);
+    const lastSegEndsWithPunctuation = /[.?!:]\s*$/.test(lastSeg);
+    
+    if (startsWithLowercase || isParenthesizedContinuation || isMathOrSpecial || !lastSegEndsWithPunctuation) {
+      const isBullet = /^[-•●▪*+]\s+/.test(seg);
+      const isSubquestion = /^\([a-zivx]+\)\s+/i.test(seg);
+      
+      const isContextLabel = contextLabels.some(label => seg.toLowerCase().startsWith(label.toLowerCase()));
+      
+      if (!isBullet && !isSubquestion && !isContextLabel) {
+        mergedSegments[mergedSegments.length - 1] = `${lastSeg} ${seg}`;
+        return;
+      }
+    }
+    
+    mergedSegments.push(seg);
+  });
+  
+  let reconstructedHtml = '';
+  
+  // Wrap question header
+  if (qNum || title) {
+    reconstructedHtml += `
+      <div class="question-header">
+        <span class="question-number">${qNum || ''}</span>
+        <span class="question-title">${title || ''}</span>
+        ${marksText ? `<span class="question-marks">${marksText}</span>` : ''}
+      </div>
+    `;
+  }
+  
+  let inList = false;
+  let subquestionListType = null;
+
+  segments.forEach((segment) => {
+    if (segment.startsWith('__PRE_PLACEHOLDER_')) {
+      if (inList) { reconstructedHtml += '</ul>'; inList = false; }
+      if (subquestionListType) { reconstructedHtml += '</ol>'; subquestionListType = null; }
+      reconstructedHtml += segment;
+      return;
+    }
+
+    // Check if it's a list item (bullet or numbered)
+    const listMatch = segment.match(/^([•●-]|(?:\d+[.)]))\s+(.*)$/);
+    if (listMatch) {
+      if (subquestionListType) {
+        reconstructedHtml += `</ol>`;
+        subquestionListType = null;
+      }
+      if (!inList) {
+        reconstructedHtml += `<ul class="ws-paper-preview-ul">`;
+        inList = true;
+      }
+      reconstructedHtml += `<li class="ws-paper-preview-li">${listMatch[2]}</li>`;
+      return;
+    }
+    
+    if (inList) {
+      reconstructedHtml += `</ul>`;
+      inList = false;
+    }
+    
+    // Check if it is a subquestion
+    const subMatch = segment.match(/^\(([a-zivx]+)\)\s+(.*)$/i);
+    if (subMatch) {
+      const marker = subMatch[1].toLowerCase();
+      const subText = subMatch[2];
+      
+      const isRoman = /^[ivx]+$/.test(marker);
+      const currentListType = isRoman ? 'roman' : 'alpha';
+      
+      // Extract marks from subquestion if present, e.g. [2]
+      const marksMatch = subText.match(/\[\s*(\d+)\s*(?:Marks|M|marks|m)?\s*\]\s*$/i);
+      let marksHtml = '';
+      let cleanSubText = subText;
+      if (marksMatch) {
+        const marksVal = marksMatch[1];
+        marksHtml = `<span class="subquestion-marks">[${marksVal}]</span>`;
+        cleanSubText = subText.substring(0, marksMatch.index).trim();
+      }
+      
+      if (subquestionListType !== currentListType) {
+        if (subquestionListType) {
+          reconstructedHtml += `</ol>`;
+        }
+        reconstructedHtml += `<ol class="subquestions-list-${currentListType}">`;
+        subquestionListType = currentListType;
+      }
+      
+      reconstructedHtml += `<li data-marker="(${marker})">${cleanSubText} ${marksHtml}</li>`;
+      return;
+    }
+    
+    // Close subquestion list
+    if (subquestionListType) {
+      reconstructedHtml += `</ol>`;
+      subquestionListType = null;
+    }
+    
+    // Check if it starts with a context label
+    let matchedLabel = null;
+    for (const label of contextLabels) {
+      if (segment.toLowerCase().startsWith(label.toLowerCase())) {
+        matchedLabel = segment.substring(0, label.length);
+        break;
+      }
+    }
+    
+    if (matchedLabel) {
+      const remainingText = segment.substring(matchedLabel.length).trim();
+      reconstructedHtml += `
+        <p class="ws-paper-preview-context-header"><strong>${matchedLabel}</strong></p>
+        <p class="ws-paper-preview-p">${remainingText}</p>
+      `;
+    } else {
+      reconstructedHtml += `<p class="ws-paper-preview-p">${segment}</p>`;
+    }
+  });
+  
+  if (inList) reconstructedHtml += '</ul>';
+  if (subquestionListType) reconstructedHtml += '</ol>';
+  
+  // Restore the placeholders
+  let restoredHtml = reconstructedHtml;
+  for (let i = 0; i < imgTags.length; i++) {
+    restoredHtml = restoredHtml.replace(`__IMG_PLACEHOLDER_${i}__`, imgTags[i]);
+  }
+  for (let i = 0; i < preBlocks.length; i++) {
+    restoredHtml = restoredHtml.replace(`__PRE_PLACEHOLDER_${i}__`, preBlocks[i]);
+  }
+  
+  return restoredHtml;
+}
+
 function appendTextInline(target, text, marks = {}) {
   const normalized = normalizeInlineText(htmlDecode(text));
   if (!normalized) return;
@@ -172,6 +457,7 @@ function appendTextInline(target, text, marks = {}) {
       bold: Boolean(marks.bold),
       italic: Boolean(marks.italic),
       code: Boolean(marks.code),
+      subquestionMarks: Boolean(marks.subquestionMarks),
     },
   });
 }
@@ -184,6 +470,9 @@ function inlineNodeFromDom(node, images, marks = {}) {
   if (node.nodeType !== 1) return [];
 
   const tag = node.tagName.toLowerCase();
+  if (tag === 'br') {
+    return [{ type: 'br' }];
+  }
   if (tag === 'img') {
     const src = ensureString(node.getAttribute('src'));
     if (src) {
@@ -202,12 +491,17 @@ function inlineNodeFromDom(node, images, marks = {}) {
   if (tag === 'strong' || tag === 'b') nextMarks.bold = true;
   if (tag === 'em' || tag === 'i') nextMarks.italic = true;
   if (tag === 'code') nextMarks.code = true;
+  if (tag === 'span' && node.classList && node.classList.contains('subquestion-marks')) {
+    nextMarks.subquestionMarks = true;
+  }
 
   const fragments = [];
   Array.from(node.childNodes || []).forEach((child) => {
     inlineNodeFromDom(child, images, nextMarks).forEach((fragment) => {
       if (fragment.type === 'text') {
         appendTextInline(fragments, fragment.text, fragment.marks);
+      } else if (fragment.type === 'br') {
+        fragments.push(fragment);
       }
     });
   });
@@ -219,10 +513,8 @@ function domToAst(html = '') {
   const ast = [];
   const parser = new DOMParser();
   
-  // Clean up HTML: convert <br> to paragraph breaks, and force subquestions to start new blocks
-  let processedHtml = html
-    .replace(/<br\s*\/?>/gi, '</p><p>')
-    .replace(/(<p>|<div>)?\s*(\([a-zivx]+\)|[a-zivx]+\)|\d+\.)\s+/gi, '</p><p>$2 ');
+  // Clean up HTML: keep standard tag structures. Do not aggressively split paragraphs.
+  let processedHtml = html;
     
   const doc = parser.parseFromString(`<div>${processedHtml}</div>`, 'text/html');
   const root = doc.body.firstElementChild;
@@ -233,6 +525,8 @@ function domToAst(html = '') {
       inlineNodeFromDom(child, images).forEach((fragment) => {
         if (fragment.type === 'text') {
           appendTextInline(inlines, fragment.text, fragment.marks);
+        } else if (fragment.type === 'br') {
+          inlines.push(fragment);
         }
       });
     });
@@ -258,7 +552,23 @@ function domToAst(html = '') {
       return;
     }
 
+    if (tag === 'pre') {
+      ast.push({ type: 'pre', text: node.textContent || '' });
+      return;
+    }
+
     if (tag === 'ul' || tag === 'ol') {
+      let listStyleType = 'decimal';
+      if (tag === 'ol') {
+        const typeAttr = node.getAttribute('type');
+        if (typeAttr === 'a' || node.classList.contains('subquestions-list-alpha')) {
+          listStyleType = 'alpha';
+        } else if (typeAttr === 'i' || node.classList.contains('subquestions-list-roman')) {
+          listStyleType = 'roman';
+        }
+      } else {
+        listStyleType = 'bullet';
+      }
       const items = [];
       Array.from(node.children || []).forEach((child) => {
         if (child.tagName?.toLowerCase() !== 'li') return;
@@ -267,6 +577,8 @@ function domToAst(html = '') {
           inlineNodeFromDom(grandChild, images).forEach((fragment) => {
             if (fragment.type === 'text') {
               appendTextInline(inlines, fragment.text, fragment.marks);
+            } else if (fragment.type === 'br') {
+              inlines.push(fragment);
             }
           });
         });
@@ -274,7 +586,7 @@ function domToAst(html = '') {
       });
 
       if (items.length > 0) {
-        ast.push({ type: 'list', ordered: tag === 'ol', items });
+        ast.push({ type: 'list', ordered: tag === 'ol', listStyleType, items });
       }
       return;
     }
@@ -339,16 +651,115 @@ function fallbackParseHtml(html = '') {
   return { blocks, inlineImages: images };
 }
 
+/**
+ * Post-process AST blocks to fix subquestion layout issues:
+ * 1. Merge standalone subquestion labels "(a)", "(b)" with following content
+ * 2. Merge consecutive lists of the same type into one list
+ * 3. Deduplicate repeated labels like multiple "(b)" items
+ */
+function postProcessAstBlocks(blocks) {
+  if (!blocks || blocks.length <= 1) return blocks;
+
+  const subqLabelPattern = /^\s*\(([a-zivx]+)\)\s*$/i;
+  const numberedItemPattern = /^\s*\d+[.)]\s+/;
+
+  // Pass 1: Merge standalone subquestion label paragraphs with the next block
+  let merged = [];
+  let lastPrependedLabel = null;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+
+    // Check if this block is a paragraph containing only a subquestion label like "(b)"
+    if (block.type === 'paragraph' && block.inlines) {
+      const text = block.inlines.map(il => il.text || '').join('').trim();
+      const labelMatch = text.match(subqLabelPattern);
+
+      if (labelMatch) {
+        const currentLabel = labelMatch[1].toLowerCase();
+        
+        // If this is a duplicate label immediately following the same label sequence, skip it
+        if (currentLabel === lastPrependedLabel) {
+          continue;
+        }
+
+        if (i + 1 < blocks.length) {
+          const nextBlock = blocks[i + 1];
+          const label = `(${labelMatch[1]}) `;
+
+          if (nextBlock.type === 'paragraph' && nextBlock.inlines) {
+            // Prepend label to next paragraph
+            nextBlock.inlines.unshift({ type: 'text', text: label, marks: { bold: true } });
+            lastPrependedLabel = currentLabel;
+            continue;
+          } else if (nextBlock.type === 'list') {
+            // Prepend label to first list item
+            if (nextBlock.items && nextBlock.items.length > 0 && nextBlock.items[0].inlines) {
+              nextBlock.items[0].inlines.unshift({ type: 'text', text: label, marks: { bold: true } });
+            }
+            lastPrependedLabel = currentLabel;
+            continue;
+          }
+        }
+      } else {
+        // Reset if we hit normal text, though keeping it allows skipping scattered duplicate labels
+        // within the same question segment. For subquestions, this is generally what we want.
+      }
+    }
+
+    merged.push(block);
+  }
+
+  // Pass 2: Merge consecutive lists of the same type
+  const result = [];
+  for (let i = 0; i < merged.length; i++) {
+    const block = merged[i];
+    const prev = result[result.length - 1];
+
+    if (
+      block.type === 'list' &&
+      prev &&
+      prev.type === 'list' &&
+      prev.ordered === block.ordered &&
+      prev.listStyleType === block.listStyleType
+    ) {
+      // Merge items into the previous list
+      prev.items.push(...(block.items || []));
+      continue;
+    }
+
+    result.push(block);
+  }
+
+  return result;
+}
+
 export function parseHtmlToAst(html = '') {
   if (!html) return { blocks: [], inlineImages: [] };
+  
+  const hasLists = /<(ul|ol|li)/i.test(html);
+  const hasCustomClass = /subquestions-list/i.test(html) || /question-header/i.test(html);
+  
+  let processedHtml = html;
+  if (!hasCustomClass && (!hasLists || html.includes('•') || html.includes('●') || /\([a-zivx]+\)/i.test(html) || html.replace(/<[^>]+>/g, ' ').length > 400)) {
+    processedHtml = reconstructHtmlStructure(html);
+  }
+
+  let ast;
   if (typeof DOMParser !== 'undefined') {
     try {
-      return domToAst(html);
+      ast = domToAst(processedHtml);
     } catch (_error) {
-      return fallbackParseHtml(html);
+      ast = fallbackParseHtml(processedHtml);
     }
+  } else {
+    ast = fallbackParseHtml(processedHtml);
   }
-  return fallbackParseHtml(html);
+
+  // Post-process to fix standalone labels, merge consecutive lists, etc.
+  ast.blocks = postProcessAstBlocks(ast.blocks);
+
+  return ast;
 }
 
 function parseOptionToBlocks(optionText) {
@@ -542,6 +953,14 @@ function splitInlinesByBudget(inlines = [], charBudget = DEFAULT_CHARS_PER_LINE 
   const tail = [];
 
   inlines.forEach((inline) => {
+    if (inline.type === 'br') {
+      if (remaining <= 0) {
+        tail.push(inline);
+      } else {
+        head.push(inline);
+      }
+      return;
+    }
     const text = ensureString(inline?.text);
     if (!text) return;
 
@@ -563,8 +982,8 @@ function splitInlinesByBudget(inlines = [], charBudget = DEFAULT_CHARS_PER_LINE 
   });
 
   return [
-    head.filter((inline) => ensureString(inline.text)),
-    tail.filter((inline) => ensureString(inline.text)),
+    head.filter((inline) => inline.type === 'br' || ensureString(inline.text)),
+    tail.filter((inline) => inline.type === 'br' || ensureString(inline.text)),
   ];
 }
 
@@ -644,6 +1063,11 @@ function estimateBlockHeight(block) {
     return Math.max(30, lines * 22 + 8 + itemGaps);
   }
 
+  if (block.type === 'pre') {
+    const lines = (block.text || '').split('\n').length;
+    return Math.max(30, lines * 16 + 24);
+  }
+
   if (block.type === 'options') {
     const optionHeights = (block.options || []).map((option) => {
       const optionHeight = (option.blocks || []).reduce((sum, optBlock) => {
@@ -671,6 +1095,11 @@ function splitBlocksIntoSegments(blocks = [], lineBudget = DEFAULT_BODY_LINES_PE
   const fragments = [];
 
   blocks.forEach((block) => {
+    if (block.type === 'pre') {
+      fragments.push(block);
+      return;
+    }
+
     if (block.type === 'paragraph') {
       splitParagraphBlock(block, lineBudget).forEach((fragment) => fragments.push(fragment));
       return;
@@ -757,11 +1186,50 @@ function estimateAnswerAreaHeight(answerArea) {
 export function buildQuestionBlock(card, context = {}) {
   const paperSettings = normalizePaperSettings(context.paperSettings);
   let rawBody = ensureString(card?.question_body);
-  // Strip trailing marks like [10 Marks] or [10] at the end of elements, paragraphs, or lines
-  rawBody = rawBody.replace(/\s*\[\s*\d+(\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]\s*(?=(?:<\/p>|<\/li>|<br\s*\/?>|\n|$))/gi, '');
   
-  const bodyAst = parseHtmlToAst(rawBody);
+  // Extract title and qNum prefix from plain text to avoid splitting HTML tags
+  const plainTextForHeader = htmlDecode(rawBody.replace(/<[^>]+>/g, ' ').trim());
+  const parsedHeader = parseQuestionHeaderAndTitle(plainTextForHeader);
+  let extractedTitle = parsedHeader.title || card?.parsed_metadata?.title || '';
+  
+  // If the extracted title contains ONLY marks (e.g. "[35 Marks]" or "[10]"), discard it as title
+  if (/^\[\s*\d+(?:\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]$/i.test(extractedTitle.trim())) {
+    extractedTitle = '';
+  }
+  
+  let cleanBody = rawBody;
+  
+  // Strip question-header div block and question-marks span entirely from cleanBody
+  cleanBody = cleanBody.replace(/<div class=["']question-header["']>[\s\S]*?<\/div>/gi, '');
+  cleanBody = cleanBody.replace(/<span class=["']question-marks["']>[\s\S]*?<\/span>/gi, '');
+  
+  // Strip question number prefix like Q1. or Q1) from rawBody/cleanBody
+  cleanBody = cleanBody.replace(/^\s*(?:<[^>]+>)*\s*Q\d+[.)]\s*/i, '');
+  // If we found a title, we can also remove it from the start of the body
+  if (extractedTitle) {
+    const words = extractedTitle.split(/\s+/).filter(Boolean);
+    if (words.length > 0) {
+      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(?:\\s*|<[^>]+>)+');
+      const titleRegex = new RegExp(`^\\s*(?:<[^>]+>)*\\s*${pattern}\\s*(?:<[^>]+>)*[.:]?\\s*(?:<[^>]+>)*`, 'i');
+      cleanBody = cleanBody.replace(titleRegex, '');
+    }
+  }
+
+  // Strip trailing marks like [10 Marks] or [10] at the end of elements, paragraphs, or lines
+  cleanBody = cleanBody.replace(/\s*\[\s*\d+(\.\d+)?\s*(?:Marks|M|marks|m)?\s*\]\s*(?=(?:<\/p>|<\/li>|<br\s*\/?>|\n|$))/gi, '');
+  
+  const bodyAst = parseHtmlToAst(cleanBody);
   const bodyBlocks = [...bodyAst.blocks];
+
+  let finalTitle = extractedTitle;
+  if (!finalTitle && bodyBlocks.length > 0 && bodyBlocks[0].type === 'paragraph') {
+    const firstBlockText = extractPlainTextFromInlines(bodyBlocks[0].inlines);
+    if (firstBlockText.length < 150) {
+      finalTitle = firstBlockText;
+      bodyBlocks.shift();
+    }
+  }
+
   const optionBlock = buildOptionBlock(card);
   if (optionBlock) bodyBlocks.push(optionBlock);
 
@@ -772,7 +1240,7 @@ export function buildQuestionBlock(card, context = {}) {
     id: String(card?.id),
     cardId: String(card?.id),
     type: card?.question_type || 'long_subjective',
-    title: '',
+    title: finalTitle,
     body: {
       blocks: bodyBlocks,
       plainText: bodyBlocks
@@ -943,6 +1411,7 @@ export function createQuestionSegments(questionBlock) {
 
   return segments.map((segment, index) => ({
     ...segment,
+    title: questionBlock.title || '',
     isFirstSegment: index === 0,
     isLastSegment: index === segments.length - 1,
     totalSegments: segments.length,

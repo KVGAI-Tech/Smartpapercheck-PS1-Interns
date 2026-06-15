@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check, ChevronRight } from 'lucide-react';
 
 /**
  * 4-step workspace stepper: Import Sources → Question Library → Question Paper Workspace → Paper Builder & Preview
@@ -11,28 +12,51 @@ export default function WorkspaceStepper({ step, onChange, sourcesCount, questio
     { id: 'builder', label: 'Paper Builder & Preview', sub: 'Settings & preview' },
   ];
 
+  const currentStepIndex = steps.findIndex(s => s.id === step);
+
   return (
     <div className="w-full">
-      <div className="flex-1 mt-1 sm:mt-0 border-b border-gray-200">
-        <div className="flex flex-wrap gap-2 max-w-full">
-          {steps.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => onChange(s.id)}
-              className={`relative -mb-px px-4 py-3 text-sm font-medium rounded-t-lg transition-colors flex-1 sm:flex-none
-                ${step === s.id
-                  ? 'text-accent border-b-2 border-accent bg-accent/5'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-            >
-              <div className="flex flex-col items-center sm:items-start text-left">
-                <span className="block truncate max-w-[200px]">{s.label}</span>
-                <span className={`text-[11px] mt-0.5 ${step === s.id ? 'text-accent/80' : 'text-gray-400'}`}>
-                  {s.sub}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+      <div className="flex w-full items-center justify-between overflow-x-auto pb-1 mt-1 sm:mt-0">
+        {steps.map((s, index) => {
+          const isCompleted = index < currentStepIndex;
+          const isActive = index === currentStepIndex;
+
+          return (
+            <React.Fragment key={s.id}>
+              <button
+                onClick={() => onChange(s.id)}
+                className={`relative flex flex-1 items-center justify-center lg:justify-start gap-3 pb-3 pt-2 px-2 transition-colors ${
+                  isActive ? 'border-b-[3px] border-accent' : 'border-b-[3px] border-transparent hover:border-slate-300'
+                }`}
+              >
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                  isCompleted || isActive ? 'bg-accent text-white' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {isCompleted ? <Check className="h-4 w-4" /> : (index + 1)}
+                </div>
+                
+                <div className="flex flex-col text-left">
+                  <span className={`text-[15px] font-semibold whitespace-nowrap ${
+                    isActive ? 'text-slate-900' : 'text-slate-700'
+                  }`}>
+                    {s.label}
+                  </span>
+                  <span className={`text-[13px] font-medium whitespace-nowrap ${
+                    isActive ? 'text-slate-600' : 'text-slate-500'
+                  }`}>
+                    {s.sub}
+                  </span>
+                </div>
+              </button>
+
+              {index < steps.length - 1 && (
+                <div className="flex shrink-0 items-center px-1 lg:px-4">
+                  <ChevronRight className="h-5 w-5 text-slate-400" />
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     </div>
   );
