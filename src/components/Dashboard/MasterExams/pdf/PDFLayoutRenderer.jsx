@@ -19,16 +19,25 @@ function PdfInlineContent({ inlines = [] }) {
     if (inline.type === 'br') {
       return <Text key={index}>{'\n'}</Text>;
     }
+    
+    let fontFamily = 'Helvetica';
+    if (inline?.marks?.bold && inline?.marks?.italic) {
+      fontFamily = 'Helvetica-BoldOblique';
+    } else if (inline?.marks?.bold) {
+      fontFamily = 'Helvetica-Bold';
+    } else if (inline?.marks?.italic) {
+      fontFamily = 'Helvetica-Oblique';
+    } else if (inline?.marks?.code) {
+      fontFamily = 'Courier';
+    }
+
     return (
       <Text
         key={index}
-        style={tw([
-          inline?.marks?.bold ? 'font-bold' : '',
-          inline?.marks?.italic ? 'italic' : '',
-          inline?.marks?.code ? 'font-mono text-[10px]' : '',
-        ]
-          .filter(Boolean)
-          .join(' '))}
+        style={{
+          fontFamily: fontFamily,
+          fontSize: inline?.marks?.code ? 10 : 11,
+        }}
       >
         {`${inline.text || ''}${index < inlines.length - 1 ? ' ' : ''}`}
       </Text>
@@ -42,7 +51,7 @@ function PdfBlocks({ blocks = [] }) {
       {blocks.map((block, index) => {
         if (block.type === 'paragraph') {
           return (
-            <Text key={index} style={tw('text-[11px] leading-relaxed text-slate-900')}>
+            <Text key={index} style={{ fontSize: 11, lineHeight: 1.5, color: '#0f172a' }}>
               <PdfInlineContent inlines={block.inlines} />
             </Text>
           );
@@ -70,13 +79,13 @@ function PdfBlocks({ blocks = [] }) {
                 return (
                   <View key={itemIndex} style={tw('flex flex-row justify-between items-start mb-1')} wrap={false}>
                     <View style={tw('flex-1 flex flex-row items-start')}>
-                      <Text style={tw('mr-2 text-[11px] font-bold text-slate-900')}>{marker}</Text>
-                      <Text style={tw('flex-1 text-[11px] leading-relaxed text-slate-900')}>
+                      <Text style={{ marginRight: 8, fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{marker}</Text>
+                      <Text style={{ flex: 1, fontSize: 11, lineHeight: 1.5, color: '#0f172a' }}>
                         <PdfInlineContent inlines={normalInlines} />
                       </Text>
                     </View>
                     {marksInline && (
-                      <Text style={tw('ml-2 text-[11px] font-bold text-slate-900')}>
+                      <Text style={{ marginLeft: 8, fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>
                         {marksInline.text}
                       </Text>
                     )}
@@ -93,7 +102,7 @@ function PdfBlocks({ blocks = [] }) {
               {(block.options || []).map((option) => (
                 <View key={option.id} style={tw('w-1/2 pr-2 mb-2')}>
                   <View style={tw('rounded-lg border border-slate-200 bg-slate-50 p-2')}>
-                    <Text style={tw('mb-1 text-[9px] font-bold uppercase text-slate-600')}>({option.key})</Text>
+                    <Text style={{ marginBottom: 4, fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#475569', textTransform: 'uppercase' }}>({option.key})</Text>
                     <PdfBlocks blocks={option.blocks} />
                   </View>
                 </View>
@@ -148,7 +157,7 @@ function PdfSectionHeader({ item, paperSettings }) {
     <View style={tw('mb-4 border-b border-slate-200 pb-2')} wrap={false}>
       <View style={tw('flex flex-row items-end justify-between')}>
         <View style={tw('flex-1 pr-4')}>
-          <Text style={tw('text-[14px] font-bold text-slate-900')}>{item.title}</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{item.title}</Text>
           {item.instructions?.length > 0 && (
             <View style={tw('mt-1')}>
               <PdfBlocks blocks={item.instructions} />
@@ -156,7 +165,7 @@ function PdfSectionHeader({ item, paperSettings }) {
           )}
         </View>
         {paperSettings.showSectionMarks !== false && (
-          <Text style={tw('text-[11px] font-bold text-slate-700')}>{item.marks} marks</Text>
+          <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#475569' }}>{item.marks} marks</Text>
         )}
       </View>
     </View>
@@ -169,13 +178,13 @@ function PdfQuestionBlock({ item, paperSettings }) {
       {item.isFirstSegment && (
         <View style={tw('flex flex-row justify-between items-baseline mb-3 border-b border-slate-900 pb-1')}>
           <View style={tw('flex-1 pr-4')}>
-            <Text style={tw('text-[11px] font-bold text-slate-900')}>
+            <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>
               {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}. `}
               {item.title || ''}
             </Text>
           </View>
           {paperSettings.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && (
-            <Text style={tw('text-[11px] font-bold text-slate-900 shrink-0')}>[{item.marks} Marks]</Text>
+            <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#0f172a', flexShrink: 0 }}>[{item.marks} Marks]</Text>
           )}
         </View>
       )}
@@ -195,54 +204,57 @@ function PdfPageHeader({ header, page }) {
   if (page.headerMode === 'repeat') {
     return (
       <View style={tw('mb-4 flex flex-row items-center justify-between border-b border-slate-200 pb-2')}>
-        <Text style={tw('text-[12px] font-bold text-slate-900')}>{header.title}</Text>
-        <Text style={tw('text-[8px] uppercase tracking-widest text-slate-400')}>
+        <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{header.title}</Text>
+        <Text style={{ fontSize: 8, color: '#94a3b8', letterSpacing: 2, textTransform: 'uppercase' }}>
           {header.subject || header.course || 'Exam'}
         </Text>
       </View>
     );
   }
 
+  const isUniv = templateId === 'university_format';
+  const titleFont = isUniv ? 'Helvetica-Bold' : 'Times-Bold';
+
   return (
     <View style={tw('mb-8 border-b-2 border-slate-900 pb-5 flex flex-col items-center')} wrap={false}>
-      <Text style={tw(`text-center text-[20px] tracking-[0.08em] text-slate-950 ${templateId === 'university_format' ? 'font-bold uppercase' : 'font-serif font-bold uppercase'}`)}>
+      <Text style={{ textAlign: 'center', fontSize: 20, letterSpacing: 1, color: '#020617', fontFamily: titleFont, textTransform: 'uppercase' }}>
         {header.title}
       </Text>
       {header.institution && (
-        <Text style={tw('mt-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-600')}>
+        <Text style={{ marginTop: 8, textAlign: 'center', fontSize: 11, fontFamily: 'Helvetica-Bold', letterSpacing: 2, color: '#475569', textTransform: 'uppercase' }}>
           {header.institution}
         </Text>
       )}
       {header.subtitle && (
-        <Text style={tw('mt-2 text-center text-[12px] font-bold uppercase tracking-[0.2em] text-slate-600')}>
+        <Text style={{ marginTop: 8, textAlign: 'center', fontSize: 12, fontFamily: 'Helvetica-Bold', letterSpacing: 2, color: '#475569', textTransform: 'uppercase' }}>
           {header.subtitle}
         </Text>
       )}
       <View style={tw('mt-6 flex w-full flex-row flex-wrap justify-center')}>
         <View style={tw('mb-2 w-1/4 items-center')}>
-          <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Course</Text>
-          <Text style={tw('mt-1 text-[10px] font-bold')}>{header.course || 'Not set'}</Text>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Course</Text>
+          <Text style={{ marginTop: 4, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{header.course || 'Not set'}</Text>
         </View>
         <View style={tw('mb-2 w-1/4 items-center')}>
-          <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Subject</Text>
-          <Text style={tw('mt-1 text-[10px] font-bold')}>{header.subject || 'Not set'}</Text>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Subject</Text>
+          <Text style={{ marginTop: 4, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{header.subject || 'Not set'}</Text>
         </View>
         <View style={tw('mb-2 w-1/4 items-center')}>
-          <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Subject Code</Text>
-          <Text style={tw('mt-1 text-[10px] font-bold')}>{header.subjectCode || 'Not set'}</Text>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Subject Code</Text>
+          <Text style={{ marginTop: 4, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{header.subjectCode || 'Not set'}</Text>
         </View>
         <View style={tw('mb-2 w-1/4 items-center')}>
-          <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Duration</Text>
-          <Text style={tw('mt-1 text-[10px] font-bold')}>{header.examTime || '3 Hours'}</Text>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Duration</Text>
+          <Text style={{ marginTop: 4, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{header.examTime || '3 Hours'}</Text>
         </View>
         <View style={tw('mb-2 w-1/4 items-center')}>
-          <Text style={tw('text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500')}>Marks</Text>
-          <Text style={tw('mt-1 text-[10px] font-bold')}>{header.totalMarks || 100}</Text>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Marks</Text>
+          <Text style={{ marginTop: 4, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0f172a' }}>{header.totalMarks || 100}</Text>
         </View>
       </View>
       {header.instructions?.length > 0 && (
         <View style={tw('mt-4 w-full rounded-xl border border-slate-300 p-4')}>
-          <Text style={tw('mb-1 text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500')}>
+          <Text style={{ marginBottom: 4, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>
             General Instructions
           </Text>
           <PdfBlocks blocks={header.instructions} />
@@ -279,11 +291,12 @@ export function PDFLayoutRenderer({
       {resolvedPaperDocument.pageDescriptors.map((page) => (
         <Page
           key={page.id}
-          size="A4"
+          size={[PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT]}
           style={[
             tw('bg-white'),
             {
               position: 'relative',
+              backgroundColor: '#ffffff',
             },
           ]}
           wrap={false}
@@ -295,8 +308,6 @@ export function PDFLayoutRenderer({
               top: 0,
               width: PDF_PAGE_WIDTH,
               height: PDF_PAGE_HEIGHT,
-              transformOrigin: 'top left',
-              transform: [{ scale: pageScale }],
             }}
             wrap={false}
           >
@@ -333,7 +344,7 @@ export function PDFLayoutRenderer({
 
             {page.footerEnabled && (
               <View style={tw('absolute bottom-5 left-0 right-0 flex flex-row justify-center')} wrap={false}>
-                <Text style={tw('text-[9px] text-slate-400')}>
+                <Text style={{ fontSize: 9, color: '#94a3b8' }}>
                   {`Page ${page.pageNumber} of ${resolvedPaperDocument.pageDescriptors.length}`}
                 </Text>
               </View>

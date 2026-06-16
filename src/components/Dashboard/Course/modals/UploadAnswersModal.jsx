@@ -38,6 +38,7 @@ const UploadAnswersModal = ({ isOpen, onClose, courseId, examId, onUploadSuccess
   const studentSearchInputRefs = useRef({});
   const singleQuestionFileInputRefs = useRef({});
   const objectUrlMapRef = useRef(new Map());
+  const dropZoneRefs = useRef({});
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -584,23 +585,31 @@ useEffect(() => {
       if (!activeQuestionForPaste) return;
       const entry = (studentEntries || []).find((x) => x.entryId === activeQuestionForPaste.entryId);
       if (!entry?.studentId) return;
+      
       const items = Array.from(e?.clipboardData?.items || []);
-      const imageItems = items.filter((it) => it && it.kind === 'file' && String(it.type || '').startsWith('image/'));
-      if (!imageItems.length) return;
-
-      const files = imageItems
-        .map((it, idx) => {
-          const f = it.getAsFile();
-          if (!f) return null;
-          const ext = (f.type && f.type.includes('/')) ? f.type.split('/')[1] : 'png';
-          const nextName = `clipboard-${Date.now()}-${idx + 1}.${ext}`;
-          try {
-            return new File([f], nextName, { type: f.type });
-          } catch {
-            return f;
-          }
-        })
-        .filter(Boolean);
+      const filesList = e?.clipboardData?.files;
+      
+      let files = [];
+      if (filesList && filesList.length > 0) {
+        files = Array.from(filesList).filter((f) => String(f?.type || '').startsWith('image/'));
+      }
+      
+      if (files.length === 0 && items.length > 0) {
+        const imageItems = items.filter((it) => it && it.kind === 'file' && String(it.type || '').startsWith('image/'));
+        files = imageItems
+          .map((it, idx) => {
+            const f = it.getAsFile();
+            if (!f) return null;
+            const ext = (f.type && f.type.includes('/')) ? f.type.split('/')[1] : 'png';
+            const nextName = `clipboard-${Date.now()}-${idx + 1}.${ext}`;
+            try {
+              return new File([f], nextName, { type: f.type });
+            } catch {
+              return f;
+            }
+          })
+          .filter(Boolean);
+      }
 
       if (!files.length) return;
       e.preventDefault();
@@ -1390,6 +1399,9 @@ return (
                                 <div className="p-4 space-y-3">
                                   {/* Drop zone — click activates paste target, drag-drop still works */}
                                   <div
+                                    ref={(el) => {
+                                      dropZoneRefs.current[`${active.entryId}-${qn}`] = el;
+                                    }}
                                     onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
                                     onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                     onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); if (e.currentTarget === e.target) setIsDragging(false); }}
@@ -1401,10 +1413,10 @@ return (
                                       if (!files.length) { toast.error('Please drop image files only'); return; }
                                       appendFilesToEntryQuestion(active.entryId, qn, files);
                                     }}
-                                    onClick={() => {
-                                      // Clicking just activates this as the paste target — does NOT open file picker
+                                    onClick={(e) => {
                                       setActiveQuestionForPaste({ entryId: active.entryId, qn });
                                       setSelectedSingleQuestionNumber(qn);
+                                      e.currentTarget.focus();
                                     }}
                                     className={`border-2 border-dashed rounded-xl px-4 py-8 transition-all duration-200 cursor-pointer text-center ${
                                       isActivePaste
@@ -1413,6 +1425,7 @@ return (
                                     }`}
                                     role="button"
                                     tabIndex={0}
+                                    style={{ outline: 'none' }}
                                   >
                                     <Upload className={`w-8 h-8 mx-auto mb-3 ${isActivePaste ? 'text-accent' : 'text-gray-400'}`} />
                                     <p className="text-sm text-gray-600">
@@ -1426,9 +1439,10 @@ return (
                                   <div className="flex items-center gap-2">
                                     <button
                                       type="button"
-                                      onClick={() => {
+                                      onClick={(e) => {
                                         setActiveQuestionForPaste({ entryId: active.entryId, qn });
                                         setSelectedSingleQuestionNumber(qn);
+                                        dropZoneRefs.current[`${active.entryId}-${qn}`]?.focus();
                                       }}
                                       className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
                                         isActivePaste

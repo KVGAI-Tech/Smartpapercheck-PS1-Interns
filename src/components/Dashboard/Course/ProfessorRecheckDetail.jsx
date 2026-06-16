@@ -426,7 +426,12 @@ const ProfessorRecheckDetail = () => {
   };
 
   const handleGoBack = () => {
-    navigate(`/courses`);
+    const courseIdFromQuery = queryParams.get("courseId");
+    if (courseIdFromQuery && examId) {
+      navigate(`/courses/${courseIdFromQuery}/exams/${examId}/evaluations`);
+    } else {
+      navigate(`/courses`);
+    }
   };
 
   const handleSelectAnnotation = (annotation) => {

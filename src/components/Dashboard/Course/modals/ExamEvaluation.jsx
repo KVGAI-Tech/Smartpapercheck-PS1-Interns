@@ -1415,7 +1415,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   };
 
   const handleViewRecheckRequest = (student) => {
-    window.location.href = `/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`;
+    window.location.href = `/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}&courseId=${courseId}`;
   };
   
   const handleViewResults = (student) => {
@@ -1657,7 +1657,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         <div className="bg-gray-50 p-4 border-t border-gray-100">
           {hasResults ? (
             student.recheck_requested ? (
-              <Link to={`/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}`}>
+              <Link to={`/professor/recheck-requests?examId=${examId}&enrollmentId=${student.enrollment_id}&courseId=${courseId}`}>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

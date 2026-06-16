@@ -13,6 +13,7 @@ import {
   AlertCircle,
   History,
   Eye,
+  EyeOff,
 } from "lucide-react";
 
 const StatCard = ({ title, value, icon: Icon, className }) => (
@@ -93,7 +94,7 @@ const EvaluationCard = ({
   </div>
 );
 
-const RecheckItem = ({ title, subject, reason, status, requestDate }) => (
+const RecheckItem = ({ title, subject, reason, status, requestDate, showReason }) => (
   <div className="flex items-center justify-between p-4 border-b border-gray-100 last:border-0">
     <div className="flex items-center gap-3">
       <div
@@ -118,6 +119,11 @@ const RecheckItem = ({ title, subject, reason, status, requestDate }) => (
       <div>
         <h4 className="font-medium text-gray-900">{title}</h4>
         <p className="text-sm text-gray-500">{subject}</p>
+        {showReason && reason && (
+          <p className="text-xs text-gray-500 mt-1 bg-gray-50 px-2 py-1 rounded border border-gray-100 italic">
+            Reason: {reason}
+          </p>
+        )}
       </div>
     </div>
     <div className="text-right">
@@ -142,6 +148,7 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [studentData, setStudentData] = useState(null);
   const [error, setError] = useState(null);
+  const [showReasons, setShowReasons] = useState(false);
   const navigate = useNavigate();
   const { logout } = useAuth();
 
@@ -294,6 +301,50 @@ const StudentDashboard = () => {
     },
   ];
 
+  const downloadCSVReport = () => {
+    const headers = ["Type", "Title", "Subject", "Score / Reason", "Status", "Date"];
+    const rows = [];
+
+    // Add evaluations
+    evaluations.forEach((item) => {
+      rows.push([
+        "Evaluation",
+        item.title,
+        item.subject,
+        `${item.score}/${item.maxScore}`,
+        item.status,
+        item.submittedDate
+      ]);
+    });
+
+    // Add recheck requests
+    recheckRequests.forEach((item) => {
+      rows.push([
+        "Recheck Request",
+        item.title,
+        item.subject,
+        item.reason,
+        item.status,
+        item.requestDate
+      ]);
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `student_report_${(studentData?.user_name || "student").replace(/\s+/g, "_")}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full min-h-[60vh]">
@@ -379,18 +430,25 @@ const StudentDashboard = () => {
             <h2 className="text-lg font-semibold text-gray-900">
               Recheck Requests
             </h2>
-            <button className="text-accent hover:text-accent/80">
-              <Eye className="w-5 h-5" />
+            <button 
+              onClick={() => setShowReasons(!showReasons)}
+              className="text-accent hover:text-accent/80 cursor-pointer"
+              title={showReasons ? "Hide Details" : "Show Details"}
+            >
+              {showReasons ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
             </button>
           </div>
 
           <div className="divide-y divide-gray-100">
             {recheckRequests.map((request, index) => (
-              <RecheckItem key={index} {...request} />
+              <RecheckItem key={index} {...request} showReason={showReasons} />
             ))}
           </div>
 
-          <button className="mt-4 w-full py-2 bg-accent/5 text-accent rounded-lg font-medium hover:bg-accent/10 transition-colors flex items-center justify-center gap-2">
+          <button 
+            onClick={downloadCSVReport}
+            className="mt-4 w-full py-2 bg-accent/5 text-accent rounded-lg font-medium hover:bg-accent/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          >
             <Download className="w-4 h-4" />
             <span>Download Report</span>
           </button>

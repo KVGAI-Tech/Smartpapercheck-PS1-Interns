@@ -3,9 +3,9 @@ import { createTw } from 'react-pdf-tailwind';
 export const tw = createTw({
   theme: {
     fontFamily: {
-      sans: ['Helvetica', 'sans-serif'],
-      serif: ['Times-Roman', 'serif'],
-      mono: ['Courier', 'monospace'],
+      sans: 'Helvetica',
+      serif: 'Times-Roman',
+      mono: 'Courier',
     },
     extend: {
       colors: {

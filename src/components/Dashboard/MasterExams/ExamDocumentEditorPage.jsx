@@ -894,7 +894,7 @@ export default function ExamDocumentEditorPage() {
   const sourcesCount = documents.length;
   const questionsCount = cards.length;
   const addedMarks = sections.reduce((sum, sec) => sum + (sec.cardIds || []).reduce((s, id) => s + (Number(cards.find(c => String(c.id) === String(id))?.marks) || 0), 0), 0);
-  const totalMarks = workspace.paper_settings_json?.totalMarks || 100;
+  const totalMarks = workspace.builder_layout_json?.totalMarks || workspace.paper_settings_json?.totalMarks || 100;
 
   return (
     <div className="ws-shell">
