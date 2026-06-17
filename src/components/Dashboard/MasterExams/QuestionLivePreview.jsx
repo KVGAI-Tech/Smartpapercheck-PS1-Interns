@@ -2,6 +2,7 @@
 
 import { getQuestionTypeDefinition, supportsOptions, supportsReasoning } from './masterExamCardSchema';
 import WritableAnswerArea from './WritableAnswerArea';
+import { replaceImageSlots } from './paperDocumentBuilder';
 
 const PreviewSection = ({ label, children }) => (
   <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -70,7 +71,7 @@ export default function QuestionLivePreview({ card }) {
               <div className="rounded-2xl bg-white px-1">
                 <div 
                   className="text-[15px] leading-7 text-slate-800 ql-editor p-0"
-                  dangerouslySetInnerHTML={{ __html: card?.question_body || 'Question text will appear here once you add it.' }} 
+                  dangerouslySetInnerHTML={{ __html: replaceImageSlots(card?.question_body, card) || 'Question text will appear here once you add it.' }} 
                 />
               </div>
 
@@ -131,7 +132,7 @@ export default function QuestionLivePreview({ card }) {
                 <div className="rounded-2xl bg-white px-1">
                   <div 
                     className="text-[15px] leading-7 text-slate-800 ql-editor p-0"
-                    dangerouslySetInnerHTML={{ __html: card?.question_body || 'Question text will appear here once you add it.' }} 
+                    dangerouslySetInnerHTML={{ __html: replaceImageSlots(card?.question_body, card) || 'Question text will appear here once you add it.' }} 
                   />
                 </div>
               </div>
@@ -185,7 +186,7 @@ export default function QuestionLivePreview({ card }) {
               <div className="rounded-2xl bg-white px-1">
                 <div 
                   className="text-[15px] leading-7 text-slate-800 ql-editor p-0"
-                  dangerouslySetInnerHTML={{ __html: card?.question_body || 'Question text will appear here once you add it.' }} 
+                  dangerouslySetInnerHTML={{ __html: replaceImageSlots(card?.question_body, card) || 'Question text will appear here once you add it.' }} 
                 />
               </div>
 

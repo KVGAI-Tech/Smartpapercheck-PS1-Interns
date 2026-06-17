@@ -9,7 +9,7 @@ import { PdfAnswerArea } from './PdfAnswerArea';
 function cleanQuestionBody(htmlText, index, marks) {
   if (!htmlText || typeof htmlText !== 'string') return htmlText;
 
-  let cleaned = htmlText.trim();
+  let cleaned = htmlText.replace(/\[\[IMAGE_SLOT:\d+\]\]/gi, '').trim();
   const prefixRegex = new RegExp(
     `^((?:<[^>]+>|\\s)*)(?:Q(?:uestion)?\\s*)?0*${index}\\s*[\\).\\-、:\\s]*`,
     'i'

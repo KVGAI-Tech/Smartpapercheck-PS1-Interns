@@ -17,7 +17,7 @@ import {
 import toast from 'react-hot-toast';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 
-import { normalizeLegacySections } from './paperDocumentBuilder';
+import { normalizeLegacySections, replaceImageSlots } from './paperDocumentBuilder';
 import { PDFLayoutRenderer } from './pdf/PDFLayoutRenderer';
 
 const APP_NAME = 'SMART PAPER CHECK';
@@ -77,6 +77,7 @@ const PDF_EXPORT_TYPES = ['standard', 'writable', 'online'];
 
 function cleanText(value = '') {
   return value
+    .replace(/\[\[IMAGE_SLOT:\d+\]\]/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -360,7 +361,7 @@ function PreviewModal({ builderLayout, sections, cardsById, onClose }) {
                           <div className="min-w-0 flex-1">
                             <div
                               className="text-sm leading-7 text-slate-800"
-                              dangerouslySetInnerHTML={{ __html: card.question_body || cleanText(card.question_body) || 'Untitled question' }}
+                              dangerouslySetInnerHTML={{ __html: replaceImageSlots(card.question_body, card) || 'Untitled question' }}
                             />
                             {Array.isArray(card.image_urls) && card.image_urls.length > 0 && (
                               <div className="mt-4 flex flex-col gap-4">

@@ -1183,9 +1183,42 @@ function estimateAnswerAreaHeight(answerArea) {
   return clampNumber(answerArea.height, 0, 0) + 12;
 }
 
+export function replaceImageSlots(htmlText, card) {
+  if (!htmlText || typeof htmlText !== 'string') return htmlText || '';
+  
+  const grouped = {};
+  const imageAssets = card?.parsed_metadata?.imageAssets || [];
+  
+  if (Array.isArray(imageAssets) && imageAssets.length > 0) {
+    imageAssets.forEach((asset) => {
+      if (!asset || !asset.url) return;
+      const slotIndex = parseInt(asset.slot_index ?? 1, 10) || 1;
+      if (!grouped[slotIndex]) grouped[slotIndex] = [];
+      grouped[slotIndex].push(asset.url);
+    });
+  } else if (Array.isArray(card?.image_urls) && card.image_urls.length > 0) {
+    card.image_urls.forEach((url, i) => {
+      if (!url) return;
+      const slotIndex = i + 1;
+      grouped[slotIndex] = [url];
+    });
+  }
+
+  const IMAGE_SLOT_RE = /\[\[IMAGE_SLOT:(\d+)\]\]/gi;
+  
+  return htmlText.replace(IMAGE_SLOT_RE, (match, slotStr) => {
+    const slotIndex = parseInt(slotStr, 10);
+    const urls = grouped[slotIndex] || [];
+    if (urls.length === 0) {
+      return '';
+    }
+    return urls.map(url => `<img src="${url}" alt="Question image" class="question-image max-w-full h-auto rounded-lg border border-slate-200 object-contain my-3" style="max-height: 320px;" />`).join('');
+  });
+}
+
 export function buildQuestionBlock(card, context = {}) {
   const paperSettings = normalizePaperSettings(context.paperSettings);
-  let rawBody = ensureString(card?.question_body);
+  let rawBody = replaceImageSlots(ensureString(card?.question_body), card);
   
   // Extract title and qNum prefix from plain text to avoid splitting HTML tags
   const plainTextForHeader = htmlDecode(rawBody.replace(/<[^>]+>/g, ' ').trim());

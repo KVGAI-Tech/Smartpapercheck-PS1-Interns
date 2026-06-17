@@ -70,7 +70,9 @@ const buildWorkspaceProgressSocketUrl = (workspaceId) => {
   const token = localStorage.getItem('accessToken');
   if (!token || !workspaceId) return null;
   const root = API_BASE_URL.replace(/\/api$/, '');
-  const wsRoot = root.replace(/^http/i, 'ws');
+  const wsRoot = root.startsWith('https')
+    ? root.replace(/^https/i, 'wss')
+    : root.replace(/^http/i, 'ws');
   return `${wsRoot}/api/master-exams-workspace/${workspaceId}/progress/ws?token=${encodeURIComponent(token)}`;
 };
 
@@ -327,6 +329,13 @@ export default function ExamDocumentEditorPage() {
       setDocuments(hydratedDocuments);
       setCards(normalizedCards);
       setSourceFolders(folders);
+      
+      // Seed the cache with the current document status so we don't trigger redundant loadWorkspace on WebSocket init
+      hydratedDocuments.forEach((doc) => {
+        if (doc.parsed_status) {
+          wsStatusCache.current.set(String(doc.id), doc.parsed_status);
+        }
+      });
       
       if (draftStatusRef.current === 'clean') {
         setSections(normalizeLegacySections(savedSections, normalizedCards));

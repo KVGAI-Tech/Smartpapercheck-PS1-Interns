@@ -37,7 +37,7 @@ const TYPE_LABEL_MAP = {
 };
 
 function cleanText(value = '') {
-  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return value.replace(/\[\[IMAGE_SLOT:\d+\]\]/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function EditableMarks({ cardId, initialMarks, onUpdateCardMarks }) {
