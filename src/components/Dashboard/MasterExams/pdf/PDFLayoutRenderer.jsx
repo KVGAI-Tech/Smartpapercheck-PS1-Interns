@@ -272,7 +272,7 @@ export function PDFLayoutRenderer({
   paperType = 'standard',
   paperSettings = {},
   paperDocument = null,
-}) {
+  }) {
   const resolvedPaperDocument = paperDocument || buildPaperDocument({
     cards,
     sections,
@@ -291,7 +291,7 @@ export function PDFLayoutRenderer({
       {resolvedPaperDocument.pageDescriptors.map((page) => (
         <Page
           key={page.id}
-          size={[PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT]}
+          size={[PDF_A4_WIDTH, PDF_A4_HEIGHT]}
           style={[
             tw('bg-white'),
             {
@@ -308,6 +308,9 @@ export function PDFLayoutRenderer({
               top: 0,
               width: PDF_PAGE_WIDTH,
               height: PDF_PAGE_HEIGHT,
+              transform: [{ scale: pageScale }],
+              transformOriginX: 0,
+              transformOriginY: 0,
             }}
             wrap={false}
           >

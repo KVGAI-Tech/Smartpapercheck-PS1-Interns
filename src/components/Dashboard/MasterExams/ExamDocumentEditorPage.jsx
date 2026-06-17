@@ -18,8 +18,8 @@ import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../../../BaseURL';
 import QuestionEditModal from './QuestionEditModal';
 import SourceDocumentPreviewModal from './SourceDocumentPreviewModal';
-import { pdf } from '@react-pdf/renderer';
-import { PDFLayoutRenderer } from './pdf/PDFLayoutRenderer';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 // New workspace components
 import './workspace.css';
@@ -1022,7 +1022,7 @@ export default function ExamDocumentEditorPage() {
               name: workspaceMeta?.courseName || 'Subject',
               institution: 'University',
             }}
-            onExport={async ({
+  onExport={async ({
               paperType: exportPaperType,
               paperDocument,
               builderLayout,
@@ -1033,23 +1033,47 @@ export default function ExamDocumentEditorPage() {
               try {
                 validatePaperDocumentForExport(paperDocument);
 
-                const doc = (
-                  <PDFLayoutRenderer
-                    title={builderLayout?.headerTitle || paperTitle || workspace.title}
-                    builderLayout={builderLayout || {}}
-                    paperType={exportPaperType || 'standard'}
-                    paperSettings={paperSettings || {}}
-                    paperDocument={paperDocument}
-                  />
-                );
+                const pages = Array.from(document.querySelectorAll('.ws-paper-preview-page'));
+                if (!pages.length) {
+                  throw new Error('Paper preview pages were not found on the screen.');
+                }
 
-                const blob = await pdf(doc).toBlob();
-                const url = URL.createObjectURL(blob);
-                const anchor = document.createElement('a');
-                anchor.href = url;
-                anchor.download = `${(paperTitle || workspace.title || 'Exam_Paper').replace(/\s+/g, '_')}_${exportPaperType}.pdf`;
-                anchor.click();
-                URL.revokeObjectURL(url);
+                const pdfDoc = new jsPDF({
+                  orientation: 'portrait',
+                  unit: 'mm',
+                  format: 'a4',
+                  compress: true,
+                });
+
+                const pageWidthMm = 210;
+                const pageHeightMm = 297;
+
+                for (let index = 0; index < pages.length; index += 1) {
+                  const pageEl = pages[index];
+                  // Capture the rendered preview page exactly as shown in the browser.
+                  const canvas = await html2canvas(pageEl, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                  });
+
+                  const imgData = canvas.toDataURL('image/png');
+                  const ratio = Math.min(pageWidthMm / canvas.width, pageHeightMm / canvas.height);
+                  const renderWidth = canvas.width * ratio;
+                  const renderHeight = canvas.height * ratio;
+                  const offsetX = (pageWidthMm - renderWidth) / 2;
+                  const offsetY = (pageHeightMm - renderHeight) / 2;
+
+                  if (index > 0) {
+                    pdfDoc.addPage('a4', 'portrait');
+                  }
+
+                  pdfDoc.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+                }
+
+                const fileName = `${(paperTitle || workspace.title || 'Exam_Paper').replace(/\s+/g, '_')}_${exportPaperType}.pdf`;
+                pdfDoc.save(fileName);
                 toast.success('PDF downloaded successfully', { id: toastId });
               } catch (error) {
                 toast.error(error.message || 'Failed to generate PDF', { id: toastId });

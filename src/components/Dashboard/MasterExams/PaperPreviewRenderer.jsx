@@ -151,7 +151,7 @@ function BlockRenderer({ blocks }) {
               ? 'ws-list-roman'
               : 'ws-list-decimal';
           return (
-            <Tag key={idx} className={`ws-paper-preview-list ${block.ordered ? listClass : 'ws-list-bullet'}`}>
+            <Tag key={idx} className={`ws-paper-preview-list ${block.ordered ? listClass : 'ws-list-bullet'} ${block.customClass || ''}`}>
               {block.items.map((item, itemIdx) => {
                 const marksInline = item.inlines.find(inf => inf.marks?.subquestionMarks);
                 const normalInlines = item.inlines.filter(inf => !inf.marks?.subquestionMarks);

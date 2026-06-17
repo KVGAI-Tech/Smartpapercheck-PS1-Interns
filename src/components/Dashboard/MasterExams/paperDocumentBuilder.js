@@ -11,7 +11,7 @@ const DEFAULT_FIRST_PAGE_HEADER_HEIGHT = 240;
 const DEFAULT_REPEAT_HEADER_HEIGHT = 56;
 const DEFAULT_FOOTER_HEIGHT = 28;
 const DEFAULT_CHARS_PER_LINE = 82;
-const DEFAULT_BODY_LINES_PER_SEGMENT = 7;
+const DEFAULT_BODY_LINES_PER_SEGMENT = 12;
 const DEFAULT_INLINE_ANSWER_LINES = 3;
 const DEFAULT_CONTINUATION_ANSWER_LINES = 6;
 
@@ -170,6 +170,16 @@ export function parseQuestionHeaderAndTitle(text) {
   // Verb list: words that typically START the question body (imperative verbs / sentence starters)
   const sentenceStartVerbs = /\b(Implement|Explain|Analyze|Calculate|Consider|Suppose|Write|State|Define|Compare|Contrast|Describe|List|Show|Prove|Find|Determine|Evaluate|Construct|Solve|For|Given|Using|Draw|What|How|Why|Derive|The|A|An|If|Assume|Apply|Discuss)\b/;
   
+  // Strategy 0: Look for a subquestion marker like (a) or 1.
+  const subqMarker = textToAnalyze.match(/(?:^|\s+)((?:\([a-zivx]+\))+)\s+/i) || textToAnalyze.match(/(?:^|\s+)(\d+[.)])\s+/);
+  if (subqMarker && subqMarker.index > 2 && subqMarker.index < 150) {
+    const possibleTitle = textToAnalyze.substring(0, subqMarker.index).trim();
+    const possibleBody = textToAnalyze.substring(subqMarker.index).trim();
+    if (possibleTitle.length > 0 && possibleTitle.length < 150) {
+      return { qNum, title: possibleTitle, body: possibleBody };
+    }
+  }
+
   // Strategy 1: Look for verb that starts after a clear sentence break (newline or period+space)
   const sentenceBreak = textToAnalyze.match(/[.\n]\s+/);
   if (sentenceBreak && sentenceBreak.index > 2 && sentenceBreak.index < 200) {
@@ -235,8 +245,8 @@ export function reconstructHtmlStructure(html = '') {
   // Decode HTML first and strip tags to get clean lines
   let text = withPlaceholders
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n\n')
     .replace(/<[^>]+>/g, '')
     .trim();
     
@@ -268,13 +278,16 @@ export function reconstructHtmlStructure(html = '') {
   });
   
   // Insert split markers before bullets
-  processedBody = processedBody.replace(/\s*(?=[-•●▪*+]\s+)/g, ' __BLOCK_SPLIT__ ');
+  processedBody = processedBody.replace(/(^|\n)\s*(?=[-•●▪]\s+)/g, '$1 __BLOCK_SPLIT__ ');
   
-  // Insert split markers before subquestions like (a), (b), (i), (ii)
-  processedBody = processedBody.replace(/\s*(?=\([a-zivx]+\)\s+)/gi, ' __BLOCK_SPLIT__ ');
+  // Insert split markers before subquestions like (a), (b), (i), (ii) or (a)(i)
+  processedBody = processedBody.replace(/(^|\n|[.?!]\s+)\s*(?=(?:\([a-zivx]+\))+\s+)/gi, '$1 __BLOCK_SPLIT__ ');
   
-  // Split by split marker and newlines
-  const rawSegments = processedBody.split(/__BLOCK_SPLIT__|\n/);
+  // Merge fragmented sentences: replace single newlines with spaces unless it's a double newline
+  processedBody = processedBody.replace(/(?<!\n)\n(?!\n)/g, ' ');
+
+  // Split by split marker and double newlines
+  const rawSegments = processedBody.split(/__BLOCK_SPLIT__|\n{2,}/);
   const segments = [];
   rawSegments.forEach(seg => {
     const cleanSeg = seg.trim();
@@ -308,8 +321,8 @@ export function reconstructHtmlStructure(html = '') {
     const lastSegEndsWithPunctuation = /[.?!:]\s*$/.test(lastSeg);
     
     if (startsWithLowercase || isParenthesizedContinuation || isMathOrSpecial || !lastSegEndsWithPunctuation) {
-      const isBullet = /^[-•●▪*+]\s+/.test(seg);
-      const isSubquestion = /^\([a-zivx]+\)\s+/i.test(seg);
+      const isBullet = /^[-•●▪]\s+/.test(seg);
+      const isSubquestion = /^(?:\([a-zivx]+\))+\s+/i.test(seg);
       
       const isContextLabel = contextLabels.some(label => seg.toLowerCase().startsWith(label.toLowerCase()));
       
@@ -325,20 +338,15 @@ export function reconstructHtmlStructure(html = '') {
   let reconstructedHtml = '';
   
   // Wrap question header
-  if (qNum || title) {
-    reconstructedHtml += `
-      <div class="question-header">
-        <span class="question-number">${qNum || ''}</span>
-        <span class="question-title">${title || ''}</span>
-        ${marksText ? `<span class="question-marks">${marksText}</span>` : ''}
-      </div>
-    `;
-  }
+  // Note: question-header injection has been removed to prevent duplicate titles.
+  // The React component PaperPreviewRenderer handles the title rendering based on questionBlock.title.
   
   let inList = false;
   let subquestionListType = null;
 
   segments.forEach((segment) => {
+    // We already split by __BLOCK_SPLIT__, but some segments might still contain __PRE_PLACEHOLDER
+    // We trim each segment when building them earlier, so we can check normally.
     if (segment.startsWith('__PRE_PLACEHOLDER_')) {
       if (inList) { reconstructedHtml += '</ul>'; inList = false; }
       if (subquestionListType) { reconstructedHtml += '</ol>'; subquestionListType = null; }
@@ -367,13 +375,14 @@ export function reconstructHtmlStructure(html = '') {
     }
     
     // Check if it is a subquestion
-    const subMatch = segment.match(/^\(([a-zivx]+)\)\s+(.*)$/i);
+    const subMatch = segment.match(/^((?:\([a-zivx]+\))+)\s+(.*)$/i);
     if (subMatch) {
       const marker = subMatch[1].toLowerCase();
       const subText = subMatch[2];
-      
-      const isRoman = /^[ivx]+$/.test(marker);
+      const isRoman = /^[ivx]+$/.test(marker.replace(/[()]/g, ''));
       const currentListType = isRoman ? 'roman' : 'alpha';
+      
+      const isComplexMarker = (marker.match(/\)/g) || []).length > 1;
       
       // Extract marks from subquestion if present, e.g. [2]
       const marksMatch = subText.match(/\[\s*(\d+)\s*(?:Marks|M|marks|m)?\s*\]\s*$/i);
@@ -389,11 +398,15 @@ export function reconstructHtmlStructure(html = '') {
         if (subquestionListType) {
           reconstructedHtml += `</ol>`;
         }
-        reconstructedHtml += `<ol class="subquestions-list-${currentListType}">`;
+        reconstructedHtml += `<ol class="subquestions-list-${currentListType}${isComplexMarker ? ' list-none' : ''}">`;
         subquestionListType = currentListType;
       }
       
-      reconstructedHtml += `<li data-marker="(${marker})">${cleanSubText} ${marksHtml}</li>`;
+      if (isComplexMarker) {
+        reconstructedHtml += `<li class="ws-paper-preview-li">${marksHtml}<strong>${subMatch[1]}</strong> ${cleanSubText}</li>`;
+      } else {
+        reconstructedHtml += `<li class="ws-paper-preview-li">${marksHtml}${cleanSubText}</li>`;
+      }
       return;
     }
     
@@ -586,7 +599,8 @@ function domToAst(html = '') {
       });
 
       if (items.length > 0) {
-        ast.push({ type: 'list', ordered: tag === 'ol', listStyleType, items });
+        const customClass = node.classList.contains('list-none') ? 'list-none' : undefined;
+        ast.push({ type: 'list', ordered: tag === 'ol', listStyleType, items, customClass });
       }
       return;
     }
@@ -1051,7 +1065,7 @@ function estimateBlockHeight(block) {
   if (!block) return 0;
 
   if (block.type === 'paragraph') {
-    return Math.max(26, estimateLinesFromText(extractPlainTextFromInlines(block.inlines)) * 22 + 8);
+    return Math.max(22, estimateLinesFromText(extractPlainTextFromInlines(block.inlines)) * 18 + 8);
   }
 
   if (block.type === 'list') {
@@ -1060,7 +1074,7 @@ function estimateBlockHeight(block) {
       0
     );
     const itemGaps = Math.max(0, (block.items || []).length - 1) * 4;
-    return Math.max(30, lines * 22 + 8 + itemGaps);
+    return Math.max(26, lines * 18 + 8 + itemGaps);
   }
 
   if (block.type === 'pre') {

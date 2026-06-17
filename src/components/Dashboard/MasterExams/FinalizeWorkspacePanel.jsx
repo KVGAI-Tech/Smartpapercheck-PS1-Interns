@@ -1,10 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useMemo, useState } from 'react';
 import { Download, FileCheck2, FileText, Loader2, Printer, ShieldCheck, Sparkles } from 'lucide-react';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-
-import { PDFLayoutRenderer } from './pdf/PDFLayoutRenderer';
-import { normalizeMasterExamCard } from './masterExamCardSchema';
 
 function ValidationItem({ label, value, ok = true }) {
   return (
@@ -15,14 +11,6 @@ function ValidationItem({ label, value, ok = true }) {
   );
 }
 
-function buildFinalizedSections(finalizedExam) {
-  return finalizedExam?.structure_snapshot_json?.sections || [];
-}
-
-function buildFinalizedCards(finalizedExam) {
-  return (finalizedExam?.structure_snapshot_json?.cards || []).map((card) => normalizeMasterExamCard(card));
-}
-
 export default function FinalizeWorkspacePanel({
   workspace,
   sections,
@@ -31,6 +19,7 @@ export default function FinalizeWorkspacePanel({
   onFinalize,
   isFinalizing = false,
   finalizedExam = null,
+  onDownloadPdf,
   onDownloadDocx,
   onOpenPrintable,
   onReturnToComposer,
@@ -49,12 +38,6 @@ export default function FinalizeWorkspacePanel({
       isValid: titlePresent && hasSections && hasSelectedQuestions && sectionTitlesComplete,
     };
   }, [sections, selectedCards.length, workspace?.title]);
-
-  const finalizedCards = useMemo(() => buildFinalizedCards(finalizedExam), [finalizedExam]);
-  const finalizedSections = useMemo(() => buildFinalizedSections(finalizedExam), [finalizedExam]);
-  const finalizedBuilder = finalizedExam?.builder_snapshot_json?.builder_layout_json || {};
-  const finalizedSettings = finalizedExam?.builder_snapshot_json?.paper_settings_json || {};
-  const finalizedPaperType = finalizedExam?.paper_type || finalizedExam?.builder_snapshot_json?.paper_type || workspace?.paper_type || 'standard';
 
   return (
     <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-6 overflow-y-auto px-6 py-8 lg:px-8">
@@ -145,30 +128,17 @@ export default function FinalizeWorkspacePanel({
           </div>
         ) : (
           <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <PDFDownloadLink
-              document={(
-                <PDFLayoutRenderer
-                  title={finalizedBuilder.headerTitle || finalizedExam.exam_name}
-                  builderLayout={finalizedBuilder}
-                  cards={finalizedCards}
-                  sections={finalizedSections}
-                  paperType={finalizedPaperType}
-                  paperSettings={finalizedSettings}
-                />
-              )}
-              fileName={`${(finalizedExam.exam_name || 'Finalized_Exam').replace(/\s+/g, '_')}.pdf`}
+            <button
+              type="button"
+              onClick={() => onDownloadPdf?.(finalizedExam)}
               className="rounded-[28px] border border-slate-200 bg-white px-5 py-5 transition hover:border-slate-300"
             >
-              {({ loading }) => (
-                <div>
-                  <div className="flex items-center gap-2 text-base font-medium text-slate-950">
-                    <FileText className="h-5 w-5" />
-                    {loading ? 'Generating PDF...' : 'PDF export'}
-                  </div>
-                  <div className="mt-2 text-sm text-slate-500">Download the finalized paper as a print-ready PDF.</div>
-                </div>
-              )}
-            </PDFDownloadLink>
+              <div className="flex items-center gap-2 text-base font-medium text-slate-950">
+                <FileText className="h-5 w-5" />
+                PDF export
+              </div>
+              <div className="mt-2 text-sm text-slate-500">Download the finalized paper as a print-ready PDF.</div>
+            </button>
 
             <button
               type="button"

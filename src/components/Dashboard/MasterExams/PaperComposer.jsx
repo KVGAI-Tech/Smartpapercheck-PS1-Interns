@@ -15,10 +15,9 @@ import {
   Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { exportDomToPdf } from './pdf/DomToPdfExporter';
 
 import { normalizeLegacySections, replaceImageSlots } from './paperDocumentBuilder';
-import { PDFLayoutRenderer } from './pdf/PDFLayoutRenderer';
 
 const APP_NAME = 'SMART PAPER CHECK';
 const DURATION_OPTIONS = ['30 Minutes', '45 Minutes', '1 Hour', '90 Minutes', '2 Hours', '3 Hours'];
@@ -92,51 +91,58 @@ function showBuilderToast(message, type = 'success') {
 
 function PdfExportOption({
   paperType,
-  builderLayout,
-  cards,
-  sections,
-  paperSettings,
   fileName,
   onClose,
+  setIsPreviewOpen,
+  isExporting,
+  setIsExporting
 }) {
-  const paperTypeMeta = getPaperTypeMeta(paperType);
+  const paperTypeMeta = {
+    label: paperType === 'standard' ? 'Standard PDF' : paperType === 'writable' ? 'Writable PDF' : 'Online PDF',
+    description: 'Clean print-ready examination layout',
+    shortLabel: 'Standard'
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      setIsPreviewOpen(true);
+      
+      // Allow React to mount the PreviewModal and browser to paint
+      await new Promise(r => setTimeout(r, 500));
+      
+      showBuilderToast('PDF export started...');
+      await exportDomToPdf('paper-builder-print-root', fileName);
+      showBuilderToast('PDF export successful!');
+    } catch (error) {
+      console.error(error);
+      showBuilderToast(error.message || 'Export failed', 'error');
+    } finally {
+      setIsExporting(false);
+      onClose?.();
+    }
+  };
 
   return (
-    <PDFDownloadLink
-      document={(
-        <PDFLayoutRenderer
-          title={builderLayout.headerTitle}
-          builderLayout={{ ...builderLayout, totalMarks: builderLayout.totalMarks }}
-          cards={cards}
-          sections={sections}
-          paperType={paperType}
-          paperSettings={paperSettings}
-        />
-      )}
-      fileName={fileName}
-      onClick={() => {
-        onClose?.();
-        showBuilderToast(`${paperTypeMeta.shortLabel} PDF export started`);
-      }}
-      className="flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50"
+    <button
+      type="button"
+      onClick={handleExport}
+      disabled={isExporting}
+      className="flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
     >
-      {({ loading }) => (
-        <>
-          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-            <FileDown className="h-4 w-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-slate-900">{paperTypeMeta.label}</div>
-            <div className="mt-0.5 text-xs leading-5 text-slate-500">
-              {paperTypeMeta.description}
-            </div>
-          </div>
-          <div className="shrink-0 text-xs font-medium text-slate-400">
-            {loading ? 'Preparing…' : 'PDF'}
-          </div>
-        </>
-      )}
-    </PDFDownloadLink>
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+        <FileDown className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-slate-900">{paperTypeMeta.label}</div>
+        <div className="mt-0.5 text-xs leading-5 text-slate-500">
+          {paperTypeMeta.description}
+        </div>
+      </div>
+      <div className="shrink-0 text-xs font-medium text-slate-400">
+        {isExporting ? 'Preparing…' : 'PDF'}
+      </div>
+    </button>
   );
 }
 
@@ -430,6 +436,7 @@ export default function PaperComposer({
     internalNotes: '',
   });
   const [isCreatingQuestion, setIsCreatingQuestion] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const exportMenuRef = useRef(null);
   const importInputRef = useRef(null);
 
@@ -797,12 +804,11 @@ export default function PaperComposer({
                   <PdfExportOption
                     key={type}
                     paperType={type}
-                    builderLayout={{ ...builderLayout, totalMarks: stats.totalMarks, template_id: templateId }}
-                    cards={cards}
-                    sections={normalizedSections}
-                    paperSettings={paperSettings}
-                    fileName={`${(builderLayout.headerTitle || 'exam-paper').replace(/\s+/g, '_')}-${type}.pdf`}
+                    fileName={`${builderLayout.headerTitle || 'Examination_Paper'}.pdf`}
                     onClose={() => setIsExportMenuOpen(false)}
+                    setIsPreviewOpen={setIsPreviewOpen}
+                    isExporting={isExportingPdf}
+                    setIsExporting={setIsExportingPdf}
                   />
                 ))}
 

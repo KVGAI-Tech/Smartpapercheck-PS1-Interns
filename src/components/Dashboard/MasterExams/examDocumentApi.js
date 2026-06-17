@@ -507,6 +507,14 @@ export const downloadMasterExamDocx = async (examId) => {
   return response.blob();
 };
 
+export const downloadMasterExamPdf = async (examId) => {
+  const response = await fetch(`${API_BASE_URL}/master-exams/${examId}/exports/pdf`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) await throwApiError(response, 'Failed to export PDF');
+  return response.blob();
+};
+
 export const fetchMasterExamPrintableHtml = async (examId) => {
   const response = await fetch(`${API_BASE_URL}/master-exams/${examId}/exports/printable`, {
     headers: getAuthHeaders(),

@@ -1464,6 +1464,61 @@
   margin-top: 8px;
 }
 
+/* Document Refinement Rules */
+.question-container {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  margin-bottom: 12px;
+}
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.question-title {
+  flex: 1;
+  font-weight: 700;
+  margin-left: 8px;
+}
+.question-marks {
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+.ws-paper-preview-p {
+  margin-bottom: 6px;
+  margin-top: 0;
+}
+.ws-paper-preview-list {
+  margin-bottom: 6px;
+  margin-top: 0;
+}
+.ws-list-alpha.list-none,
+.ws-list-roman.list-none {
+  list-style-type: none;
+  padding-left: 16px;
+}
+.ws-list-alpha.list-none li,
+.ws-list-roman.list-none li {
+  margin-bottom: 4px;
+}
+.ws-paper-preview-q__images {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.ws-paper-preview-q__images img {
+  margin: 8px 0;
+  max-width: 100%;
+}
+.ws-paper-preview-section {
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
 /* ========= PAPER SETTINGS PANEL ========= */
 .ws-settings-panel {
   background: var(--ws-ink-0);
