@@ -63,6 +63,21 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+const getNormalizedEvaluationStatus = (student) => {
+  const explicitStatus = String(student?.evaluation_status || '').trim().toLowerCase();
+  if (explicitStatus === 'completed' || explicitStatus === 'evaluated') {
+    return 'completed';
+  }
+
+  const rowStatus = String(student?.status || '').trim().toLowerCase();
+  return rowStatus === 'evaluated' ? 'completed' : 'pending';
+};
+
+const hasEvaluationResultsForStudent = (student) => {
+  const hasMarks = student?.marks_obtained !== null && student?.marks_obtained !== undefined;
+  return getNormalizedEvaluationStatus(student) === 'completed' && hasMarks;
+};
+
 const NavButton = ({ icon: Icon, label, onClick, disabled, variant = "primary" }) => {
   const getStyles = () => {
     switch (variant) {
@@ -496,6 +511,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
         const formattedStudents = data.data.enrollments.map(student => {
           const status = student.status || 'not_uploaded';
+          const rawEvaluationStatus = String(student.evaluation_status || '').trim().toLowerCase();
+          const isEvaluated = status === 'evaluated' || rawEvaluationStatus === 'completed' || rawEvaluationStatus === 'evaluated';
           const hasMarks = student.marks_obtained !== null && student.marks_obtained !== undefined;
 
           return {
@@ -504,7 +521,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             exam_id: student.exam_id,
             student_name: student.student_name,
             roll_number: student.roll_number,
-            marks_obtained: hasMarks ? student.marks_obtained : null,
+            marks_obtained: isEvaluated && hasMarks ? student.marks_obtained : null,
             max_marks: student.max_marks || examFullMarks || 0,
             feedback: student.feedback,
             status,
@@ -512,8 +529,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
             upload_time: student.uploaded_by?.upload_time || null,
             recheck_requested: student.recheck_requested || false,
             recheck_count: student.recheck_count || 0,
-            // Consider a student evaluated only when marks are present
-            evaluation_status: hasMarks ? 'completed' : 'pending',
+            evaluation_status: isEvaluated ? 'completed' : 'pending',
             answer_sheet_url: student.answer_sheet_url || null,
           };
         });
@@ -1079,10 +1095,10 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     if (evaluationStatusFilter !== 'all') {
       const isEvaluated = evaluationStatusFilter === 'completed';
       result = result.filter(student => {
-        const hasMarks = student.marks_obtained !== null && student.marks_obtained !== undefined;
-        if (isEvaluated) return hasMarks;
+        const hasResults = hasEvaluationResultsForStudent(student);
+        if (isEvaluated) return hasResults;
         const hasUpload = !!student.status && student.status !== 'not_uploaded';
-        return hasUpload && !hasMarks;
+        return hasUpload && !hasResults;
       });
     }
 
@@ -1098,7 +1114,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
 
   const isStudentSelectable = useCallback((student) => {
     if (!student || student.status === 'not_uploaded') return false;
-    const hasResults = student.marks_obtained !== null;
+    const hasResults = hasEvaluationResultsForStudent(student);
     const inProgress = evaluationProgress.inProgress.includes(student.enrollment_id) ||
       evaluatingStudent?.enrollment_id === student.enrollment_id;
 
@@ -1107,7 +1123,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       return !(inProgress || batchEvaluating || publishing);
     }
 
-    // For initial evaluation, allow both explicit 'uploaded' and 'evaluated' (backend may mark evaluated without marks yet)
+    // Allow evaluation whenever an upload exists and the row doesn't already have final results.
     return (student.status === 'uploaded' || student.status === 'evaluated')
       && !hasResults && !inProgress && !batchEvaluating && !publishing;
   }, [evaluationProgress.inProgress, evaluatingStudent, batchEvaluating, publishing]);
@@ -1252,7 +1268,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     }
 
     const selected = students.filter(s => selectedEnrollmentIds.has(s.enrollment_id));
-    const evaluated = selected.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined);
+    const evaluated = selected.filter(hasEvaluationResultsForStudent);
     if (evaluated.length === 0) {
       showToast('Please select evaluated students only', 'warning');
       return;
@@ -1268,7 +1284,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     }
 
     const selected = students.filter(s => selectedEnrollmentIds.has(s.enrollment_id));
-    const evaluated = selected.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined);
+    const evaluated = selected.filter(hasEvaluationResultsForStudent);
     if (evaluated.length === 0) {
       showToast('Please select evaluated students only', 'warning');
       return;
@@ -1386,7 +1402,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         return;
       }
 
-      const evaluatedCount = selected.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined).length;
+      const evaluatedCount = selected.filter(hasEvaluationResultsForStudent).length;
       const pendingCount = selected.length - evaluatedCount;
 
       if (pendingCount > 0 && evaluatedCount > 0) {
@@ -1406,7 +1422,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   }, [examId, selectedEnrollmentIds, students, showToast, fetchEnrollments, clearSelection]);
 
   const hasEvaluationResults = (student) => {
-    return student.marks_obtained !== null;
+    return hasEvaluationResultsForStudent(student);
   };
 
   const isEvaluationInProgress = (student) => {
@@ -1580,7 +1596,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   const StudentGridItem = ({ student, index }) => {
     const hasResults = hasEvaluationResults(student);
     const isInProgress = isEvaluationInProgress(student);
-    const status = hasResults || student.status === 'evaluated'
+    const status = hasResults
       ? 'completed'
       : isInProgress
         ? 'inProgress'
@@ -1782,7 +1798,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     if (selectedCount === 0) return 'Evaluate / Re-evaluate Selected';
 
     const selectedStudents = students.filter(s => selectedEnrollmentIds.has(s.enrollment_id));
-    const evaluatedCount = selectedStudents.filter(s => s.marks_obtained !== null && s.marks_obtained !== undefined).length;
+    const evaluatedCount = selectedStudents.filter(hasEvaluationResultsForStudent).length;
     const pendingCount = selectedStudents.length - evaluatedCount;
 
     if (pendingCount > 0 && evaluatedCount === 0) return `Evaluate (${selectedCount})`;
@@ -2218,7 +2234,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
                               {filteredStudents.map((student, index) => {
                                 const hasResults = hasEvaluationResults(student);
                                 const isInProgress = isEvaluationInProgress(student);
-                                // Row status badge: completed when marks exist, otherwise inProgress/pending
+                                // Row status badge: completed only after a final evaluated result exists.
                                 const status = hasResults
                                   ? 'completed'
                                   : isInProgress
