@@ -96,6 +96,49 @@ function EditableMarks({ cardId, initialMarks, onUpdateCardMarks }) {
   );
 }
 
+function EditableLines({ cardId, initialLines, onUpdateCard, defaultLines, initialType }) {
+  const initialVal = (!initialType || initialType === 'auto') ? '' : (initialLines ?? '');
+  const [val, setVal] = useState(initialVal);
+
+  useEffect(() => {
+    const newInitialVal = (!initialType || initialType === 'auto') ? '' : (initialLines ?? '');
+    setVal(newInitialVal);
+  }, [initialLines, initialType]);
+
+  const handleBlurOrSubmit = () => {
+    if (val === '') {
+      onUpdateCard?.(cardId, { writing_space_lines: null, writing_space_type: 'auto' });
+    } else {
+      let num = parseInt(val, 10);
+      if (!isNaN(num) && num >= 0 && num <= 50) {
+        if (num === 0) {
+          onUpdateCard?.(cardId, { writing_space_lines: 0, writing_space_type: 'none' });
+        } else {
+          onUpdateCard?.(cardId, { writing_space_lines: num, writing_space_type: 'lined' });
+        }
+      } else {
+        setVal(initialLines ?? '');
+      }
+    }
+  };
+
+  return (
+    <div className="ws-builder-row__marks" style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '3px 8px', background: 'var(--ws-ink-50)', borderRadius: '4px', border: '1px solid var(--ws-ink-200)', marginLeft: '8px' }}>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={val}
+        placeholder={String(defaultLines)}
+        onChange={(e) => setVal(e.target.value.replace(/[^0-9]/g, ''))}
+        onBlur={handleBlurOrSubmit}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+        style={{ width: '20px', border: 'none', background: 'transparent', fontWeight: 700, fontSize: '12px', color: 'var(--ws-brand)', textAlign: 'center', outline: 'none', padding: 0 }}
+      />
+      <span style={{ fontSize: '11px', color: 'var(--ws-ink-500)', fontWeight: 600 }}>Lines</span>
+    </div>
+  );
+}
+
 function splitQuestionSummary(card = {}) {
   const metadataTitle = cleanText(card?.parsed_metadata?.title || '');
   const normalizedBody = cleanText(card?.question_body || '')
@@ -141,6 +184,72 @@ function splitQuestionSummary(card = {}) {
   };
 }
 
+function PerQuestionLinesPanel({ sections, cardsById, paperSettings, onUpdateCard }) {
+  return (
+    <div className="ws-card" style={{ marginTop: '16px', overflow: 'hidden', flexShrink: 0 }}>
+      <div className="ws-card__head" style={{ padding: '16px', borderBottom: '1px solid var(--ws-ink-150)' }}>
+        <div>
+          <div className="ws-label-eyebrow">Per-Question Overrides</div>
+          <div style={{ fontSize: '13px', color: 'var(--ws-ink-500)', marginTop: '4px' }}>
+            Adjust answer space for individual questions
+          </div>
+        </div>
+      </div>
+      <div className="ws-card__body" style={{ padding: '0', maxHeight: '400px', overflowY: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+            <tr style={{ borderBottom: '1px solid var(--ws-ink-150)', background: 'var(--ws-ink-50)', textAlign: 'left' }}>
+              <th style={{ padding: '8px 16px', fontWeight: 600, color: 'var(--ws-ink-600)' }}>Question</th>
+              <th style={{ padding: '8px 16px', fontWeight: 600, color: 'var(--ws-ink-600)', width: '60px', textAlign: 'center' }}>Marks</th>
+              <th style={{ padding: '8px 16px', fontWeight: 600, color: 'var(--ws-ink-600)', width: '100px', textAlign: 'center' }}>Lines</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sections.map((sec) => (
+              <React.Fragment key={sec.id}>
+                <tr>
+                  <td colSpan={3} style={{ padding: '8px 16px', background: 'var(--ws-ink-50)', fontWeight: 600, color: 'var(--ws-ink-700)', fontSize: '12px', borderTop: '1px solid var(--ws-ink-150)' }}>
+                    {sec.title || 'Untitled Section'}
+                  </td>
+                </tr>
+                {(sec.cardIds || []).map((id, idx) => {
+                  const q = cardsById[id];
+                  if (!q) return null;
+                  const questionSummary = splitQuestionSummary(q);
+                  return (
+                    <tr key={id} style={{ borderBottom: '1px solid var(--ws-ink-100)' }}>
+                      <td style={{ padding: '8px 16px' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--ws-ink-800)', fontSize: '13px', marginBottom: '2px' }}>Q{idx + 1}.</div>
+                        <div style={{ color: 'var(--ws-ink-500)', fontSize: '12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {questionSummary.preview}
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 16px', textAlign: 'center', color: 'var(--ws-ink-700)', fontWeight: 500 }}>
+                        {q.marks || 0}
+                      </td>
+                      <td style={{ padding: '8px 16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <EditableLines
+                            cardId={q.id}
+                            initialLines={q.writing_space_lines}
+                            initialType={q.writing_space_type}
+                            onUpdateCard={onUpdateCard}
+                            defaultLines={paperSettings?.writableLineCount ?? 0}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function PreviewOptions({ options = [] }) {
   if (!options.length) return null;
   return (
@@ -155,7 +264,7 @@ function PreviewOptions({ options = [] }) {
   );
 }
 
-function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onChangePaperType }) {
+function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onChangePaperType, paperSettings = {}, onUpdatePaperSettings, pdfViewMode }) {
   const [isOpen, setIsOpen] = useState(true);
   const [totalMarksInput, setTotalMarksInput] = useState(String(builderLayout.totalMarks ?? 100));
 
@@ -269,60 +378,15 @@ function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onC
               placeholder="1. Attempt all questions.\n2. All questions carry equal marks."
             />
           </div>
+
+
         </div>
       )}
     </div>
   );
 }
 
-function ExportDropdown({ onExport }) {
-  const [isOpen, setIsOpen] = useState(false);
 
-  return (
-    <div style={{ position: 'relative' }}>
-      <button
-        type="button"
-        className="ws-btn ws-btn--sm"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <Download size={12} /> Export PDF <ChevronDown size={10} />
-      </button>
-
-      {isOpen && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 9 }}
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="ws-export-dropdown">
-            <button
-              type="button"
-              className="ws-export-dropdown__item"
-              onClick={() => { setIsOpen(false); onExport?.('standard'); }}
-            >
-              <FileText size={14} />
-              <div>
-                <div className="ws-export-dropdown__title">Standard PDF</div>
-                <div className="ws-export-dropdown__desc">Print-ready paper without answer spaces</div>
-              </div>
-            </button>
-            <button
-              type="button"
-              className="ws-export-dropdown__item"
-              onClick={() => { setIsOpen(false); onExport?.('writable'); }}
-            >
-              <Printer size={14} />
-              <div>
-                <div className="ws-export-dropdown__title">Writable Print</div>
-                <div className="ws-export-dropdown__desc">Paper with answer lines &amp; writing spaces</div>
-              </div>
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 export default function BuilderWorkspace({
   mode = 'compose',
@@ -340,7 +404,10 @@ export default function BuilderWorkspace({
   onExport,
   onFinalize,
   onUpdateCardMarks,
+  onUpdatePaperSettings,
+  onUpdateCard,
 }) {
+  const [pdfViewMode, setPdfViewMode] = useState('standard');
   const [libSearch, setLibSearch] = useState('');
   const [dragOverSectionId, setDragOverSectionId] = useState(null);
   const [dragOverCardId, setDragOverCardId] = useState(null);
@@ -400,20 +467,37 @@ export default function BuilderWorkspace({
     subjectCode: builderLayout.subjectCode || builderLayout.subject_code || courseContext?.code || '',
   }), [builderLayout, courseContext, paperTitle]);
 
-  const paperDocument = useMemo(() => {
+  const standardDocument = useMemo(() => {
     try {
       return buildPaperDocument({
         cards,
         sections,
         builderLayout: resolvedBuilderLayout,
         paperSettings,
-        paperType,
+        paperType: 'standard',
       });
     } catch (err) {
-      console.error("Error building paper document:", err);
+      console.error("Error building standard paper document:", err);
       return { error: err.message || String(err) };
     }
-  }, [cards, sections, resolvedBuilderLayout, paperSettings, paperType]);
+  }, [cards, sections, resolvedBuilderLayout, paperSettings]);
+
+  const writableDocument = useMemo(() => {
+    try {
+      return buildPaperDocument({
+        cards,
+        sections,
+        builderLayout: resolvedBuilderLayout,
+        paperSettings,
+        paperType: 'writable',
+      });
+    } catch (err) {
+      console.error("Error building writable paper document:", err);
+      return { error: err.message || String(err) };
+    }
+  }, [cards, sections, resolvedBuilderLayout, paperSettings]);
+
+  const paperDocument = pdfViewMode === 'writable' ? writableDocument : standardDocument;
 
   const filteredLib = useMemo(() => {
     const q = libSearch.toLowerCase().trim();
@@ -452,6 +536,7 @@ export default function BuilderWorkspace({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [pendingFocusSectionId, sections]);
+
 
   const toggleSection = (id) => {
     setCollapsedSections((prev) => {
@@ -892,30 +977,42 @@ export default function BuilderWorkspace({
               onUpdateLayout={onUpdateBuilderLayout}
               paperType={paperType}
               onChangePaperType={onChangePaperType}
+              paperSettings={paperSettings}
+              onUpdatePaperSettings={onUpdatePaperSettings}
+              pdfViewMode={pdfViewMode}
             />
 
-            <div className="ws-card ws-builder-structure-card">
-              <div className="ws-builder-structure-card__head">
-                <div>
-                  <div className="ws-label-eyebrow">Question Paper Workspace</div>
-                  <div className="ws-builder-structure-card__title">Sections locked in from step 3</div>
-                </div>
-                <div className="ws-builder-structure-card__meta">{count} questions</div>
-              </div>
-              <div className="ws-builder-structure-card__list">
-                {structureSummary.map((section) => (
-                  <div key={section.id} className="ws-builder-structure-card__row">
-                    <div>
-                      <div className="ws-builder-structure-card__row-title">{section.title}</div>
-                      <div className="ws-builder-structure-card__row-sub">
-                        {section.questionCount} question{section.questionCount === 1 ? '' : 's'}
-                      </div>
-                    </div>
-                    <div className="ws-builder-structure-card__row-marks">{section.marks} marks</div>
+            {pdfViewMode === 'writable' ? (
+              <PerQuestionLinesPanel
+                sections={sections}
+                cardsById={cardsById}
+                paperSettings={paperSettings}
+                onUpdateCard={onUpdateCard}
+              />
+            ) : (
+              <div className="ws-card ws-builder-structure-card" style={{ margin: 0, flexShrink: 0 }}>
+                <div className="ws-builder-structure-card__head">
+                  <div>
+                    <div className="ws-label-eyebrow">Question Paper Workspace</div>
+                    <div className="ws-builder-structure-card__title">Sections locked in from step 3</div>
                   </div>
-                ))}
+                  <div className="ws-builder-structure-card__meta">{count} questions</div>
+                </div>
+                <div className="ws-builder-structure-card__list">
+                  {structureSummary.map((section) => (
+                    <div key={section.id} className="ws-builder-structure-card__row">
+                      <div>
+                        <div className="ws-builder-structure-card__row-title">{section.title}</div>
+                        <div className="ws-builder-structure-card__row-sub">
+                          {section.questionCount} question{section.questionCount === 1 ? '' : 's'}
+                        </div>
+                      </div>
+                      <div className="ws-builder-structure-card__row-marks">{section.marks} marks</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
 
@@ -1052,6 +1149,14 @@ export default function BuilderWorkspace({
                                 </div>
                                 <div className="ws-builder-row__right">
                                   <EditableMarks cardId={q.id} initialMarks={q.marks || 0} onUpdateCardMarks={onUpdateCardMarks} />
+                                  {pdfViewMode === 'writable' && (
+                                    <EditableLines
+                                      cardId={q.id}
+                                      initialLines={q.writing_space_lines}
+                                      onUpdateCard={onUpdateCard}
+                                      defaultLines={paperSettings?.writableLineCount || 5}
+                                    />
+                                  )}
                                   <button
                                     type="button"
                                     className="ws-builder-row__expand"
@@ -1122,15 +1227,35 @@ export default function BuilderWorkspace({
         <div className="ws-preview-pane ws-fade-up" style={{ animationDelay: '120ms' }}>
           <div className="ws-preview-pane__toolbar">
             <div className="ws-label-eyebrow">Live Preview</div>
-            <ExportDropdown
-              onExport={(exportPaperType) => onExport?.({
-                paperType: exportPaperType,
-                paperDocument,
-                builderLayout: resolvedBuilderLayout,
-                paperSettings,
-                paperTitle,
-              })}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ position: 'relative' }}>
+                <select
+                  className="ws-btn ws-btn--sm"
+                  value={pdfViewMode}
+                  onChange={(e) => setPdfViewMode(e.target.value)}
+                  style={{ appearance: 'none', paddingRight: '24px', cursor: 'pointer', background: 'var(--ws-ink-0)' }}
+                >
+                  <option value="standard">Standard PDF View</option>
+                  <option value="writable">Writable PDF View</option>
+                </select>
+                <ChevronDown size={12} color="var(--ws-ink-500)" style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              </div>
+              <button
+                type="button"
+                className="ws-btn ws-btn--sm"
+                onClick={() => {
+                  onExport?.({
+                    paperType: pdfViewMode,
+                    paperDocument,
+                    builderLayout: resolvedBuilderLayout,
+                    paperSettings,
+                    paperTitle,
+                  });
+                }}
+              >
+                <Download size={12} /> Export PDF
+              </button>
+            </div>
           </div>
           <div className="ws-preview-pane__scroll">
             <LocalErrorBoundary>

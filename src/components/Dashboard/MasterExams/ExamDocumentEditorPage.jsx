@@ -701,6 +701,11 @@ export default function ExamDocumentEditorPage() {
     }
   };
 
+  const handleUpdateCard = (cardId, patch) => {
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, ...patch } : c)));
+    markWorkspaceDirty();
+  };
+
   const handleReorderCards = async (cardIds) => {
     setCards((prev) => {
       const cardMap = new Map(prev.map((card) => [card.id, card]));
@@ -976,6 +981,13 @@ export default function ExamDocumentEditorPage() {
             paperTitle={workspace.title}
             setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
             paperSettings={workspace.paper_settings_json || {}}
+            onUpdatePaperSettings={(patch) => markWorkspaceDirty((prev) => ({
+              ...prev,
+              paper_settings_json: {
+                ...(prev.paper_settings_json || {}),
+                ...patch,
+              },
+            }))}
             builderLayout={workspace.builder_layout_json || {}}
             onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
               ...prev,
@@ -994,6 +1006,7 @@ export default function ExamDocumentEditorPage() {
             }}
             onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
             onUpdateCardMarks={handleUpdateCardMarks}
+            onUpdateCard={handleUpdateCard}
           />
         )}
 
@@ -1006,6 +1019,13 @@ export default function ExamDocumentEditorPage() {
             paperTitle={workspace.title}
             setPaperTitle={(t) => markWorkspaceDirty({ title: t })}
             paperSettings={workspace.paper_settings_json || {}}
+            onUpdatePaperSettings={(patch) => markWorkspaceDirty((prev) => ({
+              ...prev,
+              paper_settings_json: {
+                ...(prev.paper_settings_json || {}),
+                ...patch,
+              },
+            }))}
             builderLayout={workspace.builder_layout_json || {}}
             onUpdateBuilderLayout={(patch) => markWorkspaceDirty((prev) => ({
               ...prev,
@@ -1081,10 +1101,10 @@ export default function ExamDocumentEditorPage() {
             }}
             onFinalize={() => handleFinalize(workspace.title || 'Final Exam')}
             onUpdateCardMarks={handleUpdateCardMarks}
+            onUpdateCard={handleUpdateCard}
           />
         )}
       </div>
-
 
       <ErrorBoundary>
         <QuestionEditModal

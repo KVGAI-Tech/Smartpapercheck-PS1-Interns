@@ -38,41 +38,43 @@ export function PdfQuestionBlock({ card, index, paperType, paperSettings }) {
   const imageStyle = card.parsed_metadata?.paper_image_style || {};
 
   return (
-    <View style={tw('mb-6 flex flex-row items-start')} wrap={true}>
-      {/* Number */}
-      <View style={tw('w-[24px]')}>
-        <Text style={tw('font-bold text-[11px] text-slate-900')}>Q{index})</Text>
-      </View>
-
-      {/* Content */}
-      <View style={tw('flex-1')}>
-        <View wrap={true}>
-          <HtmlToReactPdf html={cleanedHtml} />
-
-          {supportsOptions(card.question_type) && options.length > 0 && (
-            <View style={tw('mt-3 flex flex-row flex-wrap')}>
-              {options.map((opt) => (
-                <View key={opt.id} style={tw('w-1/2 flex flex-row mb-1 pr-2')}>
-                  <Text style={tw('font-bold text-[11px] mr-1')}>({opt.key})</Text>
-                  <HtmlToReactPdf html={opt.text} />
-                </View>
-              ))}
-            </View>
-          )}
-
-          <PdfImageRenderer images={images} imageStyle={imageStyle} paperType={paperType} />
+    <View style={tw('mb-6 flex flex-col')} wrap={true}>
+      <View style={tw('flex flex-row items-start')}>
+        {/* Number */}
+        <View style={tw('w-[24px]')}>
+          <Text style={tw('font-bold text-[11px] text-slate-900')}>Q{index})</Text>
         </View>
 
-        {/* Answer area can wrap gracefully if it's long lines, or stays solid if box */}
-        <PdfAnswerArea card={card} paperSettings={paperSettings} paperType={paperType} />
+        {/* Content */}
+        <View style={tw('flex-1')}>
+          <View wrap={true}>
+            <HtmlToReactPdf html={cleanedHtml} />
+
+            {supportsOptions(card.question_type) && options.length > 0 && (
+              <View style={tw('mt-3 flex flex-row flex-wrap')}>
+                {options.map((opt) => (
+                  <View key={opt.id} style={tw('w-1/2 flex flex-row mb-1 pr-2')}>
+                    <Text style={tw('font-bold text-[11px] mr-1')}>({opt.key})</Text>
+                    <HtmlToReactPdf html={opt.text} />
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <PdfImageRenderer images={images} imageStyle={imageStyle} paperType={paperType} />
+          </View>
+        </View>
+
+        {/* Marks */}
+        {card.marks > 0 && paperSettings.showQuestionMarks !== false && (
+          <View style={tw('ml-2')}>
+            <Text style={tw('font-bold text-[11px] text-slate-900')}>[{card.marks}]</Text>
+          </View>
+        )}
       </View>
 
-      {/* Marks */}
-      {card.marks > 0 && paperSettings.showQuestionMarks !== false && (
-        <View style={tw('ml-2')}>
-          <Text style={tw('font-bold text-[11px] text-slate-900')}>[{card.marks}]</Text>
-        </View>
-      )}
+      {/* Answer area can wrap gracefully if it's long lines, or stays solid if box */}
+      <PdfAnswerArea card={card} paperSettings={paperSettings} paperType={paperType} />
     </View>
   );
 }

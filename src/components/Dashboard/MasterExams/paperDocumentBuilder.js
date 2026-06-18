@@ -70,7 +70,8 @@ function normalizePaperSettings(paperSettings = {}) {
     startSectionsNewPage: Boolean(
       paperSettings.startSectionsNewPage ?? paperSettings.start_sections_new_page
     ),
-    writableLineCount: clampNumber(paperSettings.writableLineCount, 5, 1),
+    writableLineCount: clampNumber(paperSettings.writableLineCount, 0, 0),
+    writableLineStyle: ensureString(paperSettings.writableLineStyle) || 'solid',
     writableBoxHeight: clampNumber(paperSettings.writableBoxHeight, 120, 40),
     graphBoxHeight: clampNumber(paperSettings.graphBoxHeight, 156, 80),
   };
@@ -834,7 +835,7 @@ export function normalizeQuestionImages(card = {}, inlineImages = []) {
 function normalizeAnswerSpaceType(rawValue) {
   const value = ensureString(rawValue).trim().toLowerCase();
   if (!value || value === 'auto' || value === 'inherit') return 'auto';
-  if (value === 'none') return 'auto';
+  if (value === 'none') return 'none';
   if (value === 'no_space') return 'none';
   if (value === 'lines') return 'lined';
   if (value === 'graph_grid' || value === 'grid') return 'graph';
@@ -896,9 +897,15 @@ function deriveHeuristicAnswerArea(card, paperSettings, paperType) {
         : { mode: 'steps', lines: Math.max(4, Math.min(10, calculateWritableLines(marks, paperSettings.writableLineCount))) };
     case 'image_based':
     case 'diagram_based':
-      return technicalMode || graphFriendly
-        ? { mode: 'graph', height: calculateWritableHeight(marks, paperSettings.graphBoxHeight, 150) }
-        : { mode: 'blank', height: calculateWritableHeight(marks, paperSettings.writableBoxHeight, 136) };
+      if (technicalMode) {
+        return graphFriendly
+          ? { mode: 'graph', height: calculateWritableHeight(marks, paperSettings.graphBoxHeight, 150) }
+          : { mode: 'blank', height: calculateWritableHeight(marks, paperSettings.writableBoxHeight, 136) };
+      }
+      return {
+        mode: 'lined',
+        lines: calculateWritableLines(marks, paperSettings.writableLineCount),
+      };
     case 'short_subjective':
       return {
         mode: 'lined',
@@ -917,18 +924,22 @@ function deriveHeuristicAnswerArea(card, paperSettings, paperType) {
 export function deriveAnswerArea(card = {}, paperSettings = {}, paperType = 'standard') {
   const normalizedSettings = normalizePaperSettings(paperSettings);
   const explicitType = normalizeAnswerSpaceType(card?.writing_space_type);
-  const explicitLines = clampNumber(card?.writing_space_lines, 0, 0);
-  const explicitHeight = clampNumber(card?.writing_space_height, 0, 0);
+  const explicitLines = card?.writing_space_lines != null ? clampNumber(card?.writing_space_lines, 0, 0) : null;
+  const explicitHeight = card?.writing_space_height != null ? clampNumber(card?.writing_space_height, 0, 40) : null;
+
+  if (!isWritablePaperType(paperType)) {
+    return { mode: 'none' };
+  }
 
   if (explicitType !== 'auto') {
     if (explicitType === 'none') {
       return { mode: 'none' };
     }
     if (explicitType === 'lined') {
-      return { mode: 'lined', lines: explicitLines || normalizedSettings.writableLineCount };
+      return { mode: 'lined', lines: explicitLines ?? normalizedSettings.writableLineCount, lineStyle: normalizedSettings.writableLineStyle };
     }
     if (explicitType === 'steps') {
-      return { mode: 'steps', lines: explicitLines || Math.max(4, normalizedSettings.writableLineCount) };
+      return { mode: 'steps', lines: explicitLines ?? Math.max(4, normalizedSettings.writableLineCount), lineStyle: normalizedSettings.writableLineStyle };
     }
     if (explicitType === 'graph') {
       return { mode: 'graph', height: explicitHeight || normalizedSettings.graphBoxHeight };
@@ -941,11 +952,11 @@ export function deriveAnswerArea(card = {}, paperSettings = {}, paperType = 'sta
     }
   }
 
-  if (!isWritablePaperType(paperType)) {
-    return { mode: 'none' };
+  const derived = deriveHeuristicAnswerArea(card, normalizedSettings, paperType);
+  if (derived.mode === 'lined' || derived.mode === 'steps') {
+    derived.lineStyle = normalizedSettings.writableLineStyle;
   }
-
-  return deriveHeuristicAnswerArea(card, normalizedSettings, paperType);
+  return derived;
 }
 
 function extractPlainTextFromInlines(inlines = []) {
@@ -1181,20 +1192,23 @@ function buildOptionBlock(card = {}) {
 
 function estimateImagesHeight(questionBlock) {
   if (!questionBlock.images.length) return 0;
+  // Assume a default height of 150px rather than 200/220 to avoid excessive blank space
+  // unless layoutMode specifies otherwise.
   const imageHeight = clampNumber(
     questionBlock.layoutMode?.imageHeight,
-    questionBlock.paperType === 'writable' ? 200 : 220,
-    120
+    questionBlock.paperType === 'writable' ? 150 : 160,
+    80
   );
-  return questionBlock.images.length * (imageHeight + 28) + 18;
+  // Remove massive margins from math to match tighter CSS styling.
+  return questionBlock.images.length * (imageHeight + 12) + 12;
 }
 
 function estimateAnswerAreaHeight(answerArea) {
   if (!answerArea || answerArea.mode === 'none') return 0;
   if (answerArea.mode === 'lined' || answerArea.mode === 'steps') {
-    return clampNumber(answerArea.lines, 0, 0) * 20 + 12;
+    return clampNumber(answerArea.lines, 0, 0) * 24 + 16;
   }
-  return clampNumber(answerArea.height, 0, 0) + 12;
+  return clampNumber(answerArea.height, 0, 0) + 16;
 }
 
 export function replaceImageSlots(htmlText, card) {
@@ -1309,8 +1323,8 @@ export function buildQuestionBlock(card, context = {}) {
       imageSize: imageStyle.size || 'large',
       imageHeight: clampNumber(
         imageStyle.height,
-        (context.paperType || 'standard') === 'writable' ? 200 : 220,
-        120
+        (context.paperType || 'standard') === 'writable' ? 150 : 160,
+        80
       ),
     },
     estimatedHeight: 0,
@@ -1394,43 +1408,7 @@ export function createQuestionSegments(questionBlock) {
     });
   }
 
-  if (questionBlock.answerArea?.mode === 'lined' || questionBlock.answerArea?.mode === 'steps') {
-    const totalLines = clampNumber(questionBlock.answerArea.lines, 0, 0);
-    const inlineLines = Math.min(totalLines, DEFAULT_INLINE_ANSWER_LINES);
-    let remaining = totalLines;
-    let index = 0;
-    if (inlineLines > 0 && attachAnswerAreaToLastSegment({
-      ...questionBlock.answerArea,
-      lines: inlineLines,
-    })) {
-      remaining -= inlineLines;
-    }
-    while (remaining > 0) {
-      const lineCount = Math.min(DEFAULT_CONTINUATION_ANSWER_LINES, remaining);
-      segments.push({
-        id: `${questionBlock.id}-answer-${index + 1}`,
-        type: 'questionSegment',
-        segmentType: 'answer',
-        questionId: questionBlock.id,
-        cardId: questionBlock.cardId,
-        questionNumber: questionBlock.questionNumber,
-        questionDisplayNumber: questionBlock.questionDisplayNumber,
-        questionLabel: questionBlock.questionLabel,
-        marks: questionBlock.marks,
-        continuation: true,
-        showNumber: false,
-        showMarks: false,
-        blocks: [],
-        images: [],
-        answerArea: { ...questionBlock.answerArea, lines: lineCount },
-        estimatedHeight: estimateAnswerAreaHeight({ ...questionBlock.answerArea, lines: lineCount }),
-        layoutMode: questionBlock.layoutMode,
-        rawCard: questionBlock.rawCard,
-      });
-      remaining -= lineCount;
-      index += 1;
-    }
-  } else if (questionBlock.answerArea && questionBlock.answerArea.mode !== 'none') {
+  if (questionBlock.answerArea && questionBlock.answerArea.mode !== 'none') {
     const attached = attachAnswerAreaToLastSegment(questionBlock.answerArea);
     if (!attached) {
       segments.push({
@@ -1598,7 +1576,7 @@ export function paginatePaperDocument({ header, sections, paperSettings = {} }) 
     if (firstQuestion) {
       if (
         currentPage.items.length > 0
-        && sectionHeaderHeight + (firstQuestionSegment?.estimatedHeight || firstQuestion.estimatedHeight) > currentPage.remainingHeight
+        && sectionHeaderHeight + (firstQuestionSegment?.estimatedHeight || firstQuestion.estimatedHeight) + 60 > currentPage.remainingHeight
       ) {
         startNewPage();
       }
