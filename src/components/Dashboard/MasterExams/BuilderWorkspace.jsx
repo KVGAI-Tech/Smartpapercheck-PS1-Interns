@@ -225,7 +225,9 @@ function PerQuestionLinesPanel({ sections, cardsById, paperSettings, onUpdateCar
             </tr>
           </thead>
           <tbody>
-            {sections.map((sec) => (
+            {sections.map((sec, secIdx) => {
+              const globalIdxOffset = sections.slice(0, secIdx).reduce((sum, s) => sum + (s.cardIds || []).length, 0);
+              return (
               <React.Fragment key={sec.id}>
                 <tr>
                   <td colSpan={3} style={{ padding: '8px 16px', background: 'var(--ws-ink-50)', fontWeight: 600, color: 'var(--ws-ink-700)', fontSize: '12px', borderTop: '1px solid var(--ws-ink-150)' }}>
@@ -233,13 +235,14 @@ function PerQuestionLinesPanel({ sections, cardsById, paperSettings, onUpdateCar
                   </td>
                 </tr>
                 {(sec.cardIds || []).map((id, idx) => {
+                  const globalIdx = globalIdxOffset + idx + 1;
                   const q = cardsById[id];
                   if (!q) return null;
                   const questionSummary = splitQuestionSummary(q);
                   return (
                     <tr key={id} style={{ borderBottom: '1px solid var(--ws-ink-100)' }}>
                       <td style={{ padding: '8px 16px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--ws-ink-800)', fontSize: '13px', marginBottom: '2px' }}>Q{idx + 1}.</div>
+                        <div style={{ fontWeight: 600, color: 'var(--ws-ink-800)', fontSize: '13px', marginBottom: '2px' }}>Q{globalIdx}.</div>
                         <div style={{ color: 'var(--ws-ink-500)', fontSize: '12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           {questionSummary.preview}
                         </div>
@@ -262,7 +265,8 @@ function PerQuestionLinesPanel({ sections, cardsById, paperSettings, onUpdateCar
                   );
                 })}
               </React.Fragment>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
@@ -470,6 +474,7 @@ function BuilderSortableRow({
   card,
   sectionId,
   idx,
+  globalIndex,
   isExpanded,
   onToggleExpand,
   onRemove,
@@ -520,7 +525,7 @@ function BuilderSortableRow({
             <GripVertical size={16} color="var(--ws-ink-300)" />
           </div>
           <div className="ws-builder-row__index">
-            <div className="ws-builder-row__num">Q{idx + 1}</div>
+            <div className="ws-builder-row__num">Q{globalIndex}</div>
             <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[card.question_type] || 'Q'}</span>
           </div>
           <div className="ws-builder-row__content">
@@ -1162,7 +1167,8 @@ export default function BuilderWorkspace({
 
         {isComposeMode && (
           <div className="ws-section-workspace-list">
-            {sections.map((sec) => {
+            {sections.map((sec, secIdx) => {
+              const globalIdxOffset = sections.slice(0, secIdx).reduce((sum, s) => sum + (s.cardIds || []).length, 0);
               const secMarks = (sec.cardIds || []).reduce((sum, id) => sum + (Number(cardsById[id]?.marks) || 0), 0);
               const qCount = (sec.cardIds || []).length;
               const isCollapsed = collapsedSections.has(sec.id);
@@ -1257,6 +1263,7 @@ export default function BuilderWorkspace({
                                 card={q}
                                 sectionId={sec.id}
                                 idx={idx}
+                                globalIndex={globalIdxOffset + idx + 1}
                                 isExpanded={isExpanded}
                                 onToggleExpand={() => toggleQuestionExpanded(sec.id, id, idx)}
                                 onRemove={() => removeCard(sec.id, id)}

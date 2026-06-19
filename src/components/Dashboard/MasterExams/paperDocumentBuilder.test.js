@@ -301,7 +301,7 @@ test('buildPaperDocument preserves strict builder section and question order acr
 
   assert.deepEqual(renderedSections, ['section-a', 'section-b']);
   assert.deepEqual(renderedQuestions, ['1', '2', '3', '4']);
-  assert.deepEqual(renderedQuestionNumbers, ['1', '2', '1', '2']);
+  assert.deepEqual(renderedQuestionNumbers, ['1', '2', '3', '4']);
   assert.ok(paperDocument.pageDescriptors.every((page) => page.items.length > 0));
   assert.doesNotThrow(() => validatePaperDocumentForExport(paperDocument));
 });

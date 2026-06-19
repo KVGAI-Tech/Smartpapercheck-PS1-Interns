@@ -1484,6 +1484,7 @@
   margin-bottom: 12px;
   page-break-inside: avoid;
   break-inside: avoid;
+  font-size: 14.5px;
 }
 .question-title {
   flex: 1;
@@ -1935,13 +1936,18 @@
 }
 .ws-paper-preview-section {
   margin-bottom: 0;
-  border-bottom: 1px solid #ddd;
   padding-bottom: 10px;
 }
 .ws-paper-preview-section__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  margin-bottom: 4px;
+}
+.ws-paper-preview-section-divider {
+  border: 0;
+  border-top: 1px solid var(--ws-ink-800);
+  margin-bottom: 24px;
 }
 .ws-paper-preview-section__title {
   font-size: 16px;
@@ -2148,6 +2154,9 @@
 
 .ws-list-alpha {
   list-style-type: lower-alpha;
+}
+.ws-list-none {
+  list-style-type: none;
 }
 .ws-list-roman {
   list-style-type: lower-roman;

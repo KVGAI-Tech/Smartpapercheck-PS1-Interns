@@ -74,9 +74,10 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
                     <div className="ws-paper-preview-section__head">
                       <div className="ws-paper-preview-section__title">{item.title}</div>
                       {paperSettings?.showSectionMarks !== false && (
-                        <div className="ws-paper-preview-section__marks">{item.marks} marks</div>
+                        <div className="ws-paper-preview-section__marks">{item.marks} MARKS</div>
                       )}
                     </div>
+                    <hr className="ws-paper-preview-section-divider" />
                     {item.instructions && item.instructions.length > 0 && (
                       <div className="ws-paper-preview-section__instructions">
                         <BlockRenderer blocks={item.instructions} />
@@ -87,18 +88,22 @@ export default function PaperPreviewRenderer({ paperDocument, paperSettings }) {
               }
 
               // Question Segment
+              const cleanTitle = item.title ? item.title.replace(/^Question\s*\d+:\s*/i, '').trim() : '';
+
               return (
                 <div key={item.id} className="ws-paper-preview-q question-container">
                   {item.isFirstSegment && (
-                    <div className="question-header">
-                      <span className="question-number">
-                        {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}.`}
-                      </span>
-                      <span className="question-title">{item.title || ''}</span>
-                      {paperSettings?.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && (
-                        <span className="question-marks">[{item.marks} Marks]</span>
-                      )}
-                    </div>
+                    <>
+                      <div className="question-header">
+                        <span className="question-number">
+                          {item.showNumber === false ? '' : `Q${item.questionDisplayNumber || item.questionNumber || item.questionLabel}. `}
+                          <span className="question-title">{cleanTitle}</span>
+                        </span>
+                        {paperSettings?.showQuestionMarks !== false && item.showMarks !== false && item.marks > 0 && (
+                          <span className="question-marks">[{item.marks} Marks]</span>
+                        )}
+                      </div>
+                    </>
                   )}
                   <div className="ws-paper-preview-q__body question-body">
                     {(item.body?.blocks || item.blocks) && (item.body?.blocks || item.blocks).length > 0 && (
@@ -149,9 +154,12 @@ function BlockRenderer({ blocks }) {
             ? 'ws-list-alpha'
             : block.listStyleType === 'roman'
               ? 'ws-list-roman'
-              : 'ws-list-decimal';
+              : block.listStyleType === 'none'
+                ? 'ws-list-none'
+                : 'ws-list-decimal';
           return (
-            <Tag key={idx} className={`ws-paper-preview-list ${block.ordered ? listClass : 'ws-list-bullet'} ${block.customClass || ''}`}>
+            <div key={idx}>
+              <Tag className={`ws-paper-preview-list ${block.ordered ? listClass : 'ws-list-bullet'} ${block.customClass || ''}`}>
               {block.items.map((item, itemIdx) => {
                 const marksInline = item.inlines.find(inf => inf.marks?.subquestionMarks);
                 const normalInlines = item.inlines.filter(inf => !inf.marks?.subquestionMarks);
@@ -167,6 +175,7 @@ function BlockRenderer({ blocks }) {
                 );
               })}
             </Tag>
+            </div>
           );
         }
         if (block.type === 'options') {

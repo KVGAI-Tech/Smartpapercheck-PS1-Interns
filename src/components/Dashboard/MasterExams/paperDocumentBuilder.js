@@ -1475,7 +1475,7 @@ function buildSectionDescriptors(normalizedSections, cardsById, paperSettings, p
         return buildQuestionBlock(card, {
           sectionId: section.id,
           questionNumber: globalContext.questionIndex,
-          questionDisplayNumber: cardIndex + 1,
+          questionDisplayNumber: globalContext.questionIndex,
           paperSettings,
           paperType,
         });

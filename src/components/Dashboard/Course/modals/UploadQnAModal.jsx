@@ -552,8 +552,7 @@ const UploadQnAModal = ({
     if (hasEditorContent) return 'text';
     return 'image';
   };
-
-  const flattenParsedExam = (parsedData) => {
+const flattenParsedExam = (parsedData) => {
     // Extract questions — supports both legacy sections schema and new flat questions schema
     let questionsList = [];
     if (parsedData?.sections) {
@@ -565,7 +564,7 @@ const UploadQnAModal = ({
     if (!questionsList || questionsList.length === 0) return [];
 
     // ONLY main questions go into the dropdown — sub-parts (a, b, c) are rubrics, NOT selectable
-    return questionsList.map(q => {
+    return questionsList.map((q, idx) => {
       let rubricsCount = 1;
       if (q.rubrics && Array.isArray(q.rubrics)) {
         const countLeaves = (rubs) => {
@@ -585,7 +584,7 @@ const UploadQnAModal = ({
 
       return {
         id: `M_${q.id || Math.random()}`,
-        label: `Q${q.id || ''}`,
+        label: `Q${idx + 1}. ${q.question?.replace(/^Question\s*\d+:\s*/i, '').substring(0, 50) || 'Untitled Question'}...`,
         questionBody: q.question || '',
         answerBody: q.answer || '',
         marks: q.totalMarks || '',
@@ -695,7 +694,7 @@ const UploadQnAModal = ({
         
         const options = allQuestions.map((q, idx) => ({
           id: q.id,
-          label: `Q${q.display_order + 1 || (idx + 1)}: ${q.question_text?.substring(0, 50) || 'Untitled Question'}...`,
+          label: `Q${idx + 1}. ${q.question_text?.replace(/^Question\s*\d+:\s*/i, '').substring(0, 50) || 'Untitled Question'}...`,
           questionBody: q.question_text || '',
           answerBody: q.metadata_json?.answer_body || q.metadata_json?.answer_text || '',
           marks: q.marks,
