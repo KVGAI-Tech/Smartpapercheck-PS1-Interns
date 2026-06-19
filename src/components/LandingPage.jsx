@@ -12,6 +12,7 @@ import Hero from "./LandingPage/Hero";
 import Insights from "./LandingPage/Insights";
 import Navbar from "./LandingPage/Navbar";
 import Pricing from "./LandingPage/Pricing";
+import SmartEvaluationSystem from "./LandingPage/SmartEvaluationSystem";
 import Testimonials from "./LandingPage/Testimonials";
 import USP from "./LandingPage/USP";
 import VideoDemo from "./LandingPage/VideoDemo";
@@ -263,6 +264,8 @@ const LandingPage = () => {
         />
         <Hero scrollToDemo={scrollToDemo} />
       </div>
+
+      <SmartEvaluationSystem />
 
       <motion.div
         initial={{ opacity: 0 }}
