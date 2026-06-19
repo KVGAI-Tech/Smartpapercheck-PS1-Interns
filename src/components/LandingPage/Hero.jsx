@@ -176,15 +176,14 @@ const Hero = ({ scrollToDemo }) => {
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none" />
                 <video
+                  src="/api/public/landing-video?v=2"
                   autoPlay
                   loop
                   muted
                   playsInline
                   preload="auto"
                   className="rounded-2xl object-cover w-full h-auto aspect-[16/10] shadow-inner"
-                >
-                  <source src="/api/public/landing-video?v=2" type="video/mp4" />
-                </video>
+                />
               </motion.div>
               
               <motion.div
