@@ -224,60 +224,27 @@ function InlineRenderer({ inlines }) {
 function AnswerAreaRenderer({ area }) {
   if (!area || area.mode === 'none') return null;
 
-  // Render all answer lines using fixed coordinates absolute to the page (margin bounds),
-  // while preserving vertical space in the document flow via a placeholder div.
-  // We apply a 38px margin to create notebook-style gaps on both ends.
-  const PAGE_MARGIN_LEFT = '38px';
-  const PAGE_MARGIN_RIGHT = '38px';
-
-  const lineContainerRef = useRef(null);
-
-  useEffect(() => {
-    if (lineContainerRef.current) {
-      console.log(`[AnswerArea Debug] Calculated width: ${lineContainerRef.current.getBoundingClientRect().width}px`);
-    }
-  });
-
   if (area.mode === 'lined' || area.mode === 'steps') {
-    const linesCount = area.lines ?? 3;
-    if (linesCount === 0) return null;
-
-    const lineStyle = area.lineStyle || 'solid';
-    const height = linesCount * 24;
     return (
-      <div style={{ height: `${height}px`, width: '100%', marginTop: '16px' }}>
-        <div 
-          ref={lineContainerRef}
-          className={`ws-paper-preview-answer-lined ws-line-style-${lineStyle}`}
-          style={{ position: 'absolute', left: PAGE_MARGIN_LEFT, right: PAGE_MARGIN_RIGHT, marginTop: 0 }}
-        >
-          {Array.from({ length: linesCount }).map((_, i) => (
-            <div key={i} className="ws-paper-preview-answer-line"></div>
-          ))}
-        </div>
+      <div className="ws-paper-preview-answer-lined">
+        {Array.from({ length: area.lines || 3 }).map((_, i) => (
+          <div key={i} className="ws-paper-preview-answer-line"></div>
+        ))}
       </div>
     );
   }
   if (area.mode === 'graph') {
-    const height = area.height || 150;
     return (
-      <div style={{ height: `${height}px`, width: '100%', marginTop: '16px' }}>
-        <div 
-          ref={lineContainerRef}
-          className="ws-paper-preview-answer-graph" 
-          style={{ height: `${height}px`, position: 'absolute', left: PAGE_MARGIN_LEFT, right: PAGE_MARGIN_RIGHT, marginTop: 0 }}
-        ></div>
-      </div>
+      <div 
+        className="ws-paper-preview-answer-graph" 
+        style={{ height: area.height || 150 }}
+      ></div>
     );
   }
-  const height = area.height || 100;
   return (
-    <div style={{ height: `${height}px`, width: '100%', marginTop: '16px' }}>
-      <div 
-        ref={lineContainerRef}
-        className="ws-paper-preview-answer-blank" 
-        style={{ height: `${height}px`, position: 'absolute', left: PAGE_MARGIN_LEFT, right: PAGE_MARGIN_RIGHT, marginTop: 0 }}
-      ></div>
-    </div>
+    <div 
+      className="ws-paper-preview-answer-blank" 
+      style={{ height: area.height || 100 }}
+    ></div>
   );
 }

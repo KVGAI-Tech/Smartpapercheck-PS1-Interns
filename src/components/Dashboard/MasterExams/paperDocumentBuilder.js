@@ -108,7 +108,9 @@ export function normalizeLegacySections(rawSections = [], cards = []) {
     const legacyCardIds = Array.isArray(section?.cards)
       ? section.cards.map((card) => card?.id).filter(Boolean)
       : [];
-    const explicitCardIds = Array.isArray(section?.cardIds) ? section.cardIds : [];
+    const explicitCardIds = Array.isArray(section?.cardIds) 
+      ? section.cardIds.map(idObj => (typeof idObj === 'object' && idObj !== null ? idObj.id : idObj))
+      : [];
     const candidateCardIds = dedupeIds(
       explicitCardIds.length > 0 ? explicitCardIds : legacyCardIds,
       validCardIds
@@ -1619,10 +1621,15 @@ export function buildPaperDocument({
   const normalizedSettings = normalizePaperSettings(paperSettings);
   const normalizedSections = normalizeLegacySections(sections, cards);
   const cardsById = new Map(cards.map((card) => [String(card.id), card]));
-  const header = buildHeaderDescriptor(builderLayout);
-  
   const globalContext = { questionIndex: 0 };
   const resolvedSections = buildSectionDescriptors(normalizedSections, cardsById, normalizedSettings, paperType, globalContext);
+  
+  const calculatedTotalMarks = resolvedSections.reduce((sum, sec) => sum + (sec.marks || 0), 0);
+  
+  const header = buildHeaderDescriptor({
+    ...builderLayout,
+    totalMarks: builderLayout.totalMarks ?? (calculatedTotalMarks > 0 ? calculatedTotalMarks : 100),
+  });
   
   const questions = resolvedSections.flatMap((section) => section.questionBlocks);
   const pageDescriptors = paginatePaperDocument({

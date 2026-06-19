@@ -8,7 +8,7 @@ export default function WorkspaceStepper({ step, onChange, sourcesCount, questio
   const steps = [
     { id: 'import', label: 'Import Sources', sub: `${sourcesCount || 0} sources` },
     { id: 'library', label: 'Question Library', sub: `${questionsCount || 0} questions` },
-    { id: 'workspace', label: 'Question Paper Workspace', sub: `${addedMarks || 0}/${totalMarks || 100} marks` },
+    { id: 'workspace', label: 'Question Paper Workspace', sub: `${addedMarks || 0} marks` },
     { id: 'builder', label: 'Paper Builder & Preview', sub: 'Settings & preview' },
   ];
 

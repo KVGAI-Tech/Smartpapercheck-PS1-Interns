@@ -5,11 +5,7 @@ export const MASTER_EXAM_QUESTION_TYPES = [
   { value: 'long_subjective', label: 'Long Subjective', family: 'subjective' },
   { value: 'numerical', label: 'Numerical Answer', family: 'objective' },
   { value: 'true_false', label: 'True / False', family: 'objective' },
-  { value: 'assertion_reason', label: 'Assertion & Reason', family: 'objective' },
   { value: 'fill_blank', label: 'Fill in the Blanks', family: 'objective' },
-  { value: 'case_study', label: 'Case Study / Passage Based', family: 'subjective' },
-  { value: 'image_based', label: 'Image-Based Question', family: 'media' },
-  { value: 'diagram_based', label: 'Diagram-Based Question', family: 'media' },
 ];
 
 export const MASTER_EXAM_DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
@@ -107,7 +103,11 @@ export const createDefaultParsedMetadata = (questionType = 'long_subjective') =>
   co_mapping: [],
   bloom_taxonomy: '',
   attachments: [],
-  options: supportsOptions(questionType) ? [defaultOption(0), defaultOption(1), defaultOption(2), defaultOption(3)] : [],
+  options: supportsOptions(questionType) 
+    ? (questionType === 'true_false' 
+      ? [{ ...defaultOption(0), text: 'True' }, { ...defaultOption(1), text: 'False' }] 
+      : [defaultOption(0), defaultOption(1), defaultOption(2), defaultOption(3)]) 
+    : [],
   correct_option_ids: [],
   explanation: '',
   negative_marking: '',
@@ -132,6 +132,18 @@ export const createDefaultParsedMetadata = (questionType = 'long_subjective') =>
 });
 
 const normalizeOptions = (questionType, options, correctOptionIds) => {
+  const normalizedCorrectIds = ensureArray(correctOptionIds).map((item) => ensureString(item));
+
+  if (questionType === 'true_false') {
+    const isTrueCorrect = normalizedCorrectIds.includes('option-1') || normalizedCorrectIds.includes('A') || ensureArray(options).some(o => (o.key === 'A' || o.id === 'option-1' || String(o.text).toLowerCase() === 'true') && o.isCorrect);
+    const isFalseCorrect = normalizedCorrectIds.includes('option-2') || normalizedCorrectIds.includes('B') || ensureArray(options).some(o => (o.key === 'B' || o.id === 'option-2' || String(o.text).toLowerCase() === 'false') && o.isCorrect);
+    
+    return [
+      { id: 'option-1', key: 'A', text: 'True', isCorrect: isTrueCorrect },
+      { id: 'option-2', key: 'B', text: 'False', isCorrect: isFalseCorrect }
+    ];
+  }
+
   const optionList = ensureArray(options)
     .map((option, index) => ({
       id: ensureString(option?.id) || `option-${index + 1}`,
@@ -143,8 +155,6 @@ const normalizeOptions = (questionType, options, correctOptionIds) => {
   const seeded = optionList.length > 0
     ? optionList
     : (supportsOptions(questionType) ? [defaultOption(0), defaultOption(1), defaultOption(2), defaultOption(3)] : []);
-
-  const normalizedCorrectIds = ensureArray(correctOptionIds).map((item) => ensureString(item));
 
   return seeded.map((option) => ({
     ...option,

@@ -4,6 +4,26 @@ import {
   FileText, Plus, Search, GripVertical, X, Download, CheckCircle2, ChevronDown, ChevronRight, ChevronLeft,
   Settings2, Printer, Layout, Eye, EyeOff,
 } from 'lucide-react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCorners,
+  useDroppable,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  defaultDropAnimationSideEffects,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import DifficultyDots from './DifficultyDots';
 import { supportsOptions } from './masterExamCardSchema';
 import PaperPreviewRenderer from './PaperPreviewRenderer';
@@ -264,23 +284,27 @@ function PreviewOptions({ options = [] }) {
   );
 }
 
-function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onChangePaperType, paperSettings = {}, onUpdatePaperSettings, pdfViewMode }) {
+function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onChangePaperType, paperSettings = {}, onUpdatePaperSettings, pdfViewMode, computedTotalMarks }) {
   const [isOpen, setIsOpen] = useState(true);
-  const [totalMarksInput, setTotalMarksInput] = useState(String(builderLayout.totalMarks ?? 100));
+  const [totalMarksInput, setTotalMarksInput] = useState(String(builderLayout.totalMarks ?? computedTotalMarks ?? 100));
 
   // Sync local state if builderLayout.totalMarks changes externally
   const layoutTotalMarks = builderLayout.totalMarks;
   React.useEffect(() => {
-    setTotalMarksInput(String(layoutTotalMarks ?? 100));
-  }, [layoutTotalMarks]);
+    setTotalMarksInput(String(layoutTotalMarks ?? computedTotalMarks ?? 100));
+  }, [layoutTotalMarks, computedTotalMarks]);
 
   const handleTotalMarksBlur = () => {
+    if (totalMarksInput.trim() === '') {
+      onUpdateLayout?.({ totalMarks: null });
+      return;
+    }
     const parsed = parseInt(totalMarksInput, 10);
     if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 1000) {
       onUpdateLayout?.({ totalMarks: parsed });
     } else {
       // Revert to last valid value
-      setTotalMarksInput(String(builderLayout.totalMarks ?? 100));
+      setTotalMarksInput(String(builderLayout.totalMarks ?? computedTotalMarks ?? 100));
     }
   };
 
@@ -324,6 +348,7 @@ function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onC
                 type="text"
                 inputMode="numeric"
                 className="ws-settings-panel__input"
+                placeholder={`Calculated: ${computedTotalMarks || 100}`}
                 value={totalMarksInput}
                 onChange={(e) => setTotalMarksInput(e.target.value)}
                 onBlur={handleTotalMarksBlur}
@@ -388,6 +413,177 @@ function PaperSettingsPanel({ builderLayout = {}, onUpdateLayout, paperType, onC
 
 
 
+function LibrarySortableCard({ card, added, questionSummary }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
+    id: `lib-${card.id}`,
+    data: { type: 'LibraryCard', card },
+    disabled: added,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={`ws-mini-card ${added ? 'ws-mini-card--added' : ''}`}
+      style={{ 
+        opacity: isDragging ? 0.5 : (added ? 0.45 : 1), 
+        touchAction: 'none', 
+        cursor: added ? 'default' : 'grab',
+        pointerEvents: added ? 'none' : 'auto',
+        userSelect: 'none',
+        WebkitUserSelect: 'none'
+      }}
+    >
+      <div className="ws-mini-card__top">
+        <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[card.question_type] || 'Q'}</span>
+        <span style={{ fontWeight: 600, color: 'var(--ws-ink-700)' }}>{card.marks || 0}M</span>
+        <div style={{ marginLeft: 'auto' }}><DifficultyDots level={card.difficulty} /></div>
+      </div>
+      <div className="ws-mini-card__title">{questionSummary.title}</div>
+      <div className="ws-mini-card__preview">{questionSummary.preview}</div>
+    </div>
+  );
+}
+
+function SectionDropZone({ section, isSectionDropTarget, setSectionRef, children }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `section-${section.id}`,
+    data: { type: 'Section', sectionId: section.id },
+  });
+
+  return (
+    <div
+      ref={(node) => {
+        setNodeRef(node);
+        if (setSectionRef) setSectionRef(node);
+      }}
+      className={`ws-section-block ${(isOver || isSectionDropTarget) ? 'ws-section-block--drop' : ''}`}
+      data-section-id={section.id}
+    >
+      {children}
+    </div>
+  );
+}
+
+function BuilderSortableRow({
+  card,
+  sectionId,
+  idx,
+  isExpanded,
+  onToggleExpand,
+  onRemove,
+  onUpdateCardMarks,
+  pdfViewMode,
+  paperSettings,
+  onUpdateCard,
+  questionSummary,
+  hasOptions,
+  optionList,
+  EditableMarks,
+  EditableLines,
+  cleanText
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `card-${sectionId}-${card.id}-${idx}`,
+    data: { type: 'SectionCard', card, sectionId, idx },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`ws-builder-row ${isExpanded ? 'ws-builder-row--expanded' : ''}`}
+    >
+      <div className="ws-builder-row__header">
+        <div className="ws-builder-row__left">
+          <div
+            {...attributes}
+            {...listeners}
+            className="ws-builder-row__grip"
+            style={{ cursor: 'grab', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+          >
+            <GripVertical size={16} color="var(--ws-ink-300)" />
+          </div>
+          <div className="ws-builder-row__index">
+            <div className="ws-builder-row__num">Q{idx + 1}</div>
+            <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[card.question_type] || 'Q'}</span>
+          </div>
+          <div className="ws-builder-row__content">
+            <div className="ws-builder-row__title" title={questionSummary.title}>
+              {questionSummary.title}
+            </div>
+            <div className="ws-builder-row__preview" title={questionSummary.preview}>
+              {questionSummary.preview}
+            </div>
+          </div>
+        </div>
+        <div className="ws-builder-row__right">
+          <EditableMarks cardId={card.id} initialMarks={card.marks || 0} onUpdateCardMarks={onUpdateCardMarks} />
+          {pdfViewMode === 'writable' && (
+            <EditableLines
+              cardId={card.id}
+              initialLines={card.writing_space_lines}
+              onUpdateCard={onUpdateCard}
+              defaultLines={paperSettings?.writableLineCount || 5}
+            />
+          )}
+          <button
+            type="button"
+            className="ws-builder-row__expand"
+            onClick={onToggleExpand}
+            title={isExpanded ? 'Collapse question' : 'Expand question'}
+          >
+            {isExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
+            {isExpanded ? 'Collapse' : 'Expand'}
+          </button>
+          <button
+            type="button"
+            className="ws-builder-row__remove"
+            onClick={onRemove}
+            title="Remove Question"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="ws-builder-row__details">
+          <div className="ws-builder-row__full-text">{questionSummary.fullText}</div>
+          {hasOptions && (
+            <div className="ws-builder-row__options">
+              {optionList.slice(0, 4).map((opt, optIdx) => (
+                <div key={optIdx} className="ws-builder-row__option">
+                  <span className="ws-builder-row__option-key">({opt.key || String.fromCharCode(65 + optIdx)})</span>
+                  <span className="ws-builder-row__option-text">{cleanText(opt.text)}</span>
+                </div>
+              ))}
+              {optionList.length > 4 && (
+                <div className="ws-builder-row__option-more">+{optionList.length - 4} more</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BuilderWorkspace({
   mode = 'compose',
   cards,
@@ -409,8 +605,6 @@ export default function BuilderWorkspace({
 }) {
   const [pdfViewMode, setPdfViewMode] = useState('standard');
   const [libSearch, setLibSearch] = useState('');
-  const [dragOverSectionId, setDragOverSectionId] = useState(null);
-  const [dragOverCardId, setDragOverCardId] = useState(null);
   const [isLibraryCollapsed, setIsLibraryCollapsed] = useState(false);
   const [isSettingsCollapsed, setIsSettingsCollapsed] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState(new Set());
@@ -419,12 +613,17 @@ export default function BuilderWorkspace({
   const builderCanvasRef = useRef(null);
   const sectionRefs = useRef({});
   const sectionTitleRefs = useRef({});
-  const autoScrollFrameRef = useRef(null);
-  const autoScrollStateRef = useRef({ active: false, pointerY: 0 });
   const autoExpandTimeoutRef = useRef(null);
   const autoExpandSectionIdRef = useRef(null);
+  const [activeDragItem, setActiveDragItem] = useState(null);
+  
   const isComposeMode = mode === 'compose';
   const isFinalizeMode = mode === 'finalize';
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const cardsById = useMemo(() => {
     const map = {};
@@ -437,7 +636,10 @@ export default function BuilderWorkspace({
 
   const addedIds = useMemo(() => {
     const s = new Set();
-    sections.forEach((sec) => (sec.cardIds || []).forEach((id) => s.add(String(id))));
+    sections.forEach((sec) => (sec.cardIds || []).forEach((idObj) => {
+      const id = typeof idObj === 'object' && idObj !== null ? idObj.id : idObj;
+      s.add(String(id));
+    }));
     return s;
   }, [sections]);
 
@@ -565,77 +767,6 @@ export default function BuilderWorkspace({
     autoExpandSectionIdRef.current = null;
   };
 
-  const stopAutoScroll = () => {
-    autoScrollStateRef.current.active = false;
-    if (autoScrollFrameRef.current) {
-      window.cancelAnimationFrame(autoScrollFrameRef.current);
-      autoScrollFrameRef.current = null;
-    }
-  };
-
-  const clearDragState = () => {
-    setDragOverSectionId(null);
-    setDragOverCardId(null);
-    clearAutoExpandTimeout();
-    stopAutoScroll();
-  };
-
-  const getScrollContainer = () => {
-    let node = builderCanvasRef.current;
-    while (node) {
-      const computedStyle = window.getComputedStyle(node);
-      const overflowY = computedStyle.overflowY || computedStyle.overflow;
-      const canScroll = /(auto|scroll)/.test(overflowY) && node.scrollHeight > node.clientHeight + 1;
-      if (canScroll) return node;
-      node = node.parentElement;
-    }
-    return document.scrollingElement || document.documentElement;
-  };
-
-  const runAutoScroll = () => {
-    if (!autoScrollStateRef.current.active) {
-      autoScrollFrameRef.current = null;
-      return;
-    }
-
-    const edgeThreshold = 96;
-    const maxStep = 28;
-    const { pointerY } = autoScrollStateRef.current;
-    let delta = 0;
-
-    if (pointerY < edgeThreshold) {
-      delta = -Math.min(maxStep, Math.max(8, Math.round((edgeThreshold - pointerY) / 3)));
-    } else if (pointerY > window.innerHeight - edgeThreshold) {
-      delta = Math.min(
-        maxStep,
-        Math.max(8, Math.round((pointerY - (window.innerHeight - edgeThreshold)) / 3))
-      );
-    }
-
-    if (delta !== 0) {
-      const scrollContainer = getScrollContainer();
-      if (
-        scrollContainer === document.body
-        || scrollContainer === document.documentElement
-        || scrollContainer === document.scrollingElement
-      ) {
-        window.scrollBy(0, delta);
-      } else {
-        scrollContainer.scrollTop += delta;
-      }
-    }
-
-    autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll);
-  };
-
-  const updateAutoScroll = (pointerY) => {
-    autoScrollStateRef.current.pointerY = pointerY;
-    autoScrollStateRef.current.active = true;
-    if (!autoScrollFrameRef.current) {
-      autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll);
-    }
-  };
-
   const scheduleSectionExpand = (sectionId) => {
     if (!collapsedSections.has(sectionId)) {
       clearAutoExpandTimeout();
@@ -658,98 +789,124 @@ export default function BuilderWorkspace({
     }, 500);
   };
 
-  const handleDragOverTarget = (event, sectionId, options = {}) => {
-    const { cardId = null, stopPropagation = false } = options;
-    event.preventDefault();
-    if (stopPropagation) event.stopPropagation();
-    setDragOverSectionId(sectionId);
-    setDragOverCardId(cardId);
-    updateAutoScroll(event.clientY);
-    scheduleSectionExpand(sectionId);
-  };
-
   useEffect(() => () => {
     clearAutoExpandTimeout();
-    stopAutoScroll();
   }, []);
 
-  const handleDrop = (e, targetSectionId, targetCardIdx = null) => {
-    e.preventDefault();
-    clearDragState();
-    const rawData = e.dataTransfer.getData('text/plain');
-    if (!rawData) return;
+  const handleDragStart = ({ active }) => {
+    console.log('[DnD] Drag Start', active.id);
+    setActiveDragItem(active);
+  };
+
+  const handleDragOver = ({ active, over }) => {
+    if (!over) return;
+    console.log('[DnD] Drag Over', over.id);
+    const overType = over.data.current?.type;
+    if (overType === 'Section' || overType === 'SectionCard') {
+      const sectionId = over.data.current?.sectionId;
+      if (sectionId) scheduleSectionExpand(sectionId);
+    }
+  };
+
+  const handleDragEnd = ({ active, over }) => {
+    setActiveDragItem(null);
+    clearAutoExpandTimeout();
+    if (!over) return;
     
-    if (rawData.startsWith('section:')) {
-      const draggedSectionId = rawData.split(':')[1];
-      if (draggedSectionId === targetSectionId) return;
+    const activeType = active.data.current?.type;
+    const overType = over.data.current?.type;
+    const activeId = active.id;
+    const overId = over.id;
+
+    if (activeType === 'Section' && overType === 'Section' && activeId !== overId) {
       updateSections((prev) => {
-        const draggedIdx = prev.findIndex(s => s.id === draggedSectionId);
-        const targetIdx = prev.findIndex(s => s.id === targetSectionId);
-        if (draggedIdx === -1 || targetIdx === -1) return prev;
-        const newSecs = [...prev];
-        const [moved] = newSecs.splice(draggedIdx, 1);
-        newSecs.splice(targetIdx, 0, moved);
-        return newSecs;
+        const oldIndex = prev.findIndex((s) => s.id === activeId);
+        const newIndex = prev.findIndex((s) => s.id === overId);
+        console.log('[DnD] Section Updated (reordered)', { oldIndex, newIndex });
+        return arrayMove(prev, oldIndex, newIndex);
       });
       return;
     }
 
-    let draggedCardId = rawData;
-    let sourceSectionId = null;
-    let sourceCardIdx = null;
-    if (rawData.startsWith('reorder-card:')) {
-      const parts = rawData.split(':');
-      draggedCardId = parts[1];
-      sourceSectionId = parts[2];
-      sourceCardIdx = Number.isFinite(Number(parts[3])) ? Number(parts[3]) : null;
+    if (activeType === 'LibraryCard') {
+      const card = active.data.current?.card;
+      if (!card) return;
+      const targetSectionId = over.data.current?.sectionId;
+      if (!targetSectionId) return;
+
+      updateSections((prev) => {
+        const targetSec = prev.find(s => s.id === targetSectionId);
+        if (!targetSec || targetSec.cardIds?.includes(String(card.id))) return prev;
+        
+        let insertIndex = targetSec.cardIds?.length || 0;
+        if (overType === 'SectionCard') {
+          insertIndex = over.data.current?.idx;
+        }
+        
+        console.log('[DnD] Drop Success');
+        console.log(`[DnD] Question Added: ${card.id} to section ${targetSectionId} at index ${insertIndex}`);
+        
+        return prev.map(s => {
+          if (s.id === targetSectionId) {
+            const nextIds = [...(s.cardIds || [])];
+            nextIds.splice(insertIndex, 0, String(card.id));
+            return { ...s, cardIds: nextIds };
+          }
+          return s;
+        });
+      });
     }
 
-    updateSections((prev) => {
-      const newSecs = prev.map(s => ({ ...s, cardIds: [...(s.cardIds || [])] }));
-      const targetSec = newSecs.find(s => s.id === targetSectionId);
-      if (!targetSec) return prev;
+    if (activeType === 'SectionCard') {
+      const activeSectionId = active.data.current?.sectionId;
+      const targetSectionId = over.data.current?.sectionId;
+      if (!activeSectionId || !targetSectionId) return;
+      
+      const cardId = active.data.current?.card?.id;
 
-      let insertAtIndex = targetCardIdx;
-
-      if (sourceSectionId) {
-        const srcSec = newSecs.find(s => s.id === sourceSectionId);
-        if (srcSec) {
-          if (
-            srcSec.id === targetSectionId
-            && sourceCardIdx !== null
-            && targetCardIdx !== null
-            && sourceCardIdx === targetCardIdx
-          ) {
-            return prev;
-          }
-
-          srcSec.cardIds = srcSec.cardIds.filter(id => String(id) !== String(draggedCardId));
-
-          if (
-            srcSec.id === targetSectionId
-            && sourceCardIdx !== null
-            && targetCardIdx !== null
-            && sourceCardIdx < targetCardIdx
-          ) {
-            insertAtIndex = targetCardIdx - 1;
-          }
+      if (activeSectionId === targetSectionId) {
+        const oldIndex = active.data.current?.idx;
+        let newIndex = over.data.current?.idx ?? over.data.current?.cardIds?.length ?? 0;
+        
+        if (oldIndex !== newIndex) {
+          console.log('[DnD] Drop Success');
+          console.log(`[DnD] Section Updated (question reordered within section ${activeSectionId})`);
+          updateSections((prev) => prev.map(s => {
+            if (s.id === activeSectionId) {
+              return { ...s, cardIds: arrayMove(s.cardIds || [], oldIndex, newIndex) };
+            }
+            return s;
+          }));
         }
-      }
-
-      if (!sourceSectionId && targetSec.cardIds.includes(String(draggedCardId))) {
-        return prev;
-      }
-
-      if (insertAtIndex !== null) {
-        targetSec.cardIds.splice(insertAtIndex, 0, String(draggedCardId));
       } else {
-        targetSec.cardIds.push(String(draggedCardId));
+        let insertIndex = over.data.current?.idx ?? (overType === 'Section' ? (prev => { const t=prev.find(s=>s.id===targetSectionId); return t?t.cardIds.length:0; }) : 0);
+        updateSections((prev) => {
+          if (typeof insertIndex === 'function') insertIndex = insertIndex(prev);
+          const oldIndex = active.data.current?.idx;
+          const newIndex = insertIndex;
+          console.log('[DnD] Drop Success');
+          console.log(`[DnD] Question Removed from section ${activeSectionId}`);
+          console.log(`[DnD] Question Added: ${cardId} to section ${targetSectionId}`);
+          return prev.map(s => {
+            if (s.id === activeSectionId) {
+              const nextIds = [...(s.cardIds || [])];
+              nextIds.splice(oldIndex, 1);
+              return { ...s, cardIds: nextIds };
+            }
+            if (s.id === targetSectionId) {
+              const nextIds = [...(s.cardIds || [])];
+              nextIds.splice(newIndex, 0, String(cardId));
+              return { ...s, cardIds: nextIds };
+            }
+            return s;
+          });
+        });
       }
-      return newSecs;
-    });
+    }
   };
 
   const removeCard = (sectionId, cardId) => {
+    console.log(`[DnD] Question Removed from section ${sectionId}`);
     updateSections((prev) => {
       return prev.map((s) => {
         if (s.id === sectionId) {
@@ -809,8 +966,15 @@ export default function BuilderWorkspace({
   };
 
   return (
-    <div 
-      className={`ws-builder-layout ${isFinalizeMode ? 'ws-builder-layout--finalize' : 'ws-builder-layout--compose'}`} 
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div 
+        className={`ws-builder-layout ${isFinalizeMode ? 'ws-builder-layout--finalize' : 'ws-builder-layout--compose'}`} 
       style={{
         gridTemplateColumns: isComposeMode
           ? (isLibraryCollapsed ? '48px 1fr' : '280px 1fr')
@@ -848,10 +1012,7 @@ export default function BuilderWorkspace({
           <div className="ws-summary-meter">
             <div className="ws-summary-meter__label">Total marks</div>
             <div className="ws-summary-meter__val">
-              {totalMarks} <span style={{ color: 'var(--ws-ink-400)', fontSize: 13, fontWeight: 600 }}>/ {targetMarks}</span>
-            </div>
-            <div className="ws-summary-meter__bar">
-              <div style={{ width: `${marksPercent}%`, background: marksPercent > 100 ? 'var(--ws-danger)' : 'var(--ws-brand)' }} />
+              {totalMarks}
             </div>
           </div>
           {isFinalizeMode ? (
@@ -902,24 +1063,7 @@ export default function BuilderWorkspace({
                 const added = addedIds.has(String(c.id));
                 const questionSummary = splitQuestionSummary(c);
                 return (
-                  <div
-                    key={c.id}
-                    className={`ws-mini-card ${added ? 'ws-mini-card--added' : ''}`}
-                    draggable={!added}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('text/plain', String(c.id));
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    onDragEnd={clearDragState}
-                  >
-                    <div className="ws-mini-card__top">
-                      <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[c.question_type] || 'Q'}</span>
-                      <span style={{ fontWeight: 600, color: 'var(--ws-ink-700)' }}>{c.marks || 0}M</span>
-                      <div style={{ marginLeft: 'auto' }}><DifficultyDots level={c.difficulty} /></div>
-                    </div>
-                    <div className="ws-mini-card__title">{questionSummary.title}</div>
-                    <div className="ws-mini-card__preview">{questionSummary.preview}</div>
-                  </div>
+                  <LibrarySortableCard key={c.id} card={c} added={added} questionSummary={questionSummary} />
                 );
               })}
             </div>
@@ -938,7 +1082,6 @@ export default function BuilderWorkspace({
           transition: isFinalizeMode ? 'width 0.3s ease, min-width 0.3s ease, padding 0.3s ease' : undefined,
           overflowX: 'hidden'
         }}
-        onDragOver={(e) => updateAutoScroll(e.clientY)}
       >
         {isFinalizeMode && (
           <div 
@@ -977,6 +1120,7 @@ export default function BuilderWorkspace({
               onUpdateLayout={onUpdateBuilderLayout}
               paperType={paperType}
               onChangePaperType={onChangePaperType}
+              computedTotalMarks={totalMarks}
               paperSettings={paperSettings}
               onUpdatePaperSettings={onUpdatePaperSettings}
               pdfViewMode={pdfViewMode}
@@ -1022,29 +1166,20 @@ export default function BuilderWorkspace({
               const secMarks = (sec.cardIds || []).reduce((sum, id) => sum + (Number(cardsById[id]?.marks) || 0), 0);
               const qCount = (sec.cardIds || []).length;
               const isCollapsed = collapsedSections.has(sec.id);
-              const isSectionDropTarget = dragOverSectionId === sec.id && !dragOverCardId;
               return (
-                <div
+                <SectionDropZone
                   key={sec.id}
-                  ref={(node) => {
+                  section={sec}
+                  isSectionDropTarget={activeDragItem && !activeDragItem.data.current?.idx && activeDragItem.data.current?.sectionId !== sec.id}
+                  setSectionRef={(node) => {
                     if (node) sectionRefs.current[sec.id] = node;
                     else delete sectionRefs.current[sec.id];
                   }}
-                  className={`ws-section-block ${isSectionDropTarget ? 'ws-section-block--drop' : ''}`}
-                  data-section-id={sec.id}
-                  onDragOver={(e) => handleDragOverTarget(e, sec.id)}
-                  onDrop={(e) => handleDrop(e, sec.id)}
                 >
                   <div className="ws-section-block__head">
                     <div className="ws-section-block__head-main">
                       <div
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'grab' }}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('text/plain', `section:${sec.id}`);
-                          e.dataTransfer.effectAllowed = 'move';
-                        }}
-                        onDragEnd={clearDragState}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                       >
                         <GripVertical size={16} color="var(--ws-ink-300)" />
                       </div>
@@ -1095,116 +1230,56 @@ export default function BuilderWorkspace({
                         />
                         <div className="ws-section-block__marks">{secMarks} Marks</div>
                       </div>
-                      <div
-                        className={`ws-section-block__body ${(sec.cardIds || []).length === 0 ? 'ws-section-block__body--empty' : ''}`}
-                        data-section-id={sec.id}
-                        onDragOver={(e) => handleDragOverTarget(e, sec.id, { stopPropagation: true })}
-                        onDrop={(e) => { e.stopPropagation(); handleDrop(e, sec.id); }}
-                      >
-                        {isSectionDropTarget && (
-                          <div className="ws-drop-placeholder">Drop question here</div>
-                        )}
-                        {(sec.cardIds || []).map((id, idx) => {
-                          const q = cardsById[id];
-                          if (!q) return null;
+                      <div className={`ws-section-block__body ${(sec.cardIds || []).length === 0 ? 'ws-section-block__body--empty' : ''}`}>
+                        <SortableContext items={(sec.cardIds || []).map((idObj, idx) => {
+                          const id = typeof idObj === 'object' && idObj !== null ? idObj.id : idObj;
+                          return `card-${sec.id}-${id}-${idx}`;
+                        })} strategy={verticalListSortingStrategy}>
+                          {(sec.cardIds || []).map((idObj, idx) => {
+                            const id = typeof idObj === 'object' && idObj !== null ? idObj.id : idObj;
+                            const q = cardsById[id];
+                            if (!q) {
+                              console.warn(`[DEBUG] Missing card for id: ${id}.`);
+                              return null;
+                            }
 
-                          const optionList = Array.isArray(q.options) && q.options.length > 0
-                            ? q.options
-                            : (Array.isArray(q.parsed_metadata?.options) ? q.parsed_metadata.options : []);
-                          const hasOptions = supportsOptions(q.question_type) && optionList.length > 0;
-                          const questionSummary = splitQuestionSummary(q);
-                          const questionKey = `${sec.id}:${id}:${idx}`;
-                          const isExpanded = expandedQuestions.has(questionKey);
+                            const optionList = Array.isArray(q.options) && q.options.length > 0
+                              ? q.options
+                              : (Array.isArray(q.parsed_metadata?.options) ? q.parsed_metadata.options : []);
+                            const hasOptions = supportsOptions(q.question_type) && optionList.length > 0;
+                            const questionSummary = splitQuestionSummary(q);
+                            const questionKey = `${sec.id}:${id}:${idx}`;
+                            const isExpanded = expandedQuestions.has(questionKey);
 
-                          return (
-                            <div
-                              key={`${sec.id}-${id}-${idx}`}
-                              className={`ws-builder-row ${isExpanded ? 'ws-builder-row--expanded' : ''}`}
-                              draggable
-                              onDragStart={(e) => {
-                                e.stopPropagation();
-                                e.dataTransfer.setData('text/plain', `reorder-card:${id}:${sec.id}:${idx}`);
-                                e.dataTransfer.effectAllowed = 'move';
-                              }}
-                              onDragEnd={clearDragState}
-                              onDragOver={(e) => handleDragOverTarget(e, sec.id, { cardId: id, stopPropagation: true })}
-                              onDrop={(e) => { e.stopPropagation(); handleDrop(e, sec.id, idx); }}
-                              style={dragOverCardId === id ? { borderTop: '2px solid var(--ws-brand)' } : {}}
-                            >
-                              <div className="ws-builder-row__header">
-                                <div className="ws-builder-row__left">
-                                  <div className="ws-builder-row__grip"><GripVertical size={16} color="var(--ws-ink-300)" /></div>
-                                  <div className="ws-builder-row__index">
-                                    <div className="ws-builder-row__num">Q{idx + 1}</div>
-                                    <span className="ws-tag ws-tag--neutral">{TYPE_LABEL_MAP[q.question_type] || 'Q'}</span>
-                                  </div>
-                                  <div className="ws-builder-row__content">
-                                    <div className="ws-builder-row__title" title={questionSummary.title}>
-                                      {questionSummary.title}
-                                    </div>
-                                    <div className="ws-builder-row__preview" title={questionSummary.preview}>
-                                      {questionSummary.preview}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="ws-builder-row__right">
-                                  <EditableMarks cardId={q.id} initialMarks={q.marks || 0} onUpdateCardMarks={onUpdateCardMarks} />
-                                  {pdfViewMode === 'writable' && (
-                                    <EditableLines
-                                      cardId={q.id}
-                                      initialLines={q.writing_space_lines}
-                                      onUpdateCard={onUpdateCard}
-                                      defaultLines={paperSettings?.writableLineCount || 5}
-                                    />
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="ws-builder-row__expand"
-                                    onClick={() => toggleQuestionExpanded(sec.id, id, idx)}
-                                    title={isExpanded ? 'Collapse question' : 'Expand question'}
-                                  >
-                                    {isExpanded ? <EyeOff size={15} /> : <Eye size={15} />}
-                                    {isExpanded ? 'Collapse' : 'Expand'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="ws-builder-row__remove"
-                                    onClick={() => removeCard(sec.id, id)}
-                                    title="Remove Question"
-                                  >
-                                    <X size={16} />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {isExpanded && (
-                                <div className="ws-builder-row__details">
-                                  <div className="ws-builder-row__full-text">{questionSummary.fullText}</div>
-                                  {hasOptions && (
-                                    <div className="ws-builder-row__options">
-                                      {optionList.slice(0, 4).map((opt, optIdx) => (
-                                        <div key={optIdx} className="ws-builder-row__option">
-                                          <span className="ws-builder-row__option-key">({opt.key || String.fromCharCode(65 + optIdx)})</span>
-                                          <span className="ws-builder-row__option-text">{cleanText(opt.text)}</span>
-                                        </div>
-                                      ))}
-                                      {optionList.length > 4 && (
-                                        <div className="ws-builder-row__option-more">+{optionList.length - 4} more</div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                            return (
+                              <BuilderSortableRow
+                                key={`${sec.id}-${id}-${idx}`}
+                                card={q}
+                                sectionId={sec.id}
+                                idx={idx}
+                                isExpanded={isExpanded}
+                                onToggleExpand={() => toggleQuestionExpanded(sec.id, id, idx)}
+                                onRemove={() => removeCard(sec.id, id)}
+                                onUpdateCardMarks={onUpdateCardMarks}
+                                pdfViewMode={pdfViewMode}
+                                paperSettings={paperSettings}
+                                onUpdateCard={onUpdateCard}
+                                questionSummary={questionSummary}
+                                hasOptions={hasOptions}
+                                optionList={optionList}
+                                EditableMarks={EditableMarks}
+                                EditableLines={EditableLines}
+                                cleanText={cleanText}
+                                TYPE_LABEL_MAP={TYPE_LABEL_MAP}
+                              />
+                            );
+                          })}
+                        </SortableContext>
                         {(sec.cardIds || []).length === 0 && (
                           <div
                             className="ws-empty-state"
                             style={{ padding: '30px', textAlign: 'center', border: '2px dashed var(--ws-ink-200)', borderRadius: 8, color: 'var(--ws-ink-500)', width: '100%' }}
                             data-section-id={sec.id}
-                            onDragOver={(e) => handleDragOverTarget(e, sec.id, { stopPropagation: true })}
-                            onDrop={(e) => { e.stopPropagation(); handleDrop(e, sec.id); }}
                           >
                             No questions added yet.
                             <br/>
@@ -1213,7 +1288,7 @@ export default function BuilderWorkspace({
                         )}
                       </div>
                   </div>
-                </div>
+                </SectionDropZone>
               );
             })}
             <button type="button" className="ws-btn ws-btn--ghost ws-section-workspace__add" onClick={addSection}>
@@ -1267,6 +1342,25 @@ export default function BuilderWorkspace({
           </div>
         </div>
       )}
-    </div>
+        <DragOverlay dropAnimation={defaultDropAnimationSideEffects({ sideEffects: ['transform'] })}>
+          {activeDragItem?.data.current?.type === 'LibraryCard' ? (
+            <LibrarySortableCard card={activeDragItem.data.current?.card} added={false} questionSummary={splitQuestionSummary(activeDragItem.data.current?.card)} TYPE_LABEL_MAP={TYPE_LABEL_MAP} />
+          ) : null}
+          {activeDragItem?.data.current?.type === 'SectionCard' ? (
+            <BuilderSortableRow
+              card={activeDragItem.data.current?.card}
+              sectionId={activeDragItem.data.current?.sectionId}
+              idx={activeDragItem.data.current?.idx}
+              isExpanded={false}
+              questionSummary={splitQuestionSummary(activeDragItem.data.current?.card)}
+              EditableMarks={EditableMarks}
+              EditableLines={EditableLines}
+              cleanText={cleanText}
+              TYPE_LABEL_MAP={TYPE_LABEL_MAP}
+            />
+          ) : null}
+        </DragOverlay>
+      </div>
+    </DndContext>
   );
 }
