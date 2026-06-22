@@ -6,8 +6,6 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Download,
-  Eye,
   History,
   Loader
 } from 'lucide-react';
@@ -157,7 +155,16 @@ const ExamCard = ({
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
+    <button
+      type="button"
+      onClick={handleViewDetails}
+      disabled={isOpenDisabled}
+      className={`w-full text-left bg-white rounded-xl p-4 shadow-sm transition-all duration-300 border border-gray-100 ${
+        isOpenDisabled
+          ? 'opacity-80 cursor-not-allowed'
+          : 'hover:shadow-md hover:border-accent/30 cursor-pointer'
+      }`}
+    >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-4">
           <div className="p-2.5 bg-accent/10 rounded-lg">
@@ -195,35 +202,16 @@ const ExamCard = ({
         </div>
       )}
 
-      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-        <div className="flex gap-2 flex-wrap">
-          <button 
-            onClick={handleViewDetails}
-            disabled={isOpenDisabled}
-            className={`px-3 py-1.5 text-sm font-medium flex items-center gap-1 ${
-              isOpenDisabled
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-accent hover:text-accent/80'
-            }`}
-          >
-            <Eye className="w-4 h-4" />
-            {status === 'evaluated' ? 'View Result' : (examVariant === 'portal_mcq' || examVariant === 'conduct') ? 'Open Exam' : 'View Details'}
-          </button>
-          {status === 'evaluated' && (
-            <button className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1">
-              <Download className="w-4 h-4" />
-              Download
-            </button>
-          )}
+      {!isOpenDisabled && (
+        <div className="mt-3 pt-3 border-t border-gray-100 text-sm font-medium text-accent">
+          {status === 'evaluated'
+            ? 'Open Result'
+            : (examVariant === 'portal_mcq' || examVariant === 'conduct')
+            ? 'Open Exam'
+            : 'Open Details'}
         </div>
-        {allow_recheck && status === 'evaluated' && !recheck_requested && (
-          <button className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1 whitespace-nowrap">
-            <History className="w-4 h-4" />
-            Request Recheck
-          </button>
-        )}
-      </div>
-    </div>
+      )}
+    </button>
   );
 };
 
