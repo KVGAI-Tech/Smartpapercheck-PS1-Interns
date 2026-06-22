@@ -582,9 +582,10 @@ const flattenParsedExam = (parsedData) => {
         if (rc > 0) rubricsCount = rc;
       }
 
+      const plainTextQ = (q.question || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
       return {
         id: `M_${q.id || Math.random()}`,
-        label: `Q${idx + 1}. ${q.question?.replace(/^Question\s*\d+:\s*/i, '').substring(0, 50) || 'Untitled Question'}...`,
+        label: `Q${idx + 1}. ${plainTextQ.replace(/^Question\s*\d+:\s*/i, '').substring(0, 50) || 'Untitled Question'}...`,
         questionBody: q.question || '',
         answerBody: q.answer || '',
         marks: q.totalMarks || '',
@@ -692,17 +693,20 @@ const flattenParsedExam = (parsedData) => {
           });
         }
         
-        const options = allQuestions.map((q, idx) => ({
-          id: q.id,
-          label: `Q${idx + 1}. ${q.question_text?.replace(/^Question\s*\d+:\s*/i, '').substring(0, 50) || 'Untitled Question'}...`,
+        const options = allQuestions.map((q, idx) => {
+          const plainTextQ = (q.question_text || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
+          return {
+            id: q.id,
+            label: `Q${idx + 1}. ${plainTextQ.replace(/^Question\s*\d+:\s*/i, '').substring(0, 50) || 'Untitled Question'}...`,
           questionBody: q.question_text || '',
-          answerBody: q.metadata_json?.answer_body || q.metadata_json?.answer_text || '',
+          answerBody: q.answer_body || q.answer_text || q.metadata_json?.answer_body || q.metadata_json?.answer_text || '',
           marks: q.marks,
           imageUrls: q.images || [],
           num_rubric_items: q.metadata_json?.num_rubric_items || 1,
           rubrics: q.metadata_json?.parsed_metadata?.rubrics || [],
-          questionType: q.question_type || 'subjective',
-        }));
+            questionType: q.question_type || 'subjective',
+          };
+        });
         setFlattenedOptions(options);
         return options;
       }
@@ -787,10 +791,21 @@ const flattenParsedExam = (parsedData) => {
       compositeBody += buildRubricHtml(selectedOption.rubrics);
     }
 
+    const finalQuestionBody = compositeBody || q.questionBody;
+    const strippedQuestionText = finalQuestionBody ? finalQuestionBody.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    const finalAnswerBody = selectedOption.answerBody ? `<p>${selectedOption.answerBody}</p>` : '';
+    const strippedAnswerText = finalAnswerBody ? finalAnswerBody.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() : '';
+
     updateQuestion(questions[selectedIndex].id, (q) => ({
       ...q,
-      questionBody: compositeBody || q.questionBody,
-      answerBody: selectedOption.answerBody ? `<p>${selectedOption.answerBody}</p>` : q.answerBody,
+      questionBody: finalQuestionBody,
+      question_body: finalQuestionBody,
+      questionText: strippedQuestionText,
+      question_text: strippedQuestionText,
+      answerBody: finalAnswerBody,
+      answer_body: finalAnswerBody,
+      answerText: strippedAnswerText,
+      answer_text: strippedAnswerText,
       marks: selectedOption.marks ? String(selectedOption.marks) : String(q.marks || ''),
       num_rubric_items: selectedOption.rubricsCount || q.num_rubric_items,
     }));

@@ -10,7 +10,7 @@ import AnnotationResponseForm from "./ProfessorRecheckDetail/AnnotationResponseF
 import QuestionMarksEditor from "./ProfessorRecheckDetail/QuestionMarksEditor";
 import SidebarTabs from "./ProfessorRecheckDetail/SidebarTabs";
 import StudentAnnotationsList from "./ProfessorRecheckDetail/StudentAnnotationsList";
-import { AlertCircle, ArrowLeft, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle, XCircle, Save } from "lucide-react";
 
 const ProfessorRecheckDetail = () => {
   const { courseId, requestId } = useParams();
@@ -887,7 +887,8 @@ const ProfessorRecheckDetail = () => {
                 annotations={annotations}
                 selectedAnnotationId={selectedAnnotationId}
                 onSelectAnnotation={handleSelectAnnotation}
-                respondedAnnotationIds={respondedAnnotationIds}
+                respondedIds={respondedAnnotationIds}
+                questionResponses={questionResponses}
               />
             ) : (
               <div className="p-5 space-y-6">
