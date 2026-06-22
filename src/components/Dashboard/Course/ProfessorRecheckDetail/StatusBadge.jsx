@@ -6,9 +6,16 @@ const StatusBadge = ({ status }) => {
 
   switch (status?.toLowerCase()) {
     case "approved":
+    case "completed":
       bgColor = "bg-accent/10";
       textColor = "text-accent";
       icon = <CheckCircle className="w-4 h-4" />;
+      break;
+    case "partial":
+    case "in_review":
+      bgColor = "bg-accent/10";
+      textColor = "text-accent";
+      icon = <AlertCircle className="w-4 h-4" />;
       break;
     case "rejected":
       bgColor = "bg-accent/10";

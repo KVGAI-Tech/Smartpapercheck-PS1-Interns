@@ -127,7 +127,9 @@ const ProfessorRecheckDetail = () => {
           throw new Error("No recheck requests found");
         }
 
-        const request = recheckData.data[0];
+        const request = [...recheckData.data].sort(
+          (a, b) => (b.request_number || 0) - (a.request_number || 0)
+        )[0];
         setMongoId(request._id);
 
         const answerSheetResponse = await fetch(
@@ -264,7 +266,7 @@ const ProfessorRecheckDetail = () => {
           examTitle: `Exam ${request.exam_id || examId}`,
           examType: "Examination",
           reason: request.reason,
-          status: request.status,
+          status: request.final_decision || request.status,
           submittedDate: new Date(request.created_at).toLocaleDateString(),
           currentMarks: origTotal,
           maxMarks: maxMarksByQuestion,
@@ -581,6 +583,8 @@ const ProfessorRecheckDetail = () => {
         const finalStatus = decision === "partial" ? "approved" : decision;
         formData.append("status", "completed");
         formData.append("feedback", professorFeedback || `Recheck ${finalStatus}`);
+        formData.append("final_decision", finalStatus);
+        formData.append("question_marks", JSON.stringify(questionMarks));
 
         const statusResponse = await fetch(
           `${API_BASE_URL}/exams/${examId}/recheck/${mongoId}/status`,
@@ -895,8 +899,11 @@ const ProfessorRecheckDetail = () => {
                 <QuestionMarksEditor
                   questionMarks={questionMarks}
                   maxMarks={maxMarks}
+                  totalOriginalMarks={totalOriginalMarks}
+                  totalNewMarks={totalNewMarks}
                   addressedQuestions={addressedQuestions}
-                  onMarkChange={handleQuestionMarkChange}
+                  questionResponses={questionResponses}
+                  onQuestionMarkChange={handleQuestionMarkChange}
                 />
                 
                 <div className="border-t border-gray-200 pt-6">

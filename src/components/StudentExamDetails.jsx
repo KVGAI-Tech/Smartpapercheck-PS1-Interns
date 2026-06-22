@@ -46,6 +46,11 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+const getDisplayRecheckStatus = (request) => {
+  if (!request) return "pending";
+  return request.final_decision || request.status || "pending";
+};
+
 const StudentExamDetails = ({ isHistory = false }) => {
   const { courseId, id: examId } = useParams();
   const [searchParams] = useSearchParams();
@@ -174,11 +179,13 @@ const StudentExamDetails = ({ isHistory = false }) => {
         }
 
         if (requests.length > 0) {
-          const latestRequest = requests[0];
+          const latestRequest = [...requests].sort(
+            (a, b) => (b.request_number || 0) - (a.request_number || 0)
+          )[0];
           setRequestStatus({
             id: latestRequest._id,
             timestamp: new Date(latestRequest.created_at).toLocaleString(),
-            status: latestRequest.status,
+            status: getDisplayRecheckStatus(latestRequest),
           });
 
           setHasSubmittedRecheck(true);
