@@ -1336,7 +1336,9 @@ const ExamEvaluationDashboard = ({ examId, courseId, onClose }) => {
           if (failed > 0) showToast(`Evaluation finished: ${completed}/${total}. Failed: ${failed}.`, "warning");
           else showToast(`Evaluation finished: ${completed}/${total}.`, "success");
 
-          await fetchEnrollments();
+          // Force a full replace so re-evaluated rows update even when the user
+          // is past page 1 (the merge path skips already-seen enrollment_ids).
+          await fetchEnrollments({ replace: true });
         }
       } catch (e) {
         console.error("Dashboard poll job error:", e);

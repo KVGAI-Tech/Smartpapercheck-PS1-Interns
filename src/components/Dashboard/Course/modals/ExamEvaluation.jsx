@@ -436,9 +436,16 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
   }, []);
 
   const latestRequestIdRef = useRef(0);
+  // Remembers which model an evaluation job ran with, so the post-job refetch
+  // reads the SAME model bucket the marks were written to (prevents the
+  // "professor sees 0 until refresh" model-mismatch bug).
+  const lastEvaluatedModelRef = useRef(null);
 
-  const fetchEnrollments = useCallback(async () => {
+  const fetchEnrollments = useCallback(async (opts = {}) => {
     const requestId = ++latestRequestIdRef.current;
+    // Allow callers (e.g. post-evaluation refetch) to read the SAME model bucket
+    // that was just evaluated, instead of always using the display dropdown.
+    const modelForFetch = opts.model || resultsModel;
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true);
@@ -462,7 +469,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
       const queryParams = [
         `page=${encodeURIComponent(page)}`,
         `page_size=${encodeURIComponent(pageSize)}`,
-        `model=${encodeURIComponent(resultsModel)}`
+        `model=${encodeURIComponent(modelForFetch)}`
       ];
 
       if (search) queryParams.push(`search=${encodeURIComponent(search)}`);
@@ -775,7 +782,13 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         }
 
         clearSelection();
-        await fetchEnrollments();
+        // Refetch the SAME model bucket the job wrote to, and align the display
+        // dropdown to it, so the freshly-written marks are visible without a hard refresh.
+        const evaluatedModel = lastEvaluatedModelRef.current;
+        if (evaluatedModel && evaluatedModel !== resultsModel) {
+          setResultsModel(evaluatedModel);
+        }
+        await fetchEnrollments({ model: evaluatedModel || resultsModel });
         await fetchOverallProgress();
       }
     } catch (e) {
@@ -788,7 +801,7 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
         }, evaluationJobPollDelayRef.current);
       }
     }
-  }, [fetchEvaluationJob, syncUiWithEvaluationJob, stopEvaluationJobPolling, showToast, clearSelection, fetchEnrollments, fetchOverallProgress]);
+  }, [fetchEvaluationJob, syncUiWithEvaluationJob, stopEvaluationJobPolling, showToast, clearSelection, fetchEnrollments, fetchOverallProgress, resultsModel]);
 
   const cancelEvaluationJob = useCallback(async () => {
     if (!activeEvaluationJobId) return;
@@ -883,6 +896,8 @@ const ExamEvaluation = ({ examId, courseId, onClose }) => {
     if (!Array.isArray(enrollmentIds) || enrollmentIds.length === 0) {
       throw new Error('No students selected');
     }
+    // Remember the model this job runs with for the post-completion refetch.
+    lastEvaluatedModelRef.current = model || 'current';
     try {
       const response = await fetch(`${API_BASE_URL}/celery/${examId}/evaluations/jobs`, {
         method: 'POST',
