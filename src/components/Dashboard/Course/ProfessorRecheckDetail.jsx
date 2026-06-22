@@ -833,36 +833,141 @@ const ProfessorRecheckDetail = () => {
         </div>
       </header>
 
-      <div className="flex-1 bg-gray-800 relative">
-        <PageViewer
-          presigned_url={pageUrls[pageNumber - 1]}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onZoomReset={handleZoomReset}
-          zoomLevel={zoomLevel}
-          pageNumber={pageNumber}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
-        <AnnotationViewer
-          annotations={annotations}
-          currentPage={pageNumber}
-          onSelectAnnotation={handleSelectAnnotation}
-          selectedAnnotationId={selectedAnnotationId}
-          respondedAnnotationIds={respondedAnnotationIds}
-          zoomLevel={zoomLevel}
-        />
-        {showResponseForm && selectedAnnotation && (
-          <AnnotationResponseForm
-            selectedAnnotation={selectedAnnotation}
-            onClose={() => setShowResponseForm(false)}
-            onSubmit={handleAnnotationResponse}
-            maxMarks={maxMarks}
-            questionResponses={
-              questionResponses[selectedAnnotation.questionNumber] || []
-            }
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 bg-gray-800 relative">
+          <PageViewer
+            presigned_url={pageUrls[pageNumber - 1]}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
+            zoomLevel={zoomLevel}
+            pageNumber={pageNumber}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
           />
-        )}
+          <AnnotationViewer
+            annotations={annotations}
+            currentPage={pageNumber}
+            onSelectAnnotation={handleSelectAnnotation}
+            selectedAnnotationId={selectedAnnotationId}
+            respondedAnnotationIds={respondedAnnotationIds}
+            zoomLevel={zoomLevel}
+          />
+          {showResponseForm && selectedAnnotation && (
+            <AnnotationResponseForm
+              selectedAnnotation={selectedAnnotation}
+              onClose={() => setShowResponseForm(false)}
+              onSubmit={handleAnnotationResponse}
+              maxMarks={maxMarks}
+              questionResponses={
+                questionResponses[selectedAnnotation.questionNumber] || []
+              }
+            />
+          )}
+        </div>
+
+        {/* Resizer */}
+        <div
+          className="w-1 bg-gray-200 hover:bg-accent/50 cursor-col-resize transition-colors flex flex-col justify-center items-center z-40 shadow-sm"
+          onMouseDown={startResize}
+        >
+          <div className="h-8 w-1 bg-gray-400 rounded-full"></div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div
+          className="bg-white flex flex-col z-30 shadow-xl border-l border-gray-200"
+          style={{ width: `${sidebarWidth}px`, minWidth: '320px' }}
+        >
+          <SidebarTabs activeTab={sidebarTab} setActiveTab={setSidebarTab} />
+          
+          <div className="flex-1 overflow-y-auto">
+            {sidebarTab === "annotations" ? (
+              <StudentAnnotationsList
+                annotations={annotations}
+                selectedAnnotationId={selectedAnnotationId}
+                onSelectAnnotation={handleSelectAnnotation}
+                respondedAnnotationIds={respondedAnnotationIds}
+              />
+            ) : (
+              <div className="p-5 space-y-6">
+                <QuestionMarksEditor
+                  questionMarks={questionMarks}
+                  maxMarks={maxMarks}
+                  addressedQuestions={addressedQuestions}
+                  onMarkChange={handleQuestionMarkChange}
+                />
+                
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Final Decision</h3>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setDecision("approved")}
+                        className={`flex-1 py-2 px-3 rounded-lg border flex items-center justify-center gap-2 transition-all ${
+                          decision === "approved"
+                            ? "bg-green-50 border-green-500 text-green-700 font-medium"
+                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <CheckCircle size={16} className={decision === "approved" ? "text-green-500" : "text-gray-400"} />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => setDecision("rejected")}
+                        className={`flex-1 py-2 px-3 rounded-lg border flex items-center justify-center gap-2 transition-all ${
+                          decision === "rejected"
+                            ? "bg-red-50 border-red-500 text-red-700 font-medium"
+                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <XCircle size={16} className={decision === "rejected" ? "text-red-500" : "text-gray-400"} />
+                        Reject
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Overall Feedback
+                      </label>
+                      <textarea
+                        value={professorFeedback}
+                        onChange={(e) => setProfessorFeedback(e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                        rows={3}
+                        placeholder="Add overall comments for the student..."
+                      />
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleSubmitResponse}
+                      disabled={isSubmitting || !decision}
+                      className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 text-white font-medium shadow-sm transition-all ${
+                        isSubmitting || !decision
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Save size={18} />
+                          Submit Final Decision
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <Toast

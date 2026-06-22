@@ -1413,6 +1413,7 @@ export function createQuestionSegments(questionBlock) {
   if (questionBlock.answerArea && questionBlock.answerArea.mode !== 'none') {
     const attached = attachAnswerAreaToLastSegment(questionBlock.answerArea);
     if (!attached) {
+      const isFirst = segments.length === 0;
       segments.push({
         id: `${questionBlock.id}-answer`,
         type: 'questionSegment',
@@ -1423,17 +1424,40 @@ export function createQuestionSegments(questionBlock) {
         questionDisplayNumber: questionBlock.questionDisplayNumber,
         questionLabel: questionBlock.questionLabel,
         marks: questionBlock.marks,
-        continuation: true,
-        showNumber: false,
-        showMarks: false,
+        continuation: !isFirst,
+        showNumber: isFirst,
+        showMarks: isFirst,
         blocks: [],
         images: [],
         answerArea: questionBlock.answerArea,
-        estimatedHeight: estimateAnswerAreaHeight(questionBlock.answerArea),
+        estimatedHeight: estimateAnswerAreaHeight(questionBlock.answerArea) + (isFirst ? 30 : 0),
         layoutMode: questionBlock.layoutMode,
         rawCard: questionBlock.rawCard,
       });
     }
+  }
+
+  if (segments.length === 0) {
+    segments.push({
+      id: `${questionBlock.id}-empty-body`,
+      type: 'questionSegment',
+      segmentType: 'body',
+      questionId: questionBlock.id,
+      cardId: questionBlock.cardId,
+      questionNumber: questionBlock.questionNumber,
+      questionDisplayNumber: questionBlock.questionDisplayNumber,
+      questionLabel: questionBlock.questionLabel,
+      marks: questionBlock.marks,
+      continuation: false,
+      showNumber: true,
+      showMarks: true,
+      blocks: [],
+      images: [],
+      answerArea: null,
+      estimatedHeight: 30,
+      layoutMode: questionBlock.layoutMode,
+      rawCard: questionBlock.rawCard,
+    });
   }
 
   return segments.map((segment, index) => ({
