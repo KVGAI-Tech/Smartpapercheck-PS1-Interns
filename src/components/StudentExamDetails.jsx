@@ -202,7 +202,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
         return;
       }
 
-      if (isPortalConductExam || isSubjectiveExam) {
+      const isEvaluated = examMeta?.evaluation_status === 'evaluated' || examMeta?.recheck_requested;
+
+      if ((isPortalConductExam || isSubjectiveExam) && !isEvaluated) {
         setLoading(false);
         setError(null);
         return;
@@ -555,7 +557,9 @@ const StudentExamDetails = ({ isHistory = false }) => {
     window.location.reload();
   };
 
-  if (isPortalConductExam) {
+  const isEvaluated = examMeta?.evaluation_status === 'evaluated' || examMeta?.recheck_requested;
+
+  if (isPortalConductExam && !isEvaluated) {
     return (
       <ConductExamSession
         examId={examId}
@@ -565,7 +569,7 @@ const StudentExamDetails = ({ isHistory = false }) => {
     );
   }
 
-  if (isSubjectiveExam) {
+  if (isSubjectiveExam && !isEvaluated) {
     return (
       <SubjectiveConductExamSession
         examId={examId}

@@ -51,6 +51,9 @@ const ExamCard = ({
   };
   
   const getStatus = () => {
+    if (recheck_requested) return 'recheck_requested';
+    if (evaluation_status === 'evaluated') return 'evaluated';
+
     if (examVariant === 'portal_mcq' && upload_status === 'submitted') return 'submitted';
     if (examVariant === 'portal_mcq' && !exam_is_active) return 'inactive';
     if (examVariant === 'portal_mcq') return 'ready';
@@ -60,8 +63,6 @@ const ExamCard = ({
       }
       return getSubjectiveConductAvailability();
     }
-    if (recheck_requested) return 'recheck_requested';
-    if (evaluation_status === 'evaluated') return 'evaluated';
     if (upload_status === 'not_uploaded') return 'not_uploaded';
     return 'pending';
   };
@@ -123,8 +124,8 @@ const ExamCard = ({
       return;
     }
 
-    // Subjective conduct exams go directly to the exam session page
-    if (examVariant === 'conduct') {
+    // Subjective conduct exams go directly to the exam session page unless evaluated
+    if (examVariant === 'conduct' && status !== 'evaluated' && status !== 'recheck_requested') {
       navigate(`/student/exams/${exam_id}/conduct`);
       return;
     }
