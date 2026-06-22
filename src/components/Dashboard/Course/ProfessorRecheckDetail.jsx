@@ -576,11 +576,50 @@ const ProfessorRecheckDetail = () => {
       }
 
       const updateRecheckStatus = async () => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // 1. Update the overall recheck status in MongoDB
+        const formData = new FormData();
+        const finalStatus = decision === "partial" ? "approved" : decision;
+        formData.append("status", "completed");
+        formData.append("feedback", professorFeedback || `Recheck ${finalStatus}`);
+
+        const statusResponse = await fetch(
+          `${API_BASE_URL}/exams/${examId}/recheck/${mongoId}/status`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!statusResponse.ok) {
+          throw new Error("Failed to update recheck status on backend");
+        }
+
+        // 2. Update the student's exam enrollment with new marks and clear recheck_requested
+        const enrollmentUpdateResponse = await fetch(
+          `${API_BASE_URL}/exams/${examId}/enrollments/${enrollmentId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+            body: JSON.stringify({
+              marks_obtained: totalNewMarks,
+              recheck_requested: false
+            }),
+          }
+        );
+
+        if (!enrollmentUpdateResponse.ok) {
+          throw new Error("Failed to update student enrollment marks");
+        }
 
         setRequestData((prev) => ({
           ...prev,
-          status: decision === "partial" ? "approved" : decision,
+          status: finalStatus,
           currentMarks: totalNewMarks,
         }));
       };

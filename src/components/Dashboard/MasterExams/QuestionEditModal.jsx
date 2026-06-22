@@ -1043,9 +1043,7 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
     }
   };
 
-  const centeredSections = availableSections.filter(
-    (s) => s.id === 'question' || s.id === 'images'
-  );
+  const renderSections = availableSections;
 
   return (
     <>
@@ -1081,7 +1079,7 @@ export default function QuestionEditModal({ card, onClose, onSave, onDelete, sou
           <header className="shrink-0 border-b border-slate-200 px-7 py-5">
             <div className="flex items-center justify-between gap-4">
               <nav className="flex gap-2">
-                {centeredSections.map((section) => {
+                {renderSections.map((section) => {
                   const Icon = sectionIcons[section.id] || Sparkles;
                   const isSectionActive = activeSection === section.id;
                   return (

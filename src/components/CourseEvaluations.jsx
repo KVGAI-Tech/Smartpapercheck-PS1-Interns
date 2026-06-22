@@ -52,7 +52,7 @@ const ExamCard = ({
   
   const getStatus = () => {
     if (recheck_requested) return 'recheck_requested';
-    if (evaluation_status === 'evaluated') return 'evaluated';
+    if (upload_status === 'evaluated' || conduct_submission_status === 'evaluated') return 'evaluated';
 
     if (examVariant === 'portal_mcq' && upload_status === 'submitted') return 'submitted';
     if (examVariant === 'portal_mcq' && !exam_is_active) return 'inactive';
@@ -130,7 +130,13 @@ const ExamCard = ({
       return;
     }
 
-    navigate(`/student/evaluations/${courseId}/exam/${exam_id}?enrollment_id=${id}`);
+    const examData = {
+      id, student_id, exam_id, exam_name, full_marks, exam_mode, exam_type, conduct_variant,
+      exam_is_active, marks_obtained, start_time, end_time, duration, recheck_requested,
+      allow_recheck, upload_status, conduct_submission_status, evaluation_status: status
+    };
+
+    navigate(`/student/evaluations/${courseId}/exam/${exam_id}?enrollment_id=${id}`, { state: { exam: examData } });
   };
 
   const formatDate = (dateString) => {
@@ -201,7 +207,7 @@ const ExamCard = ({
             }`}
           >
             <Eye className="w-4 h-4" />
-            {(examVariant === 'portal_mcq' || examVariant === 'conduct') ? 'Open Exam' : 'View Details'}
+            {status === 'evaluated' ? 'View Result' : (examVariant === 'portal_mcq' || examVariant === 'conduct') ? 'Open Exam' : 'View Details'}
           </button>
           {status === 'evaluated' && (
             <button className="px-3 py-1.5 text-sm font-medium text-accent hover:text-accent/80 flex items-center gap-1">
