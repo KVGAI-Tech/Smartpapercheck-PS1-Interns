@@ -68,14 +68,14 @@ const Footer = () => {
 
   return (
     <footer className="bg-gray-50 border-t border-gray-200 text-gray-800">
-      <motion.div 
+
+      <motion.div
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.1 }}
       >
-        
         {/* Top Section */}
         <div className="flex flex-col md:flex-row justify-between items-start pb-20">
           {/* Left: Main Links */}
@@ -83,12 +83,12 @@ const Footer = () => {
             <ul className="space-y-6">
               {quickLinks.map((link, index) => (
                 <li key={index} className="group">
-                  <a 
-                    href={link.href} 
+                  <a
+                    href={link.href}
                     className="inline-flex items-center text-xl md:text-3xl font-light text-gray-800 hover:text-teal-600 transition-colors duration-300"
                   >
                     {link.name}
-                    <motion.span 
+                    <motion.span
                       className="ml-4 opacity-0 group-hover:opacity-100 transition-all duration-300 text-teal-600"
                       initial={{ x: -10 }}
                       whileHover={{ x: 5 }}
@@ -102,19 +102,25 @@ const Footer = () => {
             </ul>
           </motion.div>
 
-          {/* Right: Info Columns */}
-          <div className="w-full md:w-2/3 grid grid-cols-1 sm:grid-cols-3 gap-12">
+          {/* Right: Info Columns — 3. Glassmorphism cards */}
+          <div className="w-full md:w-2/3 grid grid-cols-1 sm:grid-cols-3 gap-6">
             {/* About Platform */}
-            <motion.div variants={itemVariants}>
-              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-6">About</h4>
+            <motion.div
+              variants={itemVariants}
+              className="rounded-2xl border border-white/70 bg-white/60 backdrop-blur-md shadow-sm p-6 hover:shadow-md hover:border-teal-200 transition-all duration-300"
+            >
+              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-4">About</h4>
               <p className="text-base text-gray-600 leading-relaxed font-light">
                 AI-powered script evaluation platform for universities and educational institutions.
               </p>
             </motion.div>
-            
+
             {/* Contact Us */}
-            <motion.div variants={itemVariants}>
-              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-6">Contact</h4>
+            <motion.div
+              variants={itemVariants}
+              className="rounded-2xl border border-white/70 bg-white/60 backdrop-blur-md shadow-sm p-6 hover:shadow-md hover:border-teal-200 transition-all duration-300"
+            >
+              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-4">Contact</h4>
               <ul className="space-y-5 text-base">
                 <li className="text-gray-600">
                   <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1 font-medium">Email</span>
@@ -132,33 +138,35 @@ const Footer = () => {
             </motion.div>
 
             {/* Location */}
-            <motion.div variants={itemVariants}>
-              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-6">Location</h4>
+            <motion.div
+              variants={itemVariants}
+              className="rounded-2xl border border-white/70 bg-white/60 backdrop-blur-md shadow-sm p-6 hover:shadow-md hover:border-teal-200 transition-all duration-300"
+            >
+              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-4">Location</h4>
               <p className="text-base text-gray-600 leading-relaxed font-light">
                 Rajasthan, India
               </p>
             </motion.div>
           </div>
         </div>
-        
+
         {/* Bottom Section */}
-        <motion.div 
-          className="pt-10 flex flex-col md:flex-row justify-between items-center border-t border-gray-200"
+        <motion.div
+          className="pt-10 flex flex-col md:flex-row justify-between items-center border-t border-gray-200/60"
           variants={itemVariants}
         >
-          
           {/* Logo (Back to Orbit) */}
-          <motion.div 
+          <motion.div
             className="flex items-center mb-6 md:mb-0 cursor-pointer group"
             onClick={scrollToTop}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             title="Back to Orbit 🚀"
           >
-            <img 
-              src="/logo_smartqna.png" 
-              alt="Smart Paper Check Logo" 
-              className="h-8 mr-3 transition-transform group-hover:-translate-y-1 duration-300" 
+            <img
+              src="/logo_smartqna.png"
+              alt="Smart Paper Check Logo"
+              className="h-8 mr-3 transition-transform group-hover:-translate-y-1 duration-300"
             />
             <div className="font-medium text-2xl text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
               Smart<span className="font-light italic text-teal-600"> Paper Check</span>
@@ -168,8 +176,8 @@ const Footer = () => {
           {/* Socials */}
           <div className="flex space-x-8 mb-6 md:mb-0">
             {socialLinks.map((link, index) => (
-              <motion.a 
-                key={index} 
+              <motion.a
+                key={index}
                 href={link.href}
                 className="text-gray-800 hover:text-teal-600 transition-colors duration-300"
                 aria-label={link.name}
@@ -189,7 +197,6 @@ const Footer = () => {
               Revolutionizing educational assessment with AI
             </p>
           </div>
-
         </motion.div>
       </motion.div>
     </footer>
