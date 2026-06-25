@@ -65,7 +65,7 @@ const ComparisonMetrics = () => {
             </div>
 
             <p className="text-gray-600 mb-8">
-              Smart Paper Check reduces evaluation time from <span className="font-medium">5-6 days</span> to just <span className="font-medium text-accent">10-20 minutes</span>, saving over 100% of time spent on grading.
+              Smart Paper Check reduces evaluation time from <span className="font-medium">3-4 days</span> to just <span className="font-medium text-accent">10-20 minutes</span>, saving over 100% of time spent on grading.
             </p>
 
             <div className="flex flex-col relative h-64">
