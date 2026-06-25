@@ -61,14 +61,15 @@ const Footer = () => {
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((link, index) => (
-                <a 
+                <motion.a 
                   key={index} 
                   href={link.href}
                   className="text-gray-500 hover:text-teal-600 transition-colors duration-200"
                   aria-label={link.name}
+                  whileHover={{ scale: 1.1 }}
                 >
                   {link.icon}
-                </a>
+                </motion.a>
               ))}
             </div>
           </div>
