@@ -23,16 +23,16 @@ cd Smartpapercheck-PS1-Interns
 git checkout main
 git pull origin main
 
-# 4. Create YOUR OWN branch off main (use your name / feature)
-#    e.g. feature/hero-redesign-rahul
-git checkout -b feature/<your-name-or-feature>
+# 4. Create YOUR OWN branch off main — just use your name
+#    e.g. rahul
+git checkout -b <your-name>
 
-# 5. Develop locally on YOUR branch (commit as you go)
+# 5. Develop locally on YOUR branch. When committing, mention the feature you worked on
 git add .
-git commit -m "Describe what you changed"
+git commit -m "<feature you worked on> — what you changed"
 
 # 6. Push YOUR branch to GitHub (NOT main)
-git push -u origin feature/<your-name-or-feature>
+git push -u origin <your-name>
 ```
 
 Then on GitHub:
@@ -42,7 +42,8 @@ Then on GitHub:
 9. Once approved, the **admin merges** it into `main`. ✅
 
 **Rules:**
-- ✅ Always work on your own branch (`feature/...`).
+- ✅ Always work on your own branch named after you (e.g. `rahul`).
+- ✅ Mention the feature you worked on in your commit messages.
 - ✅ Push only your branch; raise a PR for review.
 - ❌ Do **not** commit, develop, or push directly to `main`.
 - ❌ Do **not** merge your own PR — only an admin merges into `main`.
