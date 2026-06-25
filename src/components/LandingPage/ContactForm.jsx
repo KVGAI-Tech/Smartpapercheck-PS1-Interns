@@ -219,7 +219,7 @@ const ContactForm = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <motion.div 
-                    className="bg-white rounded-xl shadow-md p-4 border border-gray-100"
+                    className="bg-white rounded-xl shadow-md p-4 border border-gray-100 cursor-pointer"
                     whileHover={{ y: -5 }}
                     transition={{ duration: 0.2 }}
                   >
@@ -236,7 +236,7 @@ const ContactForm = () => {
                   </motion.div>
 
                   <motion.div 
-                    className="bg-white rounded-xl shadow-md p-4 border border-gray-100"
+                    className="bg-white rounded-xl shadow-md p-4 border border-gray-100 cursor-pointer"
                     whileHover={{ y: -5 }}
                     transition={{ duration: 0.2 }}
                   >
