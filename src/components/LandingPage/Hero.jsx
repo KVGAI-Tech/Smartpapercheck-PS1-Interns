@@ -176,7 +176,7 @@ const Hero = ({ scrollToDemo }) => {
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none" />
                 <video
-                  src="/api/public/landing-video?v=2"
+                  src={`${API_BASE_URL}/public/landing-video?v=2`}
                   autoPlay
                   loop
                   muted
