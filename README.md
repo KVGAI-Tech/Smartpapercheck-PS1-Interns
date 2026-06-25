@@ -6,6 +6,50 @@ This is the **frontend** of Smart Paper Check, built with **Vite + React 18 + Ta
 
 ---
 
+## ⚠️ Contributing — Git Workflow (READ THIS FIRST)
+
+**Never develop on, or push to, `main`.** `main` is the protected, reviewed code. All your work happens on **your own branch**, and changes only reach `main` through a Pull Request that an **admin reviews and merges**.
+
+Follow these steps exactly:
+
+```bash
+# 1. Clone the repository (you've been added as a collaborator)
+git clone https://github.com/KVGAI-Tech/Smartpapercheck-PS1-Interns.git
+
+# 2. Go into the project folder
+cd Smartpapercheck-PS1-Interns
+
+# 3. Make sure your local main is up to date with the latest code
+git checkout main
+git pull origin main
+
+# 4. Create YOUR OWN branch off main (use your name / feature)
+#    e.g. feature/hero-redesign-rahul
+git checkout -b feature/<your-name-or-feature>
+
+# 5. Develop locally on YOUR branch (commit as you go)
+git add .
+git commit -m "Describe what you changed"
+
+# 6. Push YOUR branch to GitHub (NOT main)
+git push -u origin feature/<your-name-or-feature>
+```
+
+Then on GitHub:
+
+7. Open a **Pull Request** from your branch → into `main`.
+8. The **admin reviews** your PR. If changes are requested, push more commits to the **same branch** (the PR updates automatically).
+9. Once approved, the **admin merges** it into `main`. ✅
+
+**Rules:**
+- ✅ Always work on your own branch (`feature/...`).
+- ✅ Push only your branch; raise a PR for review.
+- ❌ Do **not** commit, develop, or push directly to `main`.
+- ❌ Do **not** merge your own PR — only an admin merges into `main`.
+- 🔄 Before starting new work, run `git checkout main && git pull` so your branch starts from the latest code.
+
+---
+
 ## 1. Quick Start
 
 ```bash
@@ -20,6 +64,8 @@ http://localhost:5173
 ```
 
 The **landing page is what loads at `/`** (the home route, shown when no user is logged in). No login or backend is needed to see it.
+
+> **Backend URL (optional):** The backend URL is **not committed** to this repo. If you need to talk to the backend, copy `.env.example` to `.env` and set `VITE_API_URL` to the value shared privately by the admin. For the landing-page redesign you can skip this.
 
 > If `yarn install` shows an error from a `postinstall` / PDF-viewer setup step, you can ignore it — it relates to the exam dashboard, **not** the landing page.
 
@@ -88,7 +134,7 @@ Other helpers in the folder: `Feedbacks.jsx`, `Glow.jsx` (visual effects).
 
 2. **The Contact form does not send anywhere** — it just shows a "Thank you" message via a timer (`ContactForm.jsx`). There's no backend submit, so don't worry about wiring it up.
 
-3. **The demo video** in `Hero.jsx` loads from `/api/public/landing-video`. Since you don't have the backend, **this one video won't load** — that's expected. Everything else works fully. You can swap it for a local/placeholder video during the redesign.
+3. **The demo video** in `Hero.jsx` loads from the backend (`${API_BASE_URL}/public/landing-video`). Since the landing-page task doesn't include the backend, **this one video won't load locally** — that's expected. Everything else works fully. Swap it for a local/placeholder video during the redesign: drop a file in `public/` and set `src="/your-video.mp4"`.
 
 4. **"Get Started" buttons** just navigate to `/auth` (the login page). Leave that behavior as-is unless told otherwise.
 
