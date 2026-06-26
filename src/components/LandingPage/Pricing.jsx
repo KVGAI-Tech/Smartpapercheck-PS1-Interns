@@ -152,6 +152,21 @@ const featureItem = {
   visible: { opacity: 1, x: 0 },
 };
 
+// Blur-in word reveal for the heading accent word
+const wordReveal = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.045, delayChildren: 0.15 } },
+};
+const charReveal = {
+  hidden: { opacity: 0, y: "0.35em", filter: "blur(6px)" },
+  visible: {
+    opacity: 1,
+    y: "0em",
+    filter: "blur(0px)",
+    transition: { duration: 0.45, ease: "easeOut" },
+  },
+};
+
 /* ------------------------------------------------------------------ */
 /*  Cell renderer for the comparison matrix                            */
 /* ------------------------------------------------------------------ */
@@ -215,15 +230,36 @@ const Pricing = () => {
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
         >
-          <div className="flex justify-center mb-4">
-            <span className="inline-flex items-center px-4 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium">
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <span className="h-px w-8 sm:w-10 bg-gradient-to-r from-transparent to-accent/50" />
+            <span className="text-accent font-semibold uppercase tracking-[0.25em] text-sm sm:text-base">
               Pricing
             </span>
+            <span className="h-px w-8 sm:w-10 bg-gradient-to-l from-transparent to-accent/50" />
           </div>
-          <h2 className="text-3xl sm:text-5xl font-bold mb-4 text-gray-900">
-            Pay only for the scripts <span className="text-accent">you grade</span>
+          <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.1] mb-5 text-gray-900">
+            Pay only for the scripts{" "}
+            <motion.span
+              className="text-accent inline-block"
+              variants={wordReveal}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              aria-label="you grade"
+            >
+              {"you grade".split("").map((ch, i) => (
+                <motion.span
+                  key={i}
+                  variants={charReveal}
+                  className="inline-block whitespace-pre"
+                  aria-hidden="true"
+                >
+                  {ch}
+                </motion.span>
+              ))}
+            </motion.span>
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-lg sm:text-xl text-gray-500 font-normal max-w-2xl mx-auto mb-8 leading-relaxed">
             Plans for solo tutors up to full universities. Start on a free trial,
             then move to a paid plan once your volume grows.
           </p>
@@ -282,11 +318,11 @@ const Pricing = () => {
                 {/* Most Popular ribbon */}
                 {plan.badge && (
                   <motion.div
-                    className="absolute -top-4 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-accent text-white text-xs font-semibold shadow-lg"
+                    className="absolute -top-4 left-1/2 -translate-x-1/2 inline-flex items-center px-4 py-1.5 rounded-full bg-accent text-white text-xs font-semibold tracking-wide shadow-lg"
                     animate={{ y: [0, -3, 0] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                   >
-                    <Sparkles className="w-3.5 h-3.5" /> {plan.badge}
+                    {plan.badge}
                   </motion.div>
                 )}
 
@@ -456,7 +492,20 @@ const Pricing = () => {
 
           <div className="text-center text-gray-700">
             Recommended plan:{" "}
-            <span className="font-semibold text-accent">{recommended}</span>
+            <span className="relative inline-block font-semibold text-accent">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={recommended}
+                  className="inline-block"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {recommended}
+                </motion.span>
+              </AnimatePresence>
+            </span>
           </div>
         </motion.div>
 
