@@ -1,0 +1,34 @@
+/* Continuous marquee animation for institution logos */
+.clientele-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 4.8rem; /* matches Tailwind gap-24 with custom spacing */
+  width: max-content;
+  animation: clientele-scroll 40s linear infinite;
+}
+
+.clientele-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.clientele-marquee-item {
+  flex-shrink: 0;
+}
+
+@keyframes clientele-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    /* Scroll by exactly half the total width so it loops seamlessly
+       (we duplicate the items enough times to cover this) */
+    transform: translateX(-50%);
+  }
+}
+
+/* Responsive gap adjustment */
+@media (max-width: 640px) {
+  .clientele-marquee-track {
+    gap: 3.2rem; /* matches Tailwind gap-16 with custom spacing */
+  }
+}

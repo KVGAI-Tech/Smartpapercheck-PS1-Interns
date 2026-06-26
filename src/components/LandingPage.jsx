@@ -328,6 +328,7 @@ const LandingPage = () => {
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
         ref={featureRef}
+        data-section="features"
       >
         <Features
           analyticsImage={analytics}
@@ -366,6 +367,7 @@ const LandingPage = () => {
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
         ref={pricingRef}
+        data-section="pricing"
       >
         <Pricing />
       </motion.div>
