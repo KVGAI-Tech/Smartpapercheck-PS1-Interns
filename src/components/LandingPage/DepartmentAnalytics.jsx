@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';import { motion, AnimatePresence } from 'framer-motion';
 import { 
   HiOutlineAcademicCap, 
   HiOutlineChartBar, 
@@ -8,10 +7,13 @@ import {
   HiOutlineOfficeBuilding,
   HiOutlineArrowSmUp,
   HiOutlineRefresh,
-  HiOutlineBookOpen,
   HiOutlineBeaker,
-  HiOutlineLightBulb
+  HiOutlineLightBulb,
+  HiOutlineViewGrid,
+  HiOutlineBookOpen,
+  HiCheck
 } from 'react-icons/hi';
+
 
 // Enhanced data structure with real institutions and departments
 const institutions = [
@@ -336,52 +338,109 @@ const barAnimation = {
 };
 
 // Enhanced dropdown component with better styling and animations
+// Enhanced dropdown component matching the crisp card aesthetic
+// Clean, professional dropdown component
+// Native, clean dropdown component
+// Soft, floating dropdown component matching your target design
+// Soft, floating dropdown component with defined borders
+// Interactive, popping dropdown component with clear borders and larger text
+// Bug-free, polished dropdown component
+// Bulletproof dropdown component with perfect borders
+// Drodown with refined arrow placement, softer focus borders, and deep shadows
+// Fully custom dropdown component (No native system menus!)
+// Fully custom dropdown with softer, lighter fonts
+// Custom dropdown with bolder labels
 const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
-  const [focus, setFocus] = useState(false);
-  const [hover, setHover] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
   
-  // Get the selected option's icon if available
   const selectedIcon = Array.isArray(options) && options.length > 0 && 
     typeof options[0] !== 'string' && 
     options.find(opt => opt.name === value)?.icon;
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (selectedValue) => {
+    onChange({ target: { value: selectedValue } });
+    setIsOpen(false);
+  };
   
   return (
-    <motion.div
-      className="relative w-full"
-      variants={fadeInUp}
-      animate={focus ? 'focus' : hover ? 'hover' : 'initial'}
-      initial="initial"
-      onHoverStart={() => !disabled && setHover(true)}
-      onHoverEnd={() => !disabled && setHover(false)}
-    >
-      <label className="block text-sm font-semibold text-gray-700 mb-3">{label}</label>
-      <div className={`flex items-center bg-white rounded-2xl border-2 border-gray-100 shadow-lg px-6 py-4 transition-all duration-300 hover:border-accent/30 hover:shadow-xl focus-within:border-accent/40 focus-within:shadow-xl focus-within:ring-4 focus-within:ring-accent/10 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-gray-50/50'}`}>
-        {(icon || selectedIcon) && <span className="mr-4 flex-shrink-0">{selectedIcon || icon}</span>}
-        <select
-          className="appearance-none bg-transparent outline-none w-full text-lg font-medium text-gray-800 pr-4 cursor-pointer disabled:cursor-not-allowed"
-          value={value}
-          onChange={onChange}
-          onFocus={() => !disabled && setFocus(true)}
-          onBlur={() => !disabled && setFocus(false)}
+    <div className="w-full relative" ref={dropdownRef}>
+      {/* Bolder, darker label */}
+      <label className="block text-[13px] font-bold text-slate-600 mb-2 uppercase tracking-wider ml-1">
+        {label}
+      </label>
+      
+      <div className="group relative">
+        <button
+          type="button"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
+          className={`w-full flex items-center justify-between bg-white py-3.5 pl-12 pr-5 rounded-xl border-2 outline-none transition-all duration-300 ease-out z-10 relative
+            ${disabled 
+              ? 'opacity-60 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400' 
+              : isOpen 
+                ? 'border-accent ring-4 ring-accent/15 shadow-lg shadow-accent/15 -translate-y-1 text-slate-800' 
+                : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md hover:-translate-y-1 text-slate-800'
+            }
+          `}
         >
-          {options.map((opt, idx) => (
-            typeof opt === 'string' ? (
-              <option key={opt} value={opt}>{opt}</option>
-            ) : (
-              <option key={opt.name} value={opt.name}>{opt.name}</option>
-            )
-          ))}
-        </select>
-        <motion.div 
-          className="absolute right-6 text-gray-400 pointer-events-none flex-shrink-0"
-          animate={{ rotate: focus ? 180 : 0 }}
-          transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
-        >
-          <HiOutlineChevronDown className="w-6 h-6" />
-        </motion.div>
+          <div className="pointer-events-none absolute left-4 flex items-center text-accent">
+            {selectedIcon || icon}
+          </div>
+          <span className="text-lg font-medium truncate">{value}</span>
+          <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-slate-400">
+            <HiOutlineChevronDown className="w-5 h-5" />
+          </motion.div>
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+            >
+              <div className="max-h-60 overflow-y-auto py-1">
+                {options.map((opt, idx) => {
+                  const optName = typeof opt === 'string' ? opt : opt.name;
+                  const optIcon = typeof opt === 'string' ? null : opt.icon;
+                  const isSelected = value === optName;
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelect(optName)}
+                      className={`w-full text-left px-5 py-3 text-base font-normal flex items-center justify-between transition-colors duration-150
+                        ${isSelected ? 'bg-accent/10 text-accent font-medium' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}
+                      `}
+                    >
+                      <div className="flex items-center gap-3">
+                        {optIcon && <span className={isSelected ? 'text-accent' : 'text-slate-400'}>{optIcon}</span>}
+                        <span>{optName}</span>
+                      </div>
+                      {isSelected && <HiCheck className="w-5 h-5 text-accent" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -434,78 +493,142 @@ const SingleCourseChart = ({ data, label }) => {
   const max = Math.max(1, smartQnAValue, taValue);
 
   return (
-    <div className="bg-white/70 backdrop-blur-lg rounded-3xl border border-gray-200 shadow-2xl p-8">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900">{label}</h3>
-          <p className="text-sm text-gray-500 mt-1">Smart Paper Check vs TA grading comparison</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-            <span className="w-2 h-2 rounded-full bg-accent" /> Smart Paper Check
-          </span>
-          <span className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-            <span className="w-2 h-2 rounded-full bg-gray-400" /> TA
-          </span>
-        </div>
+  <div className="bg-white/70 backdrop-blur-lg rounded-3xl border border-gray-200 shadow-2xl p-8">
+
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
+      <div>
+        <h3 className="text-2xl font-bold text-gray-900">{label}</h3>
+        <p className="text-sm text-gray-500 mt-1">
+          Smart Paper Check vs TA grading comparison
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6">
-          <div className="flex items-baseline justify-between mb-3">
-            <p className="text-sm font-semibold text-gray-700">Smart Paper Check Score</p>
-            <p className="text-2xl font-bold text-accent">{smartQnAValue}%</p>
+      <div className="flex items-center gap-3">
+        <span className="inline-flex items-center gap-2 text-xs font-semibold text-accent bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20">
+          <span className="w-2.5 h-2.5 rounded-full bg-accent" />
+          Smart Paper Check
+        </span>
+
+        <span className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+          <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
+          TA
+        </span>
+      </div>
+    </div>
+
+    <div className="relative">
+
+
+
+   
+
+      {/* Score Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-center">
+
+        {/* SPC Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-md px-5 py-4">
+          <div className="flex items-baseline justify-between mb-4">
+            <p className="text-sm font-semibold text-gray-700">
+              Smart Paper Check Score
+            </p>
+
+            <p className="text-3xl font-bold text-accent">
+              {smartQnAValue}%
+            </p>
           </div>
+
           <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-accent"
               initial={{ width: 0 }}
-              animate={{ width: `${Math.round((smartQnAValue / max) * 100)}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
+              animate={{
+                width: `${Math.round((smartQnAValue / max) * 100)}%`,
+              }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             />
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-gray-600">
-            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
-              <p className="text-gray-500">Students</p>
-              <p className="font-semibold text-gray-800">{data?.students ?? '-'}</p>
-            </div>
-            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
-              <p className="text-gray-500">Assignments</p>
-              <p className="font-semibold text-gray-800">{data?.totalAssignments ?? '-'}</p>
-            </div>
-            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
-              <p className="text-gray-500">Avg Time</p>
-              <p className="font-semibold text-gray-800">{data?.avgGradingTime ?? '-'}</p>
-            </div>
-          </div>
         </div>
+{/* Difference Card */}
+<div className="hidden md:flex flex-col items-center justify-center bg-accent/5 border border-accent/20 rounded-2xl px-4 py-4 min-w-[120px]">
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6">
-          <div className="flex items-baseline justify-between mb-3">
-            <p className="text-sm font-semibold text-gray-700">TA Score</p>
-            <p className="text-2xl font-bold text-gray-700">{taValue}%</p>
+  <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
+    Difference
+  </span>
+
+  <span className="text-3xl font-bold text-accent leading-none my-1">
+    {Math.abs((taValue - smartQnAValue).toFixed(1))}%
+  </span>
+
+  <span className="text-xs text-slate-500">
+  {taValue > smartQnAValue
+    ? "TA Higher"
+    : taValue < smartQnAValue
+    ? "Smart Paper Check Higher"
+    : "Scores Equal"}
+</span>
+
+</div>
+        {/* TA Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-md px-5 py-4">
+          <div className="flex items-baseline justify-between mb-4">
+            <p className="text-sm font-semibold text-gray-700">
+              TA Score
+            </p>
+
+            <p className="text-3xl font-bold text-gray-700">
+              {taValue}%
+            </p>
           </div>
+
           <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-gray-400"
               initial={{ width: 0 }}
-              animate={{ width: `${Math.round((taValue / max) * 100)}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
+              animate={{
+                width: `${Math.round((taValue / max) * 100)}%`,
+              }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             />
-          </div>
-          <div className="mt-4 flex items-center justify-between bg-accent/5 border border-accent/20 rounded-2xl p-4">
-            <div>
-              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Difference</p>
-              <p className="text-sm text-gray-600 mt-1">TA - Smart Paper Check</p>
-            </div>
-            <p className={`text-xl font-bold ${taValue - smartQnAValue >= 0 ? 'text-gray-700' : 'text-accent'}`}>
-              {(taValue - smartQnAValue > 0 ? '+' : '') + (Math.round((taValue - smartQnAValue) * 10) / 10)}%
-            </p>
           </div>
         </div>
       </div>
+         
+    
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+
+        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+          <div className="text-2xl font-bold text-accent">
+            {data?.students ?? "-"}
+          </div>
+          <div className="text-sm text-slate-500 mt-1">
+            Students
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+          <div className="text-2xl font-bold text-accent">
+            {data?.totalAssignments ?? "-"}
+          </div>
+          <div className="text-sm text-slate-500 mt-1">
+            Assignments
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+          <div className="text-2xl font-bold text-accent">
+            {data?.avgGradingTime ?? "-"}
+          </div>
+          <div className="text-sm text-slate-500 mt-1">
+            Avg Grading Time
+          </div>
+        </div>
+
+      </div>
     </div>
-  );
+  </div>
+);
 };
 
 // Main component
@@ -690,80 +813,56 @@ const DepartmentAnalytics = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              {/* Filters row */}
-              <div className="w-full mb-12">
+             {/* Filters row */}
+              <div className="w-full mb-10">
                 <motion.div 
-                  className="bg-white/70 backdrop-blur-lg rounded-3xl border border-gray-200 shadow-2xl p-8"
+                  className="bg-white rounded-3xl shadow-sm hover:shadow-md border border-slate-200 p-6 lg:p-8 transition-shadow duration-300"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-6">
-                    <motion.div
-                      variants={fadeInUp}
-                      initial="hidden"
-                      animate="visible"
-                    >
-                      <CustomSelect
-                        options={institutions}
-                        value={selectedInstitution}
-                        onChange={handleInstitutionChange}
-                        icon={<HiOutlineOfficeBuilding className="w-5 h-5" />}
-                        label="Institution"
-                      />
-                    </motion.div>
+                  {/* Custom Grid: 3 equal fractions (1fr) for inputs, and auto for the button */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] gap-5 lg:gap-6 items-end">
                     
-                    <motion.div
-                      variants={fadeInUp}
-                      initial="hidden"
-                      animate="visible"
-                      transition={{ delay: 0.1 }}
-                    >
-                      <CustomSelect
-                        options={currentDepartments}
-                        value={selectedDepartment}
-                        onChange={handleDepartmentChange}
-                        icon={currentDepartments.find(d => d.name === selectedDepartment)?.icon}
-                        label="Department"
-                        disabled={currentDepartments.length === 0}
-                      />
-                    </motion.div>
+                    <CustomSelect
+                      options={institutions}
+                      value={selectedInstitution}
+                      onChange={handleInstitutionChange}
+                      icon={<HiOutlineOfficeBuilding className="w-5 h-5" />}
+                      label="Institution"
+                    />
                     
-                    <motion.div
-                      variants={fadeInUp}
-                      initial="hidden"
-                      animate="visible"
-                      transition={{ delay: 0.2 }}
-                    >
-                      <CustomSelect
-                        options={currentCourses}
-                        value={selectedCourse}
-                        onChange={handleCourseChange}
-                        icon={<HiOutlineAcademicCap className="w-5 h-5 text-accent" />}
-                        label="Course"
-                        disabled={currentCourses.length === 0}
-                      />
-                    </motion.div>
-                  </div>
+                    <CustomSelect
+                      options={currentDepartments}
+                      value={selectedDepartment}
+                      onChange={handleDepartmentChange}
+                      icon={<HiOutlineViewGrid className="w-5 h-5" />}
+                      label="Department"
+                      disabled={currentDepartments.length === 0}
+                    />
+                    
+                    <CustomSelect
+                      options={currentCourses}
+                      value={selectedCourse}
+                      onChange={handleCourseChange}
+                      icon={<HiOutlineBookOpen className="w-5 h-5" />}
+                      label="Course"
+                      disabled={currentCourses.length === 0}
+                    />
                   
-                  {/* Refresh button */}
-                  <motion.div 
-                    className="flex justify-center"
-                    variants={fadeIn}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: 0.3 }}
-                  >
-                    <motion.button
-                      onClick={handleRefresh}
-                      className="flex items-center gap-3 px-6 py-3 bg-accent text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
-                      whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(var(--accent-rgb), 0.25)" }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <HiOutlineRefresh className="w-5 h-5" />
-                      <span>Refresh Analytics Data</span>
-                    </motion.button>
-                  </motion.div>
+                    {/* Refresh Button - Increased padding (px-8) for a better feel */}
+                    {/* Refresh Button - Softer font weight for better readability */}
+                    <div className="w-full flex justify-start lg:justify-end mt-2 lg:mt-0">
+                      <button
+                        onClick={handleRefresh}
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 bg-accent text-white rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 font-medium text-[15px] border-2 border-accent shrink-0"
+                      >
+                        <HiOutlineRefresh className="w-5 h-5" />
+                        <span>Update Data</span>
+                      </button>
+                    </div>
+                    
+                  </div>
                 </motion.div>
               </div>
               
@@ -795,118 +894,103 @@ const DepartmentAnalytics = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
               >
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">Performance Summary</h3>
-                  <div className="text-sm text-gray-500">
-                    Department: <span className="font-semibold text-gray-700">{selectedDepartment}</span>
-                  </div>
-                </div>
+                {/* Performance Summary Header */}
+{/* Performance Summary Header */}
+<div className="mb-6 flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
+  <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+    Performance Summary
+  </h2>
+  
+  {/* The Dash - Hidden on tiny mobile screens where text stacks */}
+  <span className="hidden sm:inline text-slate-300 font-medium">—</span>
+  
+  {/* The Subtitle Context - Now dynamic and rephrased */}
+  <span className="text-base font-medium text-slate-500">
+    <span className="font-semibold text-slate-700">{selectedDepartment}</span> Department
+  </span>
+</div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                  {/* Average Smart Paper Check score */}
-                  <div className="bg-accent/5 rounded-xl p-5 shadow-md border border-accent/20">
-                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. Smart Paper Check Score</p>
-                    <p className="text-3xl font-bold text-accent mb-1">
-                      {summaryStats.avgSmartQnA}%
-                    </p>
-                    <p className="text-xs text-accent">Conservative grading</p>
-                  </div>
-                  
-                  {/* Average TA score */}
-                  <div className="bg-gray-50 rounded-xl p-5 shadow-md border border-gray-200">
-                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. TA Score</p>
-                    <p className="text-3xl font-bold text-gray-600 mb-1">
-                      {summaryStats.avgTA}%
-                    </p>
-                    <p className="text-xs text-gray-500">Manual grading</p>
-                  </div>
-                  
-                  {/* Score difference */}
-                  <div className={`rounded-xl p-5 shadow-md border ${summaryStats.avgImprovement < 0 ? 'bg-red-50 border-red-100' : 'bg-accent/5 border-accent/20'}`}>
-                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Score Difference</p>
-                    <p className={`text-3xl font-bold mb-1 ${summaryStats.avgImprovement < 0 ? 'text-red-600' : 'text-accent'}`}>
-                      {summaryStats.avgImprovement > 0 ? '+' : ''}
-                      {summaryStats.avgImprovement}%
-                    </p>
-                    <p className={`text-xs ${summaryStats.avgImprovement < 0 ? 'text-red-600' : 'text-accent'}`}>
-                      {summaryStats.avgImprovement < 0 ? 'TA scores higher' : 'Smart Paper Check higher'}
-                    </p>
-                  </div>
-                  
-                  {/* Total students */}
-                  <div className="bg-accent/5 rounded-xl p-5 shadow-md border border-accent/20">
-                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Total Students</p>
-                    <p className="text-3xl font-bold text-accent mb-1">
-                      {summaryStats.totalStudents.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-accent">Across {summaryStats.count} courses</p>
-                  </div>
-                  
-                  {/* Total assignments */}
-                  <div className="bg-gray-50 rounded-xl p-5 shadow-md border border-gray-200">
-                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Assignments Graded</p>
-                    <p className="text-3xl font-bold text-gray-600 mb-1">
-                      {summaryStats.totalAssignments}
-                    </p>
-                    <p className="text-xs text-gray-500">Total submissions</p>
-                  </div>
-                  
-                  {/* Courses analyzed */}
-                  <div className="bg-accent/5 rounded-xl p-5 shadow-md border border-accent/20">
-                    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Courses Analyzed</p>
-                    <p className="text-3xl font-bold text-accent mb-1">
-                      {summaryStats.count}
-                    </p>
-                    <p className="text-xs text-accent">Active courses</p>
-                  </div>
-                </div>
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+  {/* Card 1: Average Smart Paper Check score */}
+  <div className="bg-slate-100 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. Smart Paper Check Score</p>
+    <p className="text-3xl font-bold text-accent mb-1">
+      {summaryStats.avgSmartQnA}%
+    </p>
+    <p className="text-xs text-accent">Conservative grading</p>
+  </div>
+  
+  {/* Card 2: Average TA score */}
+  <div className="bg-slate-50 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. TA Score</p>
+    <p className="text-3xl font-bold text-gray-600 mb-1">
+      {summaryStats.avgTA}%
+    </p>
+    <p className="text-xs text-gray-500">Manual grading</p>
+  </div>
+  
+  {/* Card 3: Score difference */}
+  <div className="bg-slate-100 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Score Difference(SPC VS TA)</p>
+    <p className="text-3xl font-bold text-accent mb-1">
+      {summaryStats.avgImprovement > 0 ? '+' : ''}{summaryStats.avgImprovement}%
+    </p>
 
-                {/* Key insights */}
-                {/* <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-teal-50 rounded-xl border border-blue-100">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 mt-0.5">
-                      <HiOutlineLightBulb className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Key Insight</h4>
-                      <p className="text-sm text-gray-700">
-                        {summaryStats.avgImprovement < 0 ? (
-                          <>Smart Paper Check maintains conservative grading standards, typically scoring {Math.abs(summaryStats.avgImprovement)}% lower than TAs to ensure fairness. Students can always request manual review if they believe their answer deserves higher marks.</>
-                        ) : (
-                          <>Smart Paper Check provides consistent grading with {summaryStats.avgImprovement}% higher average scores, indicating improved accuracy in assessment.</>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div> */}
+    <p className="text-xs text-accent">
+      {summaryStats.avgImprovement < 0 ? 'Within expected conservative bounds' : 'Scores align closely'}
+    </p>
+  </div>
+  
+  {/* Card 4: Consolidated Volume Metrics */}
+  <div className="bg-slate-50 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+    <div className="flex justify-between items-start mb-2">
+      <p className="text-xs text-gray-600 font-medium uppercase tracking-wide">Dataset Volume</p>
+      <span className="text-xs font-medium text-gray-500 bg-white border border-slate-300 px-2 py-0.5 rounded">
+        {summaryStats.count} Courses
+      </span>
+    </div>
+    <div className="grid grid-cols-2 gap-4 mt-1">
+      <div>
+        <p className="text-3xl font-bold text-accent mb-1">{summaryStats.totalStudents}</p>
+        <p className="text-xs text-accent font-medium">Students</p>
+      </div>
+      <div>
+        <p className="text-3xl font-bold text-gray-600 mb-1">{summaryStats.totalAssignments}</p>
+        <p className="text-xs text-gray-500 font-medium">Assignments Graded</p>
+      </div>
+    </div>
+  </div>
+</div>
               </motion.div>
               
-
-              
-              {/* Footer message */}
+             {/* Footer message - Extended Gradient Callout Style */}
               <motion.div
-                className="text-center"
+                className="mt-8 flex justify-center w-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.4 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
               >
-                <motion.div 
-                  className="inline-block py-6 px-8 rounded-2xl bg-accent/5 border border-accent/20 shadow-lg backdrop-blur-lg"
-                  whileHover={{ 
-                    y: -5, 
-                    boxShadow: "0 15px 30px -5px rgba(59, 130, 246, 0.1)"
-                  }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  <div className="flex items-center space-x-3 mb-2">
+                {/* Updated the gradient to stretch the color further across the box */}
+                <div className="w-full flex flex-col sm:flex-row items-start sm:items-center gap-5 py-5 px-6 rounded-2xl bg-gradient-to-r from-accent/15 via-accent/5 to-transparent border border-accent/20 shadow-sm transition-all duration-300 hover:shadow-md hover:border-accent/40 relative overflow-hidden">
+                  
+                  {/* Subtle decorative glow in the top left corner */}
+                  <div className="absolute top-0 left-0 w-32 h-32 bg-accent/10 rounded-br-full pointer-events-none" />
+
+                  {/* Icon Box */}
+                  <div className="relative flex-shrink-0 bg-white p-3 rounded-xl border border-accent/20 shadow-sm">
                     <HiOutlineLightBulb className="w-6 h-6 text-accent" />
-                    <h4 className="text-lg font-bold text-gray-900">Grading Philosophy</h4>
                   </div>
-                  <p className="text-gray-700 font-medium text-base md:text-lg max-w-2xl">
-                    Smart Paper Check employs conservative grading standards to ensure fairness and maintain academic integrity. 
-                    Students benefit from consistent evaluation criteria and can always request manual review for reassessment.
-                  </p>
-                </motion.div>
+                  
+                  {/* Text Content */}
+                  <div className="text-left relative">
+                    <h4 className="text-sm font-bold text-accent mb-1 tracking-wide uppercase">Grading Philosophy</h4>
+                    <p className="text-slate-600 font-medium text-[15px] leading-relaxed">
+                      Smart Paper Check employs conservative grading standards to ensure fairness and maintain academic integrity. 
+                      Students benefit from consistent evaluation criteria and can always request manual review for reassessment.
+                    </p>
+                  </div>
+                  
+                </div>
               </motion.div>
             </motion.div>
           )}
