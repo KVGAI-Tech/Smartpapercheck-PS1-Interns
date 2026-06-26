@@ -1,6 +1,5 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { HiOutlineSun, HiOutlineMoon } from "react-icons/hi";
 
 const Footer = () => {
   const quickLinks = [
@@ -41,87 +40,165 @@ const Footer = () => {
     }
   ];
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: "easeOut" }
+    }
+  };
+
   return (
-    <footer className="bg-gray-50 border-t border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div className="col-span-1">
-            <div className="flex items-center mb-6">
-              <img 
-                src="/logo_smartqna.png" 
-                alt="Smart Paper Check Logo" 
-                className="h-8 mr-3" 
-              />
-              <div className="font-medium text-xl text-gray-900">
-                Smart<span className="font-light italic text-teal-600"> Paper Check</span>
-              </div>
-            </div>
-            <p className="text-gray-600 mb-6 text-sm">
-              AI-powered script evaluation platform for universities and educational institutions.
-            </p>
-            <div className="flex space-x-4">
-              {socialLinks.map((link, index) => (
-                <motion.a 
-                  key={index} 
-                  href={link.href}
-                  className="text-gray-500 hover:text-teal-600 transition-colors duration-200"
-                  aria-label={link.name}
-                  whileHover={{ scale: 1.1 }}
-                >
-                  {link.icon}
-                </motion.a>
-              ))}
-            </div>
-          </div>
-          
-          <div className="col-span-1">
-            <h3 className="text-gray-900 font-medium mb-4">Quick Links</h3>
-            <ul className="space-y-3">
+    <footer className="bg-gray-50 border-t border-gray-200 text-gray-800">
+
+      <motion.div
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
+        {/* Top Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start pb-20">
+          {/* Left: Main Links */}
+          <motion.div className="w-full md:w-1/3 mb-12 md:mb-0" variants={itemVariants}>
+            <ul className="space-y-6">
               {quickLinks.map((link, index) => (
-                <li key={index}>
-                  <a 
-                    href={link.href} 
-                    className="text-gray-600 hover:text-teal-600 transition-colors duration-200 text-sm"
+                <li key={index} className="group">
+                  <a
+                    href={link.href}
+                    className="inline-flex items-center text-xl md:text-3xl font-light text-gray-800 hover:text-teal-600 transition-colors duration-300"
                   >
                     {link.name}
+                    <motion.span
+                      className="ml-4 opacity-0 group-hover:opacity-100 transition-all duration-300 text-teal-600"
+                      initial={{ x: -10 }}
+                      whileHover={{ x: 5 }}
+                      animate={{ x: 0 }}
+                    >
+                      →
+                    </motion.span>
                   </a>
                 </li>
               ))}
             </ul>
-          </div>
-          
-          <div className="col-span-1">
-            <h3 className="text-gray-900 font-medium mb-4">Contact Us</h3>
-            <ul className="space-y-3 text-sm">
-              <li className="text-gray-600">
-                <strong className="text-gray-900">Email:</strong><br />
-                <a href="mailto:info@smart-qna.com" className="hover:text-teal-600 transition-colors duration-200">
-                  info@smart-qna.com
-                </a>
-              </li>
-              <li className="text-gray-600">
-                <strong className="text-gray-900">Support:</strong><br />
-                <a href="mailto:support@smart-qna.com" className="hover:text-teal-600 transition-colors duration-200">
-                  support@smart-qna.com
-                </a>
-              </li>
-              <li className="text-gray-600">
-                <strong className="text-gray-900">Location:</strong><br />
+          </motion.div>
+
+          {/* Right: Info Columns — 3. Glassmorphism cards */}
+          <div className="w-full md:w-2/3 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {/* About Platform */}
+            <motion.div
+              variants={itemVariants}
+              className="rounded-2xl border border-white/70 bg-white/60 backdrop-blur-md shadow-sm p-6 hover:shadow-md hover:border-teal-200 transition-all duration-300"
+            >
+              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-4">About</h4>
+              <p className="text-base text-gray-600 leading-relaxed font-light">
+                AI-powered script evaluation platform for universities and educational institutions.
+              </p>
+            </motion.div>
+
+            {/* Contact Us */}
+            <motion.div
+              variants={itemVariants}
+              className="rounded-2xl border border-white/70 bg-white/60 backdrop-blur-md shadow-sm p-6 hover:shadow-md hover:border-teal-200 transition-all duration-300"
+            >
+              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-4">Contact</h4>
+              <ul className="space-y-5 text-base">
+                <li className="text-gray-600">
+                  <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1 font-medium">Email</span>
+                  <a href="mailto:info@smart-qna.com" className="font-medium text-gray-800 hover:text-teal-600 transition-colors">
+                    info@smart-qna.com
+                  </a>
+                </li>
+                <li className="text-gray-600">
+                  <span className="block text-gray-400 text-xs uppercase tracking-wider mb-1 font-medium">Support</span>
+                  <a href="mailto:support@smart-qna.com" className="font-medium text-gray-800 hover:text-teal-600 transition-colors">
+                    support@smart-qna.com
+                  </a>
+                </li>
+              </ul>
+            </motion.div>
+
+            {/* Location */}
+            <motion.div
+              variants={itemVariants}
+              className="rounded-2xl border border-white/70 bg-white/60 backdrop-blur-md shadow-sm p-6 hover:shadow-md hover:border-teal-200 transition-all duration-300"
+            >
+              <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-900 mb-4">Location</h4>
+              <p className="text-base text-gray-600 leading-relaxed font-light">
                 Rajasthan, India
-              </li>
-            </ul>
+              </p>
+            </motion.div>
           </div>
         </div>
-        
-        <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-500 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} Smart Paper Check by KVGAI Tech Pvt. Ltd. All rights reserved.
-          </p>
-          <p className="text-gray-400 text-xs">
-            Revolutionizing educational assessment with AI
-          </p>
-        </div>
-      </div>
+
+        {/* Bottom Section */}
+        <motion.div
+          className="pt-10 flex flex-col md:flex-row justify-between items-center border-t border-gray-200/60"
+          variants={itemVariants}
+        >
+          {/* Logo (Back to Orbit) */}
+          <motion.div
+            className="flex items-center mb-6 md:mb-0 cursor-pointer group"
+            onClick={scrollToTop}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            title="Back to Orbit 🚀"
+          >
+            <img
+              src="/logo_smartqna.png"
+              alt="Smart Paper Check Logo"
+              className="h-8 mr-3 transition-transform group-hover:-translate-y-1 duration-300"
+            />
+            <div className="font-medium text-2xl text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
+              Smart<span className="font-light italic text-teal-600"> Paper Check</span>
+            </div>
+          </motion.div>
+
+          {/* Socials */}
+          <div className="flex space-x-8 mb-6 md:mb-0">
+            {socialLinks.map((link, index) => (
+              <motion.a
+                key={index}
+                href={link.href}
+                className="text-gray-800 hover:text-teal-600 transition-colors duration-300"
+                aria-label={link.name}
+                whileHover={{ y: -4, scale: 1.1 }}
+              >
+                {link.icon}
+              </motion.a>
+            ))}
+          </div>
+
+          {/* Copyright & Slogan */}
+          <div className="flex flex-col md:items-end text-center md:text-right">
+            <p className="text-gray-500 text-sm mb-2 font-light">
+              &copy; {new Date().getFullYear()} Smart Paper Check by KVGAI Tech Pvt. Ltd. All rights reserved.
+            </p>
+            <p className="text-gray-400 text-xs uppercase tracking-wider font-medium">
+              Revolutionizing educational assessment with AI
+            </p>
+          </div>
+        </motion.div>
+      </motion.div>
     </footer>
   );
 };
