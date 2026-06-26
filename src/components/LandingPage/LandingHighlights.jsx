@@ -163,7 +163,7 @@ export default function LandingHighlights() {
           transition={{ duration: 0.6 }}
         >
           <motion.h2
-            className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4"
+            className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-4"
             initial={{ opacity: 0, y: 15 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -174,7 +174,7 @@ export default function LandingHighlights() {
             </span>
           </motion.h2>
           <motion.p
-            className="text-gray-500 text-lg max-w-xl mx-auto"
+            className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto font-medium"
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -257,7 +257,7 @@ export default function LandingHighlights() {
 
                   {/* Animated number */}
                   <div className="relative z-10">
-                    <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-accent">
+                    <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-800">
                       {isInView ? (
                         <AnimatedCounter
                           target={h.main}
@@ -272,7 +272,7 @@ export default function LandingHighlights() {
                     </div>
                     {h.sub && (
                       <motion.div
-                        className="text-base font-semibold mt-1 text-accent/80"
+                        className="text-base font-semibold mt-1 text-gray-500"
                         initial={{ opacity: 0, x: -10 }}
                         animate={isInView ? { opacity: 1, x: 0 } : {}}
                         transition={{ duration: 0.4, delay: 0.8 + i * 0.15 }}
@@ -294,7 +294,7 @@ export default function LandingHighlights() {
 
                   {/* Description */}
                   <motion.p
-                    className="text-sm text-gray-500 leading-relaxed relative z-10"
+                    className="text-base text-gray-600 leading-relaxed relative z-10"
                     initial={{ opacity: 0 }}
                     animate={isInView ? { opacity: 1 } : {}}
                     transition={{ duration: 0.5, delay: 0.6 + i * 0.15 }}
