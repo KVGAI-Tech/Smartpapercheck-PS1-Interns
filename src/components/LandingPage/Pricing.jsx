@@ -60,7 +60,7 @@ const plans = [
     monthly: 29,
     annual: 23,
     scripts: "Up to 200 scripts / month",
-    cta: "Start Free Trial",
+    cta: "Start free trial",
     highlight: false,
     features: [
       { text: "AI evaluation of handwritten scripts", included: true },
@@ -79,7 +79,7 @@ const plans = [
     monthly: 99,
     annual: 79,
     scripts: "Up to 1,500 scripts / month",
-    cta: "Get Started",
+    cta: "Start free trial",
     highlight: true,
     badge: "Most Popular",
     features: [
@@ -99,7 +99,7 @@ const plans = [
     monthly: null, // custom pricing
     annual: null,
     scripts: "Unlimited scripts",
-    cta: "Contact Sales",
+    cta: "Talk to our team",
     highlight: false,
     features: [
       { text: "Everything in Coaching Institute", included: true },
@@ -152,29 +152,14 @@ const featureItem = {
   visible: { opacity: 1, x: 0 },
 };
 
-/* Floating background blobs (same idiom as Hero) */
-const blobs = [
-  { size: "h-40 w-40", pos: { top: "8%", left: "4%" }, delay: 0 },
-  { size: "h-56 w-56", pos: { top: "20%", right: "6%" }, delay: 1.5 },
-  { size: "h-32 w-32", pos: { bottom: "12%", left: "12%" }, delay: 1 },
-];
-
 /* ------------------------------------------------------------------ */
 /*  Cell renderer for the comparison matrix                            */
 /* ------------------------------------------------------------------ */
 const MatrixCell = ({ value }) => {
   if (value === true)
-    return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent/10">
-        <Check className="w-4 h-4 text-accent" strokeWidth={3} />
-      </span>
-    );
+    return <Check className="w-5 h-5 text-accent mx-auto" strokeWidth={2.5} />;
   if (value === false)
-    return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100">
-        <X className="w-4 h-4 text-gray-400" strokeWidth={3} />
-      </span>
-    );
+    return <span className="text-gray-300 text-lg leading-none">–</span>;
   return <span className="text-sm font-medium text-gray-700">{value}</span>;
 };
 
@@ -196,7 +181,7 @@ const Pricing = () => {
   const recommended = recommendPlan(volume);
 
   return (
-    <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden">
+    <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative">
       {/* Slider styling scoped to this section (uses --pct set inline) */}
       <style>{`
         .pricing-slider {
@@ -221,17 +206,6 @@ const Pricing = () => {
         .pricing-slider::-moz-range-track { background: transparent; }
       `}</style>
 
-      {/* Floating accent blobs */}
-      {blobs.map((b, i) => (
-        <motion.div
-          key={i}
-          className={`absolute rounded-full blur-3xl bg-accent/5 ${b.size} z-0`}
-          style={b.pos}
-          animate={{ y: [0, -25, 0], opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: b.delay }}
-        />
-      ))}
-
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
         <motion.div
@@ -242,25 +216,24 @@ const Pricing = () => {
           viewport={{ once: true }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
-              <span className="mr-2">💸</span>
-              <span>Pricing</span>
-            </div>
+            <span className="inline-flex items-center px-4 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium">
+              Pricing
+            </span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-bold mb-4 text-gray-900">
-            Simple & <span className="text-accent">Scalable</span> Pricing
+            Pay only for the scripts <span className="text-accent">you grade</span>
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
-            Flexible plans designed to fit institutions of all sizes—pay for what you need,
-            scale as you grow.
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+            Plans for solo tutors up to full universities. Start on a free trial,
+            then move to a paid plan once your volume grows.
           </p>
 
           {/* Billing toggle */}
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center">
             <div className="relative inline-flex bg-gray-100 rounded-full p-1">
               {[
                 { id: "monthly", label: "Monthly" },
-                { id: "annual", label: "Annual" },
+                { id: "annual", label: "Annual · 2 months free" },
               ].map((opt) => (
                 <button
                   key={opt.id}
@@ -280,18 +253,6 @@ const Pricing = () => {
                 </button>
               ))}
             </div>
-            <AnimatePresence>
-              {billing === "annual" && (
-                <motion.span
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold"
-                >
-                  <TrendingDown className="w-3 h-3" /> Save 20%
-                </motion.span>
-              )}
-            </AnimatePresence>
           </div>
         </motion.div>
 
@@ -526,25 +487,32 @@ const Pricing = () => {
                 className="overflow-hidden"
               >
                 <div className="overflow-x-auto mt-8">
-                  <table className="min-w-full bg-white rounded-xl shadow-md overflow-hidden">
+                  <table className="min-w-full border border-gray-200 rounded-xl overflow-hidden">
                     <thead>
-                      <tr className="bg-accent text-white">
-                        <th className="py-4 px-6 text-left">Feature</th>
-                        <th className="py-4 px-6 text-center">Tutor</th>
-                        <th className="py-4 px-6 text-center">Coaching Institute</th>
-                        <th className="py-4 px-6 text-center">Enterprise</th>
+                      <tr className="border-b border-gray-200">
+                        <th className="py-4 px-6 text-left text-sm font-semibold text-gray-500">
+                          Feature
+                        </th>
+                        <th className="py-4 px-6 text-center text-sm font-semibold text-gray-900">
+                          Tutor
+                        </th>
+                        <th className="py-4 px-6 text-center text-sm font-semibold text-accent bg-accent/5">
+                          Coaching Institute
+                        </th>
+                        <th className="py-4 px-6 text-center text-sm font-semibold text-gray-900">
+                          Enterprise
+                        </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-100">
                       {matrix.map((row, index) => (
                         <motion.tr
                           key={row.feature}
-                          className="hover:bg-accent/5"
-                          initial={{ opacity: 0, x: -20 }}
+                          initial={{ opacity: 0, x: -16 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          transition={{ duration: 0.3, delay: index * 0.04 }}
                         >
-                          <td className="py-4 px-6 font-medium text-gray-900">{row.feature}</td>
+                          <td className="py-4 px-6 text-gray-700">{row.feature}</td>
                           <td className="py-4 px-6 text-center">
                             <MatrixCell value={row.tutor} />
                           </td>
@@ -573,7 +541,7 @@ const Pricing = () => {
           viewport={{ once: true }}
         >
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mb-8 text-sm text-gray-500">
-            {["No setup fees", "Cancel anytime", "Trusted by 50+ institutions"].map((t) => (
+            {["No setup fees", "Cancel anytime", "Used at 50+ institutions"].map((t) => (
               <span key={t} className="inline-flex items-center gap-2">
                 <Check className="w-4 h-4 text-accent" strokeWidth={3} />
                 {t}
