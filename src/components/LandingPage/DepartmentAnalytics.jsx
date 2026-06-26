@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   HiOutlineAcademicCap, 
   HiOutlineChartBar, 
@@ -13,7 +14,6 @@ import {
   HiOutlineBookOpen,
   HiCheck
 } from 'react-icons/hi';
-
 
 // Enhanced data structure with real institutions and departments
 const institutions = [
@@ -205,13 +205,9 @@ const completeMockData = {
 
 // Enhanced data generation with more realistic patterns and institution/department differences
 const generateCourseData = (institution, department, course) => {
-  // Check if we have complete mock data for this combination
   const mockData = completeMockData[institution]?.[department]?.[course];
-  if (mockData) {
-    return mockData;
-  }
+  if (mockData) return mockData;
   
-  // Base averages for each institution (TA scores higher, Smart Paper Check undergrades by 1-5%)
   const institutionBaselines = {
     'BITS Pilani': { ta: 85, smartQnA: 82 },
     'IIT Delhi': { ta: 88, smartQnA: 85 },
@@ -219,7 +215,6 @@ const generateCourseData = (institution, department, course) => {
     'IIM Bangalore': { ta: 87, smartQnA: 84 }
   };
   
-  // Department variations
   const departmentModifiers = {
     'Computer Science': { ta: 2, smartQnA: 1 },
     'Humanities': { ta: 3, smartQnA: 2 },
@@ -235,121 +230,37 @@ const generateCourseData = (institution, department, course) => {
     'Information Systems': { ta: 2, smartQnA: 1 }
   };
   
-  // Course-specific variations
   const courseRandom = {
-    ta: (Math.random() * 4) - 2, // -2 to +2 variation
-    smartQnA: (Math.random() * 3) - 1.5 // -1.5 to +1.5 variation
+    ta: (Math.random() * 4) - 2,
+    smartQnA: (Math.random() * 3) - 1.5
   };
   
-  // Get institution baseline
   const baseline = institutionBaselines[institution] || { ta: 85, smartQnA: 82 };
-  
-  // Get department modifier
   const deptMod = departmentModifiers[department] || { ta: 2, smartQnA: 1 };
   
-  // Calculate final scores (TA higher than Smart Paper Check by 1-5%)
   let ta = Math.min(98, Math.max(75, baseline.ta + deptMod.ta + courseRandom.ta));
   let smartQnA = Math.min(95, Math.max(70, baseline.smartQnA + deptMod.smartQnA + courseRandom.smartQnA));
   
-  // Ensure TA is higher than Smart Paper Check (Smart Paper Check undergrades by 1-5%)
   if (smartQnA >= ta) {
-    smartQnA = ta - (1 + Math.random() * 4); // 1-5% lower
+    smartQnA = ta - (1 + Math.random() * 4);
   }
   
-  // Round to 1 decimal place
   ta = Math.round(ta * 10) / 10;
   smartQnA = Math.round(smartQnA * 10) / 10;
   
-  // Generate student data
-  const students = Math.floor(Math.random() * 150) + 50; // 50-200 students
-  const totalAssignments = Math.floor(Math.random() * 6) + 3; // 3-8 assignments
-  const avgGradingTime = (Math.random() * 2 + 0.5).toFixed(1) + ' min'; // 0.5-2.5 min
+  const students = Math.floor(Math.random() * 150) + 50;
+  const totalAssignments = Math.floor(Math.random() * 6) + 3;
+  const avgGradingTime = (Math.random() * 2 + 0.5).toFixed(1) + ' min';
   
-  return { 
-    smartQnA, 
-    ta, 
-    students, 
-    totalAssignments, 
-    avgGradingTime 
-  };
+  return { smartQnA, ta, students, totalAssignments, avgGradingTime };
 };
 
 // Animation variants
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
-  }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
 };
 
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { 
-    opacity: 1,
-    transition: { duration: 0.4 }
-  }
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.15
-    }
-  }
-};
-
-const selectVariants = {
-  initial: { scale: 1, boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
-  focus: { 
-    scale: 1.03,
-    boxShadow: '0 4px 20px 0 rgba(0, 200, 255, 0.15)',
-    transition: { type: 'spring', stiffness: 400, damping: 25 }
-  },
-  hover: {
-    scale: 1.02,
-    boxShadow: '0 4px 15px 0 rgba(0, 200, 255, 0.1)',
-    transition: { type: 'spring', stiffness: 400, damping: 25 }
-  }
-};
-
-const backgroundPulse = {
-  initial: { opacity: 0.5 },
-  animate: {
-    opacity: [0.5, 0.8, 0.5],
-    scale: [1, 1.02, 1],
-    transition: { duration: 8, repeat: Infinity, ease: "easeInOut" }
-  }
-};
-
-const barAnimation = {
-  initial: { height: 0, opacity: 0.4 },
-  animate: (height) => ({
-    height: `${height}%`,
-    opacity: 1,
-    transition: { 
-      height: { duration: 1.2, type: 'spring', bounce: 0.3 },
-      opacity: { duration: 0.3 }
-    }
-  })
-};
-
-// Enhanced dropdown component with better styling and animations
-// Enhanced dropdown component matching the crisp card aesthetic
-// Clean, professional dropdown component
-// Native, clean dropdown component
-// Soft, floating dropdown component matching your target design
-// Soft, floating dropdown component with defined borders
-// Interactive, popping dropdown component with clear borders and larger text
-// Bug-free, polished dropdown component
-// Bulletproof dropdown component with perfect borders
-// Drodown with refined arrow placement, softer focus borders, and deep shadows
-// Fully custom dropdown component (No native system menus!)
-// Fully custom dropdown with softer, lighter fonts
-// Custom dropdown with bolder labels
 const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -375,8 +286,8 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
   
   return (
     <div className="w-full relative" ref={dropdownRef}>
-      {/* Bolder, darker label */}
-      <label className="block text-[13px] font-bold text-slate-600 mb-2 uppercase tracking-wider ml-1">
+      {/* Label: Tighter bottom margin and smaller font on mobile */}
+      <label className="block text-[11px] md:text-[13px] font-bold text-slate-600 mb-1 md:mb-2 uppercase tracking-wider ml-1">
         {label}
       </label>
       
@@ -385,7 +296,8 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
-          className={`w-full flex items-center justify-between bg-white py-3.5 pl-12 pr-5 rounded-xl border-2 outline-none transition-all duration-300 ease-out z-10 relative
+          /* Button: Reduced py-3.5 to py-2.5, pl-12 to pl-10 on mobile */
+          className={`w-full flex items-center justify-between bg-white py-2.5 md:py-3.5 pl-10 md:pl-12 pr-4 md:pr-5 rounded-xl border-2 outline-none transition-all duration-300 ease-out z-10 relative
             ${disabled 
               ? 'opacity-60 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400' 
               : isOpen 
@@ -394,12 +306,14 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
             }
           `}
         >
-          <div className="pointer-events-none absolute left-4 flex items-center text-accent">
+          {/* Icon positioning adjusted for tighter padding */}
+          <div className="pointer-events-none absolute left-3 md:left-4 flex items-center text-accent">
             {selectedIcon || icon}
           </div>
-          <span className="text-lg font-medium truncate">{value}</span>
+          {/* Shrunk selected text on mobile */}
+          <span className="text-base md:text-lg font-medium truncate">{value}</span>
           <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-slate-400">
-            <HiOutlineChevronDown className="w-5 h-5" />
+            <HiOutlineChevronDown className="w-4 h-4 md:w-5 md:h-5" />
           </motion.div>
         </button>
 
@@ -410,7 +324,7 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
-              className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+              className="absolute z-50 w-full mt-1 md:mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
             >
               <div className="max-h-60 overflow-y-auto py-1">
                 {options.map((opt, idx) => {
@@ -423,15 +337,16 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
                       key={idx}
                       type="button"
                       onClick={() => handleSelect(optName)}
-                      className={`w-full text-left px-5 py-3 text-base font-normal flex items-center justify-between transition-colors duration-150
+                      /* Dropdown items: Reduced padding and text size on mobile */
+                      className={`w-full text-left px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-normal flex items-center justify-between transition-colors duration-150
                         ${isSelected ? 'bg-accent/10 text-accent font-medium' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}
                       `}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 md:gap-3">
                         {optIcon && <span className={isSelected ? 'text-accent' : 'text-slate-400'}>{optIcon}</span>}
                         <span>{optName}</span>
                       </div>
-                      {isSelected && <HiCheck className="w-5 h-5 text-accent" />}
+                      {isSelected && <HiCheck className="w-4 h-4 md:w-5 md:h-5 text-accent" />}
                     </button>
                   );
                 })}
@@ -444,7 +359,6 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
   );
 };
 
-// Animated floating particles background
 const ParticleBackground = () => {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -459,28 +373,12 @@ const ParticleBackground = () => {
             scale: Math.random() * 1.5 + 0.5
           }}
           animate={{ 
-            y: [
-              Math.random() * 100 + "%", 
-              Math.random() * 100 + "%", 
-              Math.random() * 100 + "%"
-            ],
-            x: [
-              Math.random() * 100 + "%", 
-              Math.random() * 100 + "%", 
-              Math.random() * 100 + "%"
-            ],
+            y: [Math.random() * 100 + "%", Math.random() * 100 + "%", Math.random() * 100 + "%"],
+            x: [Math.random() * 100 + "%", Math.random() * 100 + "%", Math.random() * 100 + "%"],
             opacity: [0.2, 0.5, 0.2],
-            scale: [
-              Math.random() * 1.5 + 0.5, 
-              Math.random() * 2 + 1, 
-              Math.random() * 1.5 + 0.5
-            ]
+            scale: [Math.random() * 1.5 + 0.5, Math.random() * 2 + 1, Math.random() * 1.5 + 0.5]
           }}
-          transition={{ 
-            duration: 20 + Math.random() * 30,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
+          transition={{ duration: 20 + Math.random() * 30, repeat: Infinity, ease: "easeInOut" }}
         />
       ))}
     </div>
@@ -493,175 +391,110 @@ const SingleCourseChart = ({ data, label }) => {
   const max = Math.max(1, smartQnAValue, taValue);
 
   return (
-  <div className="bg-white/70 backdrop-blur-lg rounded-3xl border border-gray-200 shadow-2xl p-8">
-
-    {/* Header */}
-    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
-      <div>
-        <h3 className="text-2xl font-bold text-gray-900">{label}</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          Smart Paper Check vs TA grading comparison
-        </p>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className="inline-flex items-center gap-2 text-xs font-semibold text-accent bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20">
-          <span className="w-2.5 h-2.5 rounded-full bg-accent" />
-          Smart Paper Check
-        </span>
-
-        <span className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
-          <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
-          TA
-        </span>
-      </div>
-    </div>
-
-    <div className="relative">
-
-
-
-   
-
-      {/* Score Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-center">
-
-        {/* SPC Card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-md px-5 py-4">
-          <div className="flex items-baseline justify-between mb-4">
-            <p className="text-sm font-semibold text-gray-700">
-              Smart Paper Check Score
-            </p>
-
-            <p className="text-3xl font-bold text-accent">
-              {smartQnAValue}%
-            </p>
-          </div>
-
-          <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-accent"
-              initial={{ width: 0 }}
-              animate={{
-                width: `${Math.round((smartQnAValue / max) * 100)}%`,
-              }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            />
-          </div>
+    <div className="bg-white/70 backdrop-blur-lg rounded-2xl md:rounded-3xl border border-gray-200 shadow-2xl p-4 md:p-8">
+      {/* Header */}
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-2">
+        <div>
+          <h3 className="text-xl md:text-2xl font-bold text-gray-900">{label}</h3>
+          <p className="text-sm text-gray-500 mt-1">Smart Paper Check vs TA grading comparison</p>
         </div>
-{/* Difference Card */}
-<div className="hidden md:flex flex-col items-center justify-center bg-accent/5 border border-accent/20 rounded-2xl px-4 py-4 min-w-[120px]">
 
-  <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-    Difference
-  </span>
-
-  <span className="text-3xl font-bold text-accent leading-none my-1">
-    {Math.abs((taValue - smartQnAValue).toFixed(1))}%
-  </span>
-
-  <span className="text-xs text-slate-500">
-  {taValue > smartQnAValue
-    ? "TA Higher"
-    : taValue < smartQnAValue
-    ? "Smart Paper Check Higher"
-    : "Scores Equal"}
-</span>
-
-</div>
-        {/* TA Card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-md px-5 py-4">
-          <div className="flex items-baseline justify-between mb-4">
-            <p className="text-sm font-semibold text-gray-700">
-              TA Score
-            </p>
-
-            <p className="text-3xl font-bold text-gray-700">
-              {taValue}%
-            </p>
-          </div>
-
-          <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gray-400"
-              initial={{ width: 0 }}
-              animate={{
-                width: `${Math.round((taValue / max) * 100)}%`,
-              }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            />
-          </div>
+        {/* Added hidden md:flex here to hide the legend on mobile only */}
+        <div className="hidden md:flex items-center gap-3">
+          <span className="inline-flex items-center gap-2 text-xs font-semibold text-accent bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20">
+            <span className="w-2.5 h-2.5 rounded-full bg-accent" />
+            Smart Paper Check
+          </span>
+          <span className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+            <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
+            TA
+          </span>
         </div>
       </div>
-         
-    
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
-          <div className="text-2xl font-bold text-accent">
-            {data?.students ?? "-"}
+      <div className="relative">
+        {/* Score Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-center mt-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md px-5 py-4">
+            <div className="flex items-baseline justify-between mb-4">
+              <p className="text-sm font-semibold text-gray-700">Smart Paper Check Score</p>
+              <p className="text-2xl md:text-3xl font-bold text-accent">{smartQnAValue}%</p>
+            </div>
+            <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-accent"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.round((smartQnAValue / max) * 100)}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+              />
+            </div>
           </div>
-          <div className="text-sm text-slate-500 mt-1">
-            Students
+
+          <div className="hidden md:flex flex-col items-center justify-center bg-accent/5 border border-accent/20 rounded-2xl px-4 py-4 min-w-[120px]">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Difference</span>
+            <span className="text-3xl font-bold text-accent leading-none my-1">{Math.abs((taValue - smartQnAValue).toFixed(1))}%</span>
+            <span className="text-xs text-slate-500">
+              {taValue > smartQnAValue ? "TA Higher" : taValue < smartQnAValue ? "Smart Paper Check Higher" : "Scores Equal"}
+            </span>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md px-5 py-4">
+            <div className="flex items-baseline justify-between mb-4">
+              <p className="text-sm font-semibold text-gray-700">TA Score</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-700">{taValue}%</p>
+            </div>
+            <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gray-400"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.round((taValue / max) * 100)}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
-          <div className="text-2xl font-bold text-accent">
-            {data?.totalAssignments ?? "-"}
+        {/* Metric Cards - Made horizontal on mobile */}
+        <div className="grid grid-cols-3 gap-2 md:gap-4 mt-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-2 md:p-4 text-center shadow-sm">
+            <div className="text-lg md:text-2xl font-bold text-accent">{data?.students ?? "-"}</div>
+            <div className="text-[10px] md:text-sm text-slate-500 mt-1">Students</div>
           </div>
-          <div className="text-sm text-slate-500 mt-1">
-            Assignments
+          <div className="bg-white border border-slate-200 rounded-xl p-2 md:p-4 text-center shadow-sm">
+            <div className="text-lg md:text-2xl font-bold text-accent">{data?.totalAssignments ?? "-"}</div>
+            <div className="text-[10px] md:text-sm text-slate-500 mt-1">Assignments</div>
           </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
-          <div className="text-2xl font-bold text-accent">
-            {data?.avgGradingTime ?? "-"}
-          </div>
-          <div className="text-sm text-slate-500 mt-1">
-            Avg Grading Time
+          <div className="bg-white border border-slate-200 rounded-xl p-2 md:p-4 text-center shadow-sm">
+            <div className="text-lg md:text-2xl font-bold text-accent">{data?.avgGradingTime ?? "-"}</div>
+            <div className="text-[10px] md:text-sm text-slate-500 mt-1">Avg Time</div>
           </div>
         </div>
-
       </div>
     </div>
-  </div>
-);
+  );
 };
 
-// Main component
 const DepartmentAnalytics = () => {
-  // States for filters and UI
   const [selectedInstitution, setSelectedInstitution] = useState(institutions[0].name);
   const [selectedDepartment, setSelectedDepartment] = useState(departmentsByInstitution[institutions[0].name][0].name);
   const [selectedCourse, setSelectedCourse] = useState(coursesByDepartment[departmentsByInstitution[institutions[0].name][0].name][0]);
   const [isLoading, setIsLoading] = useState(true);
   const [allCoursesData, setAllCoursesData] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
-
+  const [isPhilosophyExpanded, setIsPhilosophyExpanded] = useState(false); // New state for Read More
   
-  // Get the current departments based on selected institution
   const currentDepartments = departmentsByInstitution[selectedInstitution] || [];
-  
-  // Get the current courses based on selected department
   const currentCourses = coursesByDepartment[selectedDepartment] || [];
   
-  // Generate data for all courses in the selected department
   const generateAllCoursesData = useCallback(() => {
-    // Use mock data for BITS Pilani, Computer Science
-    if (
-      selectedInstitution === 'BITS Pilani' &&
-      selectedDepartment === 'Computer Science'
-    ) {
+    if (selectedInstitution === 'BITS Pilani' && selectedDepartment === 'Computer Science') {
       return currentCourses.map(course => ({
         name: course,
         data: bitsPilaniCSMockData[course] || { smartQnA: 0, ta: 0 },
         isActive: course === selectedCourse
       }));
     }
-    // Default: use generated data
     return currentCourses.map(course => ({
       name: course,
       data: generateCourseData(selectedInstitution, selectedDepartment, course),
@@ -669,7 +502,6 @@ const DepartmentAnalytics = () => {
     }));
   }, [selectedInstitution, selectedDepartment, selectedCourse, currentCourses]);
   
-  // Get the data for the currently selected course
   const getSelectedCourseData = useCallback(() => {
     return allCoursesData.find(course => course.name === selectedCourse) || {
       name: selectedCourse,
@@ -678,67 +510,34 @@ const DepartmentAnalytics = () => {
     };
   }, [allCoursesData, selectedCourse]);
   
-  // Load initial data and handle filter changes
   useEffect(() => {
     setIsLoading(true);
-    
-    // Simulate API call with a small delay
     const timer = setTimeout(() => {
       setAllCoursesData(generateAllCoursesData());
       setIsLoading(false);
     }, 300);
-    
     return () => clearTimeout(timer);
   }, [selectedInstitution, selectedDepartment, selectedCourse, refreshKey, generateAllCoursesData]);
   
-  // Update department when institution changes
   useEffect(() => {
     const newDepartments = departmentsByInstitution[selectedInstitution] || [];
-    if (newDepartments.length > 0) {
-      setSelectedDepartment(newDepartments[0].name);
-    }
+    if (newDepartments.length > 0) setSelectedDepartment(newDepartments[0].name);
   }, [selectedInstitution]);
   
-  // Update course when department changes
   useEffect(() => {
     const newCourses = coursesByDepartment[selectedDepartment] || [];
-    if (newCourses.length > 0) {
-      setSelectedCourse(newCourses[0]);
-    }
+    if (newCourses.length > 0) setSelectedCourse(newCourses[0]);
   }, [selectedDepartment]);
   
-  // Handle filter changes
-  const handleInstitutionChange = (e) => {
-    setSelectedInstitution(e.target.value);
-  };
+  const handleInstitutionChange = (e) => setSelectedInstitution(e.target.value);
+  const handleDepartmentChange = (e) => setSelectedDepartment(e.target.value);
+  const handleCourseChange = (e) => setSelectedCourse(e.target.value);
+  const handleRefresh = () => setRefreshKey(prev => prev + 1);
   
-  const handleDepartmentChange = (e) => {
-    setSelectedDepartment(e.target.value);
-  };
-  
-  const handleCourseChange = (e) => {
-    setSelectedCourse(e.target.value);
-  };
-  
-  // Handle data refresh
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-  };
-  
-  // Get the selected course data
   const selectedCourseData = getSelectedCourseData();
 
-  // Calculate summary statistics
   const getSummaryStats = () => {
-    if (allCoursesData.length === 0) return { 
-      avgSmartQnA: 0, 
-      avgTA: 0, 
-      avgImprovement: 0, 
-      count: 0, 
-      totalStudents: 0, 
-      totalAssignments: 0 
-    };
-    
+    if (allCoursesData.length === 0) return { avgSmartQnA: 0, avgTA: 0, avgImprovement: 0, count: 0, totalStudents: 0, totalAssignments: 0 };
     const avgSmartQnA = allCoursesData.reduce((acc, course) => acc + course.data.smartQnA, 0) / allCoursesData.length;
     const avgTA = allCoursesData.reduce((acc, course) => acc + course.data.ta, 0) / allCoursesData.length;
     const avgImprovement = allCoursesData.reduce((acc, course) => acc + (course.data.smartQnA - course.data.ta), 0) / allCoursesData.length;
@@ -758,19 +557,20 @@ const DepartmentAnalytics = () => {
   const summaryStats = getSummaryStats();
 
   return (
-    <section className="relative py-16 px-4 sm:px-6 md:px-8 lg:px-12 min-h-screen bg-gray-50 overflow-hidden">
+    // Reduced vertical padding on mobile (py-6)
+    <section className="relative py-6 md:py-16 px-4 sm:px-6 md:px-8 lg:px-12 min-h-screen bg-gray-50 overflow-hidden">
       <ParticleBackground />
       
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header */}
+        {/* Header - Reduced margin and responsive font sizes */}
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-2 md:mb-12"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
         >
           <motion.div 
-            className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-accent/10 text-gray-800 text-base shadow-md font-semibold tracking-wide gap-2 mb-6"
+            className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-accent/10 text-gray-800 text-base shadow-md font-semibold tracking-wide gap-2 mb-3"
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
@@ -778,7 +578,7 @@ const DepartmentAnalytics = () => {
           </motion.div>
           
           <motion.h2 
-            className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 text-gray-900"
+            className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-2 md:mb-2 text-gray-900"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.7 }}
@@ -787,7 +587,7 @@ const DepartmentAnalytics = () => {
           </motion.h2>
           
           <motion.p 
-            className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto font-medium"
+            className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto font-medium"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.7 }}
@@ -813,181 +613,141 @@ const DepartmentAnalytics = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-             {/* Filters row */}
-              <div className="w-full mb-10">
+             {/* Filters row - Reduced margin and responsive padding */}
+              <div className="w-full pt-1 mb-3 md:mb-10">
                 <motion.div 
-                  className="bg-white rounded-3xl shadow-sm hover:shadow-md border border-slate-200 p-6 lg:p-8 transition-shadow duration-300"
+                  className="bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md border border-slate-200 p-4 md:p-6 lg:p-8 transition-shadow duration-300"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
-                  {/* Custom Grid: 3 equal fractions (1fr) for inputs, and auto for the button */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] gap-5 lg:gap-6 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] gap-2 lg:gap-6 items-end">
                     
-                    <CustomSelect
-                      options={institutions}
-                      value={selectedInstitution}
-                      onChange={handleInstitutionChange}
-                      icon={<HiOutlineOfficeBuilding className="w-5 h-5" />}
-                      label="Institution"
-                    />
-                    
-                    <CustomSelect
-                      options={currentDepartments}
-                      value={selectedDepartment}
-                      onChange={handleDepartmentChange}
-                      icon={<HiOutlineViewGrid className="w-5 h-5" />}
-                      label="Department"
-                      disabled={currentDepartments.length === 0}
-                    />
-                    
-                    <CustomSelect
-                      options={currentCourses}
-                      value={selectedCourse}
-                      onChange={handleCourseChange}
-                      icon={<HiOutlineBookOpen className="w-5 h-5" />}
-                      label="Course"
-                      disabled={currentCourses.length === 0}
-                    />
+                    <CustomSelect options={institutions} value={selectedInstitution} onChange={handleInstitutionChange} icon={<HiOutlineOfficeBuilding className="w-5 h-10" />} label="Institution" />
+                    <CustomSelect options={currentDepartments} value={selectedDepartment} onChange={handleDepartmentChange} icon={<HiOutlineViewGrid className="w-5 h-5" />} label="Department" disabled={currentDepartments.length === 0} />
+                    <CustomSelect options={currentCourses} value={selectedCourse} onChange={handleCourseChange} icon={<HiOutlineBookOpen className="w-5 h-5" />} label="Course" disabled={currentCourses.length === 0} />
                   
-                    {/* Refresh Button - Increased padding (px-8) for a better feel */}
-                    {/* Refresh Button - Softer font weight for better readability */}
-                    <div className="w-full flex justify-start lg:justify-end mt-2 lg:mt-0">
+                    {/* Refresh Button - Forced to 100% width on mobile */}
+                    <div className="w-full flex justify-center lg:justify-end mt-2 lg:mt-0">
                       <button
                         onClick={handleRefresh}
-                        className="flex items-center justify-center gap-2 px-6 py-3.5 bg-accent text-white rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 font-medium text-[15px] border-2 border-accent shrink-0"
+                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-accent text-white rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 font-medium text-[15px] border-2 border-accent shrink-0"
                       >
                         <HiOutlineRefresh className="w-5 h-5" />
                         <span>Update Data</span>
                       </button>
                     </div>
-                    
                   </div>
                 </motion.div>
               </div>
               
-              {/* Single course chart */}
+              {/* Single course chart - Reduced margin */}
               <motion.div 
-                className="mb-10"
+                className="mb-6 md:mb-10"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
                 layoutId="chart-container"
               >
-                {/* Defensive: Only render if data is present */}
                 {selectedCourseData && selectedCourseData.data ? (
-                  <SingleCourseChart 
-                    data={selectedCourseData.data} 
-                    label={selectedCourseData.name}
-                  />
+                  <SingleCourseChart data={selectedCourseData.data} label={selectedCourseData.name} />
                 ) : (
-                  <div className="text-center text-gray-400 py-12">
-                    No course data available.
-                  </div>
+                  <div className="text-center text-gray-400 py-12">No course data available.</div>
                 )}
               </motion.div>
               
-              {/* Summary statistics */}
+              {/* Summary statistics - Highly compact on mobile */}
               <motion.div
-                className="mb-10"
+                className="mb-6 md:mb-10"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
               >
                 {/* Performance Summary Header */}
-{/* Performance Summary Header */}
-<div className="mb-6 flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
-  <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-    Performance Summary
-  </h2>
-  
-  {/* The Dash - Hidden on tiny mobile screens where text stacks */}
-  <span className="hidden sm:inline text-slate-300 font-medium">—</span>
-  
-  {/* The Subtitle Context - Now dynamic and rephrased */}
-  <span className="text-base font-medium text-slate-500">
-    <span className="font-semibold text-slate-700">{selectedDepartment}</span> Department
-  </span>
-</div>
+                <div className="mb-3 md:mb-6 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
+                    Performance Summary
+                  </h2>
+                  <span className="hidden sm:inline text-slate-300 font-medium">—</span>
+                  <span className="text-sm md:text-base font-medium text-slate-500">
+                    <span className="font-semibold text-slate-700">{selectedDepartment}</span> Department
+                  </span>
+                </div>
                 
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-  {/* Card 1: Average Smart Paper Check score */}
-  <div className="bg-slate-100 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. Smart Paper Check Score</p>
-    <p className="text-3xl font-bold text-accent mb-1">
-      {summaryStats.avgSmartQnA}%
-    </p>
-    <p className="text-xs text-accent">Conservative grading</p>
-  </div>
-  
-  {/* Card 2: Average TA score */}
-  <div className="bg-slate-50 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Avg. TA Score</p>
-    <p className="text-3xl font-bold text-gray-600 mb-1">
-      {summaryStats.avgTA}%
-    </p>
-    <p className="text-xs text-gray-500">Manual grading</p>
-  </div>
-  
-  {/* Card 3: Score difference */}
-  <div className="bg-slate-100 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-    <p className="text-xs text-gray-600 mb-1 font-medium uppercase tracking-wide">Score Difference(SPC VS TA)</p>
-    <p className="text-3xl font-bold text-accent mb-1">
-      {summaryStats.avgImprovement > 0 ? '+' : ''}{summaryStats.avgImprovement}%
-    </p>
-
-    <p className="text-xs text-accent">
-      {summaryStats.avgImprovement < 0 ? 'Within expected conservative bounds' : 'Scores align closely'}
-    </p>
-  </div>
-  
-  {/* Card 4: Consolidated Volume Metrics */}
-  <div className="bg-slate-50 rounded-xl p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-    <div className="flex justify-between items-start mb-2">
-      <p className="text-xs text-gray-600 font-medium uppercase tracking-wide">Dataset Volume</p>
-      <span className="text-xs font-medium text-gray-500 bg-white border border-slate-300 px-2 py-0.5 rounded">
-        {summaryStats.count} Courses
-      </span>
-    </div>
-    <div className="grid grid-cols-2 gap-4 mt-1">
-      <div>
-        <p className="text-3xl font-bold text-accent mb-1">{summaryStats.totalStudents}</p>
-        <p className="text-xs text-accent font-medium">Students</p>
-      </div>
-      <div>
-        <p className="text-3xl font-bold text-gray-600 mb-1">{summaryStats.totalAssignments}</p>
-        <p className="text-xs text-gray-500 font-medium">Assignments Graded</p>
-      </div>
-    </div>
-  </div>
-</div>
+                {/* 2-Column Grid on Mobile, 4-Column on Desktop */}
+                <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 lg:gap-6">
+                  {/* Card 1: SPC Score */}
+                  <div className="bg-slate-100 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+                    <p className="text-[9px] md:text-xs text-gray-600 mb-1 font-medium uppercase tracking-tight md:tracking-wide leading-tight">Avg. SPC Score</p>
+                    <p className="text-xl md:text-3xl font-bold text-accent mb-0.5 md:mb-1">{summaryStats.avgSmartQnA}%</p>
+                    <p className="text-[9px] md:text-xs text-accent leading-tight">Conservative grading</p>
+                  </div>
+                  
+                  {/* Card 2: TA Score */}
+                  <div className="bg-slate-50 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+                    <p className="text-[9px] md:text-xs text-gray-600 mb-1 font-medium uppercase tracking-tight md:tracking-wide leading-tight">Avg. TA Score</p>
+                    <p className="text-xl md:text-3xl font-bold text-gray-600 mb-0.5 md:mb-1">{summaryStats.avgTA}%</p>
+                    <p className="text-[9px] md:text-xs text-gray-500 leading-tight">Manual grading</p>
+                  </div>
+                  
+                  {/* Card 3: Difference */}
+                  <div className="bg-slate-100 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+                    <p className="text-[9px] md:text-xs text-gray-600 mb-1 font-medium uppercase tracking-tight md:tracking-wide leading-tight">Score Difference (SPC VS TA)</p>
+                    <p className="text-xl md:text-3xl font-bold text-accent mb-0.5 md:mb-1">{summaryStats.avgImprovement > 0 ? '+' : ''}{summaryStats.avgImprovement}%</p>
+                    <p className="text-[9px] md:text-xs text-accent leading-tight line-clamp-2 md:line-clamp-none">{summaryStats.avgImprovement < 0 ? 'Within expected conservative bounds' : 'Scores align closely'}</p>
+                  </div>
+                  
+                  {/* Card 4: Volume */}
+                  <div className="bg-slate-50 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+                    <div className="flex justify-between items-start mb-1 md:mb-2">
+                      <p className="text-[9px] md:text-xs text-gray-600 font-medium uppercase tracking-tight md:tracking-wide">Dataset</p>
+                      <span className="text-[9px] md:text-xs font-medium text-gray-500 bg-white border border-slate-300 px-1 md:px-2 py-0.5 rounded whitespace-nowrap">{summaryStats.count} Courses</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 md:gap-4 mt-auto">
+                      <div>
+                        <p className="text-lg md:text-3xl font-bold text-accent mb-0.5 md:mb-1">{summaryStats.totalStudents}</p>
+                        <p className="text-[9px] md:text-xs text-accent font-medium">Students</p>
+                      </div>
+                      <div>
+                        <p className="text-lg md:text-3xl font-bold text-gray-600 mb-0.5 md:mb-1">{summaryStats.totalAssignments}</p>
+                        <p className="text-[9px] md:text-xs text-gray-500 font-medium">Graded</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
               
-             {/* Footer message - Extended Gradient Callout Style */}
+             {/* Footer message - Philosophy Shortened with Expand/Collapse toggle */}
               <motion.div
-                className="mt-8 flex justify-center w-full"
+                className="mt-4 md:mt-8 flex justify-center w-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                {/* Updated the gradient to stretch the color further across the box */}
-                <div className="w-full flex flex-col sm:flex-row items-start sm:items-center gap-5 py-5 px-6 rounded-2xl bg-gradient-to-r from-accent/15 via-accent/5 to-transparent border border-accent/20 shadow-sm transition-all duration-300 hover:shadow-md hover:border-accent/40 relative overflow-hidden">
+                {/* Changed to flex-row unconditionally so the icon sits on the left on mobile */}
+                <div className="w-full flex flex-row items-start sm:items-center gap-3 md:gap-5 py-4 md:py-5 px-4 md:px-6 rounded-2xl bg-gradient-to-r from-accent/15 via-accent/5 to-transparent border border-accent/20 shadow-sm transition-all duration-300 hover:shadow-md hover:border-accent/40 relative overflow-hidden">
                   
-                  {/* Subtle decorative glow in the top left corner */}
                   <div className="absolute top-0 left-0 w-32 h-32 bg-accent/10 rounded-br-full pointer-events-none" />
 
-                  {/* Icon Box */}
-                  <div className="relative flex-shrink-0 bg-white p-3 rounded-xl border border-accent/20 shadow-sm">
-                    <HiOutlineLightBulb className="w-6 h-6 text-accent" />
+                  {/* Added a tiny top margin (mt-0.5) to align the icon perfectly with the header text */}
+                  <div className="relative flex-shrink-0 bg-white p-2 md:p-3 rounded-xl border border-accent/20 shadow-sm mt-0.5 sm:mt-0">
+                    <HiOutlineLightBulb className="w-5 h-5 md:w-6 md:h-6 text-accent" />
                   </div>
                   
-                  {/* Text Content */}
-                  <div className="text-left relative">
-                    <h4 className="text-sm font-bold text-accent mb-1 tracking-wide uppercase">Grading Philosophy</h4>
-                    <p className="text-slate-600 font-medium text-[15px] leading-relaxed">
+                  <div className="text-left relative flex-1">
+                    <h4 className="text-xs md:text-sm font-bold text-accent mb-0.5 md:mb-1 tracking-wide uppercase">Grading Philosophy</h4>
+                    {/* Line clamp truncates text on mobile unless expanded */}
+                    <p className={`text-slate-600 font-medium text-xs md:text-[15px] leading-relaxed transition-all duration-300 ${!isPhilosophyExpanded ? 'line-clamp-2 md:line-clamp-none' : ''}`}>
                       Smart Paper Check employs conservative grading standards to ensure fairness and maintain academic integrity. 
                       Students benefit from consistent evaluation criteria and can always request manual review for reassessment.
                     </p>
+                    {/* Read More button visible only on mobile */}
+                    <button 
+                      className="md:hidden text-accent text-xs font-bold mt-1.5 hover:underline focus:outline-none flex items-center gap-1"
+                      onClick={() => setIsPhilosophyExpanded(!isPhilosophyExpanded)}
+                    >
+                      {isPhilosophyExpanded ? 'Read Less' : 'Read More'}
+                    </button>
                   </div>
                   
                 </div>
