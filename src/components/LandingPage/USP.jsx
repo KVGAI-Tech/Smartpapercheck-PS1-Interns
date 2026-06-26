@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { HiOutlineCheck, HiOutlineX } from "react-icons/hi";
+import { HiOutlineCheck, HiOutlineX, HiSparkles } from "react-icons/hi";
 
 const USP = () => {
   const features = [
@@ -69,21 +69,26 @@ const USP = () => {
           viewport={{ once: true, margin: "-100px" }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent font-medium text-sm shadow-sm backdrop-blur-sm">
-              <span className="mr-2">✨</span>
+            <div className="flex items-center gap-2 text-accent uppercase tracking-[0.2em] text-sm font-mono font-bold">
+              <HiSparkles className="w-5 h-5" />
               <span>Comparison</span>
             </div>
           </div>
           <h2 className="text-4xl sm:text-5xl font-bold mb-6 text-gray-900 tracking-tight">
-            Our <span className="text-accent relative inline-block">
+            Our <span className="text-accent relative inline-block font-serif italic pr-2">
               Edge
-              <motion.div 
-                className="absolute -bottom-1 left-0 w-full h-1 bg-accent/30 rounded-full"
-                initial={{ width: 0 }}
-                whileInView={{ width: "100%" }}
-                transition={{ duration: 0.8, delay: 0.3 }}
-                viewport={{ once: true }}
-              />
+              <svg className="absolute -bottom-2 left-0 w-full h-3 text-accent/50 overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <motion.path 
+                  d="M -2 5 Q 50 14 102 2" 
+                  stroke="currentColor" 
+                  strokeWidth="3.5" 
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0 }}
+                  whileInView={{ pathLength: 1 }}
+                  transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+                  viewport={{ once: true }}
+                />
+              </svg>
             </span> Over Others
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -106,21 +111,23 @@ const USP = () => {
               <table className="min-w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="px-6 py-6 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider bg-transparent w-1/3">Features</th>
+                  <th className="px-6 py-6 text-left text-sm font-bold text-gray-500 uppercase tracking-wider bg-transparent w-1/3 font-mono">Features</th>
                   {competitors.map((competitor, idx) => (
                     <th 
                       key={idx} 
-                      className={`px-6 py-6 text-center text-lg font-bold ${
+                      className={`px-6 py-6 text-center ${
                         competitor.highlight 
                           ? "text-accent bg-accent/[0.02]" 
-                          : "text-gray-700 bg-transparent"
+                          : "text-gray-600 bg-transparent"
                       }`}
                     >
                       <div className="flex flex-col items-center gap-1">
-                        {competitor.highlight && (
-                          <span className="text-[10px] uppercase tracking-widest font-semibold text-accent/80 mb-1">Recommended</span>
-                        )}
-                        {competitor.name}
+                        <span className={`text-[10px] uppercase tracking-widest font-bold text-accent/80 mb-1 font-mono ${competitor.highlight ? "opacity-100" : "opacity-0 invisible"}`}>
+                          Recommended
+                        </span>
+                        <span className={`font-serif tracking-tight ${competitor.highlight ? "text-2xl font-black" : "text-xl font-bold"}`}>
+                          {competitor.name}
+                        </span>
                       </div>
                     </th>
                   ))}
