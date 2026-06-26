@@ -28,105 +28,177 @@ const USP = () => {
     }
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const rowVariants = {
+    hidden: { opacity: 0, x: -20 },
+    show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 100 } }
+  };
+
+  const textVariants = {
+    hidden: { x: 0 },
+    show: { x: 0 },
+    hover: { x: 6, transition: { type: "spring", stiffness: 400, damping: 25 } }
+  };
+
+  const checkVariants = {
+    hidden: { scale: 0, opacity: 0 },
+    show: { scale: 1, opacity: 1, transition: { type: "spring", stiffness: 200, damping: 10 } },
+    hover: { scale: 1.15, rotate: 5, transition: { type: "spring", stiffness: 300 } }
+  };
+
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 relative overflow-hidden">
+      {/* Subtle background decoration */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
+      
+      <div className="max-w-5xl mx-auto">
         <motion.div 
-          className="text-center mb-12"
+          className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
         >
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
-              <span className="mr-2">🌟</span>
+            <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent font-medium text-sm shadow-sm backdrop-blur-sm">
+              <span className="mr-2">✨</span>
               <span>Comparison</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            Our <span className="text-accent">Edge</span> Over Others
+          <h2 className="text-4xl sm:text-5xl font-bold mb-6 text-gray-900 tracking-tight">
+            Our <span className="text-accent relative inline-block">
+              Edge
+              <motion.div 
+                className="absolute -bottom-1 left-0 w-full h-1 bg-accent/30 rounded-full"
+                initial={{ width: 0 }}
+                whileInView={{ width: "100%" }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                viewport={{ once: true }}
+              />
+            </span> Over Others
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            See how Smart Paper Check stands out from traditional evaluation platforms with our cutting-edge AI technologies
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            See how Smart Paper Check stands out from traditional evaluation platforms with our cutting-edge AI technologies.
           </p>
         </motion.div>
 
-        <motion.div 
-          className="overflow-x-auto"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
-        >
-          <table className="min-w-full rounded-xl overflow-hidden shadow-md">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-6 py-5 text-left text-sm font-semibold text-gray-800">Features</th>
-                {competitors.map((competitor, idx) => (
-                  <th 
-                    key={idx} 
-                    className={`px-6 py-5 text-center text-sm font-semibold ${
-                      competitor.highlight 
-                        ? "text-accent" 
-                        : "text-gray-800"
-                    }`}
-                  >
-                    {competitor.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {features.map((feature, rowIdx) => (
-                <tr 
-                  key={rowIdx} 
-                  className={rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                >
-                  <td className="px-6 py-5 text-sm text-gray-800">{feature}</td>
-                  {competitors.map((competitor, colIdx) => (
-                    <td key={colIdx} className="px-6 py-5 text-center">
-                      {competitor.features[rowIdx] ? (
-                        <div className="flex justify-center">
-                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                            competitor.highlight 
-                              ? "bg-accent/10 shadow-sm" 
-                              : "bg-gray-100"
-                          }`}>
-                            <HiOutlineCheck className={`w-5 h-5 ${
-                              competitor.highlight 
-                                ? "text-accent" 
-                                : "text-gray-600"
-                            }`} />
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex justify-center">
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
-                            <HiOutlineX className="w-5 h-5 text-gray-400" />
-                          </span>
-                        </div>
-                      )}
-                    </td>
+        <div className="relative">
+          {/* Highlight column background */}
+          <div className="absolute top-0 bottom-0 left-[33%] w-[22%] bg-accent/[0.03] border border-accent/20 rounded-2xl shadow-[0_0_40px_rgba(var(--accent-rgb),0.1)] -z-10 pointer-events-none hidden md:block" />
+
+          <motion.div 
+            className="w-full rounded-2xl shadow-xl bg-white/50 backdrop-blur-sm border border-gray-100 overflow-visible"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-50px" }}
+          >
+            <div className="w-full overflow-x-auto pb-4 -mb-4">
+              <table className="min-w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="px-6 py-6 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider bg-transparent w-1/3">Features</th>
+                  {competitors.map((competitor, idx) => (
+                    <th 
+                      key={idx} 
+                      className={`px-6 py-6 text-center text-lg font-bold ${
+                        competitor.highlight 
+                          ? "text-accent bg-accent/[0.02]" 
+                          : "text-gray-700 bg-transparent"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        {competitor.highlight && (
+                          <span className="text-[10px] uppercase tracking-widest font-semibold text-accent/80 mb-1">Recommended</span>
+                        )}
+                        {competitor.name}
+                      </div>
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </motion.div>
+              </thead>
+              <tbody className="divide-y divide-gray-100/50">
+                {features.map((feature, rowIdx) => (
+                  <motion.tr 
+                    key={rowIdx} 
+                    variants={rowVariants}
+                    whileHover="hover"
+                    className="relative group transition-all duration-300 hover:bg-white hover:shadow-[0_10px_30px_-5px_rgba(0,0,0,0.08)] hover:z-10"
+                  >
+                    <td className="px-6 py-5 text-base font-semibold text-gray-900 rounded-l-xl relative">
+                      <motion.span variants={textVariants} className="inline-block relative z-10 group-hover:text-accent">
+                        {feature}
+                      </motion.span>
+                    </td>
+                    {competitors.map((competitor, colIdx) => (
+                      <td 
+                        key={colIdx} 
+                        className={`px-6 py-5 text-center ${competitor.highlight ? "bg-accent/[0.02]" : ""}`}
+                      >
+                        {competitor.features[rowIdx] ? (
+                          <div className="flex justify-center">
+                            <motion.div 
+                              variants={checkVariants}
+                              whileHover="hover"
+                              className={`inline-flex items-center justify-center w-10 h-10 rounded-full cursor-default ${
+                                competitor.highlight 
+                                  ? "bg-accent/10 shadow-sm border border-accent/20" 
+                                  : "bg-gray-100"
+                              }`}
+                            >
+                              <HiOutlineCheck className={`w-6 h-6 ${
+                                competitor.highlight 
+                                  ? "text-accent" 
+                                  : "text-gray-500"
+                              }`} />
+                            </motion.div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-center">
+                            <motion.div 
+                              initial={{ opacity: 0 }}
+                              whileInView={{ opacity: 1 }}
+                              className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-50/40"
+                            >
+                              <HiOutlineX className="w-5 h-5 text-red-300" />
+                            </motion.div>
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    <td className="w-0 p-0 rounded-r-xl"></td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+          </motion.div>
+        </div>
 
         <motion.div 
-          className="mt-12 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-16 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
           viewport={{ once: true }}
         >
-          <div className="inline-block py-4 px-6 rounded-lg bg-accent/5 border border-accent/20 shadow-sm">
-            <p className="text-gray-700">
-              Smart Paper Check combines the power of LLMs and Vision-Language Models to deliver a comprehensive evaluation experience that traditional platforms simply can't match.
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="inline-block py-6 px-8 rounded-2xl bg-gradient-to-r from-white to-gray-50 border border-accent/20 shadow-lg shadow-accent/5 hover:shadow-accent/10 transition-all duration-300 cursor-default"
+          >
+            <p className="text-gray-800 font-medium text-base sm:text-lg">
+              Smart Paper Check combines the power of <span className="font-semibold text-accent">LLMs</span> and <span className="font-semibold text-accent">Vision-Language Models</span> to deliver a comprehensive evaluation experience that traditional platforms simply can't match.
             </p>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>
