@@ -245,6 +245,23 @@ const LandingPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (isLoaded) {
+      const savedScroll = sessionStorage.getItem("landingScrollPos");
+      if (savedScroll) {
+        // Wait a tick for the DOM to fully render the heavy components
+        setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 0);
+      }
+      
+      const handleScroll = () => {
+        sessionStorage.setItem("landingScrollPos", window.scrollY.toString());
+      };
+      
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
+    }
+  }, [isLoaded]);
+
   if (!isLoaded) {
     return <LoadingAnimation />;
   }
