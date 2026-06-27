@@ -1,152 +1,225 @@
-import React from "react";
-import { motion } from "framer-motion";
-import { FaQuoteLeft, FaQuoteRight } from "react-icons/fa";
 
-const TestimonialCard = ({
-  quote,
-  name,
-  designation,
-  institute,
-  avatar,
-  index,
-}) => {
-  return (
-    <motion.div
-      className="bg-white shadow-md border border-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300"
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.5,
-        delay: index * 0.1,
-      }}
-      viewport={{ once: true }}
-      whileHover={{ y: -5 }}
-    >
-      <div className="flex items-start mb-4">
-        <div className="mr-4">
-          <div className="w-16 h-16 rounded-full overflow-hidden bg-accent p-0.5 shadow-md">
-            <div className="bg-gray-50 w-full h-full rounded-full overflow-hidden">
-              {avatar ? (
-                <img
-                  src={avatar}
-                  alt={name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.parentNode.innerHTML = name.charAt(0);
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-700 font-medium">
-                  {name.charAt(0)}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div>
-          <h4 className="font-semibold text-gray-900">{name}</h4>
-          <p className="text-sm text-gray-600">{designation}</p>
-          <p className="text-sm text-accent font-medium">{institute}</p>
-        </div>
-      </div>
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { FaQuoteLeft } from "react-icons/fa";
 
-      <div className="relative">
-        <FaQuoteLeft className="absolute -top-2 -left-1 text-accent/40 text-xl" />
-        <p className="text-gray-700 pl-5 pr-5 py-2">{quote}</p>
-        <FaQuoteRight className="absolute -bottom-2 -right-1 text-accent/40 text-xl" />
-      </div>
-    </motion.div>
+const CARD_WIDTH = 300;
+const CARD_GAP = 28;
+const CARD_STEP = CARD_WIDTH + CARD_GAP;
+
+const TESTIMONIALS = [
+  {
+    quote: "Smart Paper Check saves us hours every exam season. The consistency and accuracy in grading has been truly remarkable.",
+    name: "Prof. Saurabh Gandh",
+    designation: "Asst. Prof. Computer Science",
+    institute: "IIT Jodhpur, Jodhpur, India",
+    avatar: "/images/testimonials/sharma.jpeg",
+    accent: "#3B82F6",
+    bg: "rgba(59,130,246,0.08)",
+  },
+  {
+    quote: "The AI rubric generator brings unprecedented consistency in marking across our department.",
+    name: "Prof. Vinay Chamola",
+    designation: "Associate Prof, Electronics",
+    institute: "BITS Pilani",
+    avatar: "/images/testimonials/patel.jpeg",
+    accent: "#14B8A6",
+    bg: "rgba(20,184,166,0.08)",
+  },
+  {
+    quote: "We've reduced our grading time by 80% and improved feedback quality with Smart Paper Check's automated evaluation system.",
+    name: "Dr. Vikas Hassija",
+    designation: "Associate Prof, CSIT",
+    institute: "KIIT",
+    avatar: "/images/testimonials/gupta.jpeg",
+    accent: "#A855F7",
+    bg: "rgba(168,85,247,0.08)",
+  },
+  {
+    quote: "The detailed analytics for each student has revolutionized how we approach curriculum improvements.",
+    name: "Dr. Saharsh Agarwal",
+    designation: "Assistant Professor",
+    institute: "Indian School of Business",
+    avatar: "/images/testimonials/singh.jpeg",
+    accent: "#F59E0B",
+    bg: "rgba(245,158,11,0.08)",
+  },
+];
+
+const n = TESTIMONIALS.length;
+
+export default function Testimonials() {
+  const containerRef = useRef(null);
+  const trackRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const directionRef = useRef(1); // 1 = forward, -1 = backward
+  const paused = useRef(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setContainerWidth(el.offsetWidth));
+    ro.observe(el);
+    setContainerWidth(el.offsetWidth);
+    return () => ro.disconnect();
+  }, []);
+
+  const getX = useCallback(
+    (index, cw) =>
+      (cw ?? containerWidth) / 2 - (index * CARD_STEP + CARD_WIDTH / 2),
+    [containerWidth]
   );
-};
 
-const Testimonials = () => {
-  const testimonials = [
-    {
-      quote:
-        "Smart Paper Check saves us hours every exam season. The consistency and accuracy in grading has been truly remarkable.",
-      name: "Prof. Saurabh Gandh",
-      designation: "Asst. Prof. Computer Science ",
-      institute: "IIT Jodhpur, Jodhpur, India",
-      avatar: "/images/testimonials/sharma.jpeg",
-    },
-    {
-      quote:
-        "The AI rubric generator brings unprecedented consistency in marking across our department.",
-      name: "Prof. Vinay Chamola",
-      designation: "Associate Prof, Electronics",
-      institute: "BITS Pilani",
-      avatar: "/images/testimonials/patel.jpeg",
-    },
-    {
-      quote:
-        "We've reduced our grading time by 80% and improved feedback quality with Smart Paper Check's automated evaluation system.",
-      name: "Dr. Vikas Hassija",
-      designation: "Associate Prof, CSIT",
-      institute: "KIIT",
-      avatar: "/images/testimonials/gupta.jpeg",
-    },
-    {
-      quote:
-        "The detailed analytics for each student has revolutionized how we approach curriculum improvements.",
-      name: "Dr. Saharsh Agarwal",
-      designation: "Assistant Professor",
-      institute: "Indian School of Business",
-      avatar: "/images/testimonials/singh.jpeg",
-    },
-  ];
+  // Move the track whenever activeIndex or containerWidth changes
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || containerWidth === 0) return;
+    track.style.transition = "transform 1.1s cubic-bezier(0.22, 1, 0.36, 1)";
+    track.style.transform = `translateX(${getX(activeIndex)}px)`;
+  }, [activeIndex, containerWidth, getX]);
+
+  // Ping-pong every 5 s
+  useEffect(() => {
+    if (containerWidth === 0) return;
+    const id = setInterval(() => {
+      if (paused.current) return;
+      setActiveIndex((prev) => {
+        const next = prev + directionRef.current;
+        if (next >= n - 1) directionRef.current = -1;
+        if (next <= 0) directionRef.current = 1;
+        return next;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [containerWidth]);
 
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-        >
+
+        {/* Header */}
+        <div className="text-center mb-12">
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
-              <span className="mr-2">🧑‍🏫</span>
-              <span>Trusted by Educators</span>
+              <span className="mr-2">🧑‍🏫</span><span>Trusted by Educators</span>
             </div>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-            What{" "}
-            <span className="text-accent">Professors Are Saying</span>
+            What <span className="text-accent">Professors Are Saying</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Hear from faculty members who've transformed their evaluation
-            process with Smart Paper Check
+            Hear from faculty members who've transformed their evaluation process with Smart Paper Check
           </p>
-        </motion.div>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {testimonials.map((testimonial, index) => (
-            <TestimonialCard
-              key={index}
-              quote={testimonial.quote}
-              name={testimonial.name}
-              designation={testimonial.designation}
-              institute={testimonial.institute}
-              avatar={testimonial.avatar}
-              index={index}
+        {/* Carousel */}
+        <div
+          ref={containerRef}
+          style={{ overflow: "hidden", width: "100%", padding: "40px 0" }}
+          onMouseEnter={() => { paused.current = true; }}
+          onMouseLeave={() => { paused.current = false; }}
+        >
+          <div
+            ref={trackRef}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: `${CARD_GAP}px`,
+              width: "max-content",
+              willChange: "transform",
+            }}
+          >
+            {TESTIMONIALS.map((t, i) => {
+              const active = i === activeIndex;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    width: `${CARD_WIDTH}px`,
+                    flexShrink: 0,
+                    transform: active ? "scale(1.08)" : "scale(0.87)",
+                    opacity: active ? 1 : 0.5,
+                    zIndex: active ? 20 : 1,
+                    transition: "transform 0.75s cubic-bezier(0.22,1,0.36,1), opacity 0.75s ease",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    setActiveIndex(i);
+                    paused.current = true;
+                    setTimeout(() => { paused.current = false; }, 8000);
+                  }}
+                >
+                  <div style={{
+                    background: active ? t.bg : "#ffffff",
+                    border: `2px solid ${active ? t.accent : "#e5e7eb"}`,
+                    borderRadius: "24px",
+                    padding: "24px",
+                    minHeight: "290px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    boxShadow: active
+                      ? `0 16px 48px -8px ${t.accent}40, 0 4px 16px rgba(0,0,0,0.08)`
+                      : "0 2px 8px rgba(0,0,0,0.05)",
+                    transition: "background 0.5s, border-color 0.5s, box-shadow 0.5s",
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <FaQuoteLeft style={{ color: t.accent, opacity: active ? 0.8 : 0.3, fontSize: active ? "22px" : "16px", marginBottom: "12px", transition: "all 0.4s" }} />
+                      <p style={{ color: active ? "#111827" : "#6b7280", fontSize: active ? "1rem" : "0.875rem", lineHeight: "1.65", fontWeight: active ? 500 : 400, margin: 0, transition: "all 0.4s" }}>
+                        {t.quote}
+                      </p>
+                    </div>
+                    <div style={{ height: "1px", background: active ? `${t.accent}30` : "#f3f4f6", margin: "16px 0", transition: "background 0.5s" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "52px", height: "52px", borderRadius: "50%", padding: "2px", background: active ? t.accent : "#e5e7eb", flexShrink: 0, transition: "background 0.5s" }}>
+                        <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "#f9fafb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 600, color: "#374151" }}>
+                          {t.avatar
+                            ? <img src={t.avatar} alt={t.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; e.target.parentNode.textContent = t.name.charAt(0); }} />
+                            : t.name.charAt(0)}
+                        </div>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9rem", color: "#111827" }}>{t.name}</p>
+                        <p style={{ margin: 0, fontSize: "0.78rem", color: "#6b7280" }}>{t.designation}</p>
+                        <p style={{ margin: 0, fontSize: "0.78rem", fontWeight: 500, color: t.accent, marginTop: "2px" }}>📍 {t.institute}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Dots */}
+        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "8px" }}>
+          {TESTIMONIALS.map((t, i) => (
+            <button
+              key={i}
+              aria-label={`Testimonial ${i + 1}`}
+              onClick={() => {
+                setActiveIndex(i);
+                paused.current = true;
+                setTimeout(() => { paused.current = false; }, 8000);
+              }}
+              style={{
+                width: i === activeIndex ? "24px" : "8px",
+                height: "8px",
+                borderRadius: "9999px",
+                background: i === activeIndex ? TESTIMONIALS[activeIndex].accent : "#d1d5db",
+                border: "none", padding: 0, cursor: "pointer",
+                transition: "all 0.4s ease",
+              }}
             />
           ))}
         </div>
 
-        <motion.div
-          className="mt-12 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          viewport={{ once: true }}
-        >
-        </motion.div>
+        {/* Footer */}
+        <div style={{ textAlign: "center", marginTop: "36px", color: "#9ca3af", fontSize: "0.9rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+          <span>🏅</span><span>Join 1000+ educators who trust Smart Paper Check</span><span>🏅</span>
+        </div>
+
       </div>
     </section>
   );
-};
-
-export default Testimonials;
+}
