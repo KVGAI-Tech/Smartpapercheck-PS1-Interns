@@ -12,28 +12,47 @@ const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
       viewport={{ once: true }}
     >
       <motion.button
-        className="py-5 w-full flex justify-between items-center text-left"
+        className="py-5 w-full flex justify-between items-center text-left group focus:outline-none rounded-lg transition-colors duration-200 hover:bg-gray-100/60 px-3 -mx-3 origin-left"
         onClick={toggleOpen}
-        whileHover={{ scale: 1.01 }}
-        transition={{ duration: 0.2 }}
+        whileHover={{ scale: 1.02 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
       >
-        <h3 className="text-lg font-medium text-gray-900">{question}</h3>
+        {/* Left accent bar for open item */}
+        <div className="flex items-start gap-3 pr-4 flex-1 min-w-0">
+          <div
+            className="w-1 self-stretch rounded-full flex-shrink-0 transition-all duration-300"
+            style={{
+              backgroundColor: isOpen ? "#166D70" : "transparent",
+            }}
+          />
+          <h3
+            className="text-lg font-medium transition-colors duration-200"
+            style={{ color: isOpen ? "#166D70" : "#1f2937" }}
+          >
+            {question}
+          </h3>
+        </div>
         <motion.div
+          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors duration-200"
+          style={{
+            backgroundColor: isOpen ? "rgba(22, 109, 112, 0.1)" : "transparent",
+          }}
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3 }}
         >
           <HiChevronDown className="w-5 h-5 text-accent" />
         </motion.div>
       </motion.button>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
+            className="overflow-hidden"
           >
-            <div className="pb-5 text-gray-600">
+            <div className="pb-5 pl-7 text-gray-600 text-base leading-relaxed">
               {answer}
             </div>
           </motion.div>
@@ -83,12 +102,6 @@ const FAQ = () => {
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
         >
-          <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
-              <span className="mr-2">❓</span>
-              <span>FAQ</span>
-            </div>
-          </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
             Frequently Asked <span className="text-accent">Questions</span>
           </h2>
@@ -97,7 +110,7 @@ const FAQ = () => {
           </p>
         </motion.div>
 
-        <div className="bg-gray-50 shadow-sm border border-gray-100 rounded-xl p-2 sm:p-6">
+        <div className="bg-gray-50 shadow-sm border border-gray-100 rounded-xl p-4 sm:p-6">
           {faqs.map((faq, index) => (
             <FAQItem
               key={index}
