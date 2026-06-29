@@ -66,7 +66,7 @@ const USP = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2 text-accent uppercase tracking-[0.2em] text-sm font-mono font-bold">
@@ -86,7 +86,7 @@ const USP = () => {
                   initial={{ pathLength: 0 }}
                   whileInView={{ pathLength: 1 }}
                   transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-                  viewport={{ once: true }}
+                  viewport={{ once: true, amount: 0.2 }}
                 />
               </svg>
             </span> Over Others
@@ -105,7 +105,7 @@ const USP = () => {
             variants={containerVariants}
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, margin: "-50px" }}
+            viewport={{ once: true, amount: 0.2 }}
           >
             <div className="w-full overflow-x-auto pb-4 -mb-4">
               <table className="min-w-full border-collapse">
@@ -172,8 +172,8 @@ const USP = () => {
                         ) : (
                           <div className="flex justify-center">
                             <motion.div 
-                              initial={{ opacity: 0 }}
-                              whileInView={{ opacity: 1 }}
+                              initial={{ opacity: 0, y: 20 }}
+                              whileInView={{ opacity: 1, y: 0 }}
                               className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-50/40"
                             >
                               <HiOutlineX className="w-5 h-5 text-red-300" />
@@ -196,7 +196,7 @@ const USP = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <motion.div 
             whileHover={{ scale: 1.02 }}

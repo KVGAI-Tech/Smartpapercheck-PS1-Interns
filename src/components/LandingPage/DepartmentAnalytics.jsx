@@ -565,7 +565,7 @@ const DepartmentAnalytics = () => {
         {/* Header - Reduced margin and responsive font sizes */}
         <motion.div
           className="text-center mb-2 md:mb-12"
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
         >
@@ -609,7 +609,7 @@ const DepartmentAnalytics = () => {
           ) : (
             <motion.div
               key="content"
-              initial={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >

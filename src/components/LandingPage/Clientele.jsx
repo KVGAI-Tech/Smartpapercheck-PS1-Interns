@@ -27,7 +27,7 @@ const Clientele = () => {
   const scrollClients = [...clients, ...clients, ...clients, ...clients, ...clients, ...clients];
 
   const sectionRef = useRef(null);
-  const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
   const navigate = useNavigate();
 
   // Floating particles
@@ -86,7 +86,7 @@ const Clientele = () => {
         {/* Section Header */}
         <motion.div 
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
@@ -124,7 +124,7 @@ const Clientele = () => {
 
           <motion.p 
             className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed"
-            initial={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
@@ -135,7 +135,7 @@ const Clientele = () => {
         {/* Logo Marquee - Clean, no cards */}
         <motion.div
           className="relative mb-16"
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.6, delay: 0.3 }}
         >

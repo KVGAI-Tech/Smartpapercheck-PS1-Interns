@@ -28,14 +28,14 @@ html {
 }
 
 .landing-page-html {
-  background-color: #0b1011 !important;
-  color: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #212529 !important;
 }
 
 .landing-page {
-  background-color: #0b1011 !important;
+  background-color: #ffffff !important;
   min-height: 100vh;
-  color: #ffffff !important;
+  color: #212529 !important;
   position: relative;
   overflow-x: hidden;
 }

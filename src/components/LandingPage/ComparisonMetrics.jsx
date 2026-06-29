@@ -177,7 +177,7 @@ const ComparisonMetrics = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <h3 className="text-2xl font-bold mb-6 text-center text-gray-900">
             <span className="text-accent">Smart Paper Check</span> vs. Traditional Grading
@@ -199,7 +199,7 @@ const ComparisonMetrics = () => {
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
-                  viewport={{ once: true }}
+                  viewport={{ once: true, amount: 0.2 }}
                 >
                   <td className="py-4 px-6 font-medium text-gray-900">
                     {metric.title}

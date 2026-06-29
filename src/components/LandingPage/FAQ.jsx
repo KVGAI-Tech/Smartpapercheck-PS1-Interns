@@ -9,7 +9,7 @@ const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      viewport={{ once: true }}
+      viewport={{ once: true, amount: 0.2 }}
     >
       <motion.button
         className="py-5 w-full flex justify-between items-center text-left group focus:outline-none rounded-lg transition-colors duration-200 hover:bg-gray-100/60 px-3 -mx-3 origin-left"
@@ -100,7 +100,7 @@ const FAQ = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
             Frequently Asked <span className="text-accent">Questions</span>
@@ -125,10 +125,10 @@ const FAQ = () => {
 
         <motion.div 
           className="mt-8 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <p className="text-gray-600">
             Still have questions? <a href="#contact" className="text-accent font-medium hover:text-accent transition-colors duration-200">Contact us</a> for more information

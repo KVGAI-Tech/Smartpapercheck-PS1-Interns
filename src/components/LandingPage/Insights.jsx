@@ -15,7 +15,7 @@ const InsightCard = ({ icon, title, description, chart, index }) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: index * 0.2 }}
-      viewport={{ once: true }}
+      viewport={{ once: true, amount: 0.2 }}
       whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
     >
       <div className="p-6">
@@ -63,7 +63,7 @@ const StrengthChart = () => (
             initial={{ height: 0 }}
             whileInView={{ height: `${height}%` }}
             transition={{ duration: 1, delay: i * 0.1 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.2 }}
           />
         </div>
       ))}
@@ -91,10 +91,10 @@ const HeatmapChart = () => (
           <motion.div 
             key={i}
             className={`${bgColor} rounded-sm`}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: i * 0.02 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.2 }}
           />
         );
       })}
@@ -129,16 +129,16 @@ const PerformanceChart = () => (
             initial={{ strokeDasharray: "283 283", strokeDashoffset: 283 }}
             whileInView={{ strokeDashoffset: 70 }}
             transition={{ duration: 2, ease: "easeOut" }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.2 }}
           />
         </svg>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
           <motion.span 
             className="text-xl font-bold text-gray-800"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.5 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.2 }}
           >
             75%
           </motion.span>
@@ -161,7 +161,7 @@ const Insights = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
@@ -205,10 +205,10 @@ const Insights = () => {
 
         <motion.div 
           className="mt-16 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <motion.button 
             className="bg-accent hover:bg-accent px-8 py-3 rounded-full text-white font-medium shadow-md transition-all duration-300"
