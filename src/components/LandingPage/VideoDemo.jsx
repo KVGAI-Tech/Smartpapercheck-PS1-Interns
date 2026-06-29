@@ -173,7 +173,7 @@ const VideoDemo = () => {
   const thumbnailRef = useRef(null);
   const sparkleCountRef = useRef(0);
   const rippleCountRef = useRef(0);
-  const statsInView = useInView(statsRef, { once: true, margin: "-80px" });
+  const statsInView = useInView(statsRef, { once: true, amount: 0.2 });
 
   const videoId = "3egoZx6St5Y";
 
@@ -225,7 +225,7 @@ const VideoDemo = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
@@ -248,7 +248,7 @@ const VideoDemo = () => {
           initial={{ opacity: 0, scale: 0.97 }}
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           {!videoPlaying ? (
             <div
@@ -317,10 +317,10 @@ const VideoDemo = () => {
         {/* Chapter Selector */}
         <motion.div
           className="flex flex-wrap justify-center gap-2 mt-6"
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           {chapters.map((chapter, index) => (
             <ChapterButton
