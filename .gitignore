@@ -33,4 +33,7 @@ dist-ssr
 public/lib
 public/webviewer
 package-lock.json
-package-lock.json
+
+# Large local-only media (host externally; swap src before push)
+public/*.mp4
+
