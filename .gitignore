@@ -37,3 +37,6 @@ package-lock.json
 # Large local-only media (host externally; swap src before push)
 public/*.mp4
 
+package-lock.json
+
+.agents/

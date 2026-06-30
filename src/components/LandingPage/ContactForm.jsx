@@ -138,7 +138,7 @@ const ContactForm = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex justify-center mb-3">
             <motion.div 
@@ -162,7 +162,7 @@ const ContactForm = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
           className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row"
         >
           {/* Left Column - Visuals & Info */}

@@ -33,7 +33,7 @@ const SmartEvaluationSystem = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          viewport={{ once: true, margin: "-50px" }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
             Smart Evaluation System
@@ -51,7 +51,7 @@ const SmartEvaluationSystem = () => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: idx * 0.1 }}
-              viewport={{ once: true, margin: "-50px" }}
+              viewport={{ once: true, amount: 0.2 }}
             >
               <div className="w-14 h-14 bg-accent/5 border border-accent/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-accent group-hover:scale-105 transition-all duration-300">
                 <div className="text-accent group-hover:text-white transition-colors duration-300 flex items-center justify-center">
