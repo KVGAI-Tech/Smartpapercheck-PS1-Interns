@@ -129,7 +129,7 @@ const ContactForm = () => {
   ];
 
   return (
-    <section id="contact" className="py-16 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 flex flex-col justify-center min-h-[calc(100vh-80px)]">
+    <section id="contact" className="py-16 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-[1100px] mx-auto w-full relative z-10">
 
         {/* Section Header */}
