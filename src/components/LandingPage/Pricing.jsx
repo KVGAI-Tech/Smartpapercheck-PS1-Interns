@@ -12,6 +12,7 @@ import {
   Clock,
   TrendingDown,
 } from "lucide-react";
+import { TRANSITION, hoverLift, hoverCard, viewportOnce } from "./motion";
 
 /* ------------------------------------------------------------------ */
 /*  Small reusable count-up number (animates smoothly between values)  */
@@ -137,19 +138,19 @@ const recommendPlan = (n) =>
 /* ------------------------------------------------------------------ */
 const cardsContainer = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.15 } },
+  visible: { transition: { staggerChildren: 0.08 } },
 };
 const cardItem = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: TRANSITION },
 };
 const featureList = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.2 } },
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
 };
 const featureItem = {
-  hidden: { opacity: 0, x: -10 },
-  visible: { opacity: 1, x: 0 },
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: TRANSITION },
 };
 
 // Blur-in word reveal for the heading accent word
@@ -225,10 +226,10 @@ const Pricing = () => {
         {/* Header */}
         <motion.div
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <div className="flex items-center justify-center gap-3 mb-5">
             <span className="h-px w-8 sm:w-10 bg-gradient-to-r from-transparent to-accent/50" />
@@ -244,7 +245,7 @@ const Pricing = () => {
               variants={wordReveal}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
+              viewport={viewportOnce}
               aria-label="you grade"
             >
               {"you grade".split("").map((ch, i) => (
@@ -298,7 +299,7 @@ const Pricing = () => {
           variants={cardsContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
+          viewport={viewportOnce}
         >
           {plans.map((plan) => {
             const Icon = plan.icon;
@@ -307,8 +308,7 @@ const Pricing = () => {
               <motion.div
                 key={plan.id}
                 variants={cardItem}
-                whileHover={{ y: -8 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                {...hoverCard}
                 className={`relative flex flex-col rounded-2xl p-8 ${
                   plan.highlight
                     ? "bg-white border-2 border-accent shadow-2xl shadow-accent/20 lg:scale-105 z-10"
@@ -367,7 +367,7 @@ const Pricing = () => {
                   variants={featureList}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true, amount: 0.2 }}
+                  viewport={viewportOnce}
                 >
                   {plan.features.map((f, i) => (
                     <motion.li key={i} variants={featureItem} className="flex items-start gap-2.5">
@@ -386,8 +386,7 @@ const Pricing = () => {
                 {/* CTA */}
                 <motion.button
                   onClick={() => navigate("/auth")}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  {...hoverLift}
                   className={`w-full py-3 rounded-full font-medium transition-colors duration-300 ${
                     plan.highlight
                       ? "bg-accent text-white shadow-lg shadow-accent/30 hover:bg-accent/90"
@@ -404,10 +403,10 @@ const Pricing = () => {
         {/* ---------------- Cost estimator (volume slider) ---------------- */}
         <motion.div
           className="mt-20 max-w-4xl mx-auto rounded-2xl bg-gradient-to-br from-accent/5 to-accent/10 border border-accent/20 p-8 sm:p-10"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center">
@@ -514,8 +513,7 @@ const Pricing = () => {
           <div className="text-center">
             <motion.button
               onClick={() => setShowCompare((s) => !s)}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              {...hoverLift}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white border border-gray-200 text-gray-800 font-medium shadow-sm hover:border-accent/40"
             >
               {showCompare ? "Hide" : "Compare"} all plan features
@@ -584,10 +582,10 @@ const Pricing = () => {
         {/* Trust strip + custom plan */}
         <motion.div
           className="mt-16 text-center"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ ...TRANSITION, delay: 0.2 }}
+          viewport={viewportOnce}
         >
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mb-8 text-sm text-gray-500">
             {["No setup fees", "Cancel anytime", "Used at 50+ institutions"].map((t) => (

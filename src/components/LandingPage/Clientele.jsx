@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { TRANSITION, hoverLift } from './motion';
 import './Clientele.css';
 
 const Clientele = () => {
@@ -86,16 +87,16 @@ const Clientele = () => {
         {/* Section Header */}
         <motion.div 
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7, ease: "easeOut" }}
+          transition={TRANSITION}
         >
           {/* Heading with animated gradient */}
           <motion.h2 
             className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 text-gray-900 leading-tight"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ ...TRANSITION, delay: 0.2 }}
           >
             Trusted by{' '}
             <span 
@@ -124,9 +125,9 @@ const Clientele = () => {
 
           <motion.p 
             className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            initial={{ opacity: 0, y: 24 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ ...TRANSITION, delay: 0.4 }}
           >
             Leading academic institutions and organizations use Smart Paper Check to streamline assessments.
           </motion.p>
@@ -135,9 +136,9 @@ const Clientele = () => {
         {/* Logo Marquee - Clean, no cards */}
         <motion.div
           className="relative mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          initial={{ opacity: 0, y: 24 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ ...TRANSITION, delay: 0.3 }}
         >
           {/* Fade edges */}
           <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 z-10 pointer-events-none"
@@ -191,9 +192,9 @@ const Clientele = () => {
         {/* CTA Banner */}
         <motion.div 
           className="text-center"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ ...TRANSITION, delay: 0.6 }}
         >
           <motion.div 
             className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl cursor-pointer group"
@@ -202,11 +203,7 @@ const Clientele = () => {
               border: '1px solid rgba(22,109,112,0.15)',
               backdropFilter: 'blur(10px)',
             }}
-            whileHover={{ 
-              scale: 1.02,
-              boxShadow: '0 8px 32px rgba(22,109,112,0.12)',
-            }}
-            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            {...hoverLift}
             onClick={() => navigate('/auth')}
           >
             <p className="text-gray-600 text-sm sm:text-base font-medium">

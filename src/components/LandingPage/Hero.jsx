@@ -3,19 +3,20 @@ import { FaPlay } from "react-icons/fa";
 import { HiOutlineRocketLaunch } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../BaseURL";
+import { TRANSITION, EASE, DURATION, hoverLift, hoverCard } from "./motion";
 
 const Hero = ({ scrollToDemo }) => {
   const navigate = useNavigate();
 
   const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 24 },
     visible: (i) => ({
       opacity: 1,
       y: 0,
       transition: {
         delay: i * 0.2,
-        duration: 0.8,
-        ease: "easeOut",
+        duration: DURATION,
+        ease: EASE,
       },
     }),
   };
@@ -132,8 +133,7 @@ const Hero = ({ scrollToDemo }) => {
               <motion.button
                 onClick={() => navigate("/auth")}
                 className="group flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 px-8 py-4 rounded-full text-white font-medium text-base transition-all duration-300 shadow-lg shadow-accent/25"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                {...hoverLift}
               >
                 <HiOutlineRocketLaunch className="text-white text-xl" />
                 <span>Get Started</span>
@@ -142,8 +142,7 @@ const Hero = ({ scrollToDemo }) => {
               <motion.button
                 onClick={scrollToDemo}
                 className="group flex items-center justify-center gap-2 bg-white border-2 border-gray-100 hover:border-gray-200 hover:bg-gray-50 shadow-sm px-8 py-4 rounded-full text-gray-800 font-medium text-base transition-all duration-300"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                {...hoverLift}
               >
                 <FaPlay className="text-accent group-hover:scale-110 transition-transform duration-300" />
                 <span>Watch Demo</span>
@@ -157,7 +156,7 @@ const Hero = ({ scrollToDemo }) => {
             className="relative lg:ml-auto w-full"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ ...TRANSITION, delay: 0.4 }}
           >
             <div className="relative pt-6 pb-6">
               <motion.div
@@ -171,8 +170,7 @@ const Hero = ({ scrollToDemo }) => {
               
               <motion.div
                 className="bg-white p-3 rounded-3xl shadow-2xl border border-gray-100/50 relative overflow-hidden group"
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
+                {...hoverCard}
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none" />
                 <video
