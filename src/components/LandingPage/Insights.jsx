@@ -1,22 +1,23 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { 
-  HiOutlineChartBar, 
-  HiOutlineChartPie, 
+import {
+  HiOutlineChartBar,
+  HiOutlineChartPie,
   HiOutlineChartSquareBar,
-  HiOutlineArrowSmUp 
+  HiOutlineArrowSmUp
 } from "react-icons/hi";
+import { TRANSITION, hoverLift, hoverCard, viewportOnce } from "./motion";
 
 const InsightCard = ({ icon, title, description, chart, index }) => {
   return (
     <motion.div
       className="relative overflow-hidden bg-white shadow-md border border-gray-100 rounded-xl"
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.2 }}
-      viewport={{ once: true, amount: 0.2 }}
-      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+      transition={{ ...TRANSITION, delay: index * 0.08 }}
+      viewport={viewportOnce}
+      {...hoverCard}
     >
       <div className="p-6">
         <div className="flex items-start justify-between mb-4">
@@ -158,10 +159,10 @@ const Insights = () => {
       <div className="max-w-7xl mx-auto">
         <motion.div 
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
@@ -205,15 +206,14 @@ const Insights = () => {
 
         <motion.div 
           className="mt-16 text-center"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ ...TRANSITION, delay: 0.3 }}
+          viewport={viewportOnce}
         >
-          <motion.button 
+          <motion.button
             className="bg-accent hover:bg-accent px-8 py-3 rounded-full text-white font-medium shadow-md transition-all duration-300"
-            whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-            whileTap={{ scale: 0.95 }}
+            {...hoverLift}
             onClick={() => navigate("/auth")}
           >
             Explore All Analytics Features
