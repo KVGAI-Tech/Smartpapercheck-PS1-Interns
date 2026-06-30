@@ -74,7 +74,7 @@ const USP = () => {
               <span>Comparison</span>
             </div>
           </div>
-          <h2 className="text-4xl sm:text-5xl font-bold mb-6 text-gray-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Our <span className="text-accent relative inline-block font-serif italic pr-2">
               Edge
               <svg className="absolute -bottom-2 left-0 w-full h-3 text-accent/50 overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 10" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -91,14 +91,14 @@ const USP = () => {
               </svg>
             </span> Over Others
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             See how Smart Paper Check stands out from traditional evaluation platforms with our cutting-edge AI technologies.
           </p>
         </motion.div>
 
         <div className="relative">
           {/* Highlight column background */}
-          <div className="absolute top-0 bottom-0 left-[33%] w-[22%] bg-accent/[0.03] border border-accent/20 rounded-2xl shadow-[0_0_40px_rgba(var(--accent-rgb),0.1)] -z-10 pointer-events-none hidden md:block" />
+          <div className="absolute top-0 bottom-0 left-[34%] w-[22%] bg-accent/[0.03] border border-accent/20 rounded-2xl shadow-[0_0_40px_rgba(var(--accent-rgb),0.1)] -z-10 pointer-events-none hidden md:block" />
 
           <motion.div 
             className="w-full rounded-2xl shadow-xl bg-white/50 backdrop-blur-sm border border-gray-100 overflow-visible"
@@ -108,14 +108,14 @@ const USP = () => {
             viewport={{ once: true, amount: 0.2 }}
           >
             <div className="w-full overflow-x-auto pb-4 -mb-4">
-              <table className="min-w-full border-collapse">
+              <table className="min-w-full border-collapse table-fixed">
               <thead>
                 <tr>
-                  <th className="px-6 py-6 text-left text-sm font-bold text-gray-500 uppercase tracking-wider bg-transparent w-1/3 font-mono">Features</th>
+                  <th className="px-6 py-6 text-left text-sm font-bold text-gray-500 uppercase tracking-wider bg-transparent w-[34%] font-mono">Features</th>
                   {competitors.map((competitor, idx) => (
                     <th 
                       key={idx} 
-                      className={`px-6 py-6 text-center ${
+                      className={`px-6 py-6 text-center w-[22%] ${
                         competitor.highlight 
                           ? "text-accent bg-accent/[0.02]" 
                           : "text-gray-600 bg-transparent"

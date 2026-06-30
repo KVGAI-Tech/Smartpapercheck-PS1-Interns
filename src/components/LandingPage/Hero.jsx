@@ -99,9 +99,8 @@ const Hero = ({ scrollToDemo }) => {
                 Built with Explainable AI · Powered by LLMs · Trusted by Institutions
               </span>
             </motion.div>
-
             <motion.h1
-              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6"
+              className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6 text-balance"
               custom={1}
               initial="hidden"
               animate="visible"

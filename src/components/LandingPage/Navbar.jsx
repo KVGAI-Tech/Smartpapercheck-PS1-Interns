@@ -1,7 +1,8 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { HiOutlineMenu, HiX } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 const MobileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,10 +17,21 @@ const MobileMenu = () => {
     { name: "Docs", link: "https://docs.smart-qna.com/" },
   ];
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   return (
     <div className="lg:hidden">
       <button
-        className="p-2 rounded-md bg-accent/10 text-accent"
+        className="p-2 rounded-md bg-accent/10 text-accent relative z-50"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label="Toggle menu"
@@ -31,56 +43,77 @@ const MobileMenu = () => {
         )}
       </button>
 
-      <motion.div
-        initial={{ x: "100%" }}
-        animate={{ x: isOpen ? 0 : "100%" }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="fixed top-0 right-0 h-full w-full max-w-sm bg-white shadow-xl z-50 overflow-y-auto"
-      >
-        <div className="p-6 text-gray-900">
-          <div className="flex justify-between items-center mb-8">
-            <img src="/logo_smartqna.png" alt="Smart Paper Check Logo" className="h-7" />
-            <button onClick={() => setIsOpen(false)} className="p-2 rounded-md hover:bg-gray-100">
-              <HiX className="w-6 h-6 text-gray-600" />
-            </button>
-          </div>
-
-          <nav className="space-y-1">
-            {options.map((item) => (
-              <a
-                key={item.name}
-                href={item.link}
-                className="block py-3 px-4 border-l-2 border-transparent hover:border-accent hover:bg-accent/5 rounded-r-lg transition-all duration-200 text-base text-gray-800"
+      {typeof window !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              {/* Backdrop overlay */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-black/45 z-40"
                 onClick={() => setIsOpen(false)}
+              />
+
+              {/* Menu Drawer */}
+              <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="fixed top-0 right-0 h-full w-full max-w-sm bg-white shadow-xl z-50 overflow-y-auto"
               >
-                {item.name}
-              </a>
-            ))}
-          </nav>
+                <div className="p-6 text-gray-900">
+                  <div className="flex justify-between items-center mb-8">
+                    <img src="/logo_smartqna.png" alt="Smart Paper Check Logo" className="h-7" />
+                    <button onClick={() => setIsOpen(false)} className="p-2 rounded-md hover:bg-gray-100">
+                      <HiX className="w-6 h-6 text-gray-600" />
+                    </button>
+                  </div>
 
-          <div className="mt-8 space-y-4">
-            <a
-              href="https://blog.smart-qna.com/"
-              className="w-full py-3 px-6 border border-accent text-accent rounded-md text-base font-medium hover:bg-accent/10 transition-colors duration-200 block text-center"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setIsOpen(false)}
-            >
-              Blogs
-            </a>
+                  <nav className="space-y-1">
+                    {options.map((item) => (
+                      <a
+                        key={item.name}
+                        href={item.link}
+                        className="block py-3 px-4 border-l-2 border-transparent hover:border-accent hover:bg-accent/5 rounded-r-lg transition-all duration-200 text-base text-gray-800"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        {item.name}
+                      </a>
+                    ))}
+                  </nav>
 
-            <button
-              className="w-full bg-accent py-3 px-6 rounded-md text-base font-medium hover:bg-accent transition-opacity duration-200 text-white"
-              onClick={() => {
-                setIsOpen(false);
-                navigate("/auth");
-              }}
-            >
-              Get Started 🚀
-            </button>
-          </div>
-        </div>
-      </motion.div>
+                  <div className="mt-8 space-y-4">
+                    <a
+                      href="https://blog.smart-qna.com/"
+                      className="w-full py-3 px-6 border border-accent text-accent rounded-md text-base font-medium hover:bg-accent/10 transition-colors duration-200 block text-center"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Blogs
+                    </a>
+
+                    <button
+                      className="w-full bg-accent py-3 px-6 rounded-md text-base font-medium hover:bg-accent transition-opacity duration-200 text-white"
+                      onClick={() => {
+                        setIsOpen(false);
+                        navigate("/auth");
+                      }}
+                    >
+                      Get Started 🚀
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 };

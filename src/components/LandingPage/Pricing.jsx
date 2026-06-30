@@ -237,7 +237,7 @@ const Pricing = () => {
             </span>
             <span className="h-px w-8 sm:w-10 bg-gradient-to-l from-transparent to-accent/50" />
           </div>
-          <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.1] mb-5 text-gray-900">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-5 text-gray-900">
             Pay only for the scripts{" "}
             <motion.span
               className="text-accent inline-block"
@@ -259,7 +259,7 @@ const Pricing = () => {
               ))}
             </motion.span>
           </h2>
-          <p className="text-lg sm:text-xl text-gray-500 font-normal max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-8 leading-relaxed">
             Plans for solo tutors up to full universities. Start on a free trial,
             then move to a paid plan once your volume grows.
           </p>

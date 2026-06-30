@@ -5,7 +5,7 @@ import { HiChevronDown } from "react-icons/hi";
 const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
   return (
     <motion.div
-      className="border-b border-gray-200 overflow-hidden"
+      className="border-b border-gray-200"
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -102,10 +102,10 @@ const FAQ = () => {
           transition={{ duration: 0.5 }}
           viewport={{ once: true, amount: 0.2 }}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Frequently Asked <span className="text-accent">Questions</span>
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Find answers to common questions about Smart Paper Check's capabilities and features
           </p>
         </motion.div>

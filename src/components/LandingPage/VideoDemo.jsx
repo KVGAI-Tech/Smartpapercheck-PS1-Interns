@@ -233,12 +233,11 @@ const VideoDemo = () => {
               <span>Product Demo</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             See <span className="text-accent">Smart Paper Check</span> in Action
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto" style={{ fontWeight: 300, lineHeight: "1.7" }}>
-            Watch how Smart Paper Check transforms handwritten copies into fully
-            graded evaluations with feedback in minutes.
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Watch how Smart Paper Check transforms handwritten copies into fully graded evaluations with feedback in minutes.
           </p>
         </motion.div>
 

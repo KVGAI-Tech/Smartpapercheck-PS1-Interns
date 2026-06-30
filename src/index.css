@@ -20,7 +20,7 @@ body,
   overflow-y: auto;
   background-color: var(--bg-color) !important;
   color: var(--text-color) !important;
-  font-family: sans-serif;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 html {

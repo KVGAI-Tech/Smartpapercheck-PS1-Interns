@@ -241,7 +241,7 @@ const FlipCard = ({ iconType, title, description, backDetail, index }) => {
   return (
     <motion.div
       ref={ref}
-      className="min-h-56 cursor-pointer"
+      className="min-h-[17.5rem] sm:min-h-56 cursor-pointer"
       style={{ perspective: "1000px" }}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -253,8 +253,8 @@ const FlipCard = ({ iconType, title, description, backDetail, index }) => {
       aria-label={`${title} — click to ${flipped ? "hide" : "see"} details`}
     >
       <motion.div
-        className="relative w-full h-full"
-        style={{ transformStyle: "preserve-3d", minHeight: "14rem" }}
+        className="relative w-full h-full min-h-[17.5rem] sm:min-h-56"
+        style={{ transformStyle: "preserve-3d" }}
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.5, type: "spring", stiffness: 120, damping: 18 }}
       >
@@ -403,12 +403,11 @@ const Features = ({
               <span>Features & Benefits</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Why <span className="text-accent">Smart Paper Check</span>?
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            AI-powered features to streamline grading, course management, and
-            script evaluation — efficient, accurate, and effortless.
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            AI-powered features to streamline grading, course management, and script evaluation — efficient, accurate, and effortless.
           </p>
         </motion.div>
 

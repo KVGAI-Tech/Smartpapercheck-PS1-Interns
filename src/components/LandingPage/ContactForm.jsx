@@ -4,23 +4,23 @@ import { HiOutlineMail, HiOutlineChat, HiOutlineCheck } from "react-icons/hi";
 import { FiSend } from "react-icons/fi";
 
 const RadarGraphic = () => (
-  <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center my-8 shrink-0">
-    {/* Concentric Circles */}
+  <div className="relative w-[230px] h-[230px] min-h-[230px] min-[375px]:w-[280px] min-[375px]:h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center my-8 shrink-0">
+    {/* Concentric Circles using percentages for fluid scaling */}
     <div className="absolute inset-0 rounded-full border border-accent/30"></div>
-    <div className="absolute inset-10 rounded-full border border-accent/20"></div>
-    <div className="absolute inset-20 rounded-full border border-accent/10"></div>
-    <div className="absolute inset-[110px] rounded-full border border-accent/5"></div>
+    <div className="absolute inset-[12.5%] rounded-full border border-accent/20"></div>
+    <div className="absolute inset-[25%] rounded-full border border-accent/10"></div>
+    <div className="absolute inset-[37.5%] rounded-full border border-accent/5"></div>
     
     {/* Center Element */}
     <div className="absolute w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center z-10 border border-gray-50">
       <img src="https://i.pravatar.cc/150?img=68" alt="Center Avatar" className="w-10 h-10 rounded-full" />
     </div>
 
-    {/* Floating Avatars */}
+    {/* Floating Avatars using relative positioning */}
     <motion.div 
       animate={{ y: [0, -10, 0] }} 
       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-      className="absolute top-4 left-10 w-11 h-11 bg-white rounded-full shadow-lg p-0.5"
+      className="absolute top-[6%] left-[12%] w-11 h-11 bg-white rounded-full shadow-lg p-0.5"
     >
         <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
@@ -28,7 +28,7 @@ const RadarGraphic = () => (
     <motion.div 
       animate={{ y: [0, 15, 0] }} 
       transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-      className="absolute bottom-10 right-10 w-12 h-12 bg-white rounded-full shadow-lg p-0.5"
+      className="absolute bottom-[12%] right-[12%] w-12 h-12 bg-white rounded-full shadow-lg p-0.5"
     >
         <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
@@ -36,7 +36,7 @@ const RadarGraphic = () => (
     <motion.div 
       animate={{ y: [0, -8, 0] }} 
       transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-      className="absolute top-1/2 -left-3 w-9 h-9 bg-white rounded-full shadow-lg p-0.5"
+      className="absolute top-1/2 -left-[3%] w-9 h-9 bg-white rounded-full shadow-lg p-0.5"
     >
         <img src="https://i.pravatar.cc/150?img=47" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
@@ -44,7 +44,7 @@ const RadarGraphic = () => (
     <motion.div 
       animate={{ y: [0, 12, 0] }} 
       transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-      className="absolute -top-2 right-1/4 w-8 h-8 bg-white rounded-full shadow-lg p-0.5"
+      className="absolute -top-[2%] right-[25%] w-8 h-8 bg-white rounded-full shadow-lg p-0.5"
     >
         <img src="https://i.pravatar.cc/150?img=59" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
@@ -52,7 +52,7 @@ const RadarGraphic = () => (
     <motion.div 
       animate={{ y: [0, -10, 0] }} 
       transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
-      className="absolute bottom-6 left-1/4 w-7 h-7 bg-white rounded-full shadow-lg p-0.5"
+      className="absolute bottom-[6%] left-[25%] w-7 h-7 bg-white rounded-full shadow-lg p-0.5"
     >
         <img src="https://i.pravatar.cc/150?img=60" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
@@ -150,10 +150,10 @@ const ContactForm = () => {
               <span>Contact Us</span>
             </motion.div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-3 text-gray-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Let's start a <span className="text-accent">Conversation</span>
           </h2>
-          <p className="text-base text-gray-700 max-w-2xl mx-auto font-medium">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Fill in the blanks below to send us a quick message. We'd love to hear from you.
           </p>
         </motion.div>
@@ -166,7 +166,7 @@ const ContactForm = () => {
           className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row"
         >
           {/* Left Column - Visuals & Info */}
-          <div className="w-full lg:w-[45%] bg-gray-50/50 p-8 lg:p-12 relative flex flex-col items-center justify-between border-b lg:border-b-0 lg:border-r border-gray-100 overflow-hidden">
+          <div className="w-full lg:w-[45%] bg-gray-50/50 p-5 sm:p-8 lg:p-12 relative flex flex-col items-center justify-between border-b lg:border-b-0 lg:border-r border-gray-100 overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-accent/5 to-transparent"></div>
             <RadarGraphic />
             <ContactInfoCard />

@@ -64,9 +64,18 @@ export default function Testimonials() {
     return () => ro.disconnect();
   }, []);
 
+  // Compute card sizes dynamically so it scales on mobile viewports without clipping
+  const cardWidth = containerWidth > 0 ? Math.min(300, containerWidth - 32) : 300;
+  const cardGap = containerWidth > 0 && containerWidth < 480 ? 16 : 28;
+
   const getX = useCallback(
-    (index, cw) =>
-      (cw ?? containerWidth) / 2 - (index * CARD_STEP + CARD_WIDTH / 2),
+    (index, cw) => {
+      const currentCw = cw ?? containerWidth;
+      const currentCardWidth = currentCw > 0 ? Math.min(300, currentCw - 32) : 300;
+      const currentCardGap = currentCw > 0 && currentCw < 480 ? 16 : 28;
+      const currentCardStep = currentCardWidth + currentCardGap;
+      return currentCw / 2 - (index * currentCardStep + currentCardWidth / 2);
+    },
     [containerWidth]
   );
 
@@ -104,10 +113,10 @@ export default function Testimonials() {
               <span className="mr-2">🧑‍🏫</span><span>Trusted by Educators</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             What <span className="text-accent">Professors Are Saying</span>
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Hear from faculty members who've transformed their evaluation process with Smart Paper Check
           </p>
         </div>
@@ -124,7 +133,7 @@ export default function Testimonials() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: `${CARD_GAP}px`,
+              gap: `${cardGap}px`,
               width: "max-content",
               willChange: "transform",
             }}
@@ -135,7 +144,7 @@ export default function Testimonials() {
                 <div
                   key={i}
                   style={{
-                    width: `${CARD_WIDTH}px`,
+                    width: `${cardWidth}px`,
                     flexShrink: 0,
                     transform: active ? "scale(1.08)" : "scale(0.87)",
                     opacity: active ? 1 : 0.5,

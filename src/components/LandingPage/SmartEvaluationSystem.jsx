@@ -35,10 +35,10 @@ const SmartEvaluationSystem = () => {
           transition={{ duration: 0.6 }}
           viewport={{ once: true, amount: 0.2 }}
         >
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Smart Evaluation System
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Everything you need to automate academic grading with complete transparency and human-level accuracy.
           </p>
         </motion.div>
@@ -47,7 +47,7 @@ const SmartEvaluationSystem = () => {
           {features.map((item, idx) => (
             <motion.div
               key={idx}
-              className="bg-white p-8 rounded-2xl shadow-[0_2px_15px_rgb(0,0,0,0.04)] border border-slate-100 hover:border-accent/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 flex flex-col sm:flex-row items-start gap-6 group cursor-default"
+              className="bg-white p-6 sm:p-8 rounded-2xl shadow-[0_2px_15px_rgb(0,0,0,0.04)] border border-slate-100 hover:border-accent/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 flex flex-col sm:flex-row items-start gap-6 group cursor-default"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: idx * 0.1 }}

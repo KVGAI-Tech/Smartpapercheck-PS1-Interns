@@ -47,7 +47,7 @@ module.exports = {
         accent: "rgb(var(--accent-rgb) / <alpha-value>)",
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Outfit', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
     },
   },
