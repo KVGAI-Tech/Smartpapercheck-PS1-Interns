@@ -188,7 +188,7 @@ const Hero = ({ scrollToDemo }) => {
               
               <motion.div
                 className="absolute bottom-2 left-4 bg-white/90 backdrop-blur px-4 py-2 rounded-xl text-gray-800 text-sm font-bold shadow-xl border border-gray-100 z-10 flex items-center gap-2"
-                initial={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.4 }}
               >

@@ -246,7 +246,7 @@ const FlipCard = ({ iconType, title, description, backDetail, index }) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08 }}
-      viewport={{ once: true }}
+      viewport={{ once: true, amount: 0.2 }}
       onClick={() => setFlipped(!flipped)}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
@@ -395,7 +395,7 @@ const Features = ({
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
@@ -415,10 +415,10 @@ const Features = ({
         {/* Tab Switcher */}
         <motion.div
           className="flex justify-center mb-10"
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="inline-flex bg-gray-100 rounded-full p-1 gap-1">
             {tabs.map((tab) => (
@@ -454,10 +454,10 @@ const Features = ({
         <motion.p
           className="text-center text-gray-400 text-sm mb-8"
           style={{ fontFamily: "'Sora', sans-serif", letterSpacing: "0.02em" }}
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           Click any card to explore more details
         </motion.p>
@@ -469,7 +469,7 @@ const Features = ({
             className={`grid grid-cols-1 md:grid-cols-2 ${
               activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-3"
             } gap-6`}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3 }}
@@ -501,7 +501,7 @@ const Features = ({
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
           onHoverStart={() => setCtaHovered(true)}
           onHoverEnd={() => setCtaHovered(false)}
         >

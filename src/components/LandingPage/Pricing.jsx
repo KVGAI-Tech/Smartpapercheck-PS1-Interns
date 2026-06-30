@@ -228,7 +228,7 @@ const Pricing = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex items-center justify-center gap-3 mb-5">
             <span className="h-px w-8 sm:w-10 bg-gradient-to-r from-transparent to-accent/50" />
@@ -244,7 +244,7 @@ const Pricing = () => {
               variants={wordReveal}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, amount: 0.2 }}
               aria-label="you grade"
             >
               {"you grade".split("").map((ch, i) => (
@@ -367,7 +367,7 @@ const Pricing = () => {
                   variants={featureList}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true }}
+                  viewport={{ once: true, amount: 0.2 }}
                 >
                   {plan.features.map((f, i) => (
                     <motion.li key={i} variants={featureItem} className="flex items-start gap-2.5">
@@ -404,10 +404,10 @@ const Pricing = () => {
         {/* ---------------- Cost estimator (volume slider) ---------------- */}
         <motion.div
           className="mt-20 max-w-4xl mx-auto rounded-2xl bg-gradient-to-br from-accent/5 to-accent/10 border border-accent/20 p-8 sm:p-10"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center">
@@ -497,7 +497,7 @@ const Pricing = () => {
                 <motion.span
                   key={recommended}
                   className="inline-block"
-                  initial={{ opacity: 0, y: 6 }}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.25 }}
@@ -584,10 +584,10 @@ const Pricing = () => {
         {/* Trust strip + custom plan */}
         <motion.div
           className="mt-16 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mb-8 text-sm text-gray-500">
             {["No setup fees", "Cancel anytime", "Used at 50+ institutions"].map((t) => (

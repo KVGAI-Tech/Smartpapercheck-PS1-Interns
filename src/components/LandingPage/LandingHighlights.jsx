@@ -73,7 +73,7 @@ const ACCENT_ICON_BG = "rgba(22, 109, 112, 0.12)";
 
 export default function LandingHighlights() {
   const sectionRef = useRef(null);
-  const isInView = useInView(sectionRef, { once: true, margin: "-80px" });
+  const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
   const [activeCard, setActiveCard] = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const navigate = useNavigate();
@@ -164,7 +164,7 @@ export default function LandingHighlights() {
         >
           <motion.h2
             className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-4"
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
@@ -175,7 +175,7 @@ export default function LandingHighlights() {
           </motion.h2>
           <motion.p
             className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto font-medium"
-            initial={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
@@ -222,7 +222,7 @@ export default function LandingHighlights() {
                     {activeCard === i && (
                       <motion.div
                         className="absolute pointer-events-none rounded-full"
-                        initial={{ opacity: 0 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 0.6 }}
                         exit={{ opacity: 0 }}
                         style={{
@@ -295,7 +295,7 @@ export default function LandingHighlights() {
                   {/* Description */}
                   <motion.p
                     className="text-base text-gray-600 leading-relaxed relative z-10"
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1 } : {}}
                     transition={{ duration: 0.5, delay: 0.6 + i * 0.15 }}
                   >
@@ -307,7 +307,7 @@ export default function LandingHighlights() {
                     {activeCard === i && (
                       <motion.div
                         className="absolute bottom-4 left-7 flex items-center gap-1 text-xs font-medium z-10 text-accent cursor-pointer"
-                        initial={{ opacity: 0, y: 8 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
                         transition={{ duration: 0.2 }}
