@@ -1,12 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-const Footer = () => {
+const Footer = ({ scrollToSection }) => {
   const quickLinks = [
-    { name: "Home", href: "/" },
-    { name: "Features", href: "#features" },
-    { name: "Pricing", href: "#pricing" },
-    { name: "FAQ", href: "#faq" },
+    { name: "Home", sectionId: "home" },
+    { name: "Features", sectionId: "features" },
+    { name: "Pricing", sectionId: "pricing" },
+    { name: "FAQ", sectionId: "faq" },
   ];
 
   const legalLinks = [
@@ -54,6 +54,13 @@ const Footer = () => {
     });
   };
 
+  const handleQuickLinkClick = (e, item) => {
+    e.preventDefault();
+    if (scrollToSection) {
+      scrollToSection(item.sectionId);
+    }
+  };
+
   return (
     <footer className="bg-white border-t border-gray-200" aria-labelledby="footer-heading">
       <h2 id="footer-heading" className="sr-only">
@@ -74,8 +81,8 @@ const Footer = () => {
                 alt="Smart Paper Check Logo" 
                 className="h-8 mr-3 transition-transform group-hover:-translate-y-0.5 duration-300" 
               />
-              <div className="font-medium text-xl text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
-                Smart<span className="font-light italic text-teal-600"> Paper Check</span>
+              <div className="font-medium text-xl text-gray-900 group-hover:text-accent transition-colors duration-300">
+                Smart<span className="font-light italic text-accent"> Paper Check</span>
               </div>
             </motion.div>
             <p className="text-gray-600 text-sm leading-6 max-w-xs">
@@ -103,7 +110,11 @@ const Footer = () => {
               <ul className="mt-4 space-y-4">
                 {quickLinks.map((item) => (
                   <li key={item.name}>
-                    <a href={item.href} className="text-base text-gray-700 hover:text-teal-600 transition-colors">
+                    <a
+                      href={`#${item.sectionId}`}
+                      onClick={(e) => handleQuickLinkClick(e, item)}
+                      className="text-base text-gray-700 hover:text-accent transition-colors"
+                    >
                       {item.name}
                     </a>
                   </li>
@@ -116,12 +127,12 @@ const Footer = () => {
               <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">Contact</h3>
               <ul className="mt-4 space-y-4">
                 <li>
-                  <a href="mailto:info@smart-qna.com" className="text-base text-gray-700 hover:text-teal-600 transition-colors">
+                  <a href="mailto:info@smart-qna.com" className="text-base text-gray-700 hover:text-accent transition-colors">
                     info@smart-qna.com
                   </a>
                 </li>
                 <li>
-                  <a href="mailto:support@smart-qna.com" className="text-base text-gray-700 hover:text-teal-600 transition-colors">
+                  <a href="mailto:support@smart-qna.com" className="text-base text-gray-700 hover:text-accent transition-colors">
                     support@smart-qna.com
                   </a>
                 </li>
@@ -134,7 +145,7 @@ const Footer = () => {
               <ul className="mt-4 space-y-4">
                 {legalLinks.map((item) => (
                   <li key={item.name}>
-                    <a href={item.href} className="text-base text-gray-700 hover:text-teal-600 transition-colors">
+                    <a href={item.href} className="text-base text-gray-700 hover:text-accent transition-colors">
                       {item.name}
                     </a>
                   </li>
@@ -158,7 +169,7 @@ const Footer = () => {
                 "Unsubscribe anytime",
               ].map((perk) => (
                 <li key={perk} className="flex items-center gap-2 text-gray-600 text-xs">
-                  <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                   </svg>
                   {perk}
@@ -171,12 +182,12 @@ const Footer = () => {
               <input
                 type="email"
                 placeholder="you@institution.edu"
-                className="w-full bg-white border border-gray-300 rounded-md py-2.5 px-4 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
+                className="w-full bg-white border border-gray-300 rounded-md py-2.5 px-4 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-colors duration-200"
                 required
               />
               <button
                 type="submit"
-                className="w-full bg-teal-600 text-white text-sm font-medium py-2.5 rounded-md hover:bg-teal-700 transition-colors duration-200"
+                className="w-full bg-accent text-white text-sm font-medium py-2.5 rounded-md hover:bg-accent/90 transition-colors duration-200"
               >
                 Subscribe
               </button>

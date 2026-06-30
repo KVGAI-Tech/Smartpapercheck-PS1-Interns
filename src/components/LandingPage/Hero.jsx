@@ -136,7 +136,7 @@ const Hero = ({ scrollToDemo }) => {
                 whileTap={{ scale: 0.95 }}
               >
                 <HiOutlineRocketLaunch className="text-white text-xl" />
-                <span>Request a Product Demo</span>
+                <span>Get Started</span>
               </motion.button>
               
               <motion.button
