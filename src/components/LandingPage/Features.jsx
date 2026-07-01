@@ -218,7 +218,7 @@ const MultilingualIcon = () => (
 );
 
 // ─── Flip Card ───────────────────────────────────────────────────
-const FlipCard = ({ iconType, title, description, backDetail, index }) => {
+const FlipCard = ({ iconType, title, description, backDetail, index, className = "" }) => {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
   const ref = useRef(null);
@@ -242,7 +242,7 @@ const FlipCard = ({ iconType, title, description, backDetail, index }) => {
   return (
     <motion.div
       ref={ref}
-      className="min-h-56 cursor-pointer"
+      className={`min-h-56 cursor-pointer ${className}`}
       style={{ perspective: "1000px" }}
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -468,23 +468,32 @@ const Features = ({
           <motion.div
             key={activeTab}
             className={`grid grid-cols-1 md:grid-cols-2 ${
-              activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-3"
+
+              activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-6"
             } gap-6 lg:gap-8`}
+            
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3 }}
           >
-            {activeItems.map((item, index) => (
-              <FlipCard
-                key={item.title}
-                iconType={item.iconType}
-                title={item.title}
-                description={item.description}
-                backDetail={item.backDetail}
-                index={index}
-              />
-            ))}
+            {activeItems.map((item, index) => {
+              const isFeatures = activeTab === "features";
+              const cardClass = isFeatures
+                ? `lg:col-span-2${index === 3 ? " lg:col-start-2" : ""}`
+                : "";
+              return (
+                <FlipCard
+                  key={item.title}
+                  className={cardClass}
+                  iconType={item.iconType}
+                  title={item.title}
+                  description={item.description}
+                  backDetail={item.backDetail}
+                  index={index}
+                />
+              );
+            })}
           </motion.div>
         </AnimatePresence>
 
