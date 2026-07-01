@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { HiOutlineCheck, HiOutlineX, HiSparkles } from "react-icons/hi";
+import { TRANSITION, hoverCard, viewportOnce } from "./motion";
 
 const USP = () => {
   const features = [
@@ -33,14 +34,14 @@ const USP = () => {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
+        staggerChildren: 0.08
       }
     }
   };
 
   const rowVariants = {
-    hidden: { opacity: 0, x: -20 },
-    show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 100 } }
+    hidden: { opacity: 0, y: 24 },
+    show: { opacity: 1, y: 0, transition: TRANSITION }
   };
 
   const textVariants = {
@@ -56,17 +57,18 @@ const USP = () => {
   };
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-gray-50 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Subtle background decoration */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
       
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
         <motion.div 
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2 text-accent uppercase tracking-[0.2em] text-sm font-mono font-bold">
@@ -105,7 +107,7 @@ const USP = () => {
             variants={containerVariants}
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
+            viewport={viewportOnce}
           >
             <div className="w-full overflow-x-auto pb-4 -mb-4">
               <table className="min-w-full border-collapse">
@@ -193,13 +195,13 @@ const USP = () => {
 
         <motion.div 
           className="mt-16 text-center"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ ...TRANSITION, delay: 0.4 }}
+          viewport={viewportOnce}
         >
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
+          <motion.div
+            {...hoverCard}
             className="inline-block py-6 px-8 rounded-2xl bg-gradient-to-r from-white to-gray-50 border border-accent/20 shadow-lg shadow-accent/5 hover:shadow-accent/10 transition-all duration-300 cursor-default"
           >
             <p className="text-gray-800 font-medium text-base sm:text-lg">
@@ -207,6 +209,7 @@ const USP = () => {
             </p>
           </motion.div>
         </motion.div>
+        </div>
       </div>
     </section>
   );

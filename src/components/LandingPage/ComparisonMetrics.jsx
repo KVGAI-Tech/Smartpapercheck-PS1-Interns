@@ -8,6 +8,7 @@ import {
   HiArrowRight,
   HiCheck,
 } from "react-icons/hi";
+import { TRANSITION, hoverLift, viewportOnce } from "./motion";
 
 const ACCURACY_FEATURES = [
   "Text Recognition",
@@ -54,7 +55,7 @@ const cardVariants = {
   visible: (i) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.55, delay: i * 0.12, ease: [0.22, 1, 0.36, 1] },
+    transition: { ...TRANSITION, delay: i * 0.08 },
   }),
 };
 
@@ -205,15 +206,15 @@ const ComparisonMetrics = () => {
   const navigate = useNavigate();
 
   return (
-    <section id="comparison" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="comparison" className="py-20 md:py-28 bg-white px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
 <h2 className="text-3xl sm:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Evaluation in <span className="text-accent">Minutes</span>, Not Days
@@ -225,14 +226,14 @@ const ComparisonMetrics = () => {
         </motion.div>
 
         {/* Highlight cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16">
           {/* Time reduction */}
           <motion.div
             custom={0}
             variants={cardVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
+            viewport={viewportOnce}
             className="group relative bg-white rounded-2xl border border-gray-200 p-8 shadow-sm hover:shadow-[0_12px_40px_rgba(22,109,112,0.28)] hover:border-accent/40 transition-all duration-300"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.06] via-transparent to-accent/[0.02] pointer-events-none rounded-2xl" />
@@ -313,7 +314,7 @@ const ComparisonMetrics = () => {
             variants={cardVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
+            viewport={viewportOnce}
             className="group relative bg-white rounded-2xl border border-gray-200 p-8 shadow-sm hover:shadow-[0_12px_40px_rgba(22,109,112,0.28)] hover:border-accent/40 transition-all duration-300 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.06] via-transparent to-accent/[0.02] pointer-events-none rounded-2xl" />
@@ -377,10 +378,10 @@ const ComparisonMetrics = () => {
                   {ACCURACY_FEATURES.map((feature, idx) => (
                     <motion.div
                       key={feature}
-                      initial={{ opacity: 0, x: 14 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.38, delay: 0.3 + idx * 0.09 }}
-                      viewport={{ once: true }}
+                      initial={{ opacity: 0, y: 24 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ ...TRANSITION, delay: 0.3 + idx * 0.08 }}
+                      viewport={viewportOnce}
                       className="flex flex-1 items-center gap-3.5 bg-gradient-to-r from-accent/[0.06] to-transparent border border-accent/15 rounded-xl px-4 py-3 hover:from-accent/[0.15] hover:border-accent/50 hover:shadow-[0_4px_18px_rgba(22,109,112,0.22)] transition-all"
                     >
                       <span className="w-6 h-6 rounded-full bg-accent flex items-center justify-center shrink-0 shadow-sm">
@@ -401,8 +402,8 @@ const ComparisonMetrics = () => {
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65 }}
-          viewport={{ once: true }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
           className="mb-16"
         >
           <div className="text-center mb-8">
@@ -438,11 +439,11 @@ const ComparisonMetrics = () => {
                 {metrics.map((metric, index) => (
                   <motion.tr
                     key={metric.title}
-                    className="hover:bg-accent/[0.07] hover:ring-2 hover:ring-inset hover:ring-accent/40 transition-all duration-200"
-                    initial={{ opacity: 0, x: -12 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.35, delay: index * 0.07 }}
-                    viewport={{ once: true }}
+                    className="group hover:bg-accent/[0.07] hover:ring-2 hover:ring-inset hover:ring-accent/40 transition-all duration-200"
+                    initial={{ opacity: 0, y: 24 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ ...TRANSITION, delay: index * 0.08 }}
+                    viewport={viewportOnce}
                   >
                     <td className="py-4 px-6 font-medium text-gray-900 text-base tracking-tight">
                       {metric.title}
@@ -469,10 +470,10 @@ const ComparisonMetrics = () => {
             {metrics.map((metric, index) => (
               <motion.div
                 key={metric.title}
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.06 }}
-                viewport={{ once: true }}
+                transition={{ ...TRANSITION, delay: index * 0.08 }}
+                viewport={viewportOnce}
                 className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:border-accent/50 hover:shadow-[0_8px_28px_rgba(22,109,112,0.22)] transition-all duration-200"
               >
                 <div className="flex items-center justify-between mb-4">
@@ -505,10 +506,10 @@ const ComparisonMetrics = () => {
 
         {/* CTA */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55 }}
-          viewport={{ once: true }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
           className="relative max-w-4xl mx-auto rounded-2xl border border-accent/15 bg-accent/10 p-8 sm:p-10 text-center overflow-hidden hover:border-accent/40 hover:bg-accent/[0.15] hover:shadow-[0_12px_40px_rgba(22,109,112,0.22)] transition-all duration-300"
         >
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-accent/10 blur-3xl rounded-full pointer-events-none" />
@@ -522,9 +523,7 @@ const ComparisonMetrics = () => {
 
             <motion.button
               className="bg-accent hover:bg-accent/90 text-white font-semibold py-3 px-7 rounded-full shadow-md hover:shadow-[0_6px_32px_rgba(22,109,112,0.6)] inline-flex items-center gap-2 transition-shadow"
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400, damping: 14 }}
+              {...hoverLift}
               onClick={() => navigate("/auth")}
             >
               See How It Works

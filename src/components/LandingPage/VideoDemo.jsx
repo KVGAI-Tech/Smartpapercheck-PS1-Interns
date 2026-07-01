@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Play } from 'lucide-react';
+import { TRANSITION, hoverCard, viewportOnce } from './motion';
 
 // ─── Accent color ───────────────────────────────────────────────
 const ACCENT = "#166D70";
@@ -84,7 +85,7 @@ const StatCard = ({ emoji, iconType, title, description, hovered, onHover, onLea
   };
   return (
     <motion.div
-      className="bg-white border rounded-xl p-6 transition-all duration-300 cursor-default"
+      className="bg-white border rounded-xl p-6 transition-all duration-300 cursor-default h-full flex flex-col"
       style={{
         border: hovered ? `1.5px solid ${ACCENT}` : "1.5px solid #f3f4f6",
         boxShadow: hovered
@@ -92,7 +93,7 @@ const StatCard = ({ emoji, iconType, title, description, hovered, onHover, onLea
           : "0 1px 4px rgba(0,0,0,0.06)",
         transition: "box-shadow 0.25s ease, border-color 0.25s ease",
       }}
-      whileHover={{ y: -4 }}
+      {...hoverCard}
       onHoverStart={onHover}
       onHoverEnd={onLeave}
     >
@@ -216,16 +217,17 @@ const VideoDemo = () => {
   ];
 
   return (
-    <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-6xl mx-auto">
+    <section id="demo" className="py-20 md:py-28 bg-white px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="max-w-6xl mx-auto">
 
         {/* Header */}
         <motion.div
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
@@ -247,8 +249,8 @@ const VideoDemo = () => {
           className="relative aspect-video rounded-xl overflow-hidden shadow-lg border border-gray-100"
           initial={{ opacity: 0, scale: 0.97 }}
           whileInView={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           {!videoPlaying ? (
             <div
@@ -317,10 +319,10 @@ const VideoDemo = () => {
         {/* Chapter Selector */}
         <motion.div
           className="flex flex-wrap justify-center gap-2 mt-6"
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          viewport={{ once: true }}
+          transition={{ ...TRANSITION, delay: 0.1 }}
+          viewport={viewportOnce}
         >
           {chapters.map((chapter, index) => (
             <ChapterButton
@@ -333,13 +335,14 @@ const VideoDemo = () => {
         </motion.div>
 
         {/* Stat Cards */}
-        <div ref={statsRef} className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div ref={statsRef} className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
+              className="h-full"
+              initial={{ opacity: 0, y: 24 }}
               animate={statsInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: index * 0.12 }}
+              transition={{ ...TRANSITION, delay: index * 0.08 }}
             >
               <StatCard
                 emoji={stat.emoji}
@@ -355,6 +358,7 @@ const VideoDemo = () => {
           ))}
         </div>
 
+        </div>
       </div>
     </section>
   );
