@@ -40,7 +40,7 @@ const highlights = [
     mainPrefix: "₹",
     mainSuffix: "/semester (India)",
     sub: "$30/hour (US)",
-    desc: "Automated grading at a fraction of the cost.",
+    desc: "Automated grading at a fraction of the cost. Eliminate massive TA expenses.",
     linkTo: "pricing",
   },
   {
@@ -49,7 +49,8 @@ const highlights = [
     main: "500",
     mainPrefix: "",
     mainSuffix: " scripts in 5 min",
-    desc: "Instant results, no bottlenecks. Grade a full batch simultaneously.",
+    sub: "Zero wait time",
+    desc: "Instant results, no bottlenecks. Grade a full batch simultaneously and provide faster feedback to students.",
     linkTo: "features",
   },
   {
@@ -203,7 +204,7 @@ export default function LandingHighlights() {
               >
                 {/* Card */}
                 <div
-                  className="relative rounded-3xl p-7 sm:p-8 pb-16 h-full flex flex-col gap-4 overflow-hidden transition-all duration-500"
+                  className="relative rounded-3xl p-7 pb-16 sm:p-8 sm:pb-20 h-full flex flex-col gap-4 overflow-hidden transition-all duration-500"
                   style={{
                     background: activeCard === i
                       ? 'linear-gradient(135deg, rgba(22,109,112,0.06), rgba(22,109,112,0.02))'
