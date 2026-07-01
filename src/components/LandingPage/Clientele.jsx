@@ -44,7 +44,7 @@ const Clientele = () => {
   return (
     <section 
       ref={sectionRef}
-      className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+      className="py-20 md:py-28 relative overflow-hidden px-4 sm:px-6 lg:px-8"
       style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf9 40%, #ecfdf5 100%)' }}
     >
       {/* Floating Particles Background */}

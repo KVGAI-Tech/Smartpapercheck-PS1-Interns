@@ -27,8 +27,8 @@ const features = [
 
 const SmartEvaluationSystem = () => {
   return (
-    <section className="w-full py-20 bg-white relative z-10 border-t border-slate-100">
-      <div className="container mx-auto max-w-7xl px-4 md:px-8">
+    <section className="w-full py-20 md:py-28 bg-white relative z-10 border-t border-slate-100 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 24 }}
@@ -44,7 +44,7 @@ const SmartEvaluationSystem = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
           {features.map((item, idx) => (
             <motion.div
               key={idx}

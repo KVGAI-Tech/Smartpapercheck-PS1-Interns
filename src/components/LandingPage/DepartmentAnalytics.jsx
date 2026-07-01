@@ -513,7 +513,7 @@ const DepartmentAnalytics = () => {
   const summaryStats = getSummaryStats();
 
   return (
-    <section className="relative py-6 md:py-16 px-4 sm:px-6 md:px-8 lg:px-12 min-h-screen bg-gray-50 overflow-hidden">
+    <section className="relative py-20 md:py-28 min-h-screen bg-gray-50 overflow-hidden px-4 sm:px-6 lg:px-8">
       <ParticleBackground />
       
       <div className="max-w-7xl mx-auto relative z-10">
@@ -619,7 +619,7 @@ const DepartmentAnalytics = () => {
                   </span>
                 </div>
                 
-                <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 lg:gap-6">
+                <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
                   <div className="bg-slate-100 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
                     <p className="text-[9px] md:text-xs text-gray-600 mb-1 font-medium uppercase tracking-tight md:tracking-wide leading-tight">Avg. SPC Score</p>
                     <p className="text-xl md:text-3xl font-bold text-accent mb-0.5 md:mb-1">{summaryStats.avgSmartQnA}%</p>

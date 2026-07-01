@@ -206,7 +206,7 @@ const ComparisonMetrics = () => {
   const navigate = useNavigate();
 
   return (
-    <section id="comparison" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="comparison" className="py-20 md:py-28 bg-white px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -226,7 +226,7 @@ const ComparisonMetrics = () => {
         </motion.div>
 
         {/* Highlight cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16">
           {/* Time reduction */}
           <motion.div
             custom={0}
@@ -439,7 +439,7 @@ const ComparisonMetrics = () => {
                 {metrics.map((metric, index) => (
                   <motion.tr
                     key={metric.title}
-                    className="hover:bg-accent/[0.07] hover:ring-2 hover:ring-inset hover:ring-accent/40 transition-all duration-200"
+                    className="group hover:bg-accent/[0.07] hover:ring-2 hover:ring-inset hover:ring-accent/40 transition-all duration-200"
                     initial={{ opacity: 0, y: 24 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ ...TRANSITION, delay: index * 0.08 }}
