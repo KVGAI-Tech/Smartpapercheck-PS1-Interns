@@ -384,6 +384,8 @@ const Insights = () => {
               <HiArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
             </motion.button>
           </div>
+
+
         </motion.div>
 
         {/* ── Bento grid ─────────────────────────────────────────────────── */}

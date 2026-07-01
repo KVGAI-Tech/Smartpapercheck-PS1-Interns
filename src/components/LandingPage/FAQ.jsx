@@ -6,8 +6,8 @@ import { TRANSITION, hoverLift, viewportOnce } from "./motion";
 const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
   return (
     <motion.div
-      className="border-b border-gray-200 overflow-hidden"
-      initial={{ opacity: 0, y: 24 }}
+    className="border-b border-gray-200 overflow-hidden"
+    initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ ...TRANSITION, delay: index * 0.08 }}
       viewport={viewportOnce}
@@ -103,10 +103,10 @@ const FAQ = () => {
           transition={TRANSITION}
           viewport={viewportOnce}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Frequently Asked <span className="text-accent">Questions</span>
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Find answers to common questions about Smart Paper Check's capabilities and features
           </p>
         </motion.div>

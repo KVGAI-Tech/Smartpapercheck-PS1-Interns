@@ -1,6 +1,7 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
 const EASE_OUT = { type: "spring", stiffness: 110, damping: 22 };
@@ -27,118 +28,124 @@ const ISLAND = {
 function MobileMenu({ scrollToSection }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+
   const close = () => setOpen(false);
 
   return (
     <div className="lg:hidden" style={{ flexShrink: 0 }}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        className="p-2 rounded-md bg-accent/10 text-accent relative z-50"
+        onClick={() => setOpen(!open)}
         aria-expanded={open}
-        aria-label="Toggle navigation menu"
-        style={{
-          ...ISLAND,
-          width: "44px", height: "44px",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#0d3234", cursor: "pointer",
-        }}
+        aria-label="Toggle menu"
       >
-        {open ? <X size={18} /> : <Menu size={18} />}
+        {open ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <Menu className="w-6 h-6" />
+        )}
       </button>
 
-      {open && (
-        <div
-          onClick={close}
-          style={{
-            position: "fixed", inset: 0,
-            background: "rgba(10,40,42,0.38)",
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
-            zIndex: 48,
-          }}
-        />
-      )}
+      {typeof window !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <>
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 bg-black/45 z-40"
+                  onClick={close}
+                />
 
-      <motion.div
-        initial={{ x: "100%" }}
-        animate={{ x: open ? 0 : "100%" }}
-        transition={EASE_OUT}
-        style={{
-          position: "fixed", top: 0, right: 0,
-          width: "min(300px, 86vw)",
-          height: "100dvh",
-          background: "#ffffff",
-          zIndex: 49,
-          boxShadow: "-16px 0 48px rgba(10,40,42,0.12)",
-          display: "flex", flexDirection: "column",
-          fontFamily: "Inter, system-ui, sans-serif",
-        }}
-      >
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "1.25rem 1.5rem",
-          borderBottom: "1px solid rgba(22,109,112,0.10)",
-          background: "#ffffff",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <img src="/logo_smartqna.png" alt="Smart Paper Check" style={{ height: "24px" }} />
-            <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#0d3234", letterSpacing: "-0.01em" }}>
-              Smart<span style={{ fontWeight: 400, fontStyle: "italic", color: "#166D70" }}> Paper Check</span>
-            </span>
-          </div>
-          <button onClick={close} style={{
-            width: "30px", height: "30px", display: "flex", alignItems: "center", justifyContent: "center",
-            borderRadius: "6px", border: "none", background: "transparent",
-            color: "rgba(10,40,42,0.40)", cursor: "pointer",
-          }}>
-            <X size={15} />
-          </button>
-        </div>
+                {/* Side Panel */}
+                <motion.div
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={EASE_OUT}
+                  className="fixed top-0 right-0 h-screen w-80 bg-white z-[60] shadow-2xl flex flex-col"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-6 py-5 border-b">
+                    <span className="font-semibold text-lg text-slate-800">
+                      Menu
+                    </span>
 
-        <nav style={{ padding: "0.75rem", flex: 1, background: "#ffffff" }}>
-          {NAV_LINKS.map((item, i) => (
-            <motion.a
-              key={item.name}
-              href={item.href}
-              target={item.isExternal ? "_blank" : "_self"}
-              rel={item.isExternal ? "noopener noreferrer" : ""}
-              initial={{ opacity: 0, x: 12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04, ...EASE_OUT }}
-              onClick={(e) => {
-                if (!item.isExternal) {
-                  e.preventDefault();
-                  scrollToSection?.(item.href.slice(1));
-                }
-                close();
-              }}
-              style={{
-                display: "block", padding: "11px 14px", borderRadius: "8px",
-                fontSize: "0.9375rem", fontWeight: 500, color: "rgba(10,40,42,0.68)",
-                textDecoration: "none", transition: "background 0.15s, color 0.15s",
-                marginBottom: "2px",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(22,109,112,0.07)"; e.currentTarget.style.color = "#0d3234"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(10,40,42,0.68)"; }}
-            >
-              {item.name}
-            </motion.a>
-          ))}
-        </nav>
+                    <button
+                      onClick={close}
+                      className="p-2 rounded-md hover:bg-gray-100"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
 
-        <div style={{ padding: "1rem 1rem 2.5rem", display: "flex", flexDirection: "column", gap: "10px", background: "#ffffff" }}>
-          <button
-            onClick={() => { close(); navigate("/auth"); }}
-            style={{
-              padding: "12px 20px", borderRadius: "100px",
-              border: "none", background: "#166D70",
-              color: "#fff", fontSize: "0.9375rem", fontWeight: 600,
-              cursor: "pointer", fontFamily: "Inter, system-ui, sans-serif", minHeight: "44px",
-            }}
-          >
-            Get Started
-          </button>
-        </div>
-      </motion.div>
+                  {/* Navigation */}
+                  <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                    {NAV_LINKS.map((item, i) => (
+                      <motion.a
+                        key={item.name}
+                        href={item.href}
+                        target={item.isExternal ? "_blank" : "_self"}
+                        rel={
+                          item.isExternal
+                            ? "noopener noreferrer"
+                            : undefined
+                        }
+                        initial={{ opacity: 0, x: 15 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{
+                          delay: i * 0.05,
+                          ...EASE_OUT,
+                        }}
+                        className="block rounded-lg px-4 py-3 text-slate-700 hover:bg-accent/10 hover:text-accent transition-colors"
+                        onClick={(e) => {
+                          if (!item.isExternal) {
+                            e.preventDefault();
+                            scrollToSection?.(item.href.slice(1));
+                          }
+                          close();
+                        }}
+                      >
+                        {item.name}
+                      </motion.a>
+                    ))}
+                  </nav>
+
+                  {/* Footer */}
+                  <div className="border-t p-4 space-y-3">
+                    <button
+                      className="w-full rounded-lg border border-accent py-3 text-accent font-medium hover:bg-accent/10 transition"
+                      onClick={() => {
+                        close();
+                        window.open(
+                          "https://blog.smart-qna.com/",
+                          "_blank"
+                        );
+                      }}
+                    >
+                      Blogs
+                    </button>
+
+                    <button
+                      className="w-full rounded-lg bg-accent py-3 text-white font-medium hover:opacity-90 transition"
+                      onClick={() => {
+                        close();
+                        navigate("/auth");
+                      }}
+                    >
+                      Get Started 🚀
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   );
 }

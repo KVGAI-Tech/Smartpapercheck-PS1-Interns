@@ -396,6 +396,7 @@ function VideoProcessingCard() {
             </div>
           )}
 
+
           <AnimatePresence>
             {!isPlaying && !videoError && (
               <motion.div
@@ -410,6 +411,7 @@ function VideoProcessingCard() {
                   pointerEvents: "none",
                   background: "rgba(10,40,42,0.22)",
                 }}
+
               >
                 <div style={{
                   width: "88px", height: "88px",

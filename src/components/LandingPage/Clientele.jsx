@@ -195,7 +195,7 @@ const Clientele = () => {
           transition={{ ...TRANSITION, delay: 0.6 }}
         >
           <motion.div 
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl cursor-pointer group"
+            className="flex items-center justify-center gap-3 px-4 sm:px-8 py-4 rounded-2xl cursor-pointer group w-full sm:w-auto sm:inline-flex"
             style={{
               background: 'linear-gradient(135deg, rgba(22,109,112,0.06), rgba(16,185,129,0.06))',
               border: '1px solid rgba(22,109,112,0.15)',
@@ -204,7 +204,7 @@ const Clientele = () => {
             {...hoverLift}
             onClick={() => navigate('/auth')}
           >
-            <p className="text-gray-600 text-sm sm:text-base font-medium">
+            <p className="text-gray-600 text-sm sm:text-base font-medium text-center sm:text-left">
               Join our growing list of partners and transform your evaluation process
             </p>
             <motion.span 

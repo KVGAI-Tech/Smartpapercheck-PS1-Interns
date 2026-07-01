@@ -254,14 +254,14 @@ const FlipCard = ({ iconType, title, description, backDetail, index, className =
       aria-label={`${title} — click to ${flipped ? "hide" : "see"} details`}
     >
       <motion.div
-        className="relative w-full h-full"
-        style={{ transformStyle: "preserve-3d", minHeight: "14rem" }}
+        className="relative w-full h-full min-h-56"
+        style={{ transformStyle: "preserve-3d" }}
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.5, type: "spring", stiffness: 120, damping: 18 }}
       >
         {/* Front */}
         <motion.div
-          className="absolute inset-0 bg-white rounded-xl p-6 flex flex-col"
+          className="absolute inset-0 bg-white rounded-xl p-5 sm:p-6 flex flex-col"
           style={{
             backfaceVisibility: "hidden",
             border: hovered && !flipped ? `1.5px solid ${ACCENT}` : "1.5px solid #f3f4f6",
@@ -275,11 +275,10 @@ const FlipCard = ({ iconType, title, description, backDetail, index, className =
             {renderIcon()}
           </div>
 
-          {/* ✅ Inter (Tailwind default) — Sora removed */}
           <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
 
-          <p className="text-gray-500 text-sm flex-grow" style={{ fontFamily: "'Sora', sans-serif", lineHeight: "1.65", letterSpacing: "0.01em" }}>{description}</p>
-          <p className="text-accent text-xs font-medium mt-3 flex items-center gap-1" style={{ fontFamily: "'Sora', sans-serif" }}>
+          <p className="text-gray-500 text-xs sm:text-sm flex-grow leading-relaxed" style={{ letterSpacing: "0.01em" }}>{description}</p>
+          <p className="text-accent text-xs font-medium mt-3 flex items-center gap-1">
             <span>Tap to learn more</span>
             <motion.span
               animate={hovered && !flipped ? { x: [0, 4, 0] } : { x: 0 }}
@@ -290,16 +289,15 @@ const FlipCard = ({ iconType, title, description, backDetail, index, className =
 
         {/* Back */}
         <div
-          className="absolute inset-0 bg-accent rounded-xl p-6 shadow-md flex flex-col justify-between"
+          className="absolute inset-0 bg-accent rounded-xl p-5 sm:p-6 shadow-md flex flex-col justify-between"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
           <div>
-            {/* ✅ Inter (Tailwind default) — Sora removed */}
             <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
 
-            <p className="text-white/90 text-sm leading-relaxed" style={{ fontFamily: "'Sora', sans-serif", lineHeight: "1.7", letterSpacing: "0.01em" }}>{backDetail}</p>
+            <p className="text-white/90 text-xs sm:text-sm leading-relaxed" style={{ letterSpacing: "0.01em" }}>{backDetail}</p>
           </div>
-          <p className="text-white/60 text-xs font-medium mt-4 flex items-center gap-1" style={{ fontFamily: "'Sora', sans-serif" }}>
+          <p className="text-white/60 text-xs font-medium mt-4 flex items-center gap-1">
             <span>←</span><span>Tap to go back</span>
           </p>
         </div>
@@ -404,12 +402,11 @@ const Features = ({
               <span>Features & Benefits</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Why <span className="text-accent">Smart Paper Check</span>?
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            AI-powered features to streamline grading, course management, and
-            script evaluation — efficient, accurate, and effortless.
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            AI-powered features to streamline grading, course management, and script evaluation — efficient, accurate, and effortless.
           </p>
         </motion.div>
 

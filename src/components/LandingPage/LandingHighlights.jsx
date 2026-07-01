@@ -194,9 +194,10 @@ export default function LandingHighlights() {
               <motion.div
                 key={i}
                 variants={cardVariants}
-                className="relative group cursor-default"
+                className="relative group cursor-pointer"
                 onMouseMove={(e) => handleMouseMove(e, i)}
                 onMouseLeave={() => setActiveCard(null)}
+                onClick={() => handleLearnMore(h.linkTo)}
                 {...hoverCard}
               >
                 {/* Card */}
@@ -300,16 +301,20 @@ export default function LandingHighlights() {
                     {h.desc}
                   </motion.p>
 
-                  {/* Bottom hover action - absolutely positioned so it doesn't affect card height */}
+                  {/* Bottom hover action - always visible on mobile/tablet, animated on desktop hover */}
+                  <div className="md:hidden absolute bottom-4 left-7 flex items-center gap-1 text-xs font-medium z-10 text-accent">
+                    <span>Learn more</span>
+                    <HiArrowRight className="w-3 h-3 animate-pulse" />
+                  </div>
+
                   <AnimatePresence>
                     {activeCard === i && (
                       <motion.div
-                        className="absolute bottom-4 left-7 flex items-center gap-1 text-xs font-medium z-10 text-accent cursor-pointer"
+                        className="hidden md:flex absolute bottom-4 left-7 items-center gap-1 text-xs font-medium z-10 text-accent cursor-pointer"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
                         transition={{ duration: 0.2 }}
-                        onClick={() => handleLearnMore(h.linkTo)}
                       >
                         <span>Learn more</span>
                         <motion.span

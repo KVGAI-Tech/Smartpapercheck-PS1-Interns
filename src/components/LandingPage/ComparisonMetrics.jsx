@@ -216,12 +216,11 @@ const ComparisonMetrics = () => {
           transition={TRANSITION}
           viewport={viewportOnce}
         >
-<h2 className="text-3xl sm:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
             Evaluation in <span className="text-accent">Minutes</span>, Not Days
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Smart Paper Check revolutionizes answer script evaluation with
-            unprecedented speed and accuracy
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Smart Paper Check revolutionizes answer script evaluation with unprecedented speed and accuracy.
           </p>
         </motion.div>
 
@@ -233,8 +232,8 @@ const ComparisonMetrics = () => {
             variants={cardVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={viewportOnce}
-            className="group relative bg-white rounded-2xl border border-gray-200 p-8 shadow-sm hover:shadow-[0_12px_40px_rgba(22,109,112,0.28)] hover:border-accent/40 transition-all duration-300"
+viewport={viewportOnce}
+className="group relative bg-white rounded-2xl border border-gray-200 p-5 sm:p-8 shadow-sm hover:shadow-[0_12px_40px_rgba(22,109,112,0.28)] hover:border-accent/40 transition-all duration-300"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.06] via-transparent to-accent/[0.02] pointer-events-none rounded-2xl" />
 
@@ -314,8 +313,8 @@ const ComparisonMetrics = () => {
             variants={cardVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={viewportOnce}
-            className="group relative bg-white rounded-2xl border border-gray-200 p-8 shadow-sm hover:shadow-[0_12px_40px_rgba(22,109,112,0.28)] hover:border-accent/40 transition-all duration-300 overflow-hidden flex flex-col"
+viewport={viewportOnce}
+className="group relative bg-white rounded-2xl border border-gray-200 p-5 sm:p-8 shadow-sm hover:shadow-[0_12px_40px_rgba(22,109,112,0.28)] hover:border-accent/40 transition-all duration-300 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.06] via-transparent to-accent/[0.02] pointer-events-none rounded-2xl" />
 
@@ -338,7 +337,7 @@ const ComparisonMetrics = () => {
               <div className="flex flex-col sm:flex-row items-center sm:items-stretch gap-6 flex-1">
                 <div className="relative flex-1 flex items-center justify-center">
                   <div className="absolute w-56 h-56 rounded-full bg-accent/10 blur-2xl" />
-                  <svg className="w-72 h-72 -rotate-90 relative" viewBox="0 0 100 100">
+                  <svg className="w-56 h-56 sm:w-72 sm:h-72 -rotate-90 relative" viewBox="0 0 100 100">
                     <circle
                       cx="50"
                       cy="50"
@@ -365,10 +364,10 @@ const ComparisonMetrics = () => {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-5xl font-extrabold text-accent leading-none tracking-tight">
+                    <span className="text-4xl sm:text-5xl font-extrabold text-accent leading-none tracking-tight">
                       90%
                     </span>
-                    <span className="text-[11px] text-gray-400 mt-2 font-semibold uppercase tracking-widest">
+                    <span className="text-[10px] sm:text-[11px] text-gray-400 mt-2 font-semibold uppercase tracking-widest">
                       Accuracy
                     </span>
                   </div>
