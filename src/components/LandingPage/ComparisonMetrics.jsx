@@ -225,7 +225,7 @@ const ComparisonMetrics = () => {
         </motion.div>
 
         {/* Highlight cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16">
           {/* Time reduction */}
           <motion.div
             custom={0}

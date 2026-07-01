@@ -217,7 +217,8 @@ const VideoDemo = () => {
 
   return (
     <section id="demo" className="py-20 md:py-28 bg-white px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
+        <div className="max-w-6xl mx-auto">
 
         {/* Header */}
         <motion.div
@@ -333,7 +334,7 @@ const VideoDemo = () => {
         </motion.div>
 
         {/* Stat Cards */}
-        <div ref={statsRef} className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div ref={statsRef} className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.title}
@@ -356,6 +357,7 @@ const VideoDemo = () => {
           ))}
         </div>
 
+        </div>
       </div>
     </section>
   );

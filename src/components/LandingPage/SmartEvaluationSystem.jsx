@@ -43,7 +43,7 @@ const SmartEvaluationSystem = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
           {features.map((item, idx) => (
             <motion.div
               key={idx}
