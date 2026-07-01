@@ -30,6 +30,7 @@ html {
 .landing-page-html {
   background-color: #ffffff !important;
   color: #212529 !important;
+  scroll-behavior: smooth;
 }
 
 .landing-page {
@@ -38,6 +39,40 @@ html {
   color: #212529 !important;
   position: relative;
   overflow-x: hidden;
+}
+
+/* Offset for fixed navbar when scrolling to sections */
+.landing-section {
+  scroll-margin-top: 80px;
+}
+
+/* Scroll-to-top floating button */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 50;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: rgb(var(--accent-rgb));
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.35);
+  transition: transform 0.2s ease, opacity 0.3s ease;
+}
+
+.scroll-to-top-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Active nav link indicator */
+.nav-link-active {
+  color: rgb(var(--accent-rgb)) !important;
 }
 
 @keyframes fadeIn {

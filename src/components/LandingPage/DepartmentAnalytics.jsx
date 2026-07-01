@@ -1,53 +1,53 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  HiOutlineAcademicCap, 
-  HiOutlineChartBar, 
-  HiOutlineChevronDown, 
-  HiOutlineChartPie, 
-  HiOutlineOfficeBuilding,
-  HiOutlineArrowSmUp,
-  HiOutlineRefresh,
-  HiOutlineBeaker,
-  HiOutlineLightBulb,
-  HiOutlineViewGrid,
-  HiOutlineBookOpen,
-  HiCheck
-} from 'react-icons/hi';
+import {
+  GraduationCap,
+  BarChart2,
+  ChevronDown,
+  PieChart,
+  Building2,
+  ArrowUp,
+  RefreshCw,
+  FlaskConical,
+  Lightbulb,
+  LayoutGrid,
+  BookOpen,
+  Check
+} from 'lucide-react';
 
 // Enhanced data structure with real institutions and departments
 const institutions = [
-  { name: 'BITS Pilani', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
-  { name: 'IIT Delhi', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
-  { name: 'ISB', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
-  { name: 'IIM Bangalore', icon: <HiOutlineOfficeBuilding className="w-5 h-5 text-accent" />, color: 'accent' },
+  { name: 'BITS Pilani', icon: <Building2 className="w-5 h-5 text-accent" />, color: 'accent' },
+  { name: 'IIT Delhi', icon: <Building2 className="w-5 h-5 text-accent" />, color: 'accent' },
+  { name: 'ISB', icon: <Building2 className="w-5 h-5 text-accent" />, color: 'accent' },
+  { name: 'IIM Bangalore', icon: <Building2 className="w-5 h-5 text-accent" />, color: 'accent' },
 ];
 
 // Define departments with better icons and metadata
 const departmentsByInstitution = {
   'BITS Pilani': [
-    { name: 'Computer Science', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Humanities', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Science', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Electrical', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Computer Science', icon: <GraduationCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Humanities', icon: <BookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Science', icon: <FlaskConical className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Electrical', icon: <Lightbulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ],
   'IIT Delhi': [
-    { name: 'Computer Science', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Humanities', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Science', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Electrical', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Computer Science', icon: <GraduationCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Humanities', icon: <BookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Science', icon: <FlaskConical className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Electrical', icon: <Lightbulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ],
   'ISB': [
-    { name: 'Finance', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Marketing', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Operations', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Strategy', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Finance', icon: <GraduationCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Marketing', icon: <BookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Operations', icon: <FlaskConical className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Strategy', icon: <Lightbulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ],
   'IIM Bangalore': [
-    { name: 'Economics', icon: <HiOutlineAcademicCap className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Organizational Behavior', icon: <HiOutlineBookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Statistics', icon: <HiOutlineBeaker className="w-5 h-5 text-accent" />, color: 'accent' },
-    { name: 'Information Systems', icon: <HiOutlineLightBulb className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Economics', icon: <GraduationCap className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Organizational Behavior', icon: <BookOpen className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Statistics', icon: <FlaskConical className="w-5 h-5 text-accent" />, color: 'accent' },
+    { name: 'Information Systems', icon: <Lightbulb className="w-5 h-5 text-accent" />, color: 'accent' },
   ]
 };
 
@@ -69,37 +69,12 @@ const coursesByDepartment = {
 
 // --- MOCK DATA OVERRIDE START ---
 const bitsPilaniCSMockData = {
-  'Data Structures': { 
-    smartQnA: 76.2, 
-    ta: 78.5, 
-    students: 145,
-    totalAssignments: 8,
-    avgGradingTime: '2.3 min'
-  },
-  'Algorithms': { 
-    smartQnA: 81.0, 
-    ta: 83.2, 
-    students: 132,
-    totalAssignments: 6,
-    avgGradingTime: '1.8 min'
-  },
-  'Database Systems': { 
-    smartQnA: 74.5, 
-    ta: 76.0, 
-    students: 118,
-    totalAssignments: 5,
-    avgGradingTime: '2.1 min'
-  },
-  'Operating Systems': { 
-    smartQnA: 79.8, 
-    ta: 81.1,
-    students: 156,
-    totalAssignments: 7,
-    avgGradingTime: '2.7 min'
-  }
+  'Data Structures': { smartQnA: 76.2, ta: 78.5, students: 145, totalAssignments: 8, avgGradingTime: '2.3 min' },
+  'Algorithms': { smartQnA: 81.0, ta: 83.2, students: 132, totalAssignments: 6, avgGradingTime: '1.8 min' },
+  'Database Systems': { smartQnA: 74.5, ta: 76.0, students: 118, totalAssignments: 5, avgGradingTime: '2.1 min' },
+  'Operating Systems': { smartQnA: 79.8, ta: 81.1, students: 156, totalAssignments: 7, avgGradingTime: '2.7 min' }
 };
 
-// Complete mock data for all institutions and departments
 const completeMockData = {
   'BITS Pilani': {
     'Computer Science': bitsPilaniCSMockData,
@@ -203,7 +178,6 @@ const completeMockData = {
 };
 // --- MOCK DATA OVERRIDE END ---
 
-// Enhanced data generation with more realistic patterns and institution/department differences
 const generateCourseData = (institution, department, course) => {
   const mockData = completeMockData[institution]?.[department]?.[course];
   if (mockData) return mockData;
@@ -230,20 +204,14 @@ const generateCourseData = (institution, department, course) => {
     'Information Systems': { ta: 2, smartQnA: 1 }
   };
   
-  const courseRandom = {
-    ta: (Math.random() * 4) - 2,
-    smartQnA: (Math.random() * 3) - 1.5
-  };
-  
+  const courseRandom = { ta: (Math.random() * 4) - 2, smartQnA: (Math.random() * 3) - 1.5 };
   const baseline = institutionBaselines[institution] || { ta: 85, smartQnA: 82 };
   const deptMod = departmentModifiers[department] || { ta: 2, smartQnA: 1 };
   
   let ta = Math.min(98, Math.max(75, baseline.ta + deptMod.ta + courseRandom.ta));
   let smartQnA = Math.min(95, Math.max(70, baseline.smartQnA + deptMod.smartQnA + courseRandom.smartQnA));
   
-  if (smartQnA >= ta) {
-    smartQnA = ta - (1 + Math.random() * 4);
-  }
+  if (smartQnA >= ta) smartQnA = ta - (1 + Math.random() * 4);
   
   ta = Math.round(ta * 10) / 10;
   smartQnA = Math.round(smartQnA * 10) / 10;
@@ -255,7 +223,6 @@ const generateCourseData = (institution, department, course) => {
   return { smartQnA, ta, students, totalAssignments, avgGradingTime };
 };
 
-// Animation variants
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
@@ -286,7 +253,6 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
   
   return (
     <div className="w-full relative" ref={dropdownRef}>
-      {/* Label: Tighter bottom margin and smaller font on mobile */}
       <label className="block text-[11px] md:text-[13px] font-bold text-slate-600 mb-1 md:mb-2 uppercase tracking-wider ml-1">
         {label}
       </label>
@@ -296,7 +262,6 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
-          /* Button: Reduced py-3.5 to py-2.5, pl-12 to pl-10 on mobile */
           className={`w-full flex items-center justify-between bg-white py-2.5 md:py-3.5 pl-10 md:pl-12 pr-4 md:pr-5 rounded-xl border-2 outline-none transition-all duration-300 ease-out z-10 relative
             ${disabled 
               ? 'opacity-60 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400' 
@@ -306,14 +271,12 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
             }
           `}
         >
-          {/* Icon positioning adjusted for tighter padding */}
           <div className="pointer-events-none absolute left-3 md:left-4 flex items-center text-accent">
             {selectedIcon || icon}
           </div>
-          {/* Shrunk selected text on mobile */}
           <span className="text-base md:text-lg font-medium truncate">{value}</span>
           <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-slate-400">
-            <HiOutlineChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+            <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
           </motion.div>
         </button>
 
@@ -337,7 +300,6 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
                       key={idx}
                       type="button"
                       onClick={() => handleSelect(optName)}
-                      /* Dropdown items: Reduced padding and text size on mobile */
                       className={`w-full text-left px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-normal flex items-center justify-between transition-colors duration-150
                         ${isSelected ? 'bg-accent/10 text-accent font-medium' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}
                       `}
@@ -346,7 +308,7 @@ const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
                         {optIcon && <span className={isSelected ? 'text-accent' : 'text-slate-400'}>{optIcon}</span>}
                         <span>{optName}</span>
                       </div>
-                      {isSelected && <HiCheck className="w-4 h-4 md:w-5 md:h-5 text-accent" />}
+                      {isSelected && <Check className="w-4 h-4 md:w-5 md:h-5 text-accent" />}
                     </button>
                   );
                 })}
@@ -392,15 +354,11 @@ const SingleCourseChart = ({ data, label }) => {
 
   return (
     <div className="bg-white/70 backdrop-blur-lg rounded-2xl md:rounded-3xl border border-gray-200 shadow-2xl p-4 md:p-8">
-      {/* Header */}
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-2">
         <div>
           <h3 className="text-xl md:text-2xl font-bold text-gray-900">{label}</h3>
           <p className="text-sm text-gray-500 mt-1">Smart Paper Check vs TA grading comparison</p>
         </div>
-
-        {/* Added hidden md:flex here to hide the legend on mobile only */}
         <div className="hidden md:flex items-center gap-3">
           <span className="inline-flex items-center gap-2 text-xs font-semibold text-accent bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20">
             <span className="w-2.5 h-2.5 rounded-full bg-accent" />
@@ -414,7 +372,6 @@ const SingleCourseChart = ({ data, label }) => {
       </div>
 
       <div className="relative">
-        {/* Score Cards */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-center mt-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-md px-5 py-4">
             <div className="flex items-baseline justify-between mb-4">
@@ -455,7 +412,6 @@ const SingleCourseChart = ({ data, label }) => {
           </div>
         </div>
 
-        {/* Metric Cards - Made horizontal on mobile */}
         <div className="grid grid-cols-3 gap-2 md:gap-4 mt-4">
           <div className="bg-white border border-slate-200 rounded-xl p-2 md:p-4 text-center shadow-sm">
             <div className="text-lg md:text-2xl font-bold text-accent">{data?.students ?? "-"}</div>
@@ -482,7 +438,7 @@ const DepartmentAnalytics = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [allCoursesData, setAllCoursesData] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isPhilosophyExpanded, setIsPhilosophyExpanded] = useState(false); // New state for Read More
+  const [isPhilosophyExpanded, setIsPhilosophyExpanded] = useState(false);
   
   const currentDepartments = departmentsByInstitution[selectedInstitution] || [];
   const currentCourses = coursesByDepartment[selectedDepartment] || [];
@@ -543,7 +499,6 @@ const DepartmentAnalytics = () => {
     const avgImprovement = allCoursesData.reduce((acc, course) => acc + (course.data.smartQnA - course.data.ta), 0) / allCoursesData.length;
     const totalStudents = allCoursesData.reduce((acc, course) => acc + course.data.students, 0);
     const totalAssignments = allCoursesData.reduce((acc, course) => acc + course.data.totalAssignments, 0);
-    
     return {
       avgSmartQnA: avgSmartQnA.toFixed(1),
       avgTA: avgTA.toFixed(1),
@@ -557,12 +512,10 @@ const DepartmentAnalytics = () => {
   const summaryStats = getSummaryStats();
 
   return (
-    // Reduced vertical padding on mobile (py-6)
-    <section className="relative py-6 md:py-16 px-4 sm:px-6 md:px-8 lg:px-12 min-h-screen bg-gray-50 overflow-hidden">
+    <section className="relative py-20 md:py-28 min-h-screen bg-gray-50 overflow-hidden px-4 sm:px-6 lg:px-8">
       <ParticleBackground />
       
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header - Reduced margin and responsive font sizes */}
         <motion.div
           className="text-center mb-2 md:mb-12"
           initial={{ opacity: 0, y: 20 }}
@@ -574,7 +527,7 @@ const DepartmentAnalytics = () => {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <HiOutlineChartBar className="w-5 h-5 text-accent" /> Analytics
+            <BarChart2 className="w-5 h-5 text-accent" /> Analytics
           </motion.div>
           
           <motion.h2 
@@ -613,7 +566,6 @@ const DepartmentAnalytics = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-             {/* Filters row - Reduced margin and responsive padding */}
               <div className="w-full pt-1 mb-3 md:mb-10">
                 <motion.div 
                   className="bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md border border-slate-200 p-4 md:p-6 lg:p-8 transition-shadow duration-300"
@@ -622,18 +574,16 @@ const DepartmentAnalytics = () => {
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] gap-2 lg:gap-6 items-end">
-                    
-                    <CustomSelect options={institutions} value={selectedInstitution} onChange={handleInstitutionChange} icon={<HiOutlineOfficeBuilding className="w-5 h-10" />} label="Institution" />
-                    <CustomSelect options={currentDepartments} value={selectedDepartment} onChange={handleDepartmentChange} icon={<HiOutlineViewGrid className="w-5 h-5" />} label="Department" disabled={currentDepartments.length === 0} />
-                    <CustomSelect options={currentCourses} value={selectedCourse} onChange={handleCourseChange} icon={<HiOutlineBookOpen className="w-5 h-5" />} label="Course" disabled={currentCourses.length === 0} />
+                    <CustomSelect options={institutions} value={selectedInstitution} onChange={handleInstitutionChange} icon={<Building2 className="w-5 h-5" />} label="Institution" />
+                    <CustomSelect options={currentDepartments} value={selectedDepartment} onChange={handleDepartmentChange} icon={<LayoutGrid className="w-5 h-5" />} label="Department" disabled={currentDepartments.length === 0} />
+                    <CustomSelect options={currentCourses} value={selectedCourse} onChange={handleCourseChange} icon={<BookOpen className="w-5 h-5" />} label="Course" disabled={currentCourses.length === 0} />
                   
-                    {/* Refresh Button - Forced to 100% width on mobile */}
                     <div className="w-full flex justify-center lg:justify-end mt-2 lg:mt-0">
                       <button
                         onClick={handleRefresh}
                         className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-accent text-white rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 font-medium text-[15px] border-2 border-accent shrink-0"
                       >
-                        <HiOutlineRefresh className="w-5 h-5" />
+                        <RefreshCw className="w-5 h-5" />
                         <span>Update Data</span>
                       </button>
                     </div>
@@ -641,7 +591,6 @@ const DepartmentAnalytics = () => {
                 </motion.div>
               </div>
               
-              {/* Single course chart - Reduced margin */}
               <motion.div 
                 className="mb-6 md:mb-10"
                 initial={{ opacity: 0, y: 20 }}
@@ -656,48 +605,39 @@ const DepartmentAnalytics = () => {
                 )}
               </motion.div>
               
-              {/* Summary statistics - Highly compact on mobile */}
               <motion.div
                 className="mb-6 md:mb-10"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
               >
-                {/* Performance Summary Header */}
                 <div className="mb-3 md:mb-6 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
-                  <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-                    Performance Summary
-                  </h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Performance Summary</h2>
                   <span className="hidden sm:inline text-slate-300 font-medium">—</span>
                   <span className="text-sm md:text-base font-medium text-slate-500">
                     <span className="font-semibold text-slate-700">{selectedDepartment}</span> Department
                   </span>
                 </div>
                 
-                {/* 2-Column Grid on Mobile, 4-Column on Desktop */}
-                <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 lg:gap-6">
-                  {/* Card 1: SPC Score */}
+                <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
                   <div className="bg-slate-100 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
                     <p className="text-[9px] md:text-xs text-gray-600 mb-1 font-medium uppercase tracking-tight md:tracking-wide leading-tight">Avg. SPC Score</p>
                     <p className="text-xl md:text-3xl font-bold text-accent mb-0.5 md:mb-1">{summaryStats.avgSmartQnA}%</p>
                     <p className="text-[9px] md:text-xs text-accent leading-tight">Conservative grading</p>
                   </div>
                   
-                  {/* Card 2: TA Score */}
                   <div className="bg-slate-50 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
                     <p className="text-[9px] md:text-xs text-gray-600 mb-1 font-medium uppercase tracking-tight md:tracking-wide leading-tight">Avg. TA Score</p>
                     <p className="text-xl md:text-3xl font-bold text-gray-600 mb-0.5 md:mb-1">{summaryStats.avgTA}%</p>
                     <p className="text-[9px] md:text-xs text-gray-500 leading-tight">Manual grading</p>
                   </div>
                   
-                  {/* Card 3: Difference */}
                   <div className="bg-slate-100 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
                     <p className="text-[9px] md:text-xs text-gray-600 mb-1 font-medium uppercase tracking-tight md:tracking-wide leading-tight">Score Difference (SPC VS TA)</p>
                     <p className="text-xl md:text-3xl font-bold text-accent mb-0.5 md:mb-1">{summaryStats.avgImprovement > 0 ? '+' : ''}{summaryStats.avgImprovement}%</p>
                     <p className="text-[9px] md:text-xs text-accent leading-tight line-clamp-2 md:line-clamp-none">{summaryStats.avgImprovement < 0 ? 'Within expected conservative bounds' : 'Scores align closely'}</p>
                   </div>
                   
-                  {/* Card 4: Volume */}
                   <div className="bg-slate-50 rounded-xl p-3 md:p-5 shadow-md border border-slate-300 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-1 md:mb-2">
                       <p className="text-[9px] md:text-xs text-gray-600 font-medium uppercase tracking-tight md:tracking-wide">Dataset</p>
@@ -717,31 +657,23 @@ const DepartmentAnalytics = () => {
                 </div>
               </motion.div>
               
-             {/* Footer message - Philosophy Shortened with Expand/Collapse toggle */}
               <motion.div
                 className="mt-4 md:mt-8 flex justify-center w-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                {/* Changed to flex-row unconditionally so the icon sits on the left on mobile */}
                 <div className="w-full flex flex-row items-start sm:items-center gap-3 md:gap-5 py-4 md:py-5 px-4 md:px-6 rounded-2xl bg-gradient-to-r from-accent/15 via-accent/5 to-transparent border border-accent/20 shadow-sm transition-all duration-300 hover:shadow-md hover:border-accent/40 relative overflow-hidden">
-                  
                   <div className="absolute top-0 left-0 w-32 h-32 bg-accent/10 rounded-br-full pointer-events-none" />
-
-                  {/* Added a tiny top margin (mt-0.5) to align the icon perfectly with the header text */}
                   <div className="relative flex-shrink-0 bg-white p-2 md:p-3 rounded-xl border border-accent/20 shadow-sm mt-0.5 sm:mt-0">
-                    <HiOutlineLightBulb className="w-5 h-5 md:w-6 md:h-6 text-accent" />
+                    <Lightbulb className="w-5 h-5 md:w-6 md:h-6 text-accent" />
                   </div>
-                  
                   <div className="text-left relative flex-1">
                     <h4 className="text-xs md:text-sm font-bold text-accent mb-0.5 md:mb-1 tracking-wide uppercase">Grading Philosophy</h4>
-                    {/* Line clamp truncates text on mobile unless expanded */}
                     <p className={`text-slate-600 font-medium text-xs md:text-[15px] leading-relaxed transition-all duration-300 ${!isPhilosophyExpanded ? 'line-clamp-2 md:line-clamp-none' : ''}`}>
                       Smart Paper Check employs conservative grading standards to ensure fairness and maintain academic integrity. 
                       Students benefit from consistent evaluation criteria and can always request manual review for reassessment.
                     </p>
-                    {/* Read More button visible only on mobile */}
                     <button 
                       className="md:hidden text-accent text-xs font-bold mt-1.5 hover:underline focus:outline-none flex items-center gap-1"
                       onClick={() => setIsPhilosophyExpanded(!isPhilosophyExpanded)}
@@ -749,7 +681,6 @@ const DepartmentAnalytics = () => {
                       {isPhilosophyExpanded ? 'Read Less' : 'Read More'}
                     </button>
                   </div>
-                  
                 </div>
               </motion.div>
             </motion.div>
