@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { TRANSITION, hoverLift } from './motion';
 import './Clientele.css';
 
 const Clientele = () => {
@@ -86,16 +87,16 @@ const Clientele = () => {
         {/* Section Header */}
         <motion.div 
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7, ease: "easeOut" }}
+          transition={TRANSITION}
         >
           {/* Heading with animated gradient */}
           <motion.h2 
             className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 text-gray-900 leading-tight"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ ...TRANSITION, delay: 0.2 }}
           >
             Trusted by{' '}
             <span 
@@ -124,30 +125,28 @@ const Clientele = () => {
 
           <motion.p 
             className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            initial={{ opacity: 0, y: 24 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ ...TRANSITION, delay: 0.4 }}
           >
             Leading academic institutions and organizations use Smart Paper Check to streamline assessments.
           </motion.p>
         </motion.div>
 
-        {/* Logo Marquee - Clean, no cards */}
+        {/* Logo Marquee - Glassmorphic Pill Track */}
         <motion.div
-          className="relative mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          className="relative mb-16 bg-white/30 backdrop-blur-md border border-teal-500/10 rounded-[2.5rem] shadow-[0_12px_40px_rgba(22,109,112,0.04)] py-8 px-6 sm:px-10"
+          initial={{ opacity: 0, y: 24 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ ...TRANSITION, delay: 0.3 }}
         >
-          {/* Fade edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to right, #f0fdf9, transparent)' }}
-          />
-          <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to left, #f0fdf9, transparent)' }}
-          />
-
-          <div className="overflow-hidden py-6">
+          <div 
+            className="overflow-hidden"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to right, transparent, white 15%, white 85%, transparent)',
+              maskImage: 'linear-gradient(to right, transparent, white 15%, white 85%, transparent)'
+            }}
+          >
             <div className="clientele-marquee-track">
               {scrollClients.map((client, index) => (
                 <motion.div
@@ -163,14 +162,14 @@ const Clientele = () => {
                       alt={client.name}
                       className="max-h-full max-w-full object-contain transition-all group-hover:drop-shadow-lg"
                       style={{
-                        filter: 'grayscale(20%) opacity(0.85)',
+                        filter: 'url(#remove-white) grayscale(20%) opacity(0.85)',
                         transition: 'filter 0.4s ease, transform 0.4s ease',
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.filter = 'grayscale(0%) opacity(1)';
+                        e.target.style.filter = 'url(#remove-white) grayscale(0%) opacity(1)';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.filter = 'grayscale(20%) opacity(0.85)';
+                        e.target.style.filter = 'url(#remove-white) grayscale(20%) opacity(0.85)';
                       }}
                       onError={(e) => {
                         e.target.style.opacity = "0";
@@ -191,9 +190,9 @@ const Clientele = () => {
         {/* CTA Banner */}
         <motion.div 
           className="text-center"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ ...TRANSITION, delay: 0.6 }}
         >
           <motion.div 
             className="flex items-center justify-center gap-3 px-4 sm:px-8 py-4 rounded-2xl cursor-pointer group w-full sm:w-auto sm:inline-flex"
@@ -202,11 +201,7 @@ const Clientele = () => {
               border: '1px solid rgba(22,109,112,0.15)',
               backdropFilter: 'blur(10px)',
             }}
-            whileHover={{ 
-              scale: 1.02,
-              boxShadow: '0 8px 32px rgba(22,109,112,0.12)',
-            }}
-            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            {...hoverLift}
             onClick={() => navigate('/auth')}
           >
             <p className="text-gray-600 text-sm sm:text-base font-medium text-center sm:text-left">
@@ -222,6 +217,18 @@ const Clientele = () => {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Hidden SVG Chroma-Key Filter for removing white backgrounds */}
+      <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true" focusable="false">
+        <filter id="remove-white">
+          <feColorMatrix type="matrix" values="
+            1   0   0   0   0
+            0   1   0   0   0
+            0   0   1   0   0
+            -1 -1 -1   3   0
+          " />
+        </filter>
+      </svg>
 
       {/* CSS for gradient animation */}
       <style>{`

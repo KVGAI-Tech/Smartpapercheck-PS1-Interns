@@ -25,7 +25,7 @@ const ISLAND = {
   borderRadius: "100px",
 };
 
-function MobileMenu({ fnMap }) {
+function MobileMenu({ scrollToSection }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const close = () => setOpen(false);
@@ -72,6 +72,7 @@ function MobileMenu({ fnMap }) {
                 onClick={() => setIsOpen(false)}
               />
 
+<<<<<<< HEAD
               {/* Menu Drawer */}
               <motion.div
                 initial={{ x: "100%" }}
@@ -87,6 +88,38 @@ function MobileMenu({ fnMap }) {
                       <HiX className="w-6 h-6 text-gray-600" />
                     </button>
                   </div>
+=======
+        <nav style={{ padding: "0.75rem", flex: 1, background: "#ffffff" }}>
+          {NAV_LINKS.map((item, i) => (
+            <motion.a
+              key={item.name}
+              href={item.href}
+              target={item.isExternal ? "_blank" : "_self"}
+              rel={item.isExternal ? "noopener noreferrer" : ""}
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04, ...EASE_OUT }}
+              onClick={(e) => {
+                if (!item.isExternal) {
+                  e.preventDefault();
+                  scrollToSection?.(item.href.slice(1));
+                }
+                close();
+              }}
+              style={{
+                display: "block", padding: "11px 14px", borderRadius: "8px",
+                fontSize: "0.9375rem", fontWeight: 500, color: "rgba(10,40,42,0.68)",
+                textDecoration: "none", transition: "background 0.15s, color 0.15s",
+                marginBottom: "2px",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(22,109,112,0.07)"; e.currentTarget.style.color = "#0d3234"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(10,40,42,0.68)"; }}
+            >
+              {item.name}
+            </motion.a>
+          ))}
+        </nav>
+>>>>>>> origin/main
 
                   <nav className="space-y-1">
                     {options.map((item) => (
@@ -133,14 +166,9 @@ function MobileMenu({ fnMap }) {
   );
 }
 
-const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContact, scrollToHome }) => {
+const Navbar = ({ scrollToSection, activeSection: _activeSection }) => {
   const navigate = useNavigate();
   const reduce = useReducedMotion();
-
-  const fnMap = {
-    Home: scrollToHome, Features: scrollToFeatures,
-    Pricing: scrollToPricing, FAQ: scrollToFaq, Contact: scrollToContact,
-  };
 
   return (
     <>
@@ -188,7 +216,7 @@ const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContac
           {/* Island 1 — brand */}
           <a
             href="/"
-            onClick={(e) => { e.preventDefault(); scrollToHome?.(); }}
+            onClick={(e) => { e.preventDefault(); scrollToSection?.("home"); }}
             style={{
               ...ISLAND,
               display: "flex",
@@ -226,8 +254,9 @@ const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContac
                 target={item.isExternal ? "_blank" : "_self"}
                 rel={item.isExternal ? "noopener noreferrer" : ""}
                 onClick={(e) => {
-                  if (!item.isExternal && fnMap[item.name]) {
-                    e.preventDefault(); fnMap[item.name]();
+                  if (!item.isExternal) {
+                    e.preventDefault();
+                    scrollToSection?.(item.href.slice(1));
                   }
                 }}
                 style={{
@@ -291,7 +320,7 @@ const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContac
             Get Started
           </motion.button>
 
-          <MobileMenu fnMap={fnMap} />
+          <MobileMenu scrollToSection={scrollToSection} />
         </div>
       </motion.nav>
     </>

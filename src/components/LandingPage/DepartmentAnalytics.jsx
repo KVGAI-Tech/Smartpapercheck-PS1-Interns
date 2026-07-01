@@ -14,6 +14,7 @@ import {
   BookOpen,
   Check
 } from 'lucide-react';
+import { TRANSITION, hoverLift } from './motion';
 
 // Enhanced data structure with real institutions and departments
 const institutions = [
@@ -224,8 +225,8 @@ const generateCourseData = (institution, department, course) => {
 };
 
 const fadeInUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: TRANSITION }
 };
 
 const CustomSelect = ({ options, value, onChange, icon, label, disabled }) => {
@@ -520,32 +521,31 @@ const DepartmentAnalytics = () => {
       <div className="max-w-7xl mx-auto relative z-10">
         <motion.div
           className="text-center mb-2 md:mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
+          transition={TRANSITION}
         >
-          <motion.div 
+          <motion.div
             className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-accent/10 text-gray-800 text-base shadow-md font-semibold tracking-wide gap-2 mb-3"
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            {...hoverLift}
           >
             <BarChart2 className="w-5 h-5 text-accent" /> Analytics
           </motion.div>
           
           <motion.h2 
             className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-2 md:mb-2 text-gray-900"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.7 }}
+            transition={{ ...TRANSITION, delay: 0.2 }}
           >
             Department <span className="text-accent">Analytics</span>
           </motion.h2>
           
           <motion.p 
             className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto font-medium"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.7 }}
+            transition={{ ...TRANSITION, delay: 0.4 }}
           >
             Compare grading performance across departments and courses
           </motion.p>
@@ -571,9 +571,9 @@ const DepartmentAnalytics = () => {
               <div className="w-full pt-1 mb-3 md:mb-10">
                 <motion.div 
                   className="bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md border border-slate-200 p-4 md:p-6 lg:p-8 transition-shadow duration-300"
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
+                  transition={{ ...TRANSITION, delay: 0.2 }}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] gap-2 lg:gap-6 items-end">
                     <CustomSelect options={institutions} value={selectedInstitution} onChange={handleInstitutionChange} icon={<Building2 className="w-5 h-5" />} label="Institution" />
@@ -595,9 +595,9 @@ const DepartmentAnalytics = () => {
               
               <motion.div 
                 className="mb-6 md:mb-10"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
+                transition={TRANSITION}
                 layoutId="chart-container"
               >
                 {selectedCourseData && selectedCourseData.data ? (
@@ -609,9 +609,9 @@ const DepartmentAnalytics = () => {
               
               <motion.div
                 className="mb-6 md:mb-10"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.2 }}
+                transition={{ ...TRANSITION, delay: 0.2 }}
               >
                 <div className="mb-3 md:mb-6 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
                   <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Performance Summary</h2>
@@ -662,9 +662,9 @@ const DepartmentAnalytics = () => {
               
               <motion.div
                 className="mt-4 md:mt-8 flex justify-center w-full"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
+                transition={{ ...TRANSITION, delay: 0.4 }}
               >
                 <div className="w-full flex flex-row items-start sm:items-center gap-3 md:gap-5 py-4 md:py-5 px-4 md:px-6 rounded-2xl bg-gradient-to-r from-accent/15 via-accent/5 to-transparent border border-accent/20 shadow-sm transition-all duration-300 hover:shadow-md hover:border-accent/40 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-32 h-32 bg-accent/10 rounded-br-full pointer-events-none" />

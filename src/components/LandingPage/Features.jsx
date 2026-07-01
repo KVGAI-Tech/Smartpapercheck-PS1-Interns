@@ -8,6 +8,7 @@ import {
   HiOutlineUpload,
 } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
+import { TRANSITION, hoverLift, viewportOnce } from "./motion";
 
 // ─── Accent color ───────────────────────────────────────────────
 const ACCENT = "#166D70";
@@ -217,7 +218,7 @@ const MultilingualIcon = () => (
 );
 
 // ─── Flip Card ───────────────────────────────────────────────────
-const FlipCard = ({ iconType, title, description, backDetail, index }) => {
+const FlipCard = ({ iconType, title, description, backDetail, index, className = "" }) => {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
   const ref = useRef(null);
@@ -241,12 +242,12 @@ const FlipCard = ({ iconType, title, description, backDetail, index }) => {
   return (
     <motion.div
       ref={ref}
-      className="min-h-56 cursor-pointer"
+      className={`min-h-56 cursor-pointer ${className}`}
       style={{ perspective: "1000px" }}
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.08 }}
-      viewport={{ once: true, amount: 0.2 }}
+      transition={{ ...TRANSITION, delay: index * 0.08 }}
+      viewport={viewportOnce}
       onClick={() => setFlipped(!flipped)}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
@@ -390,10 +391,10 @@ const Features = ({
         {/* Header */}
         <motion.div
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
@@ -412,10 +413,10 @@ const Features = ({
         {/* Tab Switcher */}
         <motion.div
           className="flex justify-center mb-10"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ ...TRANSITION, delay: 0.1 }}
+          viewport={viewportOnce}
         >
           <div className="inline-flex bg-gray-100 rounded-full p-1 gap-1">
             {tabs.map((tab) => (
@@ -451,10 +452,10 @@ const Features = ({
         <motion.p
           className="text-center text-gray-400 text-sm mb-8"
           style={{ fontFamily: "'Sora', sans-serif", letterSpacing: "0.02em" }}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ ...TRANSITION, delay: 0.2 }}
+          viewport={viewportOnce}
         >
           Click any card to explore more details
         </motion.p>
@@ -464,23 +465,32 @@ const Features = ({
           <motion.div
             key={activeTab}
             className={`grid grid-cols-1 md:grid-cols-2 ${
-              activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-3"
+
+              activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-6"
             } gap-6 lg:gap-8`}
+            
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3 }}
           >
-            {activeItems.map((item, index) => (
-              <FlipCard
-                key={item.title}
-                iconType={item.iconType}
-                title={item.title}
-                description={item.description}
-                backDetail={item.backDetail}
-                index={index}
-              />
-            ))}
+            {activeItems.map((item, index) => {
+              const isFeatures = activeTab === "features";
+              const cardClass = isFeatures
+                ? `lg:col-span-2${index === 3 ? " lg:col-start-2" : ""}`
+                : "";
+              return (
+                <FlipCard
+                  key={item.title}
+                  className={cardClass}
+                  iconType={item.iconType}
+                  title={item.title}
+                  description={item.description}
+                  backDetail={item.backDetail}
+                  index={index}
+                />
+              );
+            })}
           </motion.div>
         </AnimatePresence>
 
@@ -495,10 +505,10 @@ const Features = ({
               : "0 1px 4px rgba(0,0,0,0.06)",
             transition: "box-shadow 0.25s ease, border-color 0.25s ease",
           }}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
           onHoverStart={() => setCtaHovered(true)}
           onHoverEnd={() => setCtaHovered(false)}
         >
@@ -535,8 +545,7 @@ const Features = ({
                   : `0 2px 10px rgba(22,109,112,0.22)`,
                 transition: "box-shadow 0.25s ease",
               }}
-              whileHover={{ scale: 1.06 }}
-              whileTap={{ scale: 0.95 }}
+              {...hoverLift}
               onHoverStart={() => setBtnHovered(true)}
               onHoverEnd={() => setBtnHovered(false)}
               onClick={() => navigate("/auth")}
