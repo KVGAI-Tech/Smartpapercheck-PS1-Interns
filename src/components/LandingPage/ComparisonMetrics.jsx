@@ -438,7 +438,7 @@ const ComparisonMetrics = () => {
                 {metrics.map((metric, index) => (
                   <motion.tr
                     key={metric.title}
-                    className="hover:bg-accent/[0.07] hover:ring-2 hover:ring-inset hover:ring-accent/40 transition-all duration-200"
+                    className="group hover:bg-accent/[0.07] hover:ring-2 hover:ring-inset hover:ring-accent/40 transition-all duration-200"
                     initial={{ opacity: 0, x: -12 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.35, delay: index * 0.07 }}
