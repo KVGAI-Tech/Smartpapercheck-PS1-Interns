@@ -24,7 +24,7 @@ const ISLAND = {
   borderRadius: "100px",
 };
 
-function MobileMenu({ fnMap }) {
+function MobileMenu({ scrollToSection }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const close = () => setOpen(false);
@@ -105,8 +105,9 @@ function MobileMenu({ fnMap }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.04, ...EASE_OUT }}
               onClick={(e) => {
-                if (!item.isExternal && fnMap[item.name]) {
-                  e.preventDefault(); fnMap[item.name]();
+                if (!item.isExternal) {
+                  e.preventDefault();
+                  scrollToSection?.(item.href.slice(1));
                 }
                 close();
               }}
@@ -142,14 +143,9 @@ function MobileMenu({ fnMap }) {
   );
 }
 
-const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContact, scrollToHome }) => {
+const Navbar = ({ scrollToSection, activeSection: _activeSection }) => {
   const navigate = useNavigate();
   const reduce = useReducedMotion();
-
-  const fnMap = {
-    Home: scrollToHome, Features: scrollToFeatures,
-    Pricing: scrollToPricing, FAQ: scrollToFaq, Contact: scrollToContact,
-  };
 
   return (
     <>
@@ -197,7 +193,7 @@ const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContac
           {/* Island 1 — brand */}
           <a
             href="/"
-            onClick={(e) => { e.preventDefault(); scrollToHome?.(); }}
+            onClick={(e) => { e.preventDefault(); scrollToSection?.("home"); }}
             style={{
               ...ISLAND,
               display: "flex",
@@ -235,8 +231,9 @@ const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContac
                 target={item.isExternal ? "_blank" : "_self"}
                 rel={item.isExternal ? "noopener noreferrer" : ""}
                 onClick={(e) => {
-                  if (!item.isExternal && fnMap[item.name]) {
-                    e.preventDefault(); fnMap[item.name]();
+                  if (!item.isExternal) {
+                    e.preventDefault();
+                    scrollToSection?.(item.href.slice(1));
                   }
                 }}
                 style={{
@@ -300,7 +297,7 @@ const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContac
             Get Started
           </motion.button>
 
-          <MobileMenu fnMap={fnMap} />
+          <MobileMenu scrollToSection={scrollToSection} />
         </div>
       </motion.nav>
     </>
