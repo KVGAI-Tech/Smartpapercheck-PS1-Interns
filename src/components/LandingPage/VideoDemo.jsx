@@ -84,7 +84,7 @@ const StatCard = ({ emoji, iconType, title, description, hovered, onHover, onLea
   };
   return (
     <motion.div
-      className="bg-white border rounded-xl p-6 transition-all duration-300 cursor-default"
+      className="bg-white border rounded-xl p-6 transition-all duration-300 cursor-default h-full flex flex-col"
       style={{
         border: hovered ? `1.5px solid ${ACCENT}` : "1.5px solid #f3f4f6",
         boxShadow: hovered
@@ -216,8 +216,9 @@ const VideoDemo = () => {
   ];
 
   return (
-    <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-6xl mx-auto">
+    <section id="demo" className="py-20 md:py-28 bg-white px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="max-w-6xl mx-auto">
 
         {/* Header */}
         <motion.div
@@ -333,10 +334,11 @@ const VideoDemo = () => {
         </motion.div>
 
         {/* Stat Cards */}
-        <div ref={statsRef} className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div ref={statsRef} className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.title}
+              className="h-full"
               initial={{ opacity: 0, y: 20 }}
               animate={statsInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: index * 0.12 }}
@@ -355,6 +357,7 @@ const VideoDemo = () => {
           ))}
         </div>
 
+        </div>
       </div>
     </section>
   );

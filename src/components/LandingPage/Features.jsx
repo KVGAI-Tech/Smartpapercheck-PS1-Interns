@@ -385,9 +385,9 @@ const Features = ({
   const activeItems = activeTab === "features" ? features : benefits;
 
   return (
-    <section id="features" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
+    <section id="features" className="relative py-20 md:py-28 bg-white overflow-hidden px-4 sm:px-6 lg:px-8">
       <FloatingDots />
-      <div className="relative z-10 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto relative z-10">
 
         {/* Header */}
         <motion.div
@@ -467,8 +467,10 @@ const Features = ({
           <motion.div
             key={activeTab}
             className={`grid grid-cols-1 md:grid-cols-2 ${
+
               activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-6"
-            } gap-6`}
+            } gap-6 lg:gap-8}
+            
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
