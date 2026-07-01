@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -28,140 +28,124 @@ const ISLAND = {
 function MobileMenu({ scrollToSection }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+
   const close = () => setOpen(false);
 
   return (
     <div className="lg:hidden" style={{ flexShrink: 0 }}>
       <button
         className="p-2 rounded-md bg-accent/10 text-accent relative z-50"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
         aria-label="Toggle menu"
       >
-        {isOpen ? (
-          <HiX className="w-6 h-6" />
+        {open ? (
+          <X className="w-6 h-6" />
         ) : (
-          <HiOutlineMenu className="w-6 h-6" />
+          <Menu className="w-6 h-6" />
         )}
       </button>
 
-      {open && (
-        <div
-          onClick={close}
-          style={{
-            position: "fixed", inset: 0,
-            background: "rgba(10,40,42,0.38)",
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
-            zIndex: 48,
-          }}
-        />
-      )}
+      {typeof window !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <>
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 bg-black/45 z-40"
+                  onClick={close}
+                />
 
-      {typeof window !== "undefined" && createPortal(
-        <AnimatePresence>
-          {isOpen && (
-            <>
-              {/* Backdrop overlay */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 bg-black/45 z-40"
-                onClick={() => setIsOpen(false)}
-              />
+                {/* Side Panel */}
+                <motion.div
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={EASE_OUT}
+                  className="fixed top-0 right-0 h-screen w-80 bg-white z-[60] shadow-2xl flex flex-col"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-6 py-5 border-b">
+                    <span className="font-semibold text-lg text-slate-800">
+                      Menu
+                    </span>
 
-<<<<<<< HEAD
-              {/* Menu Drawer */}
-              <motion.div
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="fixed top-0 right-0 h-full w-full max-w-sm bg-white shadow-xl z-50 overflow-y-auto"
-              >
-                <div className="p-6 text-gray-900">
-                  <div className="flex justify-between items-center mb-8">
-                    <img src="/logo_smartqna.png" alt="Smart Paper Check Logo" className="h-7" />
-                    <button onClick={() => setIsOpen(false)} className="p-2 rounded-md hover:bg-gray-100">
-                      <HiX className="w-6 h-6 text-gray-600" />
+                    <button
+                      onClick={close}
+                      className="p-2 rounded-md hover:bg-gray-100"
+                    >
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
-=======
-        <nav style={{ padding: "0.75rem", flex: 1, background: "#ffffff" }}>
-          {NAV_LINKS.map((item, i) => (
-            <motion.a
-              key={item.name}
-              href={item.href}
-              target={item.isExternal ? "_blank" : "_self"}
-              rel={item.isExternal ? "noopener noreferrer" : ""}
-              initial={{ opacity: 0, x: 12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04, ...EASE_OUT }}
-              onClick={(e) => {
-                if (!item.isExternal) {
-                  e.preventDefault();
-                  scrollToSection?.(item.href.slice(1));
-                }
-                close();
-              }}
-              style={{
-                display: "block", padding: "11px 14px", borderRadius: "8px",
-                fontSize: "0.9375rem", fontWeight: 500, color: "rgba(10,40,42,0.68)",
-                textDecoration: "none", transition: "background 0.15s, color 0.15s",
-                marginBottom: "2px",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(22,109,112,0.07)"; e.currentTarget.style.color = "#0d3234"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(10,40,42,0.68)"; }}
-            >
-              {item.name}
-            </motion.a>
-          ))}
-        </nav>
->>>>>>> origin/main
 
-                  <nav className="space-y-1">
-                    {options.map((item) => (
-                      <a
+                  {/* Navigation */}
+                  <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                    {NAV_LINKS.map((item, i) => (
+                      <motion.a
                         key={item.name}
-                        href={item.link}
-                        className="block py-3 px-4 border-l-2 border-transparent hover:border-accent hover:bg-accent/5 rounded-r-lg transition-all duration-200 text-base text-gray-800"
-                        onClick={() => setIsOpen(false)}
+                        href={item.href}
+                        target={item.isExternal ? "_blank" : "_self"}
+                        rel={
+                          item.isExternal
+                            ? "noopener noreferrer"
+                            : undefined
+                        }
+                        initial={{ opacity: 0, x: 15 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{
+                          delay: i * 0.05,
+                          ...EASE_OUT,
+                        }}
+                        className="block rounded-lg px-4 py-3 text-slate-700 hover:bg-accent/10 hover:text-accent transition-colors"
+                        onClick={(e) => {
+                          if (!item.isExternal) {
+                            e.preventDefault();
+                            scrollToSection?.(item.href.slice(1));
+                          }
+                          close();
+                        }}
                       >
                         {item.name}
-                      </a>
+                      </motion.a>
                     ))}
                   </nav>
 
-                  <div className="mt-8 space-y-4">
-                    <a
-                      href="https://blog.smart-qna.com/"
-                      className="w-full py-3 px-6 border border-accent text-accent rounded-md text-base font-medium hover:bg-accent/10 transition-colors duration-200 block text-center"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => setIsOpen(false)}
+                  {/* Footer */}
+                  <div className="border-t p-4 space-y-3">
+                    <button
+                      className="w-full rounded-lg border border-accent py-3 text-accent font-medium hover:bg-accent/10 transition"
+                      onClick={() => {
+                        close();
+                        window.open(
+                          "https://blog.smart-qna.com/",
+                          "_blank"
+                        );
+                      }}
                     >
                       Blogs
-                    </a>
+                    </button>
 
                     <button
-                      className="w-full bg-accent py-3 px-6 rounded-md text-base font-medium hover:bg-accent transition-opacity duration-200 text-white"
+                      className="w-full rounded-lg bg-accent py-3 text-white font-medium hover:opacity-90 transition"
                       onClick={() => {
-                        setIsOpen(false);
+                        close();
                         navigate("/auth");
                       }}
                     >
                       Get Started 🚀
                     </button>
                   </div>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   );
 }
