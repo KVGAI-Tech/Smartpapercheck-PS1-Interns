@@ -132,22 +132,20 @@ const Clientele = () => {
           </motion.p>
         </motion.div>
 
-        {/* Logo Marquee - Clean, no cards */}
+        {/* Logo Marquee - Glassmorphic Pill Track */}
         <motion.div
-          className="relative mb-16"
+          className="relative mb-16 bg-white/30 backdrop-blur-md border border-teal-500/10 rounded-[2.5rem] shadow-[0_12px_40px_rgba(22,109,112,0.04)] py-8 px-6 sm:px-10"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          {/* Fade edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to right, #f0fdf9, transparent)' }}
-          />
-          <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to left, #f0fdf9, transparent)' }}
-          />
-
-          <div className="overflow-hidden py-6">
+          <div 
+            className="overflow-hidden"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to right, transparent, white 15%, white 85%, transparent)',
+              maskImage: 'linear-gradient(to right, transparent, white 15%, white 85%, transparent)'
+            }}
+          >
             <div className="clientele-marquee-track">
               {scrollClients.map((client, index) => (
                 <motion.div
@@ -163,14 +161,14 @@ const Clientele = () => {
                       alt={client.name}
                       className="max-h-full max-w-full object-contain transition-all group-hover:drop-shadow-lg"
                       style={{
-                        filter: 'grayscale(20%) opacity(0.85)',
+                        filter: 'url(#remove-white) grayscale(20%) opacity(0.85)',
                         transition: 'filter 0.4s ease, transform 0.4s ease',
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.filter = 'grayscale(0%) opacity(1)';
+                        e.target.style.filter = 'url(#remove-white) grayscale(0%) opacity(1)';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.filter = 'grayscale(20%) opacity(0.85)';
+                        e.target.style.filter = 'url(#remove-white) grayscale(20%) opacity(0.85)';
                       }}
                       onError={(e) => {
                         e.target.style.opacity = "0";
@@ -222,6 +220,18 @@ const Clientele = () => {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Hidden SVG Chroma-Key Filter for removing white backgrounds */}
+      <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true" focusable="false">
+        <filter id="remove-white">
+          <feColorMatrix type="matrix" values="
+            1   0   0   0   0
+            0   1   0   0   0
+            0   0   1   0   0
+            -1 -1 -1   3   0
+          " />
+        </filter>
+      </svg>
 
       {/* CSS for gradient animation */}
       <style>{`
