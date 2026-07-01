@@ -512,7 +512,7 @@ const DepartmentAnalytics = () => {
   const summaryStats = getSummaryStats();
 
   return (
-    <section className="relative py-6 md:py-16 px-4 sm:px-6 md:px-8 lg:px-12 min-h-screen bg-gray-50 overflow-hidden">
+    <section className="relative py-20 md:py-28 min-h-screen bg-gray-50 overflow-hidden px-4 sm:px-6 lg:px-8">
       <ParticleBackground />
       
       <div className="max-w-7xl mx-auto relative z-10">

@@ -130,7 +130,7 @@ export default function LandingHighlights() {
   };
 
   return (
-    <section ref={sectionRef} className="w-full py-20 relative overflow-hidden bg-white">
+    <section ref={sectionRef} className="w-full py-20 md:py-28 relative overflow-hidden bg-white px-4 sm:px-6 lg:px-8">
       {/* Subtle grid pattern */}
       <div
         className="absolute inset-0 opacity-30 pointer-events-none"
@@ -154,7 +154,7 @@ export default function LandingHighlights() {
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <div className="max-w-7xl mx-auto px-4 relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Section header */}
         <motion.div
           className="text-center mb-16"

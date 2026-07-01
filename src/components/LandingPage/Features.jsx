@@ -385,9 +385,9 @@ const Features = ({
   const activeItems = activeTab === "features" ? features : benefits;
 
   return (
-    <section id="features" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
+    <section id="features" className="relative py-20 md:py-28 bg-white overflow-hidden px-4 sm:px-6 lg:px-8">
       <FloatingDots />
-      <div className="relative z-10 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto relative z-10">
 
         {/* Header */}
         <motion.div

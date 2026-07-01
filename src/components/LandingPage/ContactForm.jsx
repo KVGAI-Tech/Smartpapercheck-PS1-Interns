@@ -129,8 +129,8 @@ const ContactForm = () => {
   ];
 
   return (
-    <section id="contact" className="py-16 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 flex flex-col justify-center min-h-[calc(100vh-80px)]">
-      <div className="max-w-[1100px] mx-auto w-full relative z-10">
+    <section id="contact" className="py-20 md:py-28 bg-gray-50 flex flex-col justify-center min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto w-full relative z-10">
 
         {/* Section Header */}
         <motion.div 

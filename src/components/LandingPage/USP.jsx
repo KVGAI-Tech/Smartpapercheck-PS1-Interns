@@ -56,7 +56,7 @@ const USP = () => {
   };
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-gray-50 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Subtle background decoration */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
       

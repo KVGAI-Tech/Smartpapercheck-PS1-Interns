@@ -196,7 +196,7 @@ const Pricing = () => {
   const recommended = recommendPlan(volume);
 
   return (
-    <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative">
+    <section id="pricing" className="py-20 md:py-28 bg-white relative px-4 sm:px-6 lg:px-8">
       {/* Slider styling scoped to this section (uses --pct set inline) */}
       <style>{`
         .pricing-slider {
