@@ -1,21 +1,21 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { HiChevronDown } from "react-icons/hi";
+import { TRANSITION, hoverLift, viewportOnce } from "./motion";
 
 const FAQItem = ({ question, answer, isOpen, toggleOpen, index }) => {
   return (
     <motion.div
       className="border-b border-gray-200 overflow-hidden"
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      viewport={{ once: true, amount: 0.2 }}
+      transition={{ ...TRANSITION, delay: index * 0.08 }}
+      viewport={viewportOnce}
     >
       <motion.button
         className="py-5 w-full flex justify-between items-center text-left group focus:outline-none rounded-lg transition-colors duration-200 hover:bg-gray-100/60 px-3 -mx-3 origin-left"
         onClick={toggleOpen}
-        whileHover={{ scale: 1.02 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        {...hoverLift}
       >
         {/* Left accent bar for open item */}
         <div className="flex items-start gap-3 pr-4 flex-1 min-w-0">
@@ -98,10 +98,10 @@ const FAQ = () => {
         <div className="max-w-3xl mx-auto">
         <motion.div 
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
             Frequently Asked <span className="text-accent">Questions</span>
@@ -126,10 +126,10 @@ const FAQ = () => {
 
         <motion.div 
           className="mt-8 text-center"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ ...TRANSITION, delay: 0.3 }}
+          viewport={viewportOnce}
         >
           <p className="text-gray-600">
             Still have questions? <a href="#contact" className="text-accent font-medium hover:text-accent transition-colors duration-200">Contact us</a> for more information

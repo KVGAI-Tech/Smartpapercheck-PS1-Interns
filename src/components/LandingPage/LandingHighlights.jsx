@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { motion, useInView, useMotionValue, useTransform, animate, AnimatePresence } from "framer-motion";
 import { HiOutlineCurrencyRupee, HiOutlineClock, HiOutlineShieldCheck, HiArrowRight } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
+import { TRANSITION, hoverCard } from "./motion";
 
 const AnimatedCounter = ({ target, suffix = "", prefix = "", duration = 2, inView }) => {
   const count = useMotionValue(0);
@@ -111,22 +112,18 @@ export default function LandingHighlights() {
     hidden: {},
     visible: {
       transition: {
-        staggerChildren: 0.15,
+        staggerChildren: 0.08,
         delayChildren: 0.2,
       },
     },
   };
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 40, scale: 0.95 },
+    hidden: { opacity: 0, y: 24 },
     visible: {
       opacity: 1,
       y: 0,
-      scale: 1,
-      transition: {
-        duration: 0.6,
-        ease: [0.25, 0.46, 0.45, 0.94],
-      },
+      transition: TRANSITION,
     },
   };
 
@@ -159,15 +156,15 @@ export default function LandingHighlights() {
         {/* Section header */}
         <motion.div
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
+          transition={TRANSITION}
         >
           <motion.h2
             className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-4"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            transition={{ ...TRANSITION, delay: 0.1 }}
           >
             Numbers That{' '}
             <span className="text-accent">
@@ -176,9 +173,9 @@ export default function LandingHighlights() {
           </motion.h2>
           <motion.p
             className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto font-medium"
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            initial={{ opacity: 0, y: 24 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ ...TRANSITION, delay: 0.2 }}
           >
             See why institutions choose AI-powered evaluation over manual paper checking
           </motion.p>
@@ -200,7 +197,7 @@ export default function LandingHighlights() {
                 className="relative group cursor-default"
                 onMouseMove={(e) => handleMouseMove(e, i)}
                 onMouseLeave={() => setActiveCard(null)}
-                whileHover={{ y: -6, transition: { type: "spring", stiffness: 400, damping: 25 } }}
+                {...hoverCard}
               >
                 {/* Card */}
                 <div

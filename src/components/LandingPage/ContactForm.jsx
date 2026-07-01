@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { HiOutlineMail, HiOutlineChat, HiOutlineCheck } from "react-icons/hi";
 import { FiSend } from "react-icons/fi";
+import { TRANSITION, hoverLift, viewportOnce } from "./motion";
 
 const RadarGraphic = () => (
   <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center my-8 shrink-0">
@@ -136,16 +137,15 @@ const ContactForm = () => {
         {/* Section Header */}
         <motion.div
           className="text-center mb-10"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={TRANSITION}
+          viewport={viewportOnce}
         >
           <div className="flex justify-center mb-3">
             <motion.div
               className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-accent/10 text-gray-800 text-base shadow-md font-semibold tracking-wide gap-2"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              {...hoverLift}
             >
               <HiOutlineMail className="w-5 h-5 text-accent" />
               <span>Contact Us</span>
@@ -160,10 +160,10 @@ const ContactForm = () => {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ ...TRANSITION, delay: 0.1 }}
+          viewport={viewportOnce}
           className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row"
         >
           {/* Left Column - Visuals & Info */}
@@ -286,8 +286,7 @@ const ContactForm = () => {
                   <motion.button
                     type="submit"
                     disabled={isLoading || !formData.role} // Require role selection
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    {...hoverLift}
                     className="bg-accent hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3.5 px-8 rounded-lg shadow-md flex items-center gap-2 transition-all duration-300 min-w-[180px] justify-center"
                   >
                     {isLoading ? (
