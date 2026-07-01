@@ -469,7 +469,7 @@ const Features = ({
             className={`grid grid-cols-1 md:grid-cols-2 ${
 
               activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-6"
-            } gap-6 lg:gap-8}
+            } gap-6 lg:gap-8`}
             
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
