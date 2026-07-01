@@ -48,6 +48,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        outfit: ['Outfit', 'system-ui', 'sans-serif'],
       },
     },
   },
