@@ -154,7 +154,7 @@ const PerformanceChart = () => (
 const Insights = () => {
   const navigate = useNavigate();
   return (
-    <section id="insights" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="insights" className="py-20 md:py-28 bg-white px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <motion.div 
           className="text-center mb-12"
@@ -177,7 +177,7 @@ const Insights = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           <InsightCard
             icon={<HiOutlineChartBar className="w-5 h-5 text-accent" />}
             title="Student Strength Analysis"

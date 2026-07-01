@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { HiArrowUp } from "react-icons/hi";
 
 import Clientele from "./LandingPage/Clientele";
 import ComparisonMetrics from "./LandingPage/ComparisonMetrics";
@@ -18,6 +19,9 @@ import USP from "./LandingPage/USP";
 import VideoDemo from "./LandingPage/VideoDemo";
 import LandingHighlights from "./LandingPage/LandingHighlights";
 
+// ---------------------------------------------------------------------------
+// Loading Animation (unchanged)
+// ---------------------------------------------------------------------------
 const LoadingAnimation = () => {
   return (
     <div className="flex flex-col items-center justify-center h-screen w-screen bg-white p-4">
@@ -161,28 +165,85 @@ const LoadingAnimation = () => {
   );
 };
 
+// ---------------------------------------------------------------------------
+// Section IDs used for navigation (order matches page layout)
+// ---------------------------------------------------------------------------
+const SECTION_IDS = [
+  "home",
+  "smart-evaluation",
+  "clientele",
+  "highlights",
+  "analytics",
+  "comparison",
+  "testimonials",
+  "demo",
+  "features",
+  "usp",
+  "insights",
+  "pricing",
+  "faq",
+  "contact",
+];
+
+// Only these IDs appear in the navbar — used for active-section tracking
+const NAV_SECTION_IDS = ["home", "features", "pricing", "faq", "contact"];
+
+// ---------------------------------------------------------------------------
+// Scroll-to-top button
+// ---------------------------------------------------------------------------
+const ScrollToTopButton = ({ visible }) => (
+  <AnimatePresence>
+    {visible && (
+      <motion.button
+        className="scroll-to-top-btn"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.6 }}
+        transition={{ duration: 0.25 }}
+        aria-label="Scroll to top"
+      >
+        <HiArrowUp className="w-5 h-5" />
+      </motion.button>
+    )}
+  </AnimatePresence>
+);
+
+// ---------------------------------------------------------------------------
+// Main Landing Page
+// ---------------------------------------------------------------------------
 const LandingPage = () => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const demoRef = useRef(null);
-  const featureRef = useRef(null);
-  const pricingRef = useRef(null);
-  const faqRef = useRef(null);
-  const contactRef = useRef(null);
-  const homeRef = useRef(null);
+  const [activeSection, setActiveSection] = useState("home");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  // Track when a user clicks a nav link so we can temporarily ignore scroll events
+  const isNavigatingRef = useRef(false);
+  const navigationTimeoutRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
 
-  const scrollToDemo = () => {
-    demoRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Centralised scroll function — replaces all per-section refs
+  const scrollToSection = useCallback((sectionId) => {
+    // Immediately set active section and ignore scroll events
+    setActiveSection(sectionId);
+    isNavigatingRef.current = true;
+    
+    // Clear any existing timeout
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+    
+    // Re-enable scroll tracking after a generous fallback timeout 
+    // (in case the scroll event stops firing entirely or they are already at the section)
+    navigationTimeoutRef.current = setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 2000);
 
-  const scrollToHelper = (targetRef) => () => {
-    targetRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const scrollToFeatures = scrollToHelper(featureRef);
-  const scrollToPricing = scrollToHelper(pricingRef);
-  const scrollToFaq = scrollToHelper(faqRef);
-  const scrollToContact = scrollToHelper(contactRef);
-  const scrollToHome = scrollToHelper(homeRef);
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  }, []);
 
   const prependHelper = (name) => `/images/landing/${name}.jpeg`;
   const analytics = prependHelper("analytics");
@@ -196,6 +257,7 @@ const LandingPage = () => {
   const unbiasedEval = prependHelper("unbiasedEval");
   const vlmGrading = prependHelper("vlmGrading");
 
+  // ---- Image preloading & initial load ----
   useEffect(() => {
     document.body.style.backgroundColor = "#ffffff";
     document.body.style.color = "#212529";
@@ -245,6 +307,7 @@ const LandingPage = () => {
     };
   }, []);
 
+  // ---- Restore scroll position & persist on scroll ----
   useEffect(() => {
     if (isLoaded) {
       const savedScroll = sessionStorage.getItem("landingScrollPos");
@@ -262,6 +325,61 @@ const LandingPage = () => {
     }
   }, [isLoaded]);
 
+  // ---- Scroll-based active-section tracking + scroll-to-top visibility ----
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const NAVBAR_HEIGHT = 100; // px offset for the fixed navbar
+
+    const handleScroll = () => {
+      // Show / hide scroll-to-top
+      setShowScrollTop(window.scrollY > 600);
+
+      // Detect when scrolling completely stops
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 100); // 100ms without scroll events means scrolling has stopped
+
+      // Determine which navigable section is currently in view
+      // Skip if we are currently programmatic scrolling (user clicked a nav link)
+      if (isNavigatingRef.current) return;
+
+      const scrollY = window.scrollY + NAVBAR_HEIGHT;
+
+      // Build an array of { id, top } for each nav section
+      const sectionPositions = NAV_SECTION_IDS
+        .map((id) => {
+          const el = document.getElementById(id);
+          if (!el) return null;
+          return { id, top: el.offsetTop };
+        })
+        .filter(Boolean);
+
+      if (sectionPositions.length === 0) return;
+
+      // Find the last section whose top is above the current scroll position
+      let current = sectionPositions[0].id;
+      for (const section of sectionPositions) {
+        if (scrollY >= section.top) {
+          current = section.id;
+        } else {
+          break;
+        }
+      }
+
+      setActiveSection(current);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Run once on mount to set initial state
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isLoaded]);
+
   if (!isLoaded) {
     return <LoadingAnimation />;
   }
@@ -269,22 +387,23 @@ const LandingPage = () => {
   return (
     <div
       className="landing-page overflow-x-hidden bg-white text-[#212529]"
-      ref={homeRef}
+      id="home"
     >
       <div className="relative">
         <Navbar
-          scrollToFeatures={scrollToFeatures}
-          scrollToContact={scrollToContact}
-          scrollToFaq={scrollToFaq}
-          scrollToHome={scrollToHome}
-          scrollToPricing={scrollToPricing}
+          scrollToSection={scrollToSection}
+          activeSection={activeSection}
         />
-        <Hero scrollToDemo={scrollToDemo} />
+        <Hero scrollToDemo={() => scrollToSection("demo")} />
       </div>
 
-      <SmartEvaluationSystem />
+      <div id="smart-evaluation" className="landing-section">
+        <SmartEvaluationSystem />
+      </div>
 
       <motion.div
+        id="clientele"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -294,6 +413,8 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="highlights"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -303,6 +424,8 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="analytics"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -312,6 +435,8 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="comparison"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -321,6 +446,8 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="testimonials"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -330,7 +457,8 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
-        ref={demoRef}
+        id="demo"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -340,11 +468,12 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="features"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
-        ref={featureRef}
         data-section="features"
       >
         <Features
@@ -361,6 +490,8 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="usp"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -370,6 +501,8 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="insights"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -379,37 +512,42 @@ const LandingPage = () => {
       </motion.div>
 
       <motion.div
+        id="pricing"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
-        ref={pricingRef}
         data-section="pricing"
       >
         <Pricing />
       </motion.div>
 
       <motion.div
+        id="faq"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
-        ref={faqRef}
       >
         <FAQ />
       </motion.div>
 
       <motion.div
+        id="contact"
+        className="landing-section"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
         viewport={{ once: true }}
-        ref={contactRef}
       >
         <ContactForm />
       </motion.div>
 
-      <Footer />
+      <Footer scrollToSection={scrollToSection} />
+
+      <ScrollToTopButton visible={showScrollTop} />
     </div>
   );
 };

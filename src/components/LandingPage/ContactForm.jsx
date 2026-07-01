@@ -7,54 +7,59 @@ const RadarGraphic = () => (
   <div className="relative w-[230px] h-[230px] min-h-[230px] min-[375px]:w-[280px] min-[375px]:h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center my-8 shrink-0">
     {/* Concentric Circles using percentages for fluid scaling */}
     <div className="absolute inset-0 rounded-full border border-accent/30"></div>
+
     <div className="absolute inset-[12.5%] rounded-full border border-accent/20"></div>
     <div className="absolute inset-[25%] rounded-full border border-accent/10"></div>
     <div className="absolute inset-[37.5%] rounded-full border border-accent/5"></div>
     
+
+
     {/* Center Element */}
     <div className="absolute w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center z-10 border border-gray-50">
       <img src="https://i.pravatar.cc/150?img=68" alt="Center Avatar" className="w-10 h-10 rounded-full" />
     </div>
 
+
     {/* Floating Avatars using relative positioning */}
     <motion.div 
       animate={{ y: [0, -10, 0] }} 
+
       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
       className="absolute top-[6%] left-[12%] w-11 h-11 bg-white rounded-full shadow-lg p-0.5"
     >
-        <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="w-full h-full rounded-full" />
+      <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
 
-    <motion.div 
-      animate={{ y: [0, 15, 0] }} 
+    <motion.div
+      animate={{ y: [0, 15, 0] }}
       transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
       className="absolute bottom-[12%] right-[12%] w-12 h-12 bg-white rounded-full shadow-lg p-0.5"
     >
-        <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" className="w-full h-full rounded-full" />
+      <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
 
-    <motion.div 
-      animate={{ y: [0, -8, 0] }} 
+    <motion.div
+      animate={{ y: [0, -8, 0] }}
       transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
       className="absolute top-1/2 -left-[3%] w-9 h-9 bg-white rounded-full shadow-lg p-0.5"
     >
-        <img src="https://i.pravatar.cc/150?img=47" alt="Avatar" className="w-full h-full rounded-full" />
+      <img src="https://i.pravatar.cc/150?img=47" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
 
-    <motion.div 
-      animate={{ y: [0, 12, 0] }} 
+    <motion.div
+      animate={{ y: [0, 12, 0] }}
       transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
       className="absolute -top-[2%] right-[25%] w-8 h-8 bg-white rounded-full shadow-lg p-0.5"
     >
-        <img src="https://i.pravatar.cc/150?img=59" alt="Avatar" className="w-full h-full rounded-full" />
+      <img src="https://i.pravatar.cc/150?img=59" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
-    
-    <motion.div 
-      animate={{ y: [0, -10, 0] }} 
+
+    <motion.div
+      animate={{ y: [0, -10, 0] }}
       transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
       className="absolute bottom-[6%] left-[25%] w-7 h-7 bg-white rounded-full shadow-lg p-0.5"
     >
-        <img src="https://i.pravatar.cc/150?img=60" alt="Avatar" className="w-full h-full rounded-full" />
+      <img src="https://i.pravatar.cc/150?img=60" alt="Avatar" className="w-full h-full rounded-full" />
     </motion.div>
   </div>
 );
@@ -103,11 +108,11 @@ const ContactForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     setTimeout(() => {
       setIsLoading(false);
       setIsSubmitted(true);
-      
+
       setTimeout(() => {
         setIsSubmitted(false);
         setFormData({
@@ -132,8 +137,9 @@ const ContactForm = () => {
     <section id="contact" className="py-16 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-[1100px] mx-auto w-full relative z-10">
 
+
         {/* Section Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -141,7 +147,7 @@ const ContactForm = () => {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex justify-center mb-3">
-            <motion.div 
+            <motion.div
               className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-accent/10 text-gray-800 text-base shadow-md font-semibold tracking-wide gap-2"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -179,7 +185,7 @@ const ContactForm = () => {
             </div>
 
             {isSubmitted ? (
-               <motion.div 
+              <motion.div
                 className="flex flex-col items-center justify-center py-16 h-full"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -211,7 +217,7 @@ const ContactForm = () => {
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all duration-300 bg-white text-gray-900 font-medium placeholder-gray-500 outline-none shadow-sm"
                     />
                   </div>
-                  
+
                   {/* Email */}
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-800">
@@ -256,8 +262,8 @@ const ContactForm = () => {
                         type="button"
                         onClick={() => handleRoleSelect(roleOption.id)}
                         className={`px-4 py-2.5 rounded-xl border transition-all duration-300 text-sm font-semibold flex items-center
-                          ${formData.role === roleOption.id 
-                            ? 'border-accent bg-accent text-white shadow-md shadow-accent/20' 
+                          ${formData.role === roleOption.id
+                            ? 'border-accent bg-accent text-white shadow-md shadow-accent/20'
                             : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-900 shadow-sm'}`}
                       >
                         {roleOption.label}
@@ -307,6 +313,7 @@ const ContactForm = () => {
           </div>
 
         </motion.div>
+     
       </div>
     </section>
   );

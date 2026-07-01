@@ -1,35 +1,37 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
-import { HiOutlineMenu, HiX } from "react-icons/hi";
-import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 
-const MobileMenu = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const EASE_OUT = { type: "spring", stiffness: 110, damping: 22 };
+
+const NAV_LINKS = [
+  { name: "Features", href: "#features",                    isExternal: false },
+  { name: "Pricing",  href: "#pricing",                     isExternal: false },
+  { name: "FAQ",      href: "#faq",                         isExternal: false },
+  { name: "Contact",  href: "#contact",                     isExternal: false },
+  { name: "Docs",     href: "https://docs.smart-qna.com/",  isExternal: true  },
+  { name: "Blogs",    href: "https://blog.smart-qna.com/",  isExternal: true  },
+];
+
+const ISLAND = {
+  background: "rgba(255,255,255,0.55)",
+  backdropFilter: "blur(22px) saturate(180%)",
+  WebkitBackdropFilter: "blur(22px) saturate(180%)",
+  border: "1px solid rgba(255,255,255,0.55)",
+  boxShadow:
+    "0 8px 28px rgba(10,40,42,0.10), 0 2px 6px rgba(10,40,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
+  borderRadius: "100px",
+};
+
+function MobileMenu({ fnMap }) {
+  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-
-  const options = [
-    { name: "Home", link: "/" },
-    { name: "Features", link: "#features" },
-    { name: "Pricing", link: "#pricing" },
-    { name: "FAQ", link: "#faq" },
-    { name: "Contact", link: "#contact" },
-    { name: "Docs", link: "https://docs.smart-qna.com/" },
-  ];
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
+  const close = () => setOpen(false);
 
   return (
-    <div className="lg:hidden">
+    <div className="lg:hidden" style={{ flexShrink: 0 }}>
       <button
         className="p-2 rounded-md bg-accent/10 text-accent relative z-50"
         onClick={() => setIsOpen(!isOpen)}
@@ -42,6 +44,19 @@ const MobileMenu = () => {
           <HiOutlineMenu className="w-6 h-6" />
         )}
       </button>
+
+      {open && (
+        <div
+          onClick={close}
+          style={{
+            position: "fixed", inset: 0,
+            background: "rgba(10,40,42,0.38)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            zIndex: 48,
+          }}
+        />
+      )}
 
       {typeof window !== "undefined" && createPortal(
         <AnimatePresence>
@@ -116,115 +131,170 @@ const MobileMenu = () => {
       )}
     </div>
   );
-};
+}
 
-const Navbar = ({
-  scrollToFeatures,
-  scrollToPricing,
-  scrollToFaq,
-  scrollToContact,
-  scrollToHome,
-}) => {
+const Navbar = ({ scrollToFeatures, scrollToPricing, scrollToFaq, scrollToContact, scrollToHome }) => {
   const navigate = useNavigate();
-  const [scrolled, setScrolled] = useState(false);
+  const reduce = useReducedMotion();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const options = [
-    { name: "Home", link: "/", function: scrollToHome },
-    { name: "Features", link: "#features", function: scrollToFeatures },
-    { name: "Pricing", link: "#pricing", function: scrollToPricing },
-    { name: "FAQ", link: "#faq", function: scrollToFaq },
-    { name: "Contact", link: "#contact", function: scrollToContact },
-    {
-      name: "Docs",
-      link: "https://docs.smart-qna.com/",
-    },
-  ];
+  const fnMap = {
+    Home: scrollToHome, Features: scrollToFeatures,
+    Pricing: scrollToPricing, FAQ: scrollToFaq, Contact: scrollToContact,
+  };
 
   return (
-    <motion.nav
-      className={`fixed w-full py-4 px-4 lg:px-12 z-40 transition-all duration-300 ${
-        scrolled ? "bg-white/90 backdrop-blur-lg shadow-md" : "bg-transparent"
-      }`}
-      initial={{ y: -100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8">
-        <motion.div
-          className="flex items-center flex-shrink-0"
-          whileHover={{ scale: 1.05 }}
-          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-        >
-          <img
-            src="/logo_smartqna.png"
-            alt="Smart Paper Check Logo"
-            className="h-7 sm:h-8 mr-2 sm:mr-3"
-          />
-          <div className="font-medium text-xl sm:text-2xl text-gray-900 whitespace-nowrap">
-            Smart<span className="font-light italic text-accent"> Paper Check</span>
+    <>
+      {/* Top backdrop-blur strip — softens whatever scrolls behind the navbar */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0,
+          height: "130px",
+          zIndex: 39,
+          pointerEvents: "none",
+          backdropFilter: "blur(18px) saturate(160%)",
+          WebkitBackdropFilter: "blur(18px) saturate(160%)",
+          background:
+            "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.30) 55%, rgba(255,255,255,0) 100%)",
+          maskImage:
+            "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)",
+        }}
+      />
+
+      {/* Navbar — three floating islands */}
+      <motion.nav
+        initial={reduce ? false : { y: -28, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ ...EASE_OUT, delay: 0.1 }}
+        style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0,
+          zIndex: 40,
+          padding: "1rem clamp(1rem, 2.5vw, 1.75rem)",
+          fontFamily: "Inter, system-ui, sans-serif",
+        }}
+      >
+        <div style={{
+          maxWidth: "1500px",
+          margin: "0 auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "0.75rem",
+        }}>
+          {/* Island 1 — brand */}
+          <a
+            href="/"
+            onClick={(e) => { e.preventDefault(); scrollToHome?.(); }}
+            style={{
+              ...ISLAND,
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "8px 20px 8px 10px",
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
+          >
+            <img src="/logo_smartqna.png" alt="Smart Paper Check" style={{ height: "28px", display: "block" }} />
+            <span style={{
+              fontWeight: 700, fontSize: "0.95rem", color: "#0d3234",
+              letterSpacing: "-0.01em", whiteSpace: "nowrap",
+            }}>
+              Smart
+              <span style={{ fontWeight: 400, fontStyle: "italic", color: "#166D70" }}> Paper Check</span>
+            </span>
+          </a>
+
+          {/* Island 2 — nav links */}
+          <div
+            className="hidden lg:flex"
+            style={{
+              ...ISLAND,
+              alignItems: "center",
+              padding: "6px 8px",
+              gap: "2px",
+            }}
+          >
+            {NAV_LINKS.map((item) => (
+              <a
+                key={item.name}
+                href={item.href}
+                target={item.isExternal ? "_blank" : "_self"}
+                rel={item.isExternal ? "noopener noreferrer" : ""}
+                onClick={(e) => {
+                  if (!item.isExternal && fnMap[item.name]) {
+                    e.preventDefault(); fnMap[item.name]();
+                  }
+                }}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: "100px",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "rgba(10,40,42,0.72)",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                  transition: "color 0.15s, background 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#0d3234";
+                  e.currentTarget.style.background = "rgba(22,109,112,0.10)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "rgba(10,40,42,0.72)";
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                {item.name}
+              </a>
+            ))}
           </div>
-        </motion.div>
 
-        <div className="hidden lg:flex items-center space-x-4 xl:space-x-6">
-          {options.map((item, idx) => (
-            <motion.a
-              key={idx}
-              href={item.link}
-              className="font-medium py-2 px-3 text-sm xl:text-base text-gray-700 hover:text-accent transition-colors duration-200"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              target={item.link.startsWith("http") ? "_blank" : "_self"}
-              rel={item.link.startsWith("http") ? "noopener noreferrer" : ""}
-              onClick={(e) => {
-                if (item.function) {
-                  e.preventDefault();
-                  item?.function();
-                }
-              }}
-            >
-              {item.name}
-            </motion.a>
-          ))}
-        </div>
-
-        <div className="hidden lg:flex items-center space-x-3 xl:space-x-4">
-          <motion.a
-            href="https://blog.smart-qna.com/"
-            className="py-2 px-4 xl:px-6 border border-accent text-accent rounded-md font-medium hover:bg-accent/10 transition-colors duration-200 text-sm xl:text-base"
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            Blogs
-          </motion.a>
-
+          {/* Island 3 — Get Started CTA */}
           <motion.button
-            className="bg-accent py-2 px-4 xl:px-6 rounded-md font-medium text-white hover:bg-accent transition-opacity duration-200 shadow-md text-sm xl:text-base"
             onClick={() => navigate("/auth")}
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            whileTap={{ scale: 0.96, y: 1 }}
+            transition={EASE_OUT}
+            className="hidden lg:flex"
+            style={{
+              padding: "11px 24px",
+              borderRadius: "100px",
+              border: "1px solid rgba(255,255,255,0.22)",
+              background: "linear-gradient(180deg, #1a8285 0%, #166D70 100%)",
+              backdropFilter: "blur(22px) saturate(180%)",
+              WebkitBackdropFilter: "blur(22px) saturate(180%)",
+              color: "#fff",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "Inter, system-ui, sans-serif",
+              letterSpacing: "-0.005em",
+              whiteSpace: "nowrap",
+              boxShadow:
+                "0 8px 26px rgba(22,109,112,0.38), 0 2px 6px rgba(22,109,112,0.18), inset 0 1px 0 rgba(255,255,255,0.28)",
+              transition: "box-shadow 0.18s",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow =
+                "0 10px 32px rgba(22,109,112,0.48), 0 3px 10px rgba(22,109,112,0.26), inset 0 1px 0 rgba(255,255,255,0.34)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow =
+                "0 8px 26px rgba(22,109,112,0.38), 0 2px 6px rgba(22,109,112,0.18), inset 0 1px 0 rgba(255,255,255,0.28)";
+            }}
           >
-            Get Started 
+            Get Started
           </motion.button>
-        </div>
 
-        <MobileMenu />
-      </div>
-    </motion.nav>
+          <MobileMenu fnMap={fnMap} />
+        </div>
+      </motion.nav>
+    </>
   );
 };
 

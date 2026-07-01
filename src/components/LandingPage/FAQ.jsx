@@ -93,8 +93,9 @@ const FAQ = () => {
   ];
 
   return (
-    <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-3xl mx-auto">
+    <section className="py-20 md:py-28 bg-white px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="max-w-3xl mx-auto">
         <motion.div 
           className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
@@ -134,6 +135,7 @@ const FAQ = () => {
             Still have questions? <a href="#contact" className="text-accent font-medium hover:text-accent transition-colors duration-200">Contact us</a> for more information
           </p>
         </motion.div>
+        </div>
       </div>
     </section>
   );
