@@ -13,7 +13,7 @@ const chapters = [
   { label: 'AI Solution',  emoji: '🤖', timestamp: '0:40', seconds: 40  },
   { label: 'How It Works', emoji: '⚙️', timestamp: '1:17', seconds: 77  },
   { label: 'For TAs',      emoji: '👩‍🏫', timestamp: '1:57', seconds: 117 },
-  { label: 'Get Started',  emoji: '🚀', timestamp: '2:27', seconds: 147 },
+  { label: 'Get Started',  emoji: '', timestamp: '2:27', seconds: 147 },
 ];
 
 // ─── Animated Icons ─────────────────────────────────────────────

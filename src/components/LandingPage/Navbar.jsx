@@ -25,7 +25,7 @@ const ISLAND = {
   borderRadius: "100px",
 };
 
-function MobileMenu({ scrollToSection }) {
+function MobileMenu({ scrollToSection, activeSection }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -137,7 +137,7 @@ function MobileMenu({ scrollToSection }) {
                         navigate("/auth");
                       }}
                     >
-                      Get Started 🚀
+                      Get Started
                     </button>
                   </div>
                 </motion.div>
@@ -150,7 +150,7 @@ function MobileMenu({ scrollToSection }) {
   );
 }
 
-const Navbar = ({ scrollToSection, activeSection: _activeSection }) => {
+const Navbar = ({ scrollToSection, activeSection }) => {
   const navigate = useNavigate();
   const reduce = useReducedMotion();
 
@@ -231,7 +231,9 @@ const Navbar = ({ scrollToSection, activeSection: _activeSection }) => {
               gap: "2px",
             }}
           >
-            {NAV_LINKS.map((item) => (
+            {NAV_LINKS.map((item) => {
+              const isActive = activeSection === item.href.replace('#', '');
+              return (
               <a
                 key={item.name}
                 href={item.href}
@@ -244,6 +246,7 @@ const Navbar = ({ scrollToSection, activeSection: _activeSection }) => {
                   }
                 }}
                 style={{
+                  position: "relative",
                   padding: "8px 14px",
                   borderRadius: "100px",
                   fontSize: "0.875rem",
@@ -263,8 +266,22 @@ const Navbar = ({ scrollToSection, activeSection: _activeSection }) => {
                 }}
               >
                 {item.name}
+                {isActive && !item.isExternal && (
+                  <motion.div
+                    layoutId="navbar-active-indicator"
+                    style={{
+                      position: "absolute",
+                      bottom: "2px",
+                      left: "14px",
+                      right: "14px",
+                      height: "2px",
+                      backgroundColor: "#166D70",
+                      borderRadius: "2px",
+                    }}
+                  />
+                )}
               </a>
-            ))}
+            )})}
           </div>
 
           {/* Island 3 — Get Started CTA */}
@@ -304,7 +321,7 @@ const Navbar = ({ scrollToSection, activeSection: _activeSection }) => {
             Get Started
           </motion.button>
 
-          <MobileMenu scrollToSection={scrollToSection} />
+          <MobileMenu scrollToSection={scrollToSection} activeSection={activeSection} />
         </div>
       </motion.nav>
     </>
