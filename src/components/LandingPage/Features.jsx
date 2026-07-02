@@ -8,7 +8,6 @@ import {
   HiOutlineUpload,
 } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
-import Button from "./button";
 
 // ─── Accent color ───────────────────────────────────────────────
 const ACCENT = "#166D70";
@@ -527,12 +526,15 @@ const Features = ({
             </div>
 
             {/* Button */}
-            <Button
-              variant="primary"
+            <motion.button
+              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-accent text-white font-semibold text-base shadow-md shadow-accent/20 hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/25 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 whitespace-nowrap"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
               onClick={() => navigate("/auth")}
             >
-              Get Started Today →
-            </Button>
+              Get Started Today
+            </motion.button>
           </div>
         </motion.div>
         {/* ─── End CTA Banner ──────────────────────────────────────── */}
@@ -543,3 +545,4 @@ const Features = ({
 };
 
 export default Features;
+
