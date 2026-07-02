@@ -8,7 +8,6 @@ import {
   HiOutlineUpload,
 } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
-import { TRANSITION, hoverLift, viewportOnce } from "./motion";
 
 // ─── Accent color ───────────────────────────────────────────────
 const ACCENT = "#166D70";
@@ -218,7 +217,7 @@ const MultilingualIcon = () => (
 );
 
 // ─── Flip Card ───────────────────────────────────────────────────
-const FlipCard = ({ iconType, title, description, backDetail, index, className = "" }) => {
+const FlipCard = ({ iconType, title, description, backDetail, index }) => {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
   const ref = useRef(null);
@@ -242,26 +241,26 @@ const FlipCard = ({ iconType, title, description, backDetail, index, className =
   return (
     <motion.div
       ref={ref}
-      className={`min-h-56 cursor-pointer ${className}`}
+      className="min-h-56 cursor-pointer"
       style={{ perspective: "1000px" }}
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ ...TRANSITION, delay: index * 0.08 }}
-      viewport={viewportOnce}
+      transition={{ duration: 0.4, delay: index * 0.08 }}
+      viewport={{ once: true, amount: 0.2 }}
       onClick={() => setFlipped(!flipped)}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       aria-label={`${title} — click to ${flipped ? "hide" : "see"} details`}
     >
       <motion.div
-        className="relative w-full h-full min-h-56"
-        style={{ transformStyle: "preserve-3d" }}
+        className="relative w-full h-full"
+        style={{ transformStyle: "preserve-3d", minHeight: "14rem" }}
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.5, type: "spring", stiffness: 120, damping: 18 }}
       >
         {/* Front */}
         <motion.div
-          className="absolute inset-0 bg-white rounded-xl p-5 sm:p-6 flex flex-col"
+          className="absolute inset-0 bg-white rounded-xl p-6 flex flex-col"
           style={{
             backfaceVisibility: "hidden",
             border: hovered && !flipped ? `1.5px solid ${ACCENT}` : "1.5px solid #f3f4f6",
@@ -275,10 +274,11 @@ const FlipCard = ({ iconType, title, description, backDetail, index, className =
             {renderIcon()}
           </div>
 
+          {/* ✅ Inter (Tailwind default) — Sora removed */}
           <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
 
-          <p className="text-gray-500 text-xs sm:text-sm flex-grow leading-relaxed" style={{ letterSpacing: "0.01em" }}>{description}</p>
-          <p className="text-accent text-xs font-medium mt-3 flex items-center gap-1">
+          <p className="text-gray-500 text-sm flex-grow" style={{ fontFamily: "'Sora', sans-serif", lineHeight: "1.65", letterSpacing: "0.01em" }}>{description}</p>
+          <p className="text-accent text-xs font-medium mt-3 flex items-center gap-1" style={{ fontFamily: "'Sora', sans-serif" }}>
             <span>Tap to learn more</span>
             <motion.span
               animate={hovered && !flipped ? { x: [0, 4, 0] } : { x: 0 }}
@@ -289,15 +289,16 @@ const FlipCard = ({ iconType, title, description, backDetail, index, className =
 
         {/* Back */}
         <div
-          className="absolute inset-0 bg-accent rounded-xl p-5 sm:p-6 shadow-md flex flex-col justify-between"
+          className="absolute inset-0 bg-accent rounded-xl p-6 shadow-md flex flex-col justify-between"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
           <div>
+            {/* ✅ Inter (Tailwind default) — Sora removed */}
             <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
 
-            <p className="text-white/90 text-xs sm:text-sm leading-relaxed" style={{ letterSpacing: "0.01em" }}>{backDetail}</p>
+            <p className="text-white/90 text-sm leading-relaxed" style={{ fontFamily: "'Sora', sans-serif", lineHeight: "1.7", letterSpacing: "0.01em" }}>{backDetail}</p>
           </div>
-          <p className="text-white/60 text-xs font-medium mt-4 flex items-center gap-1">
+          <p className="text-white/60 text-xs font-medium mt-4 flex items-center gap-1" style={{ fontFamily: "'Sora', sans-serif" }}>
             <span>←</span><span>Tap to go back</span>
           </p>
         </div>
@@ -314,7 +315,6 @@ const Features = ({
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("features");
   const [ctaHovered, setCtaHovered] = useState(false);
-  const [btnHovered, setBtnHovered] = useState(false);
 
   const features = [
     {
@@ -384,17 +384,17 @@ const Features = ({
   const activeItems = activeTab === "features" ? features : benefits;
 
   return (
-    <section id="features" className="relative py-20 md:py-28 bg-white overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="features" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
       <FloatingDots />
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="relative z-10 max-w-7xl mx-auto">
 
         {/* Header */}
         <motion.div
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={TRANSITION}
-          viewport={viewportOnce}
+          transition={{ duration: 0.5 }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-accent/10 text-gray-800 text-sm shadow-sm">
@@ -402,21 +402,22 @@ const Features = ({
               <span>Features & Benefits</span>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
             Why <span className="text-accent">Smart Paper Check</span>?
           </h2>
-          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            AI-powered features to streamline grading, course management, and script evaluation — efficient, accurate, and effortless.
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            AI-powered features to streamline grading, course management, and
+            script evaluation — efficient, accurate, and effortless.
           </p>
         </motion.div>
 
         {/* Tab Switcher */}
         <motion.div
           className="flex justify-center mb-10"
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ ...TRANSITION, delay: 0.1 }}
-          viewport={viewportOnce}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           <div className="inline-flex bg-gray-100 rounded-full p-1 gap-1">
             {tabs.map((tab) => (
@@ -452,10 +453,10 @@ const Features = ({
         <motion.p
           className="text-center text-gray-400 text-sm mb-8"
           style={{ fontFamily: "'Sora', sans-serif", letterSpacing: "0.02em" }}
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ ...TRANSITION, delay: 0.2 }}
-          viewport={viewportOnce}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           Click any card to explore more details
         </motion.p>
@@ -465,32 +466,23 @@ const Features = ({
           <motion.div
             key={activeTab}
             className={`grid grid-cols-1 md:grid-cols-2 ${
-
-              activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-6"
-            } gap-6 lg:gap-8`}
-            
+              activeTab === "benefits" ? "lg:grid-cols-4" : "lg:grid-cols-3"
+            } gap-6`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3 }}
           >
-            {activeItems.map((item, index) => {
-              const isFeatures = activeTab === "features";
-              const cardClass = isFeatures
-                ? `lg:col-span-2${index === 3 ? " lg:col-start-2" : ""}`
-                : "";
-              return (
-                <FlipCard
-                  key={item.title}
-                  className={cardClass}
-                  iconType={item.iconType}
-                  title={item.title}
-                  description={item.description}
-                  backDetail={item.backDetail}
-                  index={index}
-                />
-              );
-            })}
+            {activeItems.map((item, index) => (
+              <FlipCard
+                key={item.title}
+                iconType={item.iconType}
+                title={item.title}
+                description={item.description}
+                backDetail={item.backDetail}
+                index={index}
+              />
+            ))}
           </motion.div>
         </AnimatePresence>
 
@@ -505,10 +497,10 @@ const Features = ({
               : "0 1px 4px rgba(0,0,0,0.06)",
             transition: "box-shadow 0.25s ease, border-color 0.25s ease",
           }}
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={TRANSITION}
-          viewport={viewportOnce}
+          transition={{ duration: 0.7 }}
+          viewport={{ once: true, amount: 0.2 }}
           onHoverStart={() => setCtaHovered(true)}
           onHoverEnd={() => setCtaHovered(false)}
         >
@@ -535,48 +527,13 @@ const Features = ({
 
             {/* Button */}
             <motion.button
-              className="relative overflow-hidden px-8 py-3 rounded-full text-white font-medium whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-              style={{
-                fontFamily: "'Sora', sans-serif",
-                letterSpacing: "0.03em",
-                background: ACCENT,
-                boxShadow: btnHovered
-                  ? `0 6px 24px rgba(22,109,112,0.38), 0 2px 8px rgba(22,109,112,0.22)`
-                  : `0 2px 10px rgba(22,109,112,0.22)`,
-                transition: "box-shadow 0.25s ease",
-              }}
-              {...hoverLift}
-              onHoverStart={() => setBtnHovered(true)}
-              onHoverEnd={() => setBtnHovered(false)}
+              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-accent text-white font-semibold text-base shadow-md shadow-accent/20 hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/25 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 whitespace-nowrap"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
               onClick={() => navigate("/auth")}
             >
-              {/* Shimmer sweep */}
-              <motion.span
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background:
-                    "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.28) 50%, transparent 65%)",
-                  backgroundSize: "200% 100%",
-                }}
-                initial={{ backgroundPosition: "200% 0" }}
-                animate={btnHovered
-                  ? { backgroundPosition: ["-200% 0", "200% 0"] }
-                  : { backgroundPosition: "200% 0" }
-                }
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-              />
-
-              {/* Label + animated arrow */}
-              <span className="relative z-10 flex items-center gap-2">
-                Get Started Today
-                <motion.span
-                  animate={btnHovered ? { x: [0, 5, 0] } : { x: 0 }}
-                  transition={{ duration: 0.5, repeat: btnHovered ? Infinity : 0, ease: "easeInOut" }}
-                  style={{ display: "inline-block" }}
-                >
-                  →
-                </motion.span>
-              </span>
+              Get Started Today
             </motion.button>
           </div>
         </motion.div>
@@ -588,3 +545,4 @@ const Features = ({
 };
 
 export default Features;
+
